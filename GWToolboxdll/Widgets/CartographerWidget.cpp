@@ -16,6 +16,7 @@
 #include <ImGuiAddons.h>
 #include <Logger.h>
 #include <Timer.h>
+#include <Modules/Resources.h>
 #include <Utils/SettingsRegistry.h>
 #include <Utils/ToolboxUtils.h>
 #include <Widgets/CartographerWidget.h>
@@ -786,15 +787,37 @@ namespace {
             project({(cx + 1) * kWorldMapUnitsPerCell, (cy + 1) * kWorldMapUnitsPerCell}, max_out);
     }
 
+    // Which map a foggy tile belongs to, for the hover tooltip. GetMapIdForLocation walks every
+    // map on the continent, so the answer is kept until the pointer moves to a different tile.
+    std::pair<int, int> hover_lookup_cell{INT_MIN, INT_MIN};
+    GW::Constants::MapID hover_lookup_map = GW::Constants::MapID::None;
+
+    GW::Constants::MapID MapForTile(const int cx, const int cy)
+    {
+        if (hover_lookup_cell != std::pair{cx, cy}) {
+            hover_lookup_cell = {cx, cy};
+            hover_lookup_map = WorldMapWidget::GetMapIdForLocation(CellCenterWorldMap(cx, cy));
+        }
+        return hover_lookup_map;
+    }
+
+    bool TileOnCurrentMap(const int cx, const int cy)
+    {
+        return cx >= map_cell_min.first && cx < map_cell_max.first
+            && cy >= map_cell_min.second && cy < map_cell_max.second;
+    }
+
     // One quad per fog texel, so ImGui interpolates them as the GPU does when it samples the
     // client's texture.
-    void DrawFog(ImDrawList* dl, const ProjectToScreen project)
+    void DrawFog(ImDrawList* dl, const ProjectToScreen project, const ImVec2& mouse, std::string& tooltip_out)
     {
         const ImRect clip(dl->GetClipRectMin(), dl->GetClipRectMax());
+        const FogCell* hovered = nullptr;
         for (const auto& f : fog_cells) {
             ImVec2 cell_min, cell_max;
             if (!ProjectCell(project, f.cx, f.cy, cell_min, cell_max)) continue;
             if (!clip.Overlaps(ImRect(cell_min, cell_max))) continue;
+            if (ImRect(cell_min, cell_max).Contains(mouse)) hovered = &f;
             const float w = (cell_max.x - cell_min.x) / kFogSubdivisions;
             const float h = (cell_max.y - cell_min.y) / kFogSubdivisions;
             for (int j = 0; j < kFogSubdivisions; j++) {
@@ -807,6 +830,16 @@ namespace {
                 }
             }
         }
+        // Only worth saying for fog outside the map you are standing in - otherwise the answer is
+        // "you are already here".
+        if (!hovered || TileOnCurrentMap(hovered->cx, hovered->cy)) return;
+        const auto map_id = MapForTile(hovered->cx, hovered->cy);
+        if (map_id == GW::Constants::MapID::None) {
+            tooltip_out = "Unexplored - no map here";
+            return;
+        }
+        const auto& name = Resources::GetMapName(map_id)->string();
+        tooltip_out = name.empty() ? "Unexplored" : "Unexplored - travel to " + name;
     }
 
     // The cartography grid itself. Every tile is credited as a unit, so seeing the boundaries is
@@ -873,8 +906,9 @@ namespace {
     {
         const ImVec2 mouse = ImGui::GetMousePos();
         const char* tooltip = nullptr;
+        std::string fog_tooltip;
         if (show_fog) {
-            DrawFog(dl, project);
+            DrawFog(dl, project, mouse, fog_tooltip);
         }
         if (show_grid) {
             DrawGrid(dl, project);
@@ -917,6 +951,7 @@ namespace {
             }
         }
         if (tooltip) ImGui::SetTooltip("%s", tooltip);
+        else if (cell_tooltip && !fog_tooltip.empty()) ImGui::SetTooltip("%s", fog_tooltip.c_str());
     }
 
     void OnWorldMapOverlayDraw(ImDrawList* dl)
