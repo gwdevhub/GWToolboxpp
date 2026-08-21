@@ -384,9 +384,10 @@ namespace Pathing {
     }
 
     namespace {
-        // Live props carry their own collision radius; DAT-loaded ones do not, and the record's
-        // scale field is still undecoded, so those fall back to a middling constant.
-        constexpr float kUnknownPortalHalfWidth = 250.f;
+        // Both the live and DAT paths carry a real radius now; this only covers a prop whose model
+        // info has not loaded yet. The portal models measure ~400 unscaled, so lean that way
+        // rather than at the old 250, which was under half the true width of every gate measured.
+        constexpr float kUnknownPortalHalfWidth = 400.f;
 
         float PortalHalfWidth(const PortalProp& portal)
         {

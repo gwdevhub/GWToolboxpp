@@ -118,13 +118,12 @@ namespace Pathing {
     struct PortalProp {
         Vec2f pos;              // game coordinates (x, y)
         uint32_t model_file_id; // model file ID for portal type identification
-        // Facing of the prop, so the doorway can be treated as a line rather than a blob. Only the
-        // live-MapContext path fills this in; the DAT record's rotation field is not decoded, and
-        // callers fall back to a plain radius when it is absent.
+        // Facing of the prop, so the doorway can be treated as a line rather than a blob. Callers
+        // fall back to a plain radius when it is absent.
         float facing_radians = 0.f;
         bool has_facing = false;
         // Horizontal extent in world units, from the model's collision cylinder. Zero when it is
-        // not known - only the live-MapContext path can read it.
+        // not known.
         float radius = 0.f;
     };
 
