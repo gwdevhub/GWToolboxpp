@@ -17,6 +17,7 @@
 #include <Logger.h>
 #include <Timer.h>
 #include <Modules/Resources.h>
+#include <Utils/EncString.h>
 #include <Utils/SettingsRegistry.h>
 #include <Utils/ToolboxUtils.h>
 #include <Widgets/CartographerWidget.h>
