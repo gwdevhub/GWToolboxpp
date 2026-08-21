@@ -184,6 +184,9 @@ namespace {
 
         static std::wstring last_item_name;
         static std::wstring last_nicholas_text;
+        static time_t last_nicholas_text_time = 0;
+
+        const auto current_time = time(nullptr);
 
         auto append = [&](std::wstring text) {
             if (!description.empty()) description += L"\x2";
@@ -191,19 +194,19 @@ namespace {
             last_nicholas_text = text;
         };
 
-        if (item->name_enc == last_item_name) {
-            append(last_nicholas_text);
+        // Cached text holds a relative time ("in 3 days"), so it has to be recalculated once it's had chance to go stale
+        if (item->name_enc == last_item_name && current_time - last_nicholas_text_time < 60) {
+            if (!last_nicholas_text.empty()) append(last_nicholas_text);
             return;
         }
         last_nicholas_text.clear();
         last_item_name = item->name_enc;
-
-        const auto current_time = time(nullptr);
+        last_nicholas_text_time = current_time;
 
         if (GW::Map::IsPreSearing()) {
             const auto info = DailyQuests::GetNicholasSandfordItemInfo(item->name_enc);
             if (!info) return;
-            const auto collection_time = DailyQuests::GetTimestampFromNicholasSandford(info);
+            const auto collection_time = DailyQuests::GetTimestampFromNicholasSandford(info, current_time);
             if (collection_time <= current_time)
                 append(std::format(L"Nicholas Sandford collects {} of these right now!", 5));
             else
@@ -217,8 +220,8 @@ namespace {
 
         const auto ingredient_nick_info = ingredient ? DailyQuests::GetNicholasItemInfo(ingredient->nicholas_item) : nullptr;
 
-        const auto info_time = info ? DailyQuests::GetTimestampFromNicholasTheTraveller(info) : std::numeric_limits<time_t>::max();
-        const auto ingredient_time = ingredient_nick_info ? DailyQuests::GetTimestampFromNicholasTheTraveller(ingredient_nick_info) : std::numeric_limits<time_t>::max();
+        const auto info_time = info ? DailyQuests::GetTimestampFromNicholasTheTraveller(info, current_time) : std::numeric_limits<time_t>::max();
+        const auto ingredient_time = ingredient_nick_info ? DailyQuests::GetTimestampFromNicholasTheTraveller(ingredient_nick_info, current_time) : std::numeric_limits<time_t>::max();
 
         if (info && info_time <= ingredient_time) {
             const auto quantity_for_total_gifts = info->quantity * 5;
