@@ -943,7 +943,9 @@ GW::Constants::MapID WorldMapWidget::GetMapIdForLocation(const GW::Vec2f& world_
 void WorldMapWidget::Initialize()
 {
     ToolboxWidget::Initialize();
-    SettingsRegistry::Register(this, settings);
+    // These are all drawn by the controls window on the world map itself, not in the Settings window,
+    // so keep them out of settings search - a result here would navigate to a section without them.
+    SettingsRegistry::Register(this, settings, false);
 
     memset(show_elite_capture_locations, true, sizeof(show_elite_capture_locations));
     quest_icon_texture = GwDatModule::LoadTextureFromFileId(0x1b4d5);
@@ -1477,5 +1479,5 @@ bool WorldMapWidget::WndProc(const UINT Message, WPARAM, LPARAM lParam)
 
 void WorldMapWidget::DrawSettingsInternal()
 {
-    ImGui::Text("Note: only visible in Hard Mode explorable areas.");
+    ImGui::TextDisabled("The world map options (show all areas, quest markers, elite capture locations, ...)\nare drawn on the world map itself - open the world map to change them.");
 }
