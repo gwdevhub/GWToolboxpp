@@ -86,9 +86,12 @@ public:
     static DailyQuestResult GetZaishenMission(time_t unix = 0);
     static DailyQuestResult GetZaishenCombat(time_t unix = 0);
     static DailyQuestResult GetNicholasTheTraveller(time_t unix = 0);
-    static time_t GetTimestampFromNicholasTheTraveller(DailyQuests::NicholasCycleData* data);
+    // Returns the next time Nicholas the Traveler collects this item, or `now` if he's collecting it already
+    static time_t GetTimestampFromNicholasTheTraveller(DailyQuests::NicholasCycleData* data, time_t now = 0);
     static DailyQuestResult GetNicholasSandford(time_t unix = 0);
-    static time_t GetTimestampFromNicholasSandford(DailyQuests::QuestData* data);
+    // Returns the next time Nicholas Sandford collects this item, or `now` if he's collecting it already.
+    // Items appear several times in the pre-searing cycle; the soonest occurrence is returned.
+    static time_t GetTimestampFromNicholasSandford(DailyQuests::QuestData* data, time_t now = 0);
     static DailyQuestResult GetVanguardQuest(time_t unix = 0);
     static DailyQuestResult GetWantedByShiningBlade(time_t unix = 0);
     static DailyQuestResult GetWeeklyPvEBonus(time_t unix = 0);
