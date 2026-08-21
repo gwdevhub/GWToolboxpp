@@ -40,6 +40,12 @@ public:
     void Draw(IDirect3DDevice9* pDevice) override;
 
 public:
+    // Both Nicholases can be traded with 5 times per rotation for a full set of gifts.
+    // Item counts are shown as the total needed for all 5 trades, not the amount for a single trade.
+    static constexpr uint32_t NICHOLAS_TRADES_PER_ROTATION = 5;
+    // Nicholas Sandford (pre-searing) always collects 5 of the daily item per trade.
+    static constexpr uint32_t NICHOLAS_SANDFORD_ITEMS_PER_TRADE = 5;
+
     class QuestData {
     protected:
         std::unique_ptr<GuiUtils::EncString> name_english;
