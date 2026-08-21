@@ -583,7 +583,8 @@ namespace {
         for (const auto& line : lines) {
             if (!line->visible) continue;
             if (line->world_coords) continue; // world coords, not game coords; drawn by DrawWorldCoordRouteLines
-            if (!line->draw_on_mission_map && !(settings.draw_all_minimap_lines && line->draw_on_minimap) && !(settings.draw_all_terrain_lines && line->draw_on_terrain)) continue;
+            const bool draw_all_override = !line->created_by_toolbox && ((settings.draw_all_minimap_lines && line->draw_on_minimap) || (settings.draw_all_terrain_lines && line->draw_on_terrain));
+            if (!line->draw_on_mission_map && !draw_all_override) continue;
             if (line->map != map_id) continue;
             if (line->from_player_pos && player_pos) {
                 minimap_lines.push_back(D3DLine(*player_pos, line->p2, LINE_HALF_THICKNESS, static_cast<DWORD>(line->color)));
