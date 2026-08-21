@@ -152,6 +152,31 @@ namespace {
         ctx->TestEngineHookItems = locate.HooksNeeded();
     }
 
+    // Section a module's registered settings can actually be navigated to, or empty if it doesn't draw
+    // any settings content in this window (e.g. a module that draws its settings in its own UI instead).
+    // Usually SettingsName(), but a module is free to register its content into someone else's section.
+    std::string NavSectionForModule(ToolboxModule* module)
+    {
+        if (!module) {
+            return {};
+        }
+        const auto& callbacks = ToolboxModule::GetSettingsCallbacks();
+        const auto* settings_name = module->SettingsName();
+        if (callbacks.contains(settings_name)) {
+            return settings_name;
+        }
+        std::string found;
+        for (const auto& [section, list] : callbacks) {
+            const auto drawn_here = std::ranges::any_of(list, [module](const SectionDrawCallbackInfo& info) {
+                return info.module == module;
+            });
+            if (drawn_here && (found.empty() || section < found)) {
+                found = section;
+            }
+        }
+        return found;
+    }
+
     std::vector<SearchResult> BuildSearchResults(const std::string& query_lower)
     {
         std::vector<SearchResult> results;
@@ -162,6 +187,9 @@ namespace {
             }
         }
         for (const auto& e : SettingsRegistry::GetEntries()) {
+            if (!e.in_settings_window) {
+                continue; // Drawn by the module's own UI; navigating here would land on nothing
+            }
             auto best = MatchScore(TextUtils::ToLower(e.label), query_lower);
             for (const auto& text : {e.section, e.description}) {
                 if (text.empty()) {
@@ -172,8 +200,11 @@ namespace {
                     best = score;
                 }
             }
-            if (best >= 0) {
-                results.push_back({e.module->SettingsName(), e.label, best});
+            if (best < 0) {
+                continue;
+            }
+            if (const auto nav_section = NavSectionForModule(e.module); !nav_section.empty()) {
+                results.push_back({nav_section, e.label, best});
             }
         }
         for (const auto& [section, label] : sub_sections) {
