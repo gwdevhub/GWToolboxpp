@@ -1,5 +1,6 @@
 #include "stdafx.h"
 
+#include <algorithm>
 #include <array>
 #include <map>
 
@@ -411,41 +412,42 @@ namespace Pathing {
             return portal_cache;
         }
 
-        float SideOfLine(const GW::Vec2f& a, const GW::Vec2f& b, const GW::Vec2f& p)
+        float DistanceToSegmentSq(const GW::Vec2f& p, const GW::Vec2f& a, const GW::Vec2f& b)
         {
-            return (b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x);
+            const float dx = b.x - a.x;
+            const float dy = b.y - a.y;
+            const float len_sq = dx * dx + dy * dy;
+            float t = 0.f;
+            if (len_sq > 0.f)
+                t = std::clamp(((p.x - a.x) * dx + (p.y - a.y) * dy) / len_sq, 0.f, 1.f);
+            const float ox = a.x + dx * t - p.x;
+            const float oy = a.y + dy * t - p.y;
+            return ox * ox + oy * oy;
         }
 
-        bool SegmentsCross(const GW::Vec2f& a, const GW::Vec2f& b, const GW::Vec2f& c, const GW::Vec2f& d)
+        // The doorway blocks as a disc the width of the prop, not as a line drawn across it. A
+        // walk that only clips the opening, or that creeps over it in steps too short to straddle
+        // a line, is still going through the gate.
+        bool SegmentHitsPortal(const GW::Vec2f& a, const GW::Vec2f& b, const PortalProp& portal)
         {
-            const float d1 = SideOfLine(a, b, c);
-            const float d2 = SideOfLine(a, b, d);
-            const float d3 = SideOfLine(c, d, a);
-            const float d4 = SideOfLine(c, d, b);
-            return ((d1 > 0) != (d2 > 0)) && ((d3 > 0) != (d4 > 0));
+            const float half_width = PortalHalfWidth(portal);
+            return DistanceToSegmentSq(portal.pos, a, b) < half_width * half_width;
+        }
+
+        bool PortalContains(const PortalProp& portal, const GW::Vec2f& p)
+        {
+            const float half_width = PortalHalfWidth(portal);
+            const float dx = p.x - portal.pos.x;
+            const float dy = p.y - portal.pos.y;
+            return dx * dx + dy * dy < half_width * half_width;
         }
     } // namespace
 
     bool CrossesTravelPortal(const GW::Vec2f& a, const GW::Vec2f& b)
     {
-        for (const auto& portal : CurrentMapPortals()) {
-            const float half_width = PortalHalfWidth(portal);
-            if (!portal.has_facing) {
-                // No facing to build a doorway from, so fall back to the prop's footprint: block
-                // when the step ends up inside it.
-                const float dx = b.x - portal.pos.x;
-                const float dy = b.y - portal.pos.y;
-                if (dx * dx + dy * dy < half_width * half_width) return true;
-                continue;
-            }
-            // The doorway spans across the facing, so the gate line runs along the perpendicular.
-            const float cos_f = cosf(portal.facing_radians);
-            const float sin_f = sinf(portal.facing_radians);
-            const GW::Vec2f left{portal.pos.x - sin_f * half_width, portal.pos.y + cos_f * half_width};
-            const GW::Vec2f right{portal.pos.x + sin_f * half_width, portal.pos.y - cos_f * half_width};
-            if (SegmentsCross(a, b, left, right)) return true;
-        }
-        return false;
+        return std::ranges::any_of(CurrentMapPortals(), [&](const PortalProp& portal) {
+            return SegmentHitsPortal(a, b, portal);
+        });
     }
 
     bool CopyBlockedPlanes(std::vector<uint32_t>& out)
@@ -491,6 +493,17 @@ namespace Pathing {
             return GW::Vec2f{(t->XTL + t->XTR + t->XBL + t->XBR) * .25f, (t->YT + t->YB) * .5f};
         };
 
+        // A gate the player is standing in cannot be what separates them from anywhere, and you
+        // arrive on top of one every time you zone in through it. Testing against it would block
+        // the very first step and leave the whole map looking unreachable.
+        std::vector<const PortalProp*> gates;
+        for (const auto& portal : CurrentMapPortals()) {
+            if (!PortalContains(portal, {player->pos.x, player->pos.y})) gates.push_back(&portal);
+        }
+        const auto crosses_gate = [&](const GW::Vec2f& from, const GW::Vec2f& to) {
+            return std::ranges::any_of(gates, [&](const PortalProp* g) { return SegmentHitsPortal(from, to, *g); });
+        };
+
         for (size_t head = 0; head < queue.size(); head++) {
             const auto [trap, plane_idx] = queue[head];
             const GW::Vec2f from = centre(trap);
@@ -498,7 +511,7 @@ namespace Pathing {
                 if (!adj || reachable.contains(adj)) continue;
                 // Stepping into a travel portal changes map, so the ground past one is not
                 // somewhere walking gets you - it belongs to the map on the other side.
-                if (CrossesTravelPortal(from, centre(adj))) continue;
+                if (crosses_gate(from, centre(adj))) continue;
                 reachable.insert(adj);
                 queue.push_back({adj, plane_idx});
             }
@@ -519,7 +532,7 @@ namespace Pathing {
                     // plane boundary, so the hop across a gate is usually a plane portal rather
                     // than an adjacency step - leaving it unchecked let the walk through every
                     // travel portal in the map no matter how wide the doorway was.
-                    if (CrossesTravelPortal(from, centre(t))) continue;
+                    if (crosses_gate(from, centre(t))) continue;
                     reachable.insert(t);
                     queue.push_back({t, target_plane});
                 }
