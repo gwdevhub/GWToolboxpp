@@ -514,7 +514,14 @@ namespace Pathing {
                 if (target_plane < path->blockedPlanes.size() && path->blockedPlanes[target_plane] & 1) return;
                 for (uint32_t i = 0; i < pair->count; i++) {
                     const auto* t = pair->trapezoids[i];
-                    if (t && reachable.insert(t).second) queue.push_back({t, target_plane});
+                    if (!t || reachable.contains(t)) continue;
+                    // Same doorway test the adjacency walk uses. Map transitions tend to sit on a
+                    // plane boundary, so the hop across a gate is usually a plane portal rather
+                    // than an adjacency step - leaving it unchecked let the walk through every
+                    // travel portal in the map no matter how wide the doorway was.
+                    if (CrossesTravelPortal(from, centre(t))) continue;
+                    reachable.insert(t);
+                    queue.push_back({t, target_plane});
                 }
             };
             expand_portal(trap->portal_left);
