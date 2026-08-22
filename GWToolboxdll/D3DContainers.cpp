@@ -346,9 +346,9 @@ namespace {
 
 D3DStateGuard::D3DStateGuard(IDirect3DDevice9* dev) : device(dev)
 {
-    static_assert(std::size(GUARDED_RENDER_STATES) == std::size(render_states));
-    static_assert(std::size(GUARDED_TEXTURE_STAGE_STATES) == std::size(texture_stage_states[0]));
-    static_assert(std::size(GUARDED_SAMPLER_STATES) == std::size(sampler_states));
+    static_assert(std::size(GUARDED_RENDER_STATES) == std::extent_v<decltype(render_states)>);
+    static_assert(std::size(GUARDED_TEXTURE_STAGE_STATES) == std::extent_v<decltype(texture_stage_states), 1>);
+    static_assert(std::size(GUARDED_SAMPLER_STATES) == std::extent_v<decltype(sampler_states)>);
 
     for (size_t i = 0; i < std::size(GUARDED_RENDER_STATES); i++) {
         device->GetRenderState(GUARDED_RENDER_STATES[i], &render_states[i]);
