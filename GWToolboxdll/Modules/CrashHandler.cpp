@@ -23,6 +23,9 @@
 namespace {
     char* tb_exception_message = nullptr;
 
+    // Set once a dump has actually landed on disk, so a second entry into Crash() doesn't report a write failure.
+    wchar_t written_dump_path[MAX_PATH] = {};
+
     // If Defender quarantined/blocked the crash file in the last few seconds, surface the event text.
     std::wstring RecentDefenderBlock(const std::wstring& needle)
     {
@@ -279,6 +282,11 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const ch
     // A crash while handling a crash (e.g. resolving the blocked crash folder asserts again) must not recurse.
     static volatile LONG crashing = 0;
     if (InterlockedExchange(&crashing, 1) != 0) {
+        // The first entry may already have written a good dump; a second crash on top of it isn't a dump failure.
+        if (written_dump_path[0]) {
+            TerminateProcess(GetCurrentProcess(), 1);
+            return EXCEPTION_EXECUTE_HANDLER;
+        }
         std::wstring error =
             L"Guild Wars crashed, and GWToolbox crashed again while trying to write the crash dump.\n\n"
             L"This almost always means something is blocking your Documents\\GWToolboxpp folder - "
@@ -447,6 +455,7 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const ch
         error_info += OriginalError(extra_info);
     }
     else {
+        wcsncpy_s(written_dump_path, szFileName, _TRUNCATE);
         error_info = L"Guild Wars crashed!\n\n";
 
         if (tb_exception_message && *tb_exception_message) {
@@ -475,6 +484,8 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const ch
     if (IsDebuggerPresent()) {
         __debugbreak();
     }
+    // abort() raises SIGABRT, which our own OnAbortSignal would route straight back into Crash().
+    RemoveCrtHandlers();
     abort();
     #else
     TerminateProcess(GetCurrentProcess(), 1);
