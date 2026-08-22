@@ -1,5 +1,6 @@
 #include "stdafx.h"
 
+#include <fstream>
 #include <map>
 
 #include <GWCA/Constants/Constants.h>
@@ -26,6 +27,8 @@
 #include <Widgets/MissionMapWidget.h>
 #include <Widgets/WorldMapWidget.h>
 #include <Windows/Pathfinding/Pathing.h>
+#include <Windows/Pathfinding/PathfindingWindow.h>
+#include <Windows/Pathfinding/PathingMapDataLoader.h>
 
 #ifdef _DEBUG
 #define CARTO_LOG(...) Log::Log(__VA_ARGS__)
@@ -84,11 +87,11 @@ namespace {
     // few ulp; 1/64 is a power of two with plenty of headroom and 1/2048 of a tile.
     constexpr float kCellEps = 1.f / 64.f;
 
-    // Measured in game: the client credits from a grid whose ROWS sit one world-map unit north of
-    // the rows the fog bits are drawn in - column c spans [32c, 32c+32) but row r spans
-    // (32r-1, 32r+31]. The ceil on y is the fingerprint of the negation in GamePosToWorldMap, which
-    // is why x is unaffected. Epsilon leans toward each interval's closed end so a sample sitting
-    // exactly on a boundary stays in the cell that owns it.
+    // The tile the client credits from a standing position. Same grid as the fog bits - both axes
+    // span [32c, 32c+32) - now that GamePosToWorldMap no longer reports positions a unit north of
+    // where they are; the row skew this used to correct for was that offset, not a property of the
+    // client's grid. Epsilon leans off the closed end so a value that arrived through the two
+    // conversions and landed a few ulp short of a boundary still reads as the cell that owns it.
     int CreditCellX(const float x)
     {
         return static_cast<int>(floorf((x + kCellEps) / kWorldMapUnitsPerCell));
@@ -96,7 +99,7 @@ namespace {
 
     int CreditCellY(const float y)
     {
-        return static_cast<int>(floorf(ceilf(y - kCellEps) / kWorldMapUnitsPerCell));
+        return static_cast<int>(floorf((y + kCellEps) / kWorldMapUnitsPerCell));
     }
 
     std::pair<int, int> CreditCellAt(const GW::Vec2f& wm)
@@ -106,12 +109,11 @@ namespace {
 
     GW::Vec2f CreditCellCenterWorldMap(const int cx, const int cy)
     {
-        return {cx * kWorldMapUnitsPerCell + 16.f, cy * kWorldMapUnitsPerCell + 15.f};
+        return {cx * kWorldMapUnitsPerCell + 16.f, cy * kWorldMapUnitsPerCell + 16.f};
     }
 
-    // Which fog bit is drawn under a point. Credit indices and fog-bit indices are the same integer
-    // lattice - only the position-to-index conversion differs - so the two are directly comparable
-    // and no correction term ever belongs on a dx/dy between them.
+    // Which fog bit is drawn under a point - the same index CreditCellAt gives, without the epsilon
+    // that only round-tripped positions need, so a dx/dy between the two never carries a correction.
     std::pair<int, int> FogTileAt(const GW::Vec2f& wm)
     {
         return {
@@ -162,9 +164,8 @@ namespace {
     bool set_quest_marker = true;
 
     // Standing in a tile credits it plus the ring around it; a Bird's Eye Compass widens that to
-    // three rings. Chebyshev throughout, on the credit grid above - so where in the tile you stand
-    // makes no difference on x, but the last world-map unit of a tile's south edge already counts
-    // as the next row down.
+    // three rings. Chebyshev throughout, on the credit grid above - so where inside the tile you
+    // stand makes no difference on either axis.
     constexpr int kRevealRadius = 1;
     constexpr int kRevealRadiusBec = 3;
 
@@ -588,11 +589,9 @@ namespace {
         const GW::Vec2f centre = CreditCellCenterWorldMap(cx, cy);
         for (int sy = 0; sy < kSamples; sy++) {
             for (int sx = 0; sx < kSamples; sx++) {
-                // The credit row runs (32cy-1, 32cy+31], one unit north of the drawn tile, so the
-                // strip sampled here has to be shifted with it or the last unit is never tested.
                 const GW::Vec2f wm{
                     (cx + (sx + 0.5f) / kSamples) * kWorldMapUnitsPerCell,
-                    cy * kWorldMapUnitsPerCell - 1.f + (sy + 0.5f) / kSamples * kWorldMapUnitsPerCell,
+                    (cy + (sy + 0.5f) / kSamples) * kWorldMapUnitsPerCell,
                 };
                 GW::GamePos gp{};
                 // Reachability is the expensive half and implies walkability, so the cheap BSP
@@ -601,7 +600,7 @@ namespace {
                 out.navmesh = true;
                 if (!Pathing::IsPositionReachable(gp)) continue;
                 // Aiming central keeps our own routing error from landing the player in the
-                // neighbouring tile - which on the y axis is only a unit away at the south edge.
+                // neighbouring tile.
                 const float d2 = Dist2(wm, centre);
                 if (!out.reachable || d2 < best_d2) {
                     best_d2 = d2;
@@ -670,12 +669,10 @@ namespace {
         ImRect bounds;
         if (!(map_info && GW::Map::GetMapWorldMapBounds(map_info, &bounds))) return;
         // Only this map's squares are standable; the fog they credit may still be the next map's.
-        // These are squares to stand in, so the rows are credit rows - which sit one unit north of
-        // the drawn ones, and so reach one row further south at the bottom of the map.
         const int x0 = CreditCellX(bounds.Min.x);
         const int y0 = CreditCellY(bounds.Min.y);
         const int x1 = static_cast<int>(ceilf(bounds.Max.x / kWorldMapUnitsPerCell));
-        const int y1 = CreditCellY(bounds.Max.y) + 1;
+        const int y1 = static_cast<int>(ceilf(bounds.Max.y / kWorldMapUnitsPerCell));
         int budget = 6;
         for (int cy = y0; cy < y1 && budget > 0; cy++) {
             for (int cx = x0; cx < x1 && budget > 0; cx++) {
@@ -934,6 +931,223 @@ namespace {
                   target.stand_valid ? "" : " - no reachable spot credits it from here");
     }
 
+#ifdef _DEBUG
+    // Bakes, per continent, which 32x32 tiles have ground you can stand on. Everything it needs is
+    // reachable without visiting a map: the file id comes from GetMapFileId, AreaInfo gives the
+    // continent and world-map bounds, and the DAT gives the trapezoids. Stores standable rather
+    // than discoverable so the reveal radius stays a runtime choice.
+    struct ContinentBake {
+        std::unordered_set<uint64_t> standable; // (cy << 32) | (uint32)cx
+        int maps = 0;
+    };
+
+    struct BakeState {
+        bool running = false;
+        size_t next = 0;
+        std::vector<GW::Constants::MapID> queue;
+        std::map<int, ContinentBake> continents;
+        int on_world_map = 0;
+        int no_file_id = 0;
+        int area_fid_agrees = 0;
+        int area_fid_differs = 0;
+        int area_fid_missing = 0;
+        int load_failed = 0;
+        int no_bounds = 0;
+        clock_t started = 0;
+        std::string summary;
+    };
+    BakeState bake;
+
+    uint64_t TileKey(const int cx, const int cy)
+    {
+        return static_cast<uint64_t>(static_cast<uint32_t>(cy)) << 32 | static_cast<uint32_t>(cx);
+    }
+
+    // Trapezoids reachable from the map's largest connected component. Planes are all treated as
+    // open - which of them are blocked comes from the server at runtime - so this only drops
+    // genuinely disconnected geometry, which is what "pathable but not accessible" means offline.
+    std::unordered_set<const GW::PathingTrapezoid*> LargestComponent(const Pathing::PathingMapData& data)
+    {
+        std::unordered_map<const GW::PathingTrapezoid*, size_t> plane_of;
+        std::vector<const GW::PathingTrapezoid*> all;
+        for (size_t p = 0; p < data.planes.size(); p++) {
+            const auto& plane = data.planes[p];
+            for (uint32_t t = 0; t < plane.trapezoid_count; t++) {
+                plane_of[&plane.trapezoids[t]] = p;
+                all.push_back(&plane.trapezoids[t]);
+            }
+        }
+
+        std::unordered_set<const GW::PathingTrapezoid*> seen;
+        std::unordered_set<const GW::PathingTrapezoid*> best;
+        for (const auto* root : all) {
+            if (seen.contains(root)) continue;
+            std::unordered_set<const GW::PathingTrapezoid*> component;
+            std::vector<const GW::PathingTrapezoid*> queue{root};
+            component.insert(root);
+            seen.insert(root);
+            for (size_t head = 0; head < queue.size(); head++) {
+                const auto* trap = queue[head];
+                const auto expand = [&](const GW::PathingTrapezoid* next) {
+                    if (!next || !component.insert(next).second) return;
+                    seen.insert(next);
+                    queue.push_back(next);
+                };
+                for (const auto* adj : trap->adjacent) expand(adj);
+                const auto it = plane_of.find(trap);
+                if (it == plane_of.end() || it->second >= data.planes.size()) continue;
+                const auto& plane = data.planes[it->second];
+                const auto expand_portal = [&](const uint16_t idx) {
+                    if (idx >= plane.portal_count) return;
+                    const auto& portal = plane.portals[idx];
+                    if (portal.flags & 0x04) return;
+                    const auto* pair = portal.pair;
+                    if (!pair) return;
+                    for (uint32_t i = 0; i < pair->count; i++) expand(pair->trapezoids[i]);
+                };
+                expand_portal(trap->portal_left);
+                expand_portal(trap->portal_right);
+            }
+            if (component.size() > best.size()) best = std::move(component);
+        }
+        return best;
+    }
+
+    // Loads through GetMapFileId, which is the known-good path. AreaInfo::file_id is recorded
+    // alongside it but not trusted yet: nothing validates that it names a map file - readFromDat's
+    // second argument is a stream id, not a type - so a wrong id just yields no pathfinding chunk
+    // and looks like a load failure. The counters below are here to settle whether AreaInfo alone
+    // would do, since that is the version that survives a game update without a table in the repo.
+    void BakeMap(const GW::Constants::MapID map_id, const GW::AreaInfo* info, const int continent)
+    {
+        const uint32_t file_id = PathfindingWindow::GetMapFileId(map_id);
+        const uint32_t area_file_id = info ? info->file_id : 0;
+        if (!area_file_id) bake.area_fid_missing++;
+        else if (area_file_id == file_id) bake.area_fid_agrees++;
+        else bake.area_fid_differs++;
+        if (!file_id) {
+            bake.no_file_id++;
+            return;
+        }
+        Pathing::PathingMapData data;
+        if (!Pathing::LoadPathingMapDataFromDAT(file_id, &data)) {
+            bake.load_failed++;
+            return;
+        }
+        const auto component = LargestComponent(data);
+        auto& out = bake.continents[continent];
+        int marked = 0;
+        for (const auto& plane : data.planes) {
+            for (uint32_t t = 0; t < plane.trapezoid_count; t++) {
+                const auto& trap = plane.trapezoids[t];
+                if (!component.contains(&trap)) continue;
+                // The trapezoid's game-space box, converted through this map's own anchor. A tile
+                // is 3072 gwinches, so taking the box rather than the exact quad costs at most a
+                // sliver of over-marking on a slanted edge.
+                GW::GamePos lo{}, hi{};
+                lo.x = std::min(trap.XTL, trap.XBL);
+                lo.y = trap.YB;
+                hi.x = std::max(trap.XTR, trap.XBR);
+                hi.y = trap.YT;
+                GW::Vec2f a{}, b{};
+                if (!WorldMapWidget::GamePosToWorldMap(lo, a, map_id)) continue;
+                if (!WorldMapWidget::GamePosToWorldMap(hi, b, map_id)) continue;
+                const int x0 = static_cast<int>(floorf(std::min(a.x, b.x) / kWorldMapUnitsPerCell));
+                const int x1 = static_cast<int>(floorf(std::max(a.x, b.x) / kWorldMapUnitsPerCell));
+                const int y0 = static_cast<int>(floorf(std::min(a.y, b.y) / kWorldMapUnitsPerCell));
+                const int y1 = static_cast<int>(floorf(std::max(a.y, b.y) / kWorldMapUnitsPerCell));
+                for (int cy = y0; cy <= y1; cy++) {
+                    for (int cx = x0; cx <= x1; cx++) {
+                        if (out.standable.insert(TileKey(cx, cy)).second) marked++;
+                    }
+                }
+            }
+        }
+        out.maps++;
+        CARTO_LOG("[carto-bake] map %d (file 0x%X, continent %d): %d planes, +%d tiles",
+                  static_cast<int>(map_id), file_id, continent, static_cast<int>(data.planes.size()), marked);
+    }
+
+    void WriteBakeFiles()
+    {
+        for (const auto& [continent, data] : bake.continents) {
+            if (data.standable.empty()) continue;
+            int x0 = INT_MAX, y0 = INT_MAX, x1 = INT_MIN, y1 = INT_MIN;
+            for (const auto key : data.standable) {
+                const int cx = static_cast<int>(static_cast<uint32_t>(key & 0xffffffff));
+                const int cy = static_cast<int>(static_cast<uint32_t>(key >> 32));
+                x0 = std::min(x0, cx);
+                x1 = std::max(x1, cx);
+                y0 = std::min(y0, cy);
+                y1 = std::max(y1, cy);
+            }
+            const int w = x1 - x0 + 1;
+            const int h = y1 - y0 + 1;
+            std::vector<uint8_t> bits((static_cast<size_t>(w) * h + 7) / 8, 0);
+            for (const auto key : data.standable) {
+                const int cx = static_cast<int>(static_cast<uint32_t>(key & 0xffffffff)) - x0;
+                const int cy = static_cast<int>(static_cast<uint32_t>(key >> 32)) - y0;
+                const size_t bit = static_cast<size_t>(cy) * w + cx;
+                bits[bit >> 3] |= 1 << (bit & 7);
+            }
+            const int32_t header[5] = {continent, x0, y0, w, h};
+            const auto path = Resources::GetPath(L"cartography", std::format(L"standable_L{}.bin", continent));
+            std::ofstream file(path, std::ios::binary);
+            if (!file) {
+                CARTO_LOG("[carto-bake] could not write %ls", path.wstring().c_str());
+                continue;
+            }
+            file.write("CSM1", 4);
+            file.write(reinterpret_cast<const char*>(header), sizeof(header));
+            file.write(reinterpret_cast<const char*>(bits.data()), static_cast<std::streamsize>(bits.size()));
+            CARTO_LOG("[carto-bake] continent %d: %d maps, %u tiles, grid %dx%d at (%d,%d), %u bytes",
+                      continent, data.maps, static_cast<unsigned>(data.standable.size()), w, h, x0, y0,
+                      static_cast<unsigned>(bits.size()));
+        }
+    }
+
+    void StartBake()
+    {
+        bake = {};
+        bake.started = TIMER_INIT();
+        for (size_t i = 1; i < static_cast<size_t>(GW::Constants::MapID::Count); i++) {
+            const auto map_id = static_cast<GW::Constants::MapID>(i);
+            const auto info = GW::Map::GetMapInfo(map_id);
+            if (!(info && info->GetIsOnWorldMap())) continue;
+            bake.on_world_map++;
+            ImRect bounds;
+            if (!GW::Map::GetMapWorldMapBounds(info, &bounds)) {
+                bake.no_bounds++;
+                continue;
+            }
+            bake.queue.push_back(map_id);
+        }
+        bake.running = true;
+        bake.summary = std::format("{} maps on the world map, queued", bake.queue.size());
+    }
+
+    // One map per tick: a DAT parse is far too slow to loop over ~450 of them in a frame.
+    void StepBake()
+    {
+        if (!bake.running) return;
+        if (bake.next >= bake.queue.size()) {
+            WriteBakeFiles();
+            bake.running = false;
+            unsigned tiles = 0;
+            for (const auto& [continent, data] : bake.continents) tiles += static_cast<unsigned>(data.standable.size());
+            bake.summary = std::format("done in {:.1f}s: {} continents, {} tiles, {} maps with no file id, {} failed to load, {} without bounds",
+                                       TIMER_DIFF(bake.started) / 1000.f, bake.continents.size(), tiles,
+                                       bake.no_file_id, bake.load_failed, bake.no_bounds);
+            CARTO_LOG("[carto-bake] %s", bake.summary.c_str());
+            return;
+        }
+        const auto map_id = bake.queue[bake.next++];
+        const auto* info = GW::Map::GetMapInfo(map_id);
+        if (info) BakeMap(map_id, info, static_cast<int>(info->continent));
+        bake.summary = std::format("{}/{} maps...", bake.next, bake.queue.size());
+    }
+#endif
+
 
     void OnCartographyUpdated(GW::HookStatus*, GW::UI::UIMessage, void*, void*)
     {
@@ -1063,9 +1277,8 @@ namespace {
                         Log::Log("[cartographer] probe: no cartography data");
                         return;
                     }
-                    // Which fog bit is drawn here, and which square the game would credit from
-                    // here, are two different indices whenever the click lands in the last unit of
-                    // a row - so print both rather than quietly picking one.
+                    // Both indices, because they agreeing is the invariant this widget rests on:
+                    // one being off from the other means the position conversion has drifted again.
                     const auto [cx, cy] = FogTileAt(at);
                     const auto [ccx, ccy] = CreditCellAt(at);
                     GW::GamePos gp{};
@@ -1079,6 +1292,11 @@ namespace {
                              stand != probe->cells.end() ? static_cast<int>(stand->second.reachable) : 0,
                              stand != probe->cells.end() ? stand->second.reveals : 0,
                              static_cast<int>(FogCellCoverable(cx, cy)), RevealRadius());
+                    // Which half of FogCellCoverable answered: the bake short-circuits before any
+                    // live test, so a wrong verdict there is a wrong bake, not a wrong probe.
+                    Log::Log("[cartographer] probe (%d,%d): baked_mask=%d in_world=%d probe_complete=%d",
+                             cx, cy, static_cast<int>(continent_mask.Get(cx, cy)), static_cast<int>(InWorld(cx, cy)),
+                             static_cast<int>(probe->complete));
                     Log::FlushFile();
                 });
                 keep_open = false;
@@ -1363,6 +1581,9 @@ void CartographerWidget::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 
 void CartographerWidget::Update(float)
 {
+#ifdef _DEBUG
+    StepBake();
+#endif
     if (!GetEnabled()) {
         if (target.valid) ResetState();
         return;
@@ -1642,7 +1863,7 @@ void CartographerWidget::DrawWorldMapOptions()
             coverage_stale = true;
         });
     }
-    ImGui::ShowHelp("Standing in a tile credits it and the 8 tiles around it (Chebyshev distance, so a square block - not a circle, which is why the nearest-looking spot often is not the right one). A Bird's Eye Compass widens that to 3 tiles in each direction. Where in the tile you stand makes no difference from side to side, but the last stride at a tile's southern edge already counts as the tile below. Rescans the map.");
+    ImGui::ShowHelp("Standing in a tile credits it and the 8 tiles around it (Chebyshev distance, so a square block - not a circle, which is why the nearest-looking spot often is not the right one). A Bird's Eye Compass widens that to 3 tiles in each direction. Where inside the tile you stand makes no difference. Rescans the map.");
     if (ImGui::Checkbox("Set a quest marker to fog points", &set_quest_marker)) {
         GW::GameThread::Enqueue([] { SyncQuestMarker(); });
     }
@@ -1698,6 +1919,12 @@ void CartographerWidget::DrawSettingsInternal()
     ImGui::SameLine();
     if (ImGui::SmallButton("Clear##points")) ClearCustomPoints();
 
+#ifdef _DEBUG
+    // Before the early-out below: re-baking is a maintenance job, not something you should have to
+    // turn the widget on to reach.
+    DrawBakeSettings();
+#endif
+
     if (!GetEnabled()) return;
     unsigned standable = 0;
     unsigned useful = 0;
@@ -1717,6 +1944,41 @@ void CartographerWidget::DrawSettingsInternal()
                             continent_mask.w, continent_mask.h, continent_mask.x0, continent_mask.y0, kMaskRadius);
     }
 }
+
+
+#ifdef _DEBUG
+void CartographerWidget::DrawBakeSettings()
+{
+    ImGui::Separator();
+    ImGui::Text("Continent bake (debug)");
+    ImGui::TextDisabled("Reads every world-map map's pathing data out of the DAT and records which\n32x32 squares have standable ground, per continent. One map per frame, so it\nruns for a while; results go to Settings/cartography/standable_L<n>.bin.");
+    ImGui::BeginDisabled(bake.running);
+    if (ImGui::Button("Bake standable squares for all continents")) {
+        GW::GameThread::Enqueue([] { StartBake(); });
+    }
+    ImGui::EndDisabled();
+    if (bake.running) {
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel")) {
+            GW::GameThread::Enqueue([] {
+                bake.running = false;
+                bake.summary = "cancelled";
+            });
+        }
+        ImGui::ProgressBar(bake.queue.empty() ? 0.f : static_cast<float>(bake.next) / bake.queue.size());
+    }
+    if (!bake.summary.empty()) ImGui::TextWrapped("%s", bake.summary.c_str());
+    if (bake.on_world_map) {
+        ImGui::TextDisabled("%d maps on the world map; %d with no file id, %d failed to load, %d had no bounds",
+                            bake.on_world_map, bake.no_file_id, bake.load_failed, bake.no_bounds);
+        ImGui::TextDisabled("AreaInfo::file_id vs GetMapFileId: %d agree, %d differ, %d absent",
+                            bake.area_fid_agrees, bake.area_fid_differs, bake.area_fid_missing);
+    }
+    for (const auto& [continent, data] : bake.continents) {
+        ImGui::TextDisabled("  continent %d: %d maps, %u standable squares", continent, data.maps, static_cast<unsigned>(data.standable.size()));
+    }
+}
+#endif
 
 
 void CartographerWidget::SetEnabled(const bool on)

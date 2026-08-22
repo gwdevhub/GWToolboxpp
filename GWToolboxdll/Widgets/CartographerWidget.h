@@ -64,4 +64,10 @@ public:
     static void ClearCustomPoints();
     static void ClearDeclined();
     static void GetStatus(char* buf, size_t len);
+#ifdef _DEBUG
+    // Debug-only: bake the per-continent standable-square matrix out of the DAT. Lives here rather
+    // than in tools/ so it shares GamePosToWorldMap's anchor - the offline copy of that formula is
+    // what let the shipped table drift a row north of the game.
+    static void DrawBakeSettings();
+#endif
 };

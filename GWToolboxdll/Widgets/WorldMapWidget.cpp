@@ -1004,9 +1004,14 @@ namespace {
 
         // Signed, not abs: the conversions below need Min.x - game_min.x/96 and Min.y + game_max.y/96,
         // which abs() only happens to give for a map whose bounds straddle the origin the usual way.
+        //
+        // Measured in game: the north edge of the geometry sits one world-map unit inside the
+        // rectangle, not on it, so anchoring game_max.y straight onto Min.y reports every position
+        // 96 gwinches too far north. x has no such offset - it anchors on the min edge, which the
+        // axis flip leaves alone.
         mid_out = {
             map_bounds.Min.x - (game_min.x / gwinches_per_unit),
-            map_bounds.Min.y + (game_max.y / gwinches_per_unit),
+            map_bounds.Min.y + (game_max.y / gwinches_per_unit) + 1.f,
         };
         return true;
     }

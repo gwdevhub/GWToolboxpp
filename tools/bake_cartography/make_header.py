@@ -1,4 +1,7 @@
-"""Turn out/standable_L<n>.bin into GWToolboxdll/Widgets/CartographyData.h.
+"""Turn standable_L<n>.bin into GWToolboxdll/Widgets/CartographyData.h.
+
+Reads ./out by default, or a directory given as argv[1] - which is how you point it at the
+in-game bake's output (Settings/cartography), the route that does not need the CDN reader.
 
 Emits a fixed number of values per line. Do not wrap the joined text: a comma-separated
 list has no spaces in it, so a text wrapper splits numbers down the middle (192 -> 19, 2),
@@ -37,10 +40,10 @@ namespace CartographyData {
 '''
 
 def main():
-    src = os.path.join(HERE, 'out')
+    src = sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, 'out')
     files = sorted(f for f in os.listdir(src) if f.endswith('.bin'))
     if not files:
-        sys.exit(f"no .bin files in {src} - run bake.py first")
+        sys.exit(f"no .bin files in {src} - run bake.py, or the in-game bake, first")
     parts = [HEADER]
     entries = []
     for f in files:

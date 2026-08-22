@@ -41,8 +41,13 @@ for n, (mid, (cont, sx, sy, ex, ey), f) in enumerate(todo, 1):
         gmnx, gmny, gmxx, gmxy = game_bounds(d, ch)
         planes = parse_planes(d, ch)
         comp = largest_component(planes)
-        midx = sx + abs(gmnx)/96.0
-        midy = sy + abs(gmxy)/96.0
+        # Same anchor GetMapWorldAnchor uses in WorldMapWidget.cpp, and it has to stay the same one:
+        # signed rather than abs (abs only happens to be right for a map whose game bounds straddle
+        # the origin the usual way), and +1 unit on y because the north edge of the geometry sits one
+        # world-map unit inside the rectangle. Baking with the old form filed tiles a row too far
+        # north, which the widget then dilated into fog it claimed you could reach at normal range.
+        midx = sx - gmnx/96.0
+        midy = sy + gmxy/96.0 + 1.0
         tiles = cont_tiles.setdefault(cont, set())
         for (pi, ti) in comp:
             t = planes[pi]['traps'][ti]

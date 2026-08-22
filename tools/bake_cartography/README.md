@@ -30,11 +30,30 @@ server at `file<N>.arenanetworks.com` only serves stream 0, so the geometry has 
 `snapdat.py` fetches only the MFT plus the ranges each map occupies, a few hundred MB rather
 than 4.2GB.
 
+## The anchor
+
+`bake.py` converts game coordinates to world-map units with the same formula as
+`GetMapWorldAnchor` in `WorldMapWidget.cpp`, and the two have to stay identical. They did not:
+the runtime fixed `abs()` to signed and picked up a measured +1 unit on y, the copy here did
+not, and the shipped table ended up filing tiles a row north of where the game credits them -
+which the widget dilated into fog it claimed you could reach without a Bird's Eye Compass.
+If you touch either formula, touch both, and re-bake.
+
+The in-game bake avoids that trap entirely: it is a debug button in the Cartographer's settings
+that calls `GamePosToWorldMap` itself, so it cannot drift. It reads the local `Gw.dat` through
+the same loader the pathfinding window uses, one map per frame, and writes the same `.bin`
+format to `Settings/cartography/`. Prefer it - this directory is for a machine with no client.
+
 ## Running it
 
     pip install requests
     python3 bake.py          # regenerates fileids.txt, writes out/standable_L<n>.bin
     python3 make_header.py   # out/ -> GWToolboxdll/Widgets/CartographyData.h
+
+`bake.py` needs `gwpatch` and `inflate` (the CDN manifest reader and the DAT decompressor) on
+`sys.path`; without them, bake in game and point the second step at its output:
+
+    python3 make_header.py ~/Documents/GWToolboxpp/<COMPUTERNAME>/cartography
 
 `bake.py` takes about 20 minutes; the chunk cache in `/tmp` makes re-runs much faster.
 
