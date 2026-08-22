@@ -80,9 +80,44 @@ namespace {
         return out.width && out.height;
     }
 
-    GW::Vec2f CellCenterWorldMap(const int cx, const int cy)
+    // wm.y is a divide plus an add on top of mid.y, itself a divide plus an add, so it carries a
+    // few ulp; 1/64 is a power of two with plenty of headroom and 1/2048 of a tile.
+    constexpr float kCellEps = 1.f / 64.f;
+
+    // Measured in game: the client credits from a grid whose ROWS sit one world-map unit north of
+    // the rows the fog bits are drawn in - column c spans [32c, 32c+32) but row r spans
+    // (32r-1, 32r+31]. The ceil on y is the fingerprint of the negation in GamePosToWorldMap, which
+    // is why x is unaffected. Epsilon leans toward each interval's closed end so a sample sitting
+    // exactly on a boundary stays in the cell that owns it.
+    int CreditCellX(const float x)
     {
-        return {(cx + .5f) * kWorldMapUnitsPerCell, (cy + .5f) * kWorldMapUnitsPerCell};
+        return static_cast<int>(floorf((x + kCellEps) / kWorldMapUnitsPerCell));
+    }
+
+    int CreditCellY(const float y)
+    {
+        return static_cast<int>(floorf(ceilf(y - kCellEps) / kWorldMapUnitsPerCell));
+    }
+
+    std::pair<int, int> CreditCellAt(const GW::Vec2f& wm)
+    {
+        return {CreditCellX(wm.x), CreditCellY(wm.y)};
+    }
+
+    GW::Vec2f CreditCellCenterWorldMap(const int cx, const int cy)
+    {
+        return {cx * kWorldMapUnitsPerCell + 16.f, cy * kWorldMapUnitsPerCell + 15.f};
+    }
+
+    // Which fog bit is drawn under a point. Credit indices and fog-bit indices are the same integer
+    // lattice - only the position-to-index conversion differs - so the two are directly comparable
+    // and no correction term ever belongs on a dx/dy between them.
+    std::pair<int, int> FogTileAt(const GW::Vec2f& wm)
+    {
+        return {
+            static_cast<int>(floorf(wm.x / kWorldMapUnitsPerCell)),
+            static_cast<int>(floorf(wm.y / kWorldMapUnitsPerCell)),
+        };
     }
 
     float Dist2(const GW::Vec2f& a, const GW::Vec2f& b)
@@ -127,7 +162,9 @@ namespace {
     bool set_quest_marker = true;
 
     // Standing in a tile credits it plus the ring around it; a Bird's Eye Compass widens that to
-    // three rings. Chebyshev throughout, and where in the tile you stand makes no difference.
+    // three rings. Chebyshev throughout, on the credit grid above - so where in the tile you stand
+    // makes no difference on x, but the last world-map unit of a tile's south edge already counts
+    // as the next row down.
     constexpr int kRevealRadius = 1;
     constexpr int kRevealRadiusBec = 3;
 
@@ -137,7 +174,11 @@ namespace {
     }
 
     struct StandCell {
-        bool walkable = false;
+        // Reachable from where the player is: where we may send them. Gate-dependent.
+        bool reachable = false;
+        // Walkable ground exists in this tile at all. A property of the terrain, so it survives a
+        // gate change - and it is read over a fog tile's 3x3 block, never at the tile itself.
+        bool navmesh = false;
         GW::GamePos pos{}; // somewhere inside the cell you can actually stand
         int reveals = 0;   // still-foggy cells this spot would credit
     };
@@ -217,22 +258,73 @@ namespace {
         if (!Pathing::CopyBlockedPlanes(blocked) || blocked == probe->blocked_planes) return;
         probe->cells.clear();
         probe->strict.clear();
+        // A closed gate is one reason standing somewhere credited nothing, so that verdict expires
+        // with the gate too. Manual declines live in `declined_cells` and are untouched.
+        probe->skipped.clear();
         probe->blocked_planes = std::move(blocked);
         probe->complete = false;
         coverage_stale = true;
         CARTO_LOG("[cartographer] blocked planes changed; re-probing this map");
     }
 
-    // Gw.exe writes a tile when its own pathability byte is set OR it is within Chebyshev 1 of
-    // you, so the innermost ring is unconditional and the wide rings need pathable terrain in the
-    // tile itself - which is why BEC range misses slivers that normal range still uncovers.
-    bool CellCreditableFrom(const int dx, const int dy, const int fx, const int fy)
+    // The map we are standing in, as a tile rectangle. Kept off RebuildFog's cached pair because
+    // that one is filled after scoring has already run and reads as the whole world on a revisit.
+    GW::Constants::MapID map_rect_id = static_cast<GW::Constants::MapID>(0);
+    std::pair<int, int> map_rect_min{}, map_rect_max{};
+    bool map_rect_valid = false;
+
+    bool EnsureMapRect()
     {
-        if (abs(dx) <= kRevealRadius && abs(dy) <= kRevealRadius) return true;
+        const auto map_id = GW::Map::GetMapID();
+        if (map_id == map_rect_id) return map_rect_valid;
+        map_rect_id = map_id;
+        map_rect_valid = false;
+        ImRect bounds;
+        const auto info = GW::Map::GetMapInfo(map_id);
+        if (!(info && GW::Map::GetMapWorldMapBounds(info, &bounds) && bounds.GetWidth() >= 1.f && bounds.GetHeight() >= 1.f)) return false;
+        map_rect_min = {
+            static_cast<int>(floorf(bounds.Min.x / kWorldMapUnitsPerCell)),
+            static_cast<int>(floorf(bounds.Min.y / kWorldMapUnitsPerCell)),
+        };
+        map_rect_max = {
+            static_cast<int>(ceilf(bounds.Max.x / kWorldMapUnitsPerCell)),
+            static_cast<int>(ceilf(bounds.Max.y / kWorldMapUnitsPerCell)),
+        };
+        map_rect_valid = true;
+        return true;
+    }
+
+    // Two different boundary rules, both measured: the near ring credits a tile up to one tile past
+    // the map's edge, while a tile only reachable at Bird's Eye Compass range has to be inside it.
+    bool InMapBounds(const int cx, const int cy, const int dilate)
+    {
+        if (!EnsureMapRect()) return true; // no rectangle to clamp against - do not hide everything
+        return cx >= map_rect_min.first - dilate && cx < map_rect_max.first + dilate
+            && cy >= map_rect_min.second - dilate && cy < map_rect_max.second + dilate;
+    }
+
+    // Measured in game: a tile is reachable beyond the near ring only if walkable ground comes
+    // within about one world-map tile of it - the 3x3 block around it, NOT the tile itself, which
+    // is what the old reading of Gw.exe's per-tile byte got wrong and why we under-claimed at BEC
+    // range. `strict` stays as a runtime backstop while the navmesh test is still the loose one.
+    bool CellQualifies(const int fx, const int fy)
+    {
+        if (!InMapBounds(fx, fy, 0)) return false;
         if (probe->strict.contains({fx, fy})) return false;
         if (!probe->complete) return true;
-        const auto it = probe->cells.find({fx, fy});
-        return it != probe->cells.end() && it->second.walkable;
+        for (int ny = -1; ny <= 1; ny++) {
+            for (int nx = -1; nx <= 1; nx++) {
+                const auto it = probe->cells.find({fx + nx, fy + ny});
+                if (it != probe->cells.end() && it->second.navmesh) return true;
+            }
+        }
+        return false;
+    }
+
+    bool CellCreditableFrom(const int dx, const int dy, const int fx, const int fy)
+    {
+        if (abs(dx) <= kRevealRadius && abs(dy) <= kRevealRadius) return InMapBounds(fx, fy, 1);
+        return CellQualifies(fx, fy);
     }
 
     std::set<std::pair<int, int>> declined_cells;
@@ -307,13 +399,16 @@ namespace {
 
     bool show_whole_continent = true;
 
-    // The baked standable tiles for the continent we are on, dilated by the reveal radius so a
-    // lookup answers "could standing somewhere credit this tile" in one test. Built once per
-    // continent and radius; the live probe still covers the map we are actually in, which the
+    // The baked standable tiles for the continent we are on, dilated by ONE tile so a lookup answers
+    // "could standing somewhere credit this tile" in one test. One tile regardless of the Bird's Eye
+    // Compass: the bake's standable set is also its navmesh model, so a tile the wide rings could
+    // reach is already a tile something stands next to. Dilating by 3 claimed fog nothing can credit.
+    // Built once per continent; the live probe still covers the map we are actually in, which the
     // bake does not have for the handful of maps with no file id.
+    constexpr int kMaskRadius = 1;
+
     struct ContinentMask {
         int continent = -1;
-        int radius = 0;
         int x0 = 0, y0 = 0, w = 0, h = 0;
         std::vector<uint8_t> coverable;
 
@@ -327,12 +422,12 @@ namespace {
     };
     ContinentMask continent_mask;
 
-    void BuildContinentMask(const int continent, const int radius)
+    void BuildContinentMask(const int continent)
     {
-        if (continent_mask.continent == continent && continent_mask.radius == radius) return;
+        if (continent_mask.continent == continent) return;
         continent_mask = {};
         continent_mask.continent = continent;
-        continent_mask.radius = radius;
+        constexpr int radius = kMaskRadius;
         const CartographyData::Continent* src = nullptr;
         for (const auto& c : CartographyData::kContinents) {
             if (c.id == continent) { src = &c; break; }
@@ -361,20 +456,92 @@ namespace {
         }
     }
 
+    // Credit stops one tile past the end of the world: fog that no placed map's world-map rectangle
+    // comes within a tile of never uncovers, however close you stand to it. Taken from AreaInfo
+    // rather than from the bake so it covers all 350 placed maps, including the 19 the bake has no
+    // map file id for.
+    struct ContinentWorld {
+        int continent = -1;
+        int x0 = 0, y0 = 0, w = 0, h = 0;
+        std::vector<uint8_t> inside;
+
+        // An empty plane means we found no rectangles for this continent, so clamping would hide
+        // everything; answer "in the world" and leave the other tests to decide.
+        bool Get(const int cx, const int cy) const
+        {
+            if (inside.empty()) return true;
+            const int lx = cx - x0, ly = cy - y0;
+            if (lx < 0 || ly < 0 || lx >= w || ly >= h) return false;
+            const size_t bit = static_cast<size_t>(ly) * w + lx;
+            return inside[bit >> 3] >> (bit & 7) & 1;
+        }
+    };
+    ContinentWorld continent_world;
+
+    bool InWorld(const int cx, const int cy)
+    {
+        return continent_world.Get(cx, cy);
+    }
+
+    void BuildContinentWorld(const int continent)
+    {
+        if (continent_world.continent == continent) return;
+        continent_world = {};
+        continent_world.continent = continent;
+
+        // Already dilated by the one tile the client credits beyond a map's edge.
+        std::vector<std::array<int, 4>> rects;
+        int x0 = INT_MAX, y0 = INT_MAX, x1 = INT_MIN, y1 = INT_MIN;
+        for (size_t i = 1; i < static_cast<size_t>(GW::Constants::MapID::Count); i++) {
+            const auto info = GW::Map::GetMapInfo(static_cast<GW::Constants::MapID>(i));
+            if (!(info && info->GetIsOnWorldMap() && static_cast<int>(info->continent) == continent)) continue;
+            ImRect bounds;
+            if (!(GW::Map::GetMapWorldMapBounds(info, &bounds) && bounds.GetWidth() >= 1.f && bounds.GetHeight() >= 1.f)) continue;
+            const std::array r{
+                static_cast<int>(floorf(bounds.Min.x / kWorldMapUnitsPerCell)) - 1,
+                static_cast<int>(floorf(bounds.Min.y / kWorldMapUnitsPerCell)) - 1,
+                static_cast<int>(ceilf(bounds.Max.x / kWorldMapUnitsPerCell)),
+                static_cast<int>(ceilf(bounds.Max.y / kWorldMapUnitsPerCell)),
+            };
+            rects.push_back(r);
+            x0 = std::min(x0, r[0]);
+            y0 = std::min(y0, r[1]);
+            x1 = std::max(x1, r[2]);
+            y1 = std::max(y1, r[3]);
+        }
+        if (rects.empty()) return;
+
+        continent_world.x0 = x0;
+        continent_world.y0 = y0;
+        continent_world.w = x1 - x0 + 1;
+        continent_world.h = y1 - y0 + 1;
+        continent_world.inside.assign((static_cast<size_t>(continent_world.w) * continent_world.h + 7) / 8, 0);
+        for (const auto& r : rects) {
+            for (int cy = r[1]; cy <= r[3]; cy++) {
+                for (int cx = r[0]; cx <= r[2]; cx++) {
+                    const size_t bit = static_cast<size_t>(cy - y0) * continent_world.w + (cx - x0);
+                    continent_world.inside[bit >> 3] |= 1 << (bit & 7);
+                }
+            }
+        }
+    }
+
     // Everything counts as coverable until the sweep finishes, so the overlay does not blink
     // cells out and back in as probing progresses.
     bool FogCellCoverable(const int cx, const int cy)
     {
         // The bake knows the whole continent; the live probe knows the map we are standing in,
-        // including the few the bake has no file id for. Either is enough.
-        if (continent_mask.Get(cx, cy)) return true;
+        // including the few the bake has no file id for. Either is enough. The mask is dilated by
+        // one tile, so anything it claims is credited from some map's near ring - which is the ring
+        // the one-tile-past-the-edge rule applies to, hence the dilated union here.
+        if (continent_mask.Get(cx, cy)) return InWorld(cx, cy);
         if (!probe->complete) return true;
         const int r = RevealRadius();
         for (int dy = -r; dy <= r; dy++) {
             for (int dx = -r; dx <= r; dx++) {
                 if (!CellCreditableFrom(dx, dy, cx, cy)) continue;
                 const auto it = probe->cells.find({cx + dx, cy + dy});
-                if (it != probe->cells.end() && it->second.walkable) return true;
+                if (it != probe->cells.end() && it->second.reachable) return true;
             }
         }
         return false;
@@ -410,45 +577,50 @@ namespace {
 
 
     // Coastlines ignore the cell grid, so sample the whole cell: one that is mostly cliff but
-    // clips a walkable ledge is still somewhere you can go. Reachability rather than mere
-    // walkability: ground behind a closed gate paths fine but cannot be stood on, and suggesting
-    // it would send the player somewhere they cannot get to.
-    bool ProbeStandCell(const int cx, const int cy, GW::GamePos& out)
+    // clips a walkable ledge is still somewhere you can go. Answers both halves of the question:
+    // where we can send the player (reachable - ground behind a closed gate paths fine but cannot be
+    // walked to) and whether the tile carries walkable ground at all, which is what credit turns on.
+    void ProbeStandCell(const int cx, const int cy, StandCell& out)
     {
         // Fine enough to catch the shoreline slivers that are often the only footing near fog.
         constexpr int kSamples = 6;
-        bool found = false;
         float best_d2 = FLT_MAX;
-        const GW::Vec2f centre = CellCenterWorldMap(cx, cy);
+        const GW::Vec2f centre = CreditCellCenterWorldMap(cx, cy);
         for (int sy = 0; sy < kSamples; sy++) {
             for (int sx = 0; sx < kSamples; sx++) {
+                // The credit row runs (32cy-1, 32cy+31], one unit north of the drawn tile, so the
+                // strip sampled here has to be shifted with it or the last unit is never tested.
                 const GW::Vec2f wm{
                     (cx + (sx + 0.5f) / kSamples) * kWorldMapUnitsPerCell,
-                    (cy + (sy + 0.5f) / kSamples) * kWorldMapUnitsPerCell,
+                    cy * kWorldMapUnitsPerCell - 1.f + (sy + 0.5f) / kSamples * kWorldMapUnitsPerCell,
                 };
                 GW::GamePos gp{};
-                if (!WorldMapWidget::WorldMapToGamePos(wm, gp) || !Pathing::IsPositionReachable(gp)) continue;
-                // Where in the tile you stand makes no difference to credit, but aiming central
-                // keeps our own routing error from landing you in the neighbouring tile.
+                // Reachability is the expensive half and implies walkability, so the cheap BSP
+                // descent goes first and answers `navmesh` on its own.
+                if (!WorldMapWidget::WorldMapToGamePos(wm, gp) || !Pathing::IsPositionWalkable(gp)) continue;
+                out.navmesh = true;
+                if (!Pathing::IsPositionReachable(gp)) continue;
+                // Aiming central keeps our own routing error from landing the player in the
+                // neighbouring tile - which on the y axis is only a unit away at the south edge.
                 const float d2 = Dist2(wm, centre);
-                if (!found || d2 < best_d2) {
+                if (!out.reachable || d2 < best_d2) {
                     best_d2 = d2;
-                    out = gp;
-                    found = true;
+                    out.pos = gp;
+                    out.reachable = true;
                 }
             }
         }
-        return found;
     }
 
     // A fog point marks fog, and fog is rarely somewhere you can stand. Answers with the closest
     // spot to `from` that is reachable AND sits in a tile the game would credit `fog_wm`'s tile
     // from. False when nothing here can credit it: another map, or a point dropped on ground that
     // is already explored.
-    bool ResolveStandWorldPos(const GW::Vec2f& fog_wm, const GW::Vec2f& from, GW::Vec2f& out)
+    bool ResolveStandWorldPos(const GW::Vec2f& fog_wm, const GW::Vec2f& from, GW::Vec2f& out, std::pair<int, int>& out_cell)
     {
-        const int fx = static_cast<int>(floorf(fog_wm.x / kWorldMapUnitsPerCell));
-        const int fy = static_cast<int>(floorf(fog_wm.y / kWorldMapUnitsPerCell));
+        const auto [fx, fy] = FogTileAt(fog_wm);
+        // Nothing on this map reaches past its own edge by more than the near ring.
+        if (!InMapBounds(fx, fy, 1)) return false;
         const int r = RevealRadius();
         std::vector<std::pair<int, int>> candidates;
         for (int dy = -r; dy <= r; dy++) {
@@ -459,17 +631,20 @@ namespace {
         }
         // Nearest first, so the usual case answers after probing one tile rather than all of them.
         std::ranges::sort(candidates, [&from](const auto& a, const auto& b) {
-            return Dist2(CellCenterWorldMap(a.first, a.second), from) < Dist2(CellCenterWorldMap(b.first, b.second), from);
+            return Dist2(CreditCellCenterWorldMap(a.first, a.second), from) < Dist2(CreditCellCenterWorldMap(b.first, b.second), from);
         });
         for (const auto& cell : candidates) {
             auto it = probe->cells.find(cell);
             if (it == probe->cells.end()) {
                 StandCell sc;
-                sc.walkable = ProbeStandCell(cell.first, cell.second, sc.pos);
+                ProbeStandCell(cell.first, cell.second, sc);
                 it = probe->cells.emplace(cell, sc).first;
                 coverage_stale = true; // scored by the next recompute, not by us - we have no grid here
             }
-            if (it->second.walkable && WorldMapWidget::GamePosToWorldMap(it->second.pos, out)) return true;
+            if (it->second.reachable && WorldMapWidget::GamePosToWorldMap(it->second.pos, out)) {
+                out_cell = cell;
+                return true;
+            }
         }
         return false;
     }
@@ -495,17 +670,19 @@ namespace {
         ImRect bounds;
         if (!(map_info && GW::Map::GetMapWorldMapBounds(map_info, &bounds))) return;
         // Only this map's squares are standable; the fog they credit may still be the next map's.
-        const int x0 = static_cast<int>(floorf(bounds.Min.x / kWorldMapUnitsPerCell));
-        const int y0 = static_cast<int>(floorf(bounds.Min.y / kWorldMapUnitsPerCell));
+        // These are squares to stand in, so the rows are credit rows - which sit one unit north of
+        // the drawn ones, and so reach one row further south at the bottom of the map.
+        const int x0 = CreditCellX(bounds.Min.x);
+        const int y0 = CreditCellY(bounds.Min.y);
         const int x1 = static_cast<int>(ceilf(bounds.Max.x / kWorldMapUnitsPerCell));
-        const int y1 = static_cast<int>(ceilf(bounds.Max.y / kWorldMapUnitsPerCell));
+        const int y1 = CreditCellY(bounds.Max.y) + 1;
         int budget = 6;
         for (int cy = y0; cy < y1 && budget > 0; cy++) {
             for (int cx = x0; cx < x1 && budget > 0; cx++) {
                 if (probe->cells.contains({cx, cy})) continue;
                 if (!CellWorthProbing(grid, cx, cy)) continue;
                 StandCell sc;
-                sc.walkable = ProbeStandCell(cx, cy, sc.pos);
+                ProbeStandCell(cx, cy, sc);
                 probe->cells[{cx, cy}] = sc;
                 budget--;
             }
@@ -516,7 +693,7 @@ namespace {
     void ScoreStandCell(const CartoGrid& grid, const std::pair<int, int>& cell, StandCell& sc)
     {
         sc.reveals = 0;
-        if (!sc.walkable) return;
+        if (!sc.reachable) return;
         const int r = RevealRadius();
         for (int dy = -r; dy <= r; dy++) {
             for (int dx = -r; dx <= r; dx++) {
@@ -600,8 +777,12 @@ namespace {
         GW::Vec2f wm{};
         bool on_map = true;
         // Where a fog point actually sends you: the spot in the tile that credits it. Unset for
-        // fog targets, whose `wm` is already the tile to stand in.
+        // fog targets, whose `wm` is already the tile to stand in. The cell is carried rather than
+        // re-derived, because `stand_wm` is a round trip through two conversions and a value that
+        // lands on a row boundary parses back into the neighbouring row.
         GW::Vec2f stand_wm{};
+        int stand_cx = 0;
+        int stand_cy = 0;
         bool stand_valid = false;
     };
 
@@ -680,9 +861,12 @@ namespace {
     {
         if (!target.valid || !target.custom) return;
         CartoGrid grid;
-        const bool foggy = GetCartoGrid(grid) && !grid.IsExplored(static_cast<int>(floorf(target.wm.x / kWorldMapUnitsPerCell)),
-                                                                  static_cast<int>(floorf(target.wm.y / kWorldMapUnitsPerCell)));
-        target.stand_valid = target.on_map && foggy && ResolveStandWorldPos(target.wm, from, target.stand_wm);
+        const auto [fx, fy] = FogTileAt(target.wm);
+        const bool foggy = GetCartoGrid(grid) && !grid.IsExplored(fx, fy);
+        std::pair cell{0, 0};
+        target.stand_valid = target.on_map && foggy && ResolveStandWorldPos(target.wm, from, target.stand_wm, cell);
+        target.stand_cx = cell.first;
+        target.stand_cy = cell.second;
         SyncQuestMarker();
     }
 
@@ -731,8 +915,8 @@ namespace {
     void AddCustomPointImpl(const GW::Vec2f& wm)
     {
         CartoGrid grid;
-        const bool foggy = GetCartoGrid(grid) && !grid.IsExplored(static_cast<int>(floorf(wm.x / kWorldMapUnitsPerCell)),
-                                                                  static_cast<int>(floorf(wm.y / kWorldMapUnitsPerCell)));
+        const auto [fx, fy] = FogTileAt(wm);
+        const bool foggy = GetCartoGrid(grid) && !grid.IsExplored(fx, fy);
         custom_points.push_back({wm, foggy});
         SerializePoints();
         // Taking the target over straight away is what makes the marker point at the fog you just
@@ -809,8 +993,8 @@ namespace {
     {
         const size_t before = custom_points.size();
         std::erase_if(custom_points, [&grid](const CustomPoint& p) {
-            return p.was_fog && grid.IsExplored(static_cast<int>(floorf(p.wm.x / kWorldMapUnitsPerCell)),
-                                                static_cast<int>(floorf(p.wm.y / kWorldMapUnitsPerCell)));
+            const auto [fx, fy] = FogTileAt(p.wm);
+            return p.was_fog && grid.IsExplored(fx, fy);
         });
         if (custom_points.size() == before) return;
         SerializePoints();
@@ -839,8 +1023,7 @@ namespace {
             // Clicking the suggestion itself means acting on it — offering to drop a fog point
             // on the very spot already being suggested is nonsense.
             const bool on_suggestion = target.valid && !target.custom
-                && static_cast<int>(floorf(click_wm.x / kWorldMapUnitsPerCell)) == target.cx
-                && static_cast<int>(floorf(click_wm.y / kWorldMapUnitsPerCell)) == target.cy;
+                && CreditCellAt(click_wm) == std::pair{target.cx, target.cy};
             if (target.valid && (on_suggestion || (target.custom && point_here >= 0))) {
                 if (ImGui::Button(target.custom ? "Remove this fog point" : "Skip this suggestion", item_size)) {
                     CartographerWidget::SkipCurrentTarget(false);
@@ -880,17 +1063,20 @@ namespace {
                         Log::Log("[cartographer] probe: no cartography data");
                         return;
                     }
-                    const int cx = static_cast<int>(floorf(at.x / kWorldMapUnitsPerCell));
-                    const int cy = static_cast<int>(floorf(at.y / kWorldMapUnitsPerCell));
+                    // Which fog bit is drawn here, and which square the game would credit from
+                    // here, are two different indices whenever the click lands in the last unit of
+                    // a row - so print both rather than quietly picking one.
+                    const auto [cx, cy] = FogTileAt(at);
+                    const auto [ccx, ccy] = CreditCellAt(at);
                     GW::GamePos gp{};
                     const bool converted = WorldMapWidget::WorldMapToGamePos(at, gp);
-                    const auto stand = probe->cells.find({cx, cy});
-                    Log::Log("[cartographer] probe wm(%.0f,%.0f) cell(%d,%d): explored=%d, grid %ux%u (%u words/row), game(%.0f,%.0f), walkable here=%d, reachable here=%d, probed=%d walkable=%d reveals=%d, coverable=%d, radius=%d",
-                             at.x, at.y, cx, cy, static_cast<int>(g.IsExplored(cx, cy)),
+                    const auto stand = probe->cells.find({ccx, ccy});
+                    Log::Log("[cartographer] probe wm(%.2f,%.2f) fog_tile(%d,%d) credit_cell(%d,%d): explored=%d, grid %ux%u (%u words/row), game(%.0f,%.0f), walkable here=%d, reachable here=%d, probed=%d reachable=%d reveals=%d, coverable=%d, radius=%d",
+                             at.x, at.y, cx, cy, ccx, ccy, static_cast<int>(g.IsExplored(cx, cy)),
                              g.width, g.height, RowWords(g.width),
                              gp.x, gp.y, converted && Pathing::IsPositionWalkable(gp), converted && Pathing::IsPositionReachable(gp),
                              static_cast<int>(stand != probe->cells.end()),
-                             stand != probe->cells.end() ? static_cast<int>(stand->second.walkable) : 0,
+                             stand != probe->cells.end() ? static_cast<int>(stand->second.reachable) : 0,
                              stand != probe->cells.end() ? stand->second.reveals : 0,
                              static_cast<int>(FogCellCoverable(cx, cy)), RevealRadius());
                     Log::FlushFile();
@@ -945,7 +1131,7 @@ namespace {
     {
         if (hover_lookup_cell != std::pair{cx, cy}) {
             hover_lookup_cell = {cx, cy};
-            hover_lookup_map = WorldMapWidget::GetMapIdForLocation(CellCenterWorldMap(cx, cy));
+            hover_lookup_map = WorldMapWidget::GetMapIdForLocation({(cx + .5f) * kWorldMapUnitsPerCell, (cy + .5f) * kWorldMapUnitsPerCell});
         }
         return hover_lookup_map;
     }
@@ -1034,7 +1220,7 @@ namespace {
     {
         const ImRect clip(dl->GetClipRectMin(), dl->GetClipRectMax());
         for (const auto& [cell, sc] : probe->cells) {
-            if (!sc.walkable || sc.reveals <= 0) continue;
+            if (!sc.reachable || sc.reveals <= 0) continue;
             if (declined_cells.contains(cell)) continue;
             // Skipped only while the suggestion is actually drawn on top, else a pending ownership
             // recheck blanks the square entirely.
@@ -1091,8 +1277,8 @@ namespace {
         // The tile that credits the fog point, drawn with a leader back to the point itself so it
         // is obvious the square is not where the fog is.
         if (target_active && target.custom && target.stand_valid) {
-            const int scx = static_cast<int>(floorf(target.stand_wm.x / kWorldMapUnitsPerCell));
-            const int scy = static_cast<int>(floorf(target.stand_wm.y / kWorldMapUnitsPerCell));
+            const int scx = target.stand_cx;
+            const int scy = target.stand_cy;
             ImVec2 cell_min, cell_max, point_at;
             if (ProjectCell(project, scx, scy, cell_min, cell_max)) {
                 const float pulse = Pulse();
@@ -1225,7 +1411,8 @@ void CartographerWidget::Update(float)
     GW::Vec2f player_wm;
     if (!WorldMapWidget::GamePosToWorldMap(player->pos, player_wm)) return;
     player_wm_cached = player_wm;
-    BuildContinentMask(static_cast<int>(map_info->continent), RevealRadius());
+    BuildContinentMask(static_cast<int>(map_info->continent));
+    BuildContinentWorld(static_cast<int>(map_info->continent));
     // A completing sweep still needs one last full pass, so the flag is read before the sweep.
     DropProbeIfGatesMoved();
     const bool sweeping = !probe->complete;
@@ -1233,6 +1420,21 @@ void CartographerWidget::Update(float)
 
     std::vector<std::pair<int, int>> changed;
     if (carto_dirty) CollectChangedTiles(grid, changed);
+#ifdef _DEBUG
+    // What the client actually credited, against what we would have predicted. This is the only
+    // measurement of the reveal rule we have: the tile offsets it prints are ground truth for the
+    // radius, the extent clamp and any quantisation difference between our grid and the client's.
+    for (const auto& [tx, ty] : changed) {
+        const int our_cx = CreditCellX(player_wm.x);
+        const int our_cy = CreditCellY(player_wm.y);
+        const auto [fog_cx, fog_cy] = FogTileAt(player_wm);
+        // Every d must now land inside [-r, r]; one that does not is this bug class coming back.
+        Log::Log("[carto-reveal] map=%d game(%.1f, %.1f) wm(%.4f, %.4f) credit_cell(%d, %d) fog_tile(%d, %d) tile(%d, %d) d(%d, %d) r=%d\n",
+                 static_cast<int>(map_id), player->pos.x, player->pos.y, player_wm.x, player_wm.y,
+                 our_cx, our_cy, fog_cx, fog_cy, tx, ty, tx - our_cx, ty - our_cy, RevealRadius());
+    }
+    if (!changed.empty()) Log::FlushFile();
+#endif
     if (coverage_stale || sweeping) {
         // Rebuilding from scratch supersedes any pending diff, so re-baseline the snapshot.
         if (grid.bits && grid.dword_count) carto_snapshot.assign(grid.bits, grid.bits + grid.dword_count);
@@ -1247,8 +1449,8 @@ void CartographerWidget::Update(float)
     PruneUncoveredPoints(grid);
 
     // Arrival is being inside the square, not near the goal - on a ledge those are a square apart.
-    const int player_cx = static_cast<int>(floorf(player_wm.x / kWorldMapUnitsPerCell));
-    const int player_cy = static_cast<int>(floorf(player_wm.y / kWorldMapUnitsPerCell));
+    const int player_cx = CreditCellX(player_wm.x);
+    const int player_cy = CreditCellY(player_wm.y);
     player_cell = {player_cx, player_cy};
     player_cell_valid = true;
     if (target.valid && target.on_map) {
@@ -1264,14 +1466,23 @@ void CartographerWidget::Update(float)
                     ClearTarget();
                 }
             }
-            else if (!arrived && player_cell == std::pair{static_cast<int>(floorf(target.stand_wm.x / kWorldMapUnitsPerCell)),
-                                                          static_cast<int>(floorf(target.stand_wm.y / kWorldMapUnitsPerCell))}) {
+            // Leaving stops the clock: the verdict below is about standing here, so it must not be
+            // reached from somewhere else entirely once the target latches on to the hysteresis.
+            else if (player_cell != std::pair{target.stand_cx, target.stand_cy}) {
+                arrived = false;
+                arrived_at = 0;
+            }
+            else if (!arrived) {
                 arrived = true;
                 arrived_at = TIMER_INIT();
                 CARTO_LOG("[cartographer] standing in the square for fog point wm(%.0f, %.0f)", target.wm.x, target.wm.y);
             }
         }
-        else if (!arrived && player_cx == target.cx && player_cy == target.cy) {
+        else if (player_cx != target.cx || player_cy != target.cy) {
+            arrived = false;
+            arrived_at = 0;
+        }
+        else if (!arrived) {
             arrived = true;
             arrived_at = TIMER_INIT();
             CARTO_LOG("[cartographer] standing in cell (%d, %d), which should credit %d cells", target.cx, target.cy, target.reveals);
@@ -1292,12 +1503,24 @@ void CartographerWidget::Update(float)
                     if (abs(dx) <= kRevealRadius && abs(dy) <= kRevealRadius) continue;
                     const std::pair cell{target.cx + dx, target.cy + dy};
                     if (!grid.InGrid(cell.first, cell.second) || grid.IsExplored(cell.first, cell.second)) continue;
+                    // Blame only what the square was scored on: a tile the score already excluded
+                    // was never this visit's to credit.
+                    if (!CellCreditableFrom(dx, dy, cell.first, cell.second)) continue;
                     if (probe->strict.insert(cell).second) demoted++;
                 }
             }
-            if (!demoted) probe->skipped.insert({target.cx, target.cy});
-            CARTO_LOG("[cartographer] cell (%d, %d) credited nothing; %d tiles demoted to normal range%s",
-                      target.cx, target.cy, demoted, demoted ? "" : ", square skipped for this map");
+            if (r > kRevealRadius) {
+                if (!demoted) probe->skipped.insert({target.cx, target.cy});
+                CARTO_LOG("[cartographer] cell (%d, %d) credited nothing; %d tiles demoted to normal range%s",
+                          target.cx, target.cy, demoted, demoted ? "" : ", square skipped for this map");
+            }
+            else {
+                // Standing inside the ring the client credits unconditionally has to credit. That it
+                // did not says our tile index disagrees with the client's, which is a fact about our
+                // arithmetic and not about this square - so do not write the square off for it.
+                Log::Log("[cartographer] stood in cell (%d, %d) for 15s with no credit - game(%.1f, %.1f) wm(%.4f, %.4f) our_cell(%d, %d): index disagreement, not a dead square\n",
+                         target.cx, target.cy, player->pos.x, player->pos.y, player_wm.x, player_wm.y, player_cx, player_cy);
+            }
             ClearTarget();
         }
     }
@@ -1305,10 +1528,9 @@ void CartographerWidget::Update(float)
     // Same for a fog point, except the tile that has to credit is the one the player picked: if a
     // wide-range visit has not credited it, demote it so the next resolve sends them closer in.
     if (arrived && target.valid && target.custom && target.stand_valid && TIMER_DIFF(arrived_at) > 15000) {
-        const std::pair cell{static_cast<int>(floorf(target.wm.x / kWorldMapUnitsPerCell)),
-                             static_cast<int>(floorf(target.wm.y / kWorldMapUnitsPerCell))};
-        const int dx = static_cast<int>(floorf(target.stand_wm.x / kWorldMapUnitsPerCell)) - cell.first;
-        const int dy = static_cast<int>(floorf(target.stand_wm.y / kWorldMapUnitsPerCell)) - cell.second;
+        const std::pair cell = FogTileAt(target.wm);
+        const int dx = target.stand_cx - cell.first;
+        const int dy = target.stand_cy - cell.second;
         // Already at normal range and still nothing: there is no closer square to send them to.
         if (abs(dx) > kRevealRadius || abs(dy) > kRevealRadius) {
             arrived = false;
@@ -1337,9 +1559,9 @@ void CartographerWidget::Update(float)
         // Ranked by cells-credited-per-square-walked: a spot crediting several is worth extra steps.
         float best_value = 0.f;
         for (const auto& [cell, sc] : probe->cells) {
-            if (!sc.walkable || sc.reveals <= 0) continue;
+            if (!sc.reachable || sc.reveals <= 0) continue;
             if (probe->skipped.contains(cell) || declined_cells.contains(cell)) continue;
-            const auto centre = CellCenterWorldMap(cell.first, cell.second);
+            const auto centre = CreditCellCenterWorldMap(cell.first, cell.second);
             const float d2 = Dist2(centre, player_wm);
             const float dist_cells = sqrtf(d2) / kWorldMapUnitsPerCell;
             const float value = static_cast<float>(sc.reveals) / (dist_cells + 2.f);
@@ -1367,7 +1589,7 @@ void CartographerWidget::Update(float)
         const auto current = probe->cells.find({target.cx, target.cy});
         const bool current_eligible = target.custom
             ? std::ranges::any_of(custom_points, [&](const CustomPoint& p) { return Dist2(p.wm, target.wm) < 1.f; })
-            : current != probe->cells.end() && current->second.walkable && current->second.reveals > 0
+            : current != probe->cells.end() && current->second.reachable && current->second.reveals > 0
             && !probe->skipped.contains({target.cx, target.cy}) && !declined_cells.contains({target.cx, target.cy});
         if (current_eligible && cand_d2 >= 0.7f * Dist2(target.wm, player_wm)) same = true;
     }
@@ -1411,15 +1633,16 @@ void CartographerWidget::DrawWorldMapOptions()
     if (ImGui::Checkbox("Using a Bird's Eye Compass", &using_bec)) {
         GW::GameThread::Enqueue([] {
             // Terrain has not moved, so the probed tiles stay; the radius only widens which tiles
-            // are worth probing, so every map's sweep reopens to cover the new fringe.
+            // are worth probing, so every map's sweep reopens to cover the new fringe. `strict` is
+            // a property of the fog tile, not of the radius - it is merely inert at normal range -
+            // so it survives the toggle rather than being learned again from scratch.
             for (auto& [map_id, cached] : probe_cache) {
-                cached.strict.clear();
                 cached.complete = false;
             }
             coverage_stale = true;
         });
     }
-    ImGui::ShowHelp("Standing in a tile credits it and the 8 tiles around it (Chebyshev distance, so a square block - not a circle, which is why the nearest-looking spot often is not the right one). A Bird's Eye Compass widens that to 3 tiles in each direction. Where in the tile you stand makes no difference. Rescans the map.");
+    ImGui::ShowHelp("Standing in a tile credits it and the 8 tiles around it (Chebyshev distance, so a square block - not a circle, which is why the nearest-looking spot often is not the right one). A Bird's Eye Compass widens that to 3 tiles in each direction. Where in the tile you stand makes no difference from side to side, but the last stride at a tile's southern edge already counts as the tile below. Rescans the map.");
     if (ImGui::Checkbox("Set a quest marker to fog points", &set_quest_marker)) {
         GW::GameThread::Enqueue([] { SyncQuestMarker(); });
     }
@@ -1479,7 +1702,7 @@ void CartographerWidget::DrawSettingsInternal()
     unsigned standable = 0;
     unsigned useful = 0;
     for (const auto& [cell, sc] : probe->cells) {
-        if (!sc.walkable) continue;
+        if (!sc.reachable) continue;
         standable++;
         if (sc.reveals > 0) useful++;
     }
@@ -1491,7 +1714,7 @@ void CartographerWidget::DrawSettingsInternal()
     }
     else {
         ImGui::TextDisabled("Baked continent data: %dx%d squares at (%d,%d), radius %d",
-                            continent_mask.w, continent_mask.h, continent_mask.x0, continent_mask.y0, continent_mask.radius);
+                            continent_mask.w, continent_mask.h, continent_mask.x0, continent_mask.y0, kMaskRadius);
     }
 }
 

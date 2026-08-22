@@ -1002,9 +1002,11 @@ namespace {
         ImRect map_bounds;
         if (!area_info || !GW::Map::GetMapWorldMapBounds(area_info, &map_bounds)) return false;
 
+        // Signed, not abs: the conversions below need Min.x - game_min.x/96 and Min.y + game_max.y/96,
+        // which abs() only happens to give for a map whose bounds straddle the origin the usual way.
         mid_out = {
-            map_bounds.Min.x + (abs(game_min.x) / gwinches_per_unit),
-            map_bounds.Min.y + (abs(game_max.y) / gwinches_per_unit),
+            map_bounds.Min.x - (game_min.x / gwinches_per_unit),
+            map_bounds.Min.y + (game_max.y / gwinches_per_unit),
         };
         return true;
     }
