@@ -8,9 +8,6 @@
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/EffectMgr.h>
 
-#include <GWCA/Utilities/Scanner.h>
-#include <GWCA/Utilities/Hooker.h>
-
 #include <Defines.h>
 #include <Utils/GuiUtils.h>
 #include <Modules/DialogModule.h>
@@ -19,9 +16,6 @@
 #include <Utils/TextUtils.h>
 
 namespace {
-    GW::UI::UIInteractionCallback NPCDialogUICallback_Func = nullptr;
-    GW::UI::UIInteractionCallback NPCDialogUICallback_Ret = nullptr;
-
     std::vector<GW::UI::DialogButtonInfo*> dialog_buttons;
     std::vector<std::unique_ptr<GuiUtils::EncString>> dialog_button_messages;
 
@@ -87,14 +81,13 @@ namespace {
         dialog_info = {};
     }
 
-    void OnNPCDialogUICallback(GW::UI::InteractionMessage* message, void* wparam, void* lparam)
+    // Not a hook on the frame's callback: TextToSpeechModule and GWCA hook that same function,
+    // and GWCA fatally asserts when its own CreateHook then collides on the already-hooked target.
+    void OnNPCDialogFrameDestroyed(GW::HookStatus*, const GW::UI::Frame* frame, GW::UI::UIMessage, void*, void*)
     {
-        GW::Hook::EnterHook();
-        if (message->message_id == GW::UI::UIMessage::kDestroyFrame) {
+        if (frame == GW::UI::GetFrameByLabel(L"NPCInteract")) {
             ResetDialog();
         }
-        NPCDialogUICallback_Ret(message, wparam, lparam);
-        GW::Hook::LeaveHook();
     }
 
     void OnDialogClosedByServer()
@@ -243,16 +236,7 @@ void DialogModule::Initialize()
         RegisterUIMessageCallback(&dialog_hook, message_id, OnPostUIMessage, 0x500);
     }
 
-    // NB: Don't pin the assertion line number; it shifts whenever ArenaNet edits GmNpc.cpp (0x3fe -> 0x40c)
-    NPCDialogUICallback_Func = (GW::UI::UIInteractionCallback)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("GmNpc.cpp", "msg.createParam", 0, 0));
-    DEBUG_ASSERT(NPCDialogUICallback_Func);
-    if (NPCDialogUICallback_Func) {
-        GW::Hook::CreateHook((void**)&NPCDialogUICallback_Func, OnNPCDialogUICallback, reinterpret_cast<void**>(&NPCDialogUICallback_Ret));
-        GW::Hook::EnableHooks(NPCDialogUICallback_Func);
-    }
-    else {
-        Log::Error("Failed to find NPC dialog UI callback; dialog state won't be reset when a conversation ends");
-    }
+    GW::UI::RegisterFrameUIMessageCallback(&dialog_hook, GW::UI::UIMessage::kDestroyFrame, OnNPCDialogFrameDestroyed);
 }
 
 void DialogModule::Terminate()
@@ -260,7 +244,7 @@ void DialogModule::Terminate()
     ToolboxModule::Terminate();
     GW::UI::RemoveUIMessageCallback(&dialog_hook);
     GW::UI::RemoveCreateUIComponentCallback(&dialog_hook);
-    GW::Hook::RemoveHook(NPCDialogUICallback_Func);
+    GW::UI::RemoveFrameUIMessageCallback(&dialog_hook);
 }
 
 void DialogModule::SendDialog(const uint32_t dialog_id, clock_t time)
