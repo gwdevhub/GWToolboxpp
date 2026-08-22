@@ -16,6 +16,7 @@
 #include <ImGuiAddons.h>
 #include <Logger.h>
 #include <Timer.h>
+#include <Modules/QuestModule.h>
 #include <Modules/Resources.h>
 #include <Utils/EncString.h>
 #include <Utils/SettingsRegistry.h>
@@ -123,6 +124,7 @@ namespace {
     bool show_stand_cells = true;
     bool show_grid = false;
     bool using_bec = false;
+    bool set_quest_marker = true;
 
     // Standing in a tile credits it plus the ring around it; a Bird's Eye Compass widens that to
     // three rings. Chebyshev throughout, and where in the tile you stand makes no difference.
@@ -234,7 +236,13 @@ namespace {
     }
 
     std::set<std::pair<int, int>> declined_cells;
-    std::vector<GW::Vec2f> custom_points;
+    // `was_fog` is what lets a point retire itself: one placed on fog is done when that tile is
+    // credited, while one dropped on ground already explored is just a waypoint and never would be.
+    struct CustomPoint {
+        GW::Vec2f wm{};
+        bool was_fog = true;
+    };
+    std::vector<CustomPoint> custom_points;
     std::string declined_cells_str;
     std::string custom_points_str;
 
@@ -263,7 +271,7 @@ namespace {
         custom_points_str.clear();
         for (const auto& p : custom_points) {
             if (!custom_points_str.empty()) custom_points_str += ",";
-            custom_points_str += std::format("{:.1f}:{:.1f}", p.x, p.y);
+            custom_points_str += std::format("{:.1f}:{:.1f}:{}", p.wm.x, p.wm.y, p.was_fog ? 1 : 0);
         }
     }
 
@@ -274,7 +282,8 @@ namespace {
         std::string tok;
         while (std::getline(is, tok, ',')) {
             float x, y;
-            if (sscanf_s(tok.c_str(), "%f:%f", &x, &y) == 2) custom_points.push_back({x, y});
+            int was_fog = 1; // points written before the flag existed were all placed on fog
+            if (sscanf_s(tok.c_str(), "%f:%f:%d", &x, &y, &was_fog) >= 2) custom_points.push_back({{x, y}, was_fog != 0});
         }
     }
 
@@ -432,6 +441,39 @@ namespace {
         return found;
     }
 
+    // A fog point marks fog, and fog is rarely somewhere you can stand. Answers with the closest
+    // spot to `from` that is reachable AND sits in a tile the game would credit `fog_wm`'s tile
+    // from. False when nothing here can credit it: another map, or a point dropped on ground that
+    // is already explored.
+    bool ResolveStandWorldPos(const GW::Vec2f& fog_wm, const GW::Vec2f& from, GW::Vec2f& out)
+    {
+        const int fx = static_cast<int>(floorf(fog_wm.x / kWorldMapUnitsPerCell));
+        const int fy = static_cast<int>(floorf(fog_wm.y / kWorldMapUnitsPerCell));
+        const int r = RevealRadius();
+        std::vector<std::pair<int, int>> candidates;
+        for (int dy = -r; dy <= r; dy++) {
+            for (int dx = -r; dx <= r; dx++) {
+                // Credit is decided from the standing tile's side, so the offsets invert here.
+                if (CellCreditableFrom(-dx, -dy, fx, fy)) candidates.push_back({fx + dx, fy + dy});
+            }
+        }
+        // Nearest first, so the usual case answers after probing one tile rather than all of them.
+        std::ranges::sort(candidates, [&from](const auto& a, const auto& b) {
+            return Dist2(CellCenterWorldMap(a.first, a.second), from) < Dist2(CellCenterWorldMap(b.first, b.second), from);
+        });
+        for (const auto& cell : candidates) {
+            auto it = probe->cells.find(cell);
+            if (it == probe->cells.end()) {
+                StandCell sc;
+                sc.walkable = ProbeStandCell(cell.first, cell.second, sc.pos);
+                it = probe->cells.emplace(cell, sc).first;
+                coverage_stale = true; // scored by the next recompute, not by us - we have no grid here
+            }
+            if (it->second.walkable && WorldMapWidget::GamePosToWorldMap(it->second.pos, out)) return true;
+        }
+        return false;
+    }
+
     // Keeps the sweep to the fog's fringe instead of probing every cell on the map.
     bool CellWorthProbing(const CartoGrid& grid, const int cx, const int cy)
     {
@@ -557,6 +599,10 @@ namespace {
         int reveals = 0;
         GW::Vec2f wm{};
         bool on_map = true;
+        // Where a fog point actually sends you: the spot in the tile that credits it. Unset for
+        // fog targets, whose `wm` is already the tile to stand in.
+        GW::Vec2f stand_wm{};
+        bool stand_valid = false;
     };
 
     GW::Constants::MapID state_map_id = static_cast<GW::Constants::MapID>(0);
@@ -570,11 +616,74 @@ namespace {
     bool warned_no_data = false;
     bool warned_no_fog = false;
 
+    // Where the player is being sent: a fog point's standing spot, or the target itself.
+    const GW::Vec2f& TargetGoal()
+    {
+        return target.stand_valid ? target.stand_wm : target.wm;
+    }
+
+    // The custom quest marker is shared with everything else that sets one, so remember the one we
+    // placed and never touch a marker that has since become somebody else's.
+    bool marker_placed = false;
+    GW::Vec2f marker_point{};
+    GW::Vec2f marker_goal{};
+
+    bool MarkerStillOurs()
+    {
+        const auto* quest = QuestModule::GetCustomQuestMarker();
+        GW::Vec2f wm;
+        return quest && QuestModule::GetCustomQuestMarkerWorldPos(quest->quest_id, wm) && Dist2(wm, marker_goal) < 1.f;
+    }
+
+    void ReleaseQuestMarker()
+    {
+        const bool ours = marker_placed && MarkerStillOurs();
+        marker_placed = false;
+        if (ours) QuestModule::ClearCustomQuestMarker();
+    }
+
+    // Fog points are the one thing here the player asks for by hand, so they get a quest marker to
+    // walk to - on the tile that credits the fog, not on the fog. Suggestions do not: they are a
+    // standing offer, and hijacking the quest marker for one is not.
+    void SyncQuestMarker()
+    {
+        if (!set_quest_marker || !target.valid || !target.custom) {
+            ReleaseQuestMarker();
+            return;
+        }
+        const GW::Vec2f goal = TargetGoal();
+        if (marker_placed && Dist2(marker_point, target.wm) < 1.f) {
+            // Same point: follow it only while the marker is still ours, so clearing it by hand sticks.
+            if (Dist2(goal, marker_goal) < 1.f || !MarkerStillOurs()) return;
+        }
+        else {
+            ReleaseQuestMarker();
+        }
+        marker_placed = true;
+        marker_point = target.wm;
+        marker_goal = goal;
+        QuestModule::SetCustomQuestMarker(goal, true);
+    }
+
     void ClearTarget()
     {
         target = {};
         arrived = false;
         arrived_at = 0;
+        SyncQuestMarker();
+    }
+
+    // Re-resolved every scan rather than kept: the sweep keeps learning what is standable, a gate
+    // moving can take the answer away again, and once the tile is credited there is nowhere to send
+    // anyone - a point on explored ground is just a waypoint, so it routes to itself.
+    void RefreshCustomTargetStand(const GW::Vec2f& from)
+    {
+        if (!target.valid || !target.custom) return;
+        CartoGrid grid;
+        const bool foggy = GetCartoGrid(grid) && !grid.IsExplored(static_cast<int>(floorf(target.wm.x / kWorldMapUnitsPerCell)),
+                                                                  static_cast<int>(floorf(target.wm.y / kWorldMapUnitsPerCell)));
+        target.stand_valid = target.on_map && foggy && ResolveStandWorldPos(target.wm, from, target.stand_wm);
+        SyncQuestMarker();
     }
 
     void ResetState()
@@ -596,7 +705,7 @@ namespace {
 
     void RemoveCustomPointAt(const GW::Vec2f& wm)
     {
-        std::erase_if(custom_points, [&wm](const GW::Vec2f& p) { return Dist2(p, wm) < 1.f; });
+        std::erase_if(custom_points, [&wm](const CustomPoint& p) { return Dist2(p.wm, wm) < 1.f; });
         SerializePoints();
     }
 
@@ -621,9 +730,24 @@ namespace {
 
     void AddCustomPointImpl(const GW::Vec2f& wm)
     {
-        custom_points.push_back(wm);
+        CartoGrid grid;
+        const bool foggy = GetCartoGrid(grid) && !grid.IsExplored(static_cast<int>(floorf(wm.x / kWorldMapUnitsPerCell)),
+                                                                  static_cast<int>(floorf(wm.y / kWorldMapUnitsPerCell)));
+        custom_points.push_back({wm, foggy});
         SerializePoints();
-        CARTO_LOG("[cartographer] custom fog point added at wm(%.0f, %.0f)", wm.x, wm.y);
+        // Taking the target over straight away is what makes the marker point at the fog you just
+        // asked about, instead of at whichever queued point happens to be nearest.
+        target = {};
+        target.valid = true;
+        target.custom = true;
+        target.wm = wm;
+        ImRect bounds;
+        const auto map_info = GW::Map::GetMapInfo(GW::Map::GetMapID());
+        target.on_map = map_info && GW::Map::GetMapWorldMapBounds(map_info, &bounds) && bounds.Contains({wm.x, wm.y});
+        arrived = false;
+        RefreshCustomTargetStand(player_wm_cached);
+        CARTO_LOG("[cartographer] custom fog point added at wm(%.0f, %.0f)%s", wm.x, wm.y,
+                  target.stand_valid ? "" : " - no reachable spot credits it from here");
     }
 
 
@@ -641,13 +765,21 @@ namespace {
             snprintf(buf, len, "%s", idle);
             return;
         }
-        if (arrived && !target.custom) {
-            snprintf(buf, len, "standing in the right tile - if it does not register, take a step or click-walk");
+        if (arrived) {
+            snprintf(buf, len, target.custom
+                         ? "standing in the square for your fog point - if it does not register, take a step or click-walk"
+                         : "standing in the right tile - if it does not register, take a step or click-walk");
             return;
         }
-        const float dist_k = sqrtf(Dist2(player_wm_cached, target.wm)) * kGwinchesPerWorldMapUnit / 1000.f;
+        const GW::Vec2f goal = TargetGoal();
+        const float dist_k = sqrtf(Dist2(player_wm_cached, goal)) * kGwinchesPerWorldMapUnit / 1000.f;
         if (target.custom) {
-            snprintf(buf, len, "heading to your fog point, %.1fk units %s of you%s", dist_k, CompassDir(player_wm_cached, target.wm),
+            if (target.stand_valid) {
+                snprintf(buf, len, "stand in the square %.1fk units %s of you to uncover your fog point", dist_k,
+                         CompassDir(player_wm_cached, goal));
+                return;
+            }
+            snprintf(buf, len, "heading to your fog point, %.1fk units %s of you%s", dist_k, CompassDir(player_wm_cached, goal),
                      target.on_map ? "" : " (another map)");
             return;
         }
@@ -661,13 +793,29 @@ namespace {
         int best = -1;
         float best_d2 = max_dist * max_dist;
         for (size_t i = 0; i < custom_points.size(); i++) {
-            const float d2 = Dist2(custom_points[i], wm);
+            const float d2 = Dist2(custom_points[i].wm, wm);
             if (d2 <= best_d2) {
                 best_d2 = d2;
                 best = static_cast<int>(i);
             }
         }
         return best;
+    }
+
+    // The fog going away is the whole point of a fog point, so that - not arriving anywhere - is
+    // what retires it: credit can land a second or two after the step that earned it, and it lands
+    // for every point in range, not just the one being walked to.
+    void PruneUncoveredPoints(const CartoGrid& grid)
+    {
+        const size_t before = custom_points.size();
+        std::erase_if(custom_points, [&grid](const CustomPoint& p) {
+            return p.was_fog && grid.IsExplored(static_cast<int>(floorf(p.wm.x / kWorldMapUnitsPerCell)),
+                                                static_cast<int>(floorf(p.wm.y / kWorldMapUnitsPerCell)));
+        });
+        if (custom_points.size() == before) return;
+        SerializePoints();
+        CARTO_LOG("[cartographer] %u fog point(s) uncovered, removed", static_cast<unsigned>(before - custom_points.size()));
+        if (target.valid && target.custom && FindCustomPointNear(target.wm, 1.f) < 0) ClearTarget();
     }
 
     bool ContextMenuItems(const GW::Vec2f& click_wm, const float px_per_wm_unit)
@@ -940,10 +1088,28 @@ namespace {
                 }
             }
         }
+        // The tile that credits the fog point, drawn with a leader back to the point itself so it
+        // is obvious the square is not where the fog is.
+        if (target_active && target.custom && target.stand_valid) {
+            const int scx = static_cast<int>(floorf(target.stand_wm.x / kWorldMapUnitsPerCell));
+            const int scy = static_cast<int>(floorf(target.stand_wm.y / kWorldMapUnitsPerCell));
+            ImVec2 cell_min, cell_max, point_at;
+            if (ProjectCell(project, scx, scy, cell_min, cell_max)) {
+                const float pulse = Pulse();
+                dl->AddRectFilled(cell_min, cell_max, WithAlpha(kTargetColor, 16 + static_cast<int>(24.f * pulse)));
+                dl->AddRect(cell_min, cell_max, WithAlpha(kTargetColor, 210), 0.f, 0, 1.5f + pulse);
+                if (project(target.wm, point_at)) {
+                    dl->AddLine({(cell_min.x + cell_max.x) * .5f, (cell_min.y + cell_max.y) * .5f}, point_at, WithAlpha(kFogPointColor, 140), 1.f);
+                }
+                if (cell_tooltip && ImRect(cell_min, cell_max).Contains(mouse)) {
+                    tooltip = "Cartographer: stand in this square to uncover your fog point";
+                }
+            }
+        }
         for (const auto& p : custom_points) {
             ImVec2 c;
-            if (!project(p, c)) continue;
-            const bool is_current = target_active && target.custom && Dist2(target.wm, p) < 1.f;
+            if (!project(p.wm, c)) continue;
+            const bool is_current = target_active && target.custom && Dist2(target.wm, p.wm) < 1.f;
             DrawFogPointMarker(dl, c, is_current);
             const float mdx = mouse.x - c.x;
             const float mdy = mouse.y - c.y;
@@ -981,6 +1147,7 @@ void CartographerWidget::Initialize()
     SettingsRegistry::RegisterField(this, "show_grid", &show_grid);
     SettingsRegistry::RegisterField(this, "show_whole_continent", &show_whole_continent);
     SettingsRegistry::RegisterField(this, "using_bec", &using_bec);
+    SettingsRegistry::RegisterField(this, "set_quest_marker", &set_quest_marker);
     SettingsRegistry::RegisterField(this, "declined_cells", &declined_cells_str);
     SettingsRegistry::RegisterField(this, "custom_points", &custom_points_str);
     MissionMapWidget::AddContextMenuCallback(&OnMissionMapContextMenu);
@@ -1077,6 +1244,7 @@ void CartographerWidget::Update(float)
     }
     carto_dirty = false;
     coverage_stale = false;
+    PruneUncoveredPoints(grid);
 
     // Arrival is being inside the square, not near the goal - on a ledge those are a square apart.
     const int player_cx = static_cast<int>(floorf(player_wm.x / kWorldMapUnitsPerCell));
@@ -1085,10 +1253,22 @@ void CartographerWidget::Update(float)
     player_cell_valid = true;
     if (target.valid && target.on_map) {
         if (target.custom) {
-            if (Dist2(player_wm, target.wm) < 2.f * 2.f) {
-                CARTO_LOG("[cartographer] reached custom point wm(%.0f, %.0f)", target.wm.x, target.wm.y);
-                RemoveCustomPointAt(target.wm);
-                ClearTarget();
+            // Fog points retire when their tile is credited (PruneUncoveredPoints); arriving only
+            // starts the clock on whether standing here is going to credit anything at all.
+            if (!target.stand_valid) {
+                // Nothing creditable to walk to - a waypoint, or fog no square here can reach - so
+                // getting to the point itself is all there is to finish it off.
+                if (Dist2(player_wm, target.wm) < 2.f * 2.f) {
+                    CARTO_LOG("[cartographer] reached custom point wm(%.0f, %.0f)", target.wm.x, target.wm.y);
+                    RemoveCustomPointAt(target.wm);
+                    ClearTarget();
+                }
+            }
+            else if (!arrived && player_cell == std::pair{static_cast<int>(floorf(target.stand_wm.x / kWorldMapUnitsPerCell)),
+                                                          static_cast<int>(floorf(target.stand_wm.y / kWorldMapUnitsPerCell))}) {
+                arrived = true;
+                arrived_at = TIMER_INIT();
+                CARTO_LOG("[cartographer] standing in the square for fog point wm(%.0f, %.0f)", target.wm.x, target.wm.y);
             }
         }
         else if (!arrived && player_cx == target.cx && player_cy == target.cy) {
@@ -1122,12 +1302,29 @@ void CartographerWidget::Update(float)
         }
     }
 
+    // Same for a fog point, except the tile that has to credit is the one the player picked: if a
+    // wide-range visit has not credited it, demote it so the next resolve sends them closer in.
+    if (arrived && target.valid && target.custom && target.stand_valid && TIMER_DIFF(arrived_at) > 15000) {
+        const std::pair cell{static_cast<int>(floorf(target.wm.x / kWorldMapUnitsPerCell)),
+                             static_cast<int>(floorf(target.wm.y / kWorldMapUnitsPerCell))};
+        const int dx = static_cast<int>(floorf(target.stand_wm.x / kWorldMapUnitsPerCell)) - cell.first;
+        const int dy = static_cast<int>(floorf(target.stand_wm.y / kWorldMapUnitsPerCell)) - cell.second;
+        // Already at normal range and still nothing: there is no closer square to send them to.
+        if (abs(dx) > kRevealRadius || abs(dy) > kRevealRadius) {
+            arrived = false;
+            arrived_at = 0;
+            if (probe->strict.insert(cell).second) {
+                CARTO_LOG("[cartographer] fog point (%d, %d) not credited from wide range; dropping it to normal range", cell.first, cell.second);
+            }
+        }
+    }
+
     Target cand{};
     float cand_d2 = FLT_MAX;
     for (const auto& p : custom_points) {
-        const float d2 = Dist2(p, player_wm);
+        const float d2 = Dist2(p.wm, player_wm);
         if (d2 < cand_d2) {
-            cand = {true, true, 0, 0, 0, p};
+            cand = {true, true, 0, 0, 0, p.wm};
             cand_d2 = d2;
         }
     }
@@ -1169,7 +1366,7 @@ void CartographerWidget::Update(float)
         // Hysteresis: keep the current target unless it became ineligible or the candidate is meaningfully closer.
         const auto current = probe->cells.find({target.cx, target.cy});
         const bool current_eligible = target.custom
-            ? std::ranges::any_of(custom_points, [&](const GW::Vec2f& p) { return Dist2(p, target.wm) < 1.f; })
+            ? std::ranges::any_of(custom_points, [&](const CustomPoint& p) { return Dist2(p.wm, target.wm) < 1.f; })
             : current != probe->cells.end() && current->second.walkable && current->second.reveals > 0
             && !probe->skipped.contains({target.cx, target.cy}) && !declined_cells.contains({target.cx, target.cy});
         if (current_eligible && cand_d2 >= 0.7f * Dist2(target.wm, player_wm)) same = true;
@@ -1180,6 +1377,7 @@ void CartographerWidget::Update(float)
             const auto it = probe->cells.find({target.cx, target.cy});
             if (it != probe->cells.end()) target.reveals = it->second.reveals;
         }
+        RefreshCustomTargetStand(player_wm);
         return;
     }
 
@@ -1187,8 +1385,10 @@ void CartographerWidget::Update(float)
     cand.on_map = on_current_map;
     target = cand;
     arrived = false;
+    RefreshCustomTargetStand(player_wm);
     if (target.custom) {
-        CARTO_LOG("[cartographer] target: custom point wm(%.0f, %.0f)%s", target.wm.x, target.wm.y, on_current_map ? "" : " on another map");
+        CARTO_LOG("[cartographer] target: custom point wm(%.0f, %.0f)%s, stand wm(%.0f, %.0f) valid=%d", target.wm.x, target.wm.y,
+                  on_current_map ? "" : " on another map", target.stand_wm.x, target.stand_wm.y, target.stand_valid);
     }
     else {
         CARTO_LOG("[cartographer] stand target: cell (%d, %d) wm(%.0f, %.0f) credits %d cells at radius %d",
@@ -1220,6 +1420,10 @@ void CartographerWidget::DrawWorldMapOptions()
         });
     }
     ImGui::ShowHelp("Standing in a tile credits it and the 8 tiles around it (Chebyshev distance, so a square block - not a circle, which is why the nearest-looking spot often is not the right one). A Bird's Eye Compass widens that to 3 tiles in each direction. Where in the tile you stand makes no difference. Rescans the map.");
+    if (ImGui::Checkbox("Set a quest marker to fog points", &set_quest_marker)) {
+        GW::GameThread::Enqueue([] { SyncQuestMarker(); });
+    }
+    ImGui::ShowHelp("Placing a fog point puts a custom quest marker on the square you need to stand in to uncover it, so the usual quest path walks you there. It clears itself once the point is reached or removed, and clearing the marker by hand leaves it cleared. Suggested squares never touch the marker.");
 }
 
 void CartographerWidget::Draw(IDirect3DDevice9*)
@@ -1297,7 +1501,10 @@ void CartographerWidget::SetEnabled(const bool on)
     auto& self = Instance();
     if (self.visible == on) return;
     self.visible = on;
-    if (!on) ResetState();
+    if (!on) {
+        ReleaseQuestMarker();
+        ResetState();
+    }
     CARTO_LOG("[cartographer] %s", on ? "enabled" : "disabled");
 }
 
@@ -1336,7 +1543,7 @@ void CartographerWidget::RemoveCustomPointNear(const GW::Vec2f& world_map_pos, c
     GW::GameThread::Enqueue([world_map_pos, max_dist_wm] {
         const int idx = FindCustomPointNear(world_map_pos, max_dist_wm);
         if (idx < 0) return;
-        const GW::Vec2f p = custom_points[idx];
+        const GW::Vec2f p = custom_points[idx].wm;
         const bool was_target = target.valid && target.custom && Dist2(target.wm, p) < 1.f;
         custom_points.erase(custom_points.begin() + idx);
         SerializePoints();
@@ -1374,11 +1581,11 @@ void CartographerWidget::GetStatus(char* buf, const size_t len)
 {
     char target_desc[64];
     if (!target.valid) snprintf(target_desc, sizeof(target_desc), "none");
-    else if (target.custom) snprintf(target_desc, sizeof(target_desc), "point(%.0f,%.0f)", target.wm.x, target.wm.y);
+    else if (target.custom) snprintf(target_desc, sizeof(target_desc), "point(%.0f,%.0f)%s", target.wm.x, target.wm.y, target.stand_valid ? "+stand" : "");
     else snprintf(target_desc, sizeof(target_desc), "stand(%d,%d)+%d", target.cx, target.cy, target.reveals);
-    snprintf(buf, len, "carto: enabled=%d target=%s arrived=%d radius=%d skipped=%u probed=%u declined=%u points=%u fogcells=%d",
+    snprintf(buf, len, "carto: enabled=%d target=%s arrived=%d radius=%d skipped=%u probed=%u declined=%u points=%u fogcells=%d marker=%d",
              GetEnabled(), target_desc, arrived, RevealRadius(),
              static_cast<unsigned>(probe->skipped.size()), static_cast<unsigned>(probe->cells.size()),
-             static_cast<unsigned>(declined_cells.size()), static_cast<unsigned>(custom_points.size()), map_fog_cells);
+             static_cast<unsigned>(declined_cells.size()), static_cast<unsigned>(custom_points.size()), map_fog_cells, marker_placed);
 }
 

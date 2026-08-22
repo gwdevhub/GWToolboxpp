@@ -9,10 +9,12 @@
 // with a Bird's Eye Compass - and nothing beyond the grid is creditable. So it points at tiles to
 // stand in rather than at the fog, taking reachability from the current map's pathing data.
 //
-// It only ever draws: the tile grid, the tiles worth visiting, the suggested tile, queued fog
+// It mostly only draws: the tile grid, the tiles worth visiting, the suggested tile, queued fog
 // points and a status line go on the world map and mission map, with a toggle button on the
-// mission map and the extra options nested under the world map's own checkbox. Walking there is
-// the player's business - nothing here touches the quest marker.
+// mission map and the extra options nested under the world map's own checkbox. Suggestions stay
+// draw-only - walking to one is the player's business. The exception is a fog point placed by
+// hand: that sets the custom quest marker to the tile that credits it, so the normal quest path
+// leads there.
 class CartographerWidget : public ToolboxWidget {
     CartographerWidget()
     {
@@ -55,6 +57,8 @@ public:
     // World-map position of the current suggestion (fog tile or custom point); false if none.
     static bool GetCurrentTargetWorldPos(GW::Vec2f& out);
     static void SkipCurrentTarget(bool forever);
+    // Queues a fog point and makes it the current target, resolving it to a reachable tile that
+    // credits it and (unless turned off) pointing the custom quest marker there.
     static void AddCustomPoint(const GW::Vec2f& world_map_pos);
     static void RemoveCustomPointNear(const GW::Vec2f& world_map_pos, float max_dist_wm);
     static void ClearCustomPoints();
