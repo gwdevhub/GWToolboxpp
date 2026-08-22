@@ -154,6 +154,7 @@ private:
         [[nodiscard]] bool IsStarted() const;
         [[nodiscard]] bool IsDone() const;
         void Draw();
+        void InvalidateCachedStrings();
         static void Update();
 
     private:
@@ -228,10 +229,19 @@ private:
 
         const unsigned int ui_id = 0; // an internal id to ensure interface consistency
 
+        void InvalidateCachedStrings();
+
     private:
         static unsigned int cur_ui_id;
         char cached_start[16] = {0};
         char cached_time[16] = {0};
+        char cached_header[256] = {0};
+        // Day this run started, resolved once; compared against today to hide past runs.
+        int start_yday = -1;
+        int start_year = 0;
+        // Last known header state. Collapsed sets have a fixed row height, so once we've seen one
+        // collapsed we can reserve its row and skip the widget entirely while it's scrolled away.
+        bool drawn_expanded = true;
     };
 
     std::map<DWORD, ObjectiveSet*> objective_sets{};

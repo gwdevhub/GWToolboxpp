@@ -164,6 +164,10 @@ namespace {
 
     bool runs_dirty = false;
 
+    // Today's date, refreshed once a second in Draw; every loaded run compares its start day against it.
+    int today_yday = -1;
+    int today_year = 0;
+
     DWORD time_point_ms()
     {
         return static_cast<DWORD>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());
@@ -943,6 +947,20 @@ void ObjectiveTimerWindow::Draw(IDirect3DDevice9*)
     if (loading) {
         return;
     }
+    static DWORD today_refreshed_at = 0;
+    if (const DWORD tick = GetTickCount(); today_yday < 0 || tick - today_refreshed_at >= 1000) {
+        today_refreshed_at = tick;
+        const time_t now = time(nullptr);
+        const tm* nowinfo = localtime(&now);
+        today_yday = nowinfo->tm_yday;
+        today_year = nowinfo->tm_year;
+    }
+    if (clear_cached_times) {
+        for (const auto& [_, os] : objective_sets) {
+            os->InvalidateCachedStrings();
+        }
+        clear_cached_times = false;
+    }
     if (visible && !loading) {
         ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiCond_FirstUseEver);
@@ -1001,7 +1019,8 @@ void ObjectiveTimerWindow::DrawSettingsInternal()
     ImGui::Separator();
     ImGui::StartSpacedElements(275.f);
     ImGui::NextSpacedElement();
-    clear_cached_times = ImGui::Checkbox("Show second decimal", &settings.show_decimal);
+    // Latched, not assigned: Draw consumes it, and it may run before this settings pass.
+    clear_cached_times |= ImGui::Checkbox("Show second decimal", &settings.show_decimal);
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Show 'Start' column", &settings.show_start_column);
     ImGui::NextSpacedElement();
@@ -1014,7 +1033,7 @@ void ObjectiveTimerWindow::DrawSettingsInternal()
     ImGui::CheckboxWithHelp("Debug: log events", &show_debug_events,
         "Will spam your chat with the events used in the objective timer. \nUse for debugging and to ask for more stuff to be added");
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show run start date/time", &settings.show_start_date_time);
+    clear_cached_times |= ImGui::Checkbox("Show run start date/time", &settings.show_start_date_time);
     ImGui::NextSpacedElement();
     ImGui::CheckboxWithHelp("Show current run in separate window", &settings.show_current_run_window, "Toggle via chat: /tb_setting show_current_run_window");
     ImGui::NextSpacedElement();
@@ -1349,6 +1368,14 @@ void ObjectiveTimerWindow::Objective::Update()
     // Cached times etc moved into Draw and GetDuration functions
 }
 
+void ObjectiveTimerWindow::Objective::InvalidateCachedStrings()
+{
+    cached_start[0] = cached_done[0] = cached_duration[0] = '\0';
+    for (Objective* child : children) {
+        child->InvalidateCachedStrings();
+    }
+}
+
 void ObjectiveTimerWindow::Objective::Draw()
 {
     switch (status) {
@@ -1388,7 +1415,7 @@ void ObjectiveTimerWindow::Objective::Draw()
     ImGui::PushItemWidth(ts_width);
     if (settings.show_start_column) {
         ImGui::SameLine(offset);
-        ImGui::Text(GetStartTimeStr());
+        ImGui::TextUnformatted(GetStartTimeStr());
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Start");
         }
@@ -1396,7 +1423,7 @@ void ObjectiveTimerWindow::Objective::Draw()
     }
     if (settings.show_end_column) {
         ImGui::SameLine(offset);
-        ImGui::Text(GetEndTimeStr());
+        ImGui::TextUnformatted(GetEndTimeStr());
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("End");
         }
@@ -1404,7 +1431,7 @@ void ObjectiveTimerWindow::Objective::Draw()
     }
     if (settings.show_time_column) {
         ImGui::SameLine(offset);
-        ImGui::Text(GetDurationStr());
+        ImGui::TextUnformatted(GetDurationStr());
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Time");
         }
@@ -1650,29 +1677,41 @@ const char* ObjectiveTimerWindow::ObjectiveSet::GetDurationStr()
 
 bool ObjectiveTimerWindow::ObjectiveSet::Draw()
 {
-    char buf[256];
     if (!settings.show_past_runs && from_disk) {
-        tm timeinfo{};
-        GetStartTime(&timeinfo);
-        const time_t now = time(nullptr);
-        const tm* nowinfo = localtime(&now);
-        if (timeinfo.tm_yday != nowinfo->tm_yday || timeinfo.tm_year != nowinfo->tm_year) {
+        if (start_yday < 0) {
+            tm timeinfo{};
+            GetStartTime(&timeinfo);
+            start_yday = timeinfo.tm_yday;
+            start_year = timeinfo.tm_year;
+        }
+        if (start_yday != today_yday || start_year != today_year) {
             return true; // Hide this objective set; its from a previous day
         }
     }
-    if (settings.show_start_date_time) {
-        sprintf(buf, "%s - %s - %s%s###header%u", GetStartTimeStr(), name.c_str(), GetDurationStr(), failed ? " [Failed]" : "", ui_id);
+
+    // Hundreds of past runs stay loaded, nearly all collapsed and scrolled out of view. Submitting a
+    // CollapsingHeader for each still costs the label measure and item layout, so reserve the row instead.
+    const float collapsed_height = ImGui::GetFrameHeight();
+    if (!drawn_expanded && !ImGui::IsRectVisible(ImVec2(1.f, collapsed_height))) {
+        ImGui::Dummy(ImVec2(1.f, collapsed_height));
+        return true;
     }
-    else {
-        sprintf(buf, "%s - %s%s###header%u", name.c_str(), GetDurationStr(), failed ? " [Failed]" : "", ui_id);
+
+    if (!cached_header[0] || active) {
+        if (settings.show_start_date_time) {
+            snprintf(cached_header, sizeof(cached_header), "%s - %s - %s%s###header%u", GetStartTimeStr(), name.c_str(), GetDurationStr(), failed ? " [Failed]" : "", ui_id);
+        }
+        else {
+            snprintf(cached_header, sizeof(cached_header), "%s - %s%s###header%u", name.c_str(), GetDurationStr(), failed ? " [Failed]" : "", ui_id);
+        }
     }
 
     bool is_open = true;
-    const bool is_collapsed = !ImGui::CollapsingHeader(buf, &is_open, ImGuiTreeNodeFlags_DefaultOpen);
+    drawn_expanded = ImGui::CollapsingHeader(cached_header, &is_open, ImGuiTreeNodeFlags_DefaultOpen);
     if (!is_open) {
         return false;
     }
-    if (!is_collapsed) {
+    if (drawn_expanded) {
         ImGui::PushID(static_cast<int>(ui_id));
         for (Objective* objective : objectives) {
             objective->Draw();
@@ -1680,10 +1719,19 @@ bool ObjectiveTimerWindow::ObjectiveSet::Draw()
         ImGui::PopID();
     }
     if (need_to_collapse) {
-        ImGui::GetCurrentWindow()->DC.StateStorage->SetInt(ImGui::GetID(buf), 0);
+        ImGui::GetCurrentWindow()->DC.StateStorage->SetInt(ImGui::GetID(cached_header), 0);
         need_to_collapse = false;
+        drawn_expanded = false;
     }
     return true;
+}
+
+void ObjectiveTimerWindow::ObjectiveSet::InvalidateCachedStrings()
+{
+    cached_start[0] = cached_time[0] = cached_header[0] = '\0';
+    for (Objective* objective : objectives) {
+        objective->InvalidateCachedStrings();
+    }
 }
 
 void ObjectiveTimerWindow::ObjectiveSet::GetStartTime(tm* timeinfo) const

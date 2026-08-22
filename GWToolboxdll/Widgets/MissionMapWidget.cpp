@@ -525,7 +525,7 @@ namespace {
         }
 
         // When the overlay is off (default), draw the lines directly — a single DrawPrimitive with the
-        // state already set above. Only the opt-in overlay pays for Minimap::Render (D3DSBT_ALL capture).
+        // state already set above. Only the opt-in overlay pays for Minimap::Render's own state guard.
         if (settings.draw_minimap && Minimap::IsEnabled()) {
             RenderMinimapLayers(dx_device, gameToScreen, ortho);
         }

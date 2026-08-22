@@ -465,8 +465,7 @@ void RiverModule::DrawInWorld(IDirect3DDevice9* device)
     // Slow, incommensurate envelope so the waves swell and calm without an obvious period.
     const float env = std::max(0.15f, 1.f + 0.5f * std::sin(t_seconds * 0.13f) + 0.3f * std::sin(t_seconds * 0.071f));
 
-    IDirect3DStateBlock9* state_block = nullptr; // restored on exit so GW's own rendering isn't corrupted
-    if (device->CreateStateBlock(D3DSBT_ALL, &state_block) != D3D_OK) return;
+    const D3DStateGuard state_guard(device); // restored on exit so GW's own rendering isn't corrupted
     if (device->SetVertexShader(lava_vs) == D3D_OK && device->SetPixelShader(lava_ps) == D3D_OK && device->SetVertexDeclaration(lava_decl) == D3D_OK && GameWorldCompositor::SetWorldViewProj(device)) {
         GameWorldCompositor::SetWorldRenderStates(device, GameWorldRenderer::GetOccludeBehindTerrain());
         GameWorldCompositor::SetDistanceFog(device, render_max_distance, fog_factor);
@@ -489,8 +488,6 @@ void RiverModule::DrawInWorld(IDirect3DDevice9* device)
             }
         }
     }
-    state_block->Apply();
-    state_block->Release();
 }
 
 void RiverModule::RegisterSettings(ToolboxModule* module)

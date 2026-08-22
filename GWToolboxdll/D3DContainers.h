@@ -134,18 +134,39 @@ public:
     void SetCenterColor(DWORD c);
     void SetRadius(float r);
 };
+// Saves the device state toolbox renderers touch and restores it on scope exit, so GW's own
+// rendering isn't corrupted. Deliberately NOT CreateStateBlock(D3DSBT_ALL): capturing the whole
+// device state measures ~45us per use per frame (~0.5us for the explicit list below), and holding a
+// state block across a GW device Reset would invalidate it. The lists in D3DContainers.cpp are the
+// union of every state the toolbox writes - extend them when a renderer starts setting something new.
 struct D3DStateGuard {
-    IDirect3DStateBlock9* block = nullptr;
-    explicit D3DStateGuard(IDirect3DDevice9* dev) { dev->CreateStateBlock(D3DSBT_ALL, &block); }
-    ~D3DStateGuard()
-    {
-        if (block) {
-            block->Apply();
-            block->Release();
-        }
-    }
+    explicit D3DStateGuard(IDirect3DDevice9* dev);
+    ~D3DStateGuard();
+
     D3DStateGuard(const D3DStateGuard&) = delete;
     D3DStateGuard& operator=(const D3DStateGuard&) = delete;
+
+private:
+    IDirect3DDevice9* device;
+    DWORD render_states[35]{};
+    DWORD texture_stage_states[2][6]{};
+    DWORD sampler_states[4]{};
+    D3DMATRIX world{}, view{}, projection{};
+    // Registers the toolbox overwrites: VS c0-c11 (compositor view/proj matrices + per-module params),
+    // PS c0-c3 (fog/colour params) and PS b0 (dotted-line flag).
+    float vertex_shader_constants[12 * 4]{};
+    float pixel_shader_constants[4 * 4]{};
+    BOOL pixel_shader_bool = FALSE;
+    IDirect3DBaseTexture9* texture = nullptr;
+    IDirect3DVertexShader9* vertex_shader = nullptr;
+    IDirect3DPixelShader9* pixel_shader = nullptr;
+    IDirect3DVertexDeclaration9* vertex_declaration = nullptr;
+    IDirect3DIndexBuffer9* indices = nullptr;
+    IDirect3DVertexBuffer9* stream0 = nullptr;
+    UINT stream0_offset = 0, stream0_stride = 0;
+    DWORD fvf = 0;
+    D3DVIEWPORT9 viewport{};
+    RECT scissor{};
 };
 
 D3DMATRIX MakeOrthoProjection(float w, float h);

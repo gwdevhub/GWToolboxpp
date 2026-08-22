@@ -12,6 +12,7 @@
 #include <GWCA/Managers/MapMgr.h>
 
 #include <Color.h>
+#include <D3DContainers.h>
 #include <Defines.h>
 #include <ImGuiAddons.h>
 #include <Modules/GwDatModule.h>
@@ -458,41 +459,33 @@ void LootBeaconsModule::DrawInWorld(IDirect3DDevice9* device)
     }
 
     if (!scratch.empty()) {
-        IDirect3DStateBlock9* state_block = nullptr;
-        if (device->CreateStateBlock(D3DSBT_ALL, &state_block) == D3D_OK) {
-            // Static depth keeps walls/props occluding overlays; agents draw later in GW's pass.
-            if (GameWorldCompositor::SetupPipeline(device, true, kNoDistanceLimit, 0.f)) {
-                constexpr BOOL dotted_off[1] = {FALSE};
-                device->SetPixelShaderConstantB(0, dotted_off, 1);
-                device->DrawPrimitiveUP(D3DPT_TRIANGLELIST, static_cast<UINT>(scratch.size() / 3), scratch.data(), sizeof(BeaconVertex));
-            }
-            state_block->Apply();
-            state_block->Release();
+        const D3DStateGuard state_guard(device);
+        // Static depth keeps walls/props occluding overlays; agents draw later in GW's pass.
+        if (GameWorldCompositor::SetupPipeline(device, true, kNoDistanceLimit, 0.f)) {
+            constexpr BOOL dotted_off[1] = {FALSE};
+            device->SetPixelShaderConstantB(0, dotted_off, 1);
+            device->DrawPrimitiveUP(D3DPT_TRIANGLELIST, static_cast<UINT>(scratch.size() / 3), scratch.data(), sizeof(BeaconVertex));
         }
     }
 
     IDirect3DTexture9* ring_tex = ring_tex_pp ? *ring_tex_pp : nullptr;
     if (!ring_scratch.empty() && ring_tex && EnsureRingShaders(device)) {
-        IDirect3DStateBlock9* state_block = nullptr;
-        if (device->CreateStateBlock(D3DSBT_ALL, &state_block) == D3D_OK) {
-            if (device->SetVertexShader(ring_vs) == D3D_OK && device->SetPixelShader(ring_ps) == D3D_OK && device->SetVertexDeclaration(ring_decl) == D3D_OK &&
-                GameWorldCompositor::SetWorldViewProj(device)) {
-                // Static depth keeps walls/props occluding overlays; agents draw later in GW's pass.
-                GameWorldCompositor::SetWorldRenderStates(device, true);
-                constexpr float slope_bias = -1.5f;
-                constexpr float const_bias = -1e-5f;
-                device->SetRenderState(D3DRS_SLOPESCALEDEPTHBIAS, *reinterpret_cast<const DWORD*>(&slope_bias));
-                device->SetRenderState(D3DRS_DEPTHBIAS, *reinterpret_cast<const DWORD*>(&const_bias));
-                GameWorldCompositor::SetDistanceFog(device, kNoDistanceLimit, 0.f);
-                device->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
-                device->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
-                device->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
-                device->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
-                device->SetTexture(0, ring_tex);
-                device->DrawPrimitiveUP(D3DPT_TRIANGLELIST, static_cast<UINT>(ring_scratch.size() / 3), ring_scratch.data(), sizeof(RingVertex));
-            }
-            state_block->Apply();
-            state_block->Release();
+        const D3DStateGuard state_guard(device);
+        if (device->SetVertexShader(ring_vs) == D3D_OK && device->SetPixelShader(ring_ps) == D3D_OK && device->SetVertexDeclaration(ring_decl) == D3D_OK &&
+            GameWorldCompositor::SetWorldViewProj(device)) {
+            // Static depth keeps walls/props occluding overlays; agents draw later in GW's pass.
+            GameWorldCompositor::SetWorldRenderStates(device, true);
+            constexpr float slope_bias = -1.5f;
+            constexpr float const_bias = -1e-5f;
+            device->SetRenderState(D3DRS_SLOPESCALEDEPTHBIAS, *reinterpret_cast<const DWORD*>(&slope_bias));
+            device->SetRenderState(D3DRS_DEPTHBIAS, *reinterpret_cast<const DWORD*>(&const_bias));
+            GameWorldCompositor::SetDistanceFog(device, kNoDistanceLimit, 0.f);
+            device->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+            device->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
+            device->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
+            device->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
+            device->SetTexture(0, ring_tex);
+            device->DrawPrimitiveUP(D3DPT_TRIANGLELIST, static_cast<UINT>(ring_scratch.size() / 3), ring_scratch.data(), sizeof(RingVertex));
         }
     }
 }

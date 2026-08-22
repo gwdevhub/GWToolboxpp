@@ -1157,8 +1157,7 @@ namespace {
         };
         const ColVtx q[6] = {corner(-1, -1), corner(1, -1), corner(1, 1), corner(-1, -1), corner(1, 1), corner(-1, 1)};
 
-        IDirect3DStateBlock9* sb = nullptr;
-        if (device->CreateStateBlock(D3DSBT_ALL, &sb) != D3D_OK) return;
+        const D3DStateGuard state_guard(device);
         if (GameWorldCompositor::SetupPipeline(device, false, kZFar, 0.f)) {
             device->SetRenderState(D3DRS_ZENABLE, FALSE);
             device->SetRenderState(D3DRS_ZWRITEENABLE, FALSE); // must not touch the depth buffer or it culls the scene/particles
@@ -1167,8 +1166,6 @@ namespace {
             device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ZERO);
             device->DrawPrimitiveUP(D3DPT_TRIANGLELIST, 2, q, sizeof(ColVtx));
         }
-        sb->Apply();
-        sb->Release();
     }
 
     // Turn on automatic weather, following the current map's climate (clears any forced climate). Shared by
@@ -1325,8 +1322,7 @@ void WeatherModule::DrawInWorld(IDirect3DDevice9* device)
 #endif
     if (!have_any || !EnsureShaders(device)) return;
 
-    IDirect3DStateBlock9* state_block = nullptr; // restored on exit so GW's own rendering isn't corrupted
-    if (device->CreateStateBlock(D3DSBT_ALL, &state_block) != D3D_OK) return;
+    const D3DStateGuard state_guard(device); // restored on exit so GW's own rendering isn't corrupted
     if (device->SetPixelShader(weather_ps) == D3D_OK && GameWorldCompositor::SetWorldViewProj(device)) {
         GameWorldCompositor::SetWorldRenderStates(device, GameWorldRenderer::GetOccludeBehindTerrain());
         GameWorldCompositor::SetDistanceFog(device, render_max_distance, fog_factor);
@@ -1391,8 +1387,6 @@ void WeatherModule::DrawInWorld(IDirect3DDevice9* device)
         }
 #endif
     }
-    state_block->Apply();
-    state_block->Release();
 }
 
 void WeatherModule::RegisterSettings(ToolboxModule* module)

@@ -5,6 +5,7 @@
 #include <GWCA/Managers/MapMgr.h>
 
 #include <Color.h>
+#include <D3DContainers.h>
 #include <ImGuiAddons.h>
 #include <Modules/DangerRingsModule.h>
 #include <Timer.h>
@@ -160,16 +161,13 @@ void DangerRingsModule::DrawInWorld(IDirect3DDevice9* device)
     }
     if (scratch.empty()) return;
 
-    IDirect3DStateBlock9* state_block = nullptr;
-    if (device->CreateStateBlock(D3DSBT_ALL, &state_block) != D3D_OK) return;
+    const D3DStateGuard state_guard(device);
     // Static depth keeps walls/props occluding overlays; agents draw later in GW's pass.
     if (GameWorldCompositor::SetupPipeline(device, true, render_max_distance, fog_factor)) {
         constexpr BOOL dotted_off[1] = {FALSE};
         device->SetPixelShaderConstantB(0, dotted_off, 1);
         device->DrawPrimitiveUP(D3DPT_TRIANGLELIST, static_cast<UINT>(scratch.size() / 3), scratch.data(), sizeof(RingVertex));
     }
-    state_block->Apply();
-    state_block->Release();
 }
 
 void DangerRingsModule::RegisterSettings(ToolboxModule* module)

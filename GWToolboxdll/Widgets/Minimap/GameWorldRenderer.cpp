@@ -497,11 +497,8 @@ void GameWorldRenderer::DrawInWorld(IDirect3DDevice9* device)
         return;
     }
 
-    // Snapshot all device state; restored unconditionally on exit (incl. error paths) so GW's later rendering isn't corrupted.
-    IDirect3DStateBlock9* state_block = nullptr;
-    if (device->CreateStateBlock(D3DSBT_ALL, &state_block) != D3D_OK) {
-        return;
-    }
+    // Snapshot the device state toolbox touches; restored unconditionally on exit (incl. error paths) so GW's later rendering isn't corrupted.
+    const D3DStateGuard state_guard(device);
 
     if (GameWorldCompositor::SetupPipeline(device, occlude_behind_terrain, render_max_distance, fog_factor)) {
         const auto map_id = GW::Map::GetMapID();
@@ -560,9 +557,6 @@ void GameWorldRenderer::DrawInWorld(IDirect3DDevice9* device)
         }
         renderables_mutex.unlock();
     }
-
-    state_block->Apply();
-    state_block->Release();
 }
 
 void GameWorldRenderer::Render(IDirect3DDevice9* device)

@@ -1495,10 +1495,7 @@ void Minimap::Render(IDirect3DDevice9* device, const MinimapRenderContext& conte
         return;
     }
 
-    IDirect3DStateBlock9* d3d9_state_block = nullptr;
-    if (device->CreateStateBlock(D3DSBT_ALL, &d3d9_state_block) < 0) {
-        return;
-    }
+    const D3DStateGuard state_guard(device);
 
     D3DMATRIX reset_world;
     D3DMATRIX reset_view;
@@ -1641,9 +1638,6 @@ void Minimap::Render(IDirect3DDevice9* device, const MinimapRenderContext& conte
     device->SetTransform(D3DTS_WORLD, &reset_world);
     device->SetTransform(D3DTS_VIEW, &reset_view);
     device->SetTransform(D3DTS_PROJECTION, &reset_projection);
-
-    d3d9_state_block->Apply();
-    d3d9_state_block->Release();
 }
 
 const MinimapRenderContext& Minimap::GetRenderContext()
