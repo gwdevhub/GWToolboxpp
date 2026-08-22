@@ -58,16 +58,22 @@ namespace {
     OnProcessInput_pt ProcessInput_Ret = nullptr;
 
     struct GwMouseMove {
-        int center_x;
-        int center_y;
-        uint32_t unk;
-        uint32_t mouse_button_state; // 0x1 - LMB, 0x2 - MMB, 0x4 - RMB
-        uint32_t move_camera;        // 1 == control camera while right mouse button pressed
-        int captured_x;
-        int captured_y;
+        int center_x;                // 0x00 viewport centre the camera deltas are measured against
+        int center_y;                // 0x04
+        int captured_client_x;       // 0x08 cursor position in client space when the camera was captured
+        int captured_client_y;       // 0x0c
+        uint32_t unk;                // 0x10
+        uint32_t mouse_button_state; // 0x14 0x1 - LMB, 0x2 - MMB, 0x4 - RMB
+        uint32_t move_camera;        // 0x18 1 == control camera while right mouse button pressed
+        int captured_x;              // 0x1c cursor position in screen space when the camera was captured
+        int captured_y;              // 0x20
+        // 0x24 unused, 0x28 has_registered_track_mouse_event
     };
 
     GwMouseMove* gw_mouse_move = nullptr;
+    // OsInput event id for "mouse moved while the camera is captured". ArenaNet shuffles this
+    // enum between builds, so it's read out of the WM_MOUSEMOVE handler rather than hard coded.
+    uint32_t mouse_look_event_id = 0;
     LONG rawInputRelativePosX = 0;
     LONG rawInputRelativePosY = 0;
     bool* HasRegisteredTrackMouseEvent = nullptr;
@@ -108,7 +114,7 @@ namespace {
     bool OnProcessInput(uint32_t* wParam, uint32_t* lParam)
     {
         GW::Hook::EnterHook();
-        if (!(ShouldFixCursor() && HasRegisteredTrackMouseEvent && gw_mouse_move)) {
+        if (!(ShouldFixCursor() && HasRegisteredTrackMouseEvent && gw_mouse_move && mouse_look_event_id)) {
             goto forward_call; // Failed to find addresses for variables
         }
         if (!(wParam && wParam[1] == 0x200)) {
@@ -118,7 +124,10 @@ namespace {
             goto forward_call; // Not moving the camera, or GW hasn't yet called TrackMouseEvent
         }
 
-        lParam[0] = 0x12;
+        // NB: this has to be the mouse-look event; the button-down event id sits right next to it
+        // in GW's enum and would make the client act on whatever button index the previous event
+        // left in the (uncleared) output struct - typically walking the character forward.
+        lParam[0] = mouse_look_event_id;
         // Set the output parameters to be the relative position of the mouse to the center of the screen
         // NB: Original function uses ClientToScreen here; we've already grabbed the correct value via CursorFixWndProc
         lParam[1] = rawInputRelativePosX;
@@ -172,21 +181,32 @@ namespace {
         if(address && GW::Scanner::IsValidPtr(*(uintptr_t*)address)) {
             ProcessInput_Func = (OnProcessInput_pt)GW::Scanner::ToFunctionStart(address, 0xfff);
             HasRegisteredTrackMouseEvent = *(bool**)address;
-            gw_mouse_move = (GwMouseMove*)(HasRegisteredTrackMouseEvent - 0x20);
+            gw_mouse_move = (GwMouseMove*)(HasRegisteredTrackMouseEvent - 0x28);
+        }
+        if (address) {
+            // mov dword ptr [esi], <event id> ; movsx eax, word ptr [edi+0xc] ; mov [ebp-8], eax
+            // i.e. the branch of the WM_MOUSEMOVE handler that runs while the camera is captured.
+            const uintptr_t event_id_address = GW::Scanner::FindInRange(
+                "\xc7\x06\x00\x00\x00\x00\x0f\xbf\x47\x0c\x89\x45\xf8", "xx?xxxxxxxxxx", 2, address, address + 0x100);
+            if (event_id_address) {
+                mouse_look_event_id = *(uint32_t*)event_id_address;
+            }
         }
         SetCursorPosCenter_Func = (SetCursorPosCenter_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("OsInput.cpp", "basis", 0, 0));
         DEBUG_ASSERT(ProcessInput_Func);
         DEBUG_ASSERT(SetCursorPosCenter_Func);
+        DEBUG_ASSERT(mouse_look_event_id);
 
         GWCA_INFO("[SCAN] ProcessInput_Func = %p", ProcessInput_Func);
         GWCA_INFO("[SCAN] HasRegisteredTrackMouseEvent = %p", HasRegisteredTrackMouseEvent);
         GWCA_INFO("[SCAN] gw_mouse_move = %p", gw_mouse_move);
         GWCA_INFO("[SCAN] SetCursorPosCenter_Func = %p", SetCursorPosCenter_Func);
+        GWCA_INFO("[SCAN] mouse_look_event_id = 0x%02x", mouse_look_event_id);
 
 #ifdef _DEBUG
         //ASSERT(ProcessInput_Func && HasRegisteredTrackMouseEvent && gw_mouse_move && SetCursorPosCenter_Func);
 #endif
-        if (ProcessInput_Func && HasRegisteredTrackMouseEvent && gw_mouse_move && SetCursorPosCenter_Func) {
+        if (ProcessInput_Func && HasRegisteredTrackMouseEvent && gw_mouse_move && SetCursorPosCenter_Func && mouse_look_event_id) {
             GW::Hook::CreateHook((void**)&ProcessInput_Func, OnProcessInput, reinterpret_cast<void**>(&ProcessInput_Ret));
             GW::Hook::CreateHook((void**)&SetCursorPosCenter_Func, OnSetCursorPosCenter, reinterpret_cast<void**>(&SetCursorPosCenter_Ret));
         }            
@@ -197,7 +217,7 @@ namespace {
     void CursorFixEnable(const bool enable)
     {
         CursorFixInitialise();
-        if (!(ProcessInput_Func && HasRegisteredTrackMouseEvent && gw_mouse_move && SetCursorPosCenter_Func))
+        if (!(ProcessInput_Func && HasRegisteredTrackMouseEvent && gw_mouse_move && SetCursorPosCenter_Func && mouse_look_event_id))
             return;
         if (!enable) {
             GW::Hook::DisableHooks(ProcessInput_Func);
