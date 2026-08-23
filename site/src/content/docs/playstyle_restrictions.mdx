@@ -26,14 +26,16 @@ The profile is the rules; your progress through them is read live from the game,
 
 - **Heroes limited to unlocked campaigns** — no Olias before Nightfall is unlocked, no MOX in Prophecies.
 - **Maximum heroes in party** — caps the roster.
-- **Lock hero skillbars** — blocks loading a template onto anyone but yourself.
+- **Lock hero skillbars** — remembers each hero's bar as it joins you, and puts it straight back whenever one of their skills or attributes is changed.
 - **Always-allowed / never-allowed heroes** — comma-separated hero ids. The allow list wins over every other hero rule, which is how you make exceptions such as Reforged Devona.
 
 ## Skills
 
-- **Skills limited to unlocked campaigns** — refuses a skill template containing skills from a campaign you haven't unlocked. This approximates "what a fresh account would have unlocked" by campaign rather than by individual quest.
-- **One attribute line only** — refuses a bar that spends on more than one attribute.
-- **Lock the skillbar entirely** — refuses every template load.
+The skillbar rules are reactive rather than refusals: toolbox remembers the last bar that satisfied them — yours and each hero's — and loads it straight back when a change breaks a rule, so the skill window never ends up showing a bar the server didn't take. A change that keeps the bar legal becomes the new fallback. Switch a rule on while your bar already breaks it and the bar stays as it is until you change it; a change that makes it legal sticks.
+
+- **Skills limited to unlocked campaigns** — reverts a bar containing skills from a campaign you haven't unlocked. This approximates "what a fresh account would have unlocked" by campaign rather than by individual quest.
+- **One attribute line only** — reverts a bar that spends on more than one attribute.
+- **Lock the skillbar entirely** — pins your own bar to whatever it is when you arrive in a map; any change to a skill or to attribute points is put straight back.
 - **No elite tomes**.
 
 ## Items and equipment
