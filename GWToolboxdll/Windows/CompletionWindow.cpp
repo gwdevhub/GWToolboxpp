@@ -669,7 +669,7 @@ namespace {
             return false;
         if ((check & HardMode) && !ArrayBoolAt(w->missions_completed_hm, static_cast<uint32_t>(map_id)))
             return false;
-        const bool has_bonus = map->campaign != Campaign::EyeOfTheNorth;
+        const bool has_bonus = map->campaign != Campaign::EyeOfTheNorth && !(check & PrimaryOnly);
         if (has_bonus) {
             if ((check & NormalMode) && !ArrayBoolAt(w->missions_bonus, static_cast<uint32_t>(map_id)))
                 return false;
@@ -701,7 +701,7 @@ namespace {
             return false;
         if ((check & HardMode) && !ArrayBoolAt(completion->mission_hm, static_cast<uint32_t>(map_id)))
             return false;
-        const bool has_bonus = map->campaign != Campaign::EyeOfTheNorth;
+        const bool has_bonus = map->campaign != Campaign::EyeOfTheNorth && !(check & PrimaryOnly);
         if (has_bonus) {
             if ((check & NormalMode) && !ArrayBoolAt(completion->mission_bonus, static_cast<uint32_t>(map_id)))
                 return false;
@@ -3045,36 +3045,8 @@ CharacterCompletion* CompletionWindow::GetCharacterCompletion(const wchar_t* cha
 
 bool CompletionWindow::IsAreaComplete(const MapID map_id, CompletionCheck check)
 {
-    if (map_id == MapID::None)
-        return true;
-    if (map_id == MapID::Tomb_of_the_Primeval_Kings)
-        return true; // Topk special case
-
-    const auto map = GW::Map::GetMapInfo();
-    const auto w = GW::GetWorldContext();
-    if (!(map && w))
-        return false;
-    switch (map->type) {
-        case GW::RegionType::EliteMission:
-            return true;
-        case GW::RegionType::ExplorableZone:
-            if (map->continent == GW::Continent::BattleIsles)
-                return true; // Fow, Uw
-            return !map->GetIsOnWorldMap() || ArrayBoolAt(w->vanquished_areas, static_cast<uint32_t>(map_id));
-    }
-
-    if ((check & NormalMode) && !ArrayBoolAt(w->missions_completed, static_cast<uint32_t>(map_id)))
-        return false;
-    if ((check & HardMode) && !ArrayBoolAt(w->missions_completed_hm, static_cast<uint32_t>(map_id)))
-        return false;
-    const bool has_bonus = map->campaign != Campaign::EyeOfTheNorth;
-    if (has_bonus) {
-        if ((check & NormalMode) && !ArrayBoolAt(w->missions_bonus, static_cast<uint32_t>(map_id)))
-            return false;
-        if ((check & HardMode) && !ArrayBoolAt(w->missions_bonus_hm, static_cast<uint32_t>(map_id)))
-            return false;
-    }
-    return true;
+    // Qualified: unqualified lookup inside a member finds this same member, not the file-local one.
+    return ::IsAreaComplete(map_id, check);
 }
 
 bool CompletionWindow::IsAreaComplete(const wchar_t* player_name, const MapID map_id, CompletionCheck check)

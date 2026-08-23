@@ -1,0 +1,59 @@
+---
+title: "Playstyle Restrictions"
+description: "Build, share and enforce a profile of self-imposed challenge-run restrictions such as Copperman mode."
+section: windows
+---
+
+import ToolboxPath from '../../components/ToolboxPath.astro';
+
+Open from <ToolboxPath kind="window" steps={["Toolbox", "Playstyle Restrictions"]} />. Per-window options live under <ToolboxPath steps={["Settings", "Playstyle Restrictions"]} />.
+
+Challenge runs like "Copperman" — play the campaigns in release order, gate heroes, skills and gear to what a fresh account would naturally have — are normally enforced by honour system. This window turns that ruleset into a **profile**: a checklist of restrictions that GWToolbox enforces where it can, saved as a `.json` file you can hand to anyone else running the same challenge.
+
+The profile is the rules; your progress through them is read live from the game, so nothing extra needs saving per character.
+
+## Campaign progression
+
+- **Enforce campaign order** — blocks map travel into, and Enter Mission inside, a campaign whose predecessor isn't finished. The order is yours to arrange; the default is Prophecies → Factions → Nightfall → Eye of the North. A campaign counts as finished when its final mission is complete.
+- **Also require the previous campaign's titles maxed** — additionally requires Protector, Guardian, Vanquisher, Skill Hunter and Cartographer for that campaign (plus Sunspear and Lightbringer for Nightfall). Account-wide titles such as Party or Sweet Tooth are never counted.
+- **Missions count only when done in Hard Mode too** — applies to every mission check on this page; off means Normal Mode is enough.
+- **Missions also need their bonus objective** — off by default, so a mission counts once its primary objective is done. Turn it on for a stricter run.
+- **Missions must be done in story order** — greys out Enter Mission until every earlier mission of that campaign is complete, so missions can't be skipped by being run ahead.
+- **Require titles before leaving pre-Searing** — blocks the trip out of pre-Searing until the listed titles are earned. Defaults to Legendary Defender of Ascalon and Survivor rank 1.
+- **Minimum level for gated areas** — blocks Enter Mission for any area that carries a level requirement until you reach the level you set here.
+
+## Heroes
+
+- **Heroes limited to unlocked campaigns** — no Olias before Nightfall is unlocked, no MOX in Prophecies.
+- **Maximum heroes in party** — caps the roster.
+- **Lock hero skillbars** — blocks loading a template onto anyone but yourself.
+- **Always-allowed / never-allowed heroes** — comma-separated hero ids. The allow list wins over every other hero rule, which is how you make exceptions such as Reforged Devona.
+
+## Skills
+
+- **Skills limited to unlocked campaigns** — refuses a skill template containing skills from a campaign you haven't unlocked. This approximates "what a fresh account would have unlocked" by campaign rather than by individual quest.
+- **One attribute line only** — refuses a bar that spends on more than one attribute.
+- **Lock the skillbar entirely** — refuses every template load.
+- **No elite tomes**.
+
+## Items and equipment
+
+- **No consumables** / **No scrolls**.
+- **Lockpicks in Hard Mode only** — Normal Mode stays regular-keys-only even after Hard Mode is unlocked.
+- **No buying major/superior runes** — blocks the *purchase* only; the same rune picked up as loot stays legal.
+- **No buying Zaishen Coins**.
+- **Blocked item model ids** — comma-separated model ids that can't be used, equipped or bought. Use this for bonus and holiday weapons, Fire Imp, and anything else your group bans.
+
+## Storage
+
+- **No Xunlai Chest** — the chest simply won't open. A "fresh account" run just leaves this off.
+
+## Sharing a profile
+
+**Save profile to file...** writes every toggle above to a `.json` file; **Load profile from file...** reads one back. The file is the whole ruleset, so authoring it once and sharing it verbatim reproduces the same restrictions for everyone else. Your own copy is also kept in `playstyle_restrictions.json` in your GWToolbox settings folder.
+
+**Enforce this profile** turns blocking on and off without losing the profile.
+
+## What is not enforced
+
+The module gates what the client routes through an action it can block, and does not police anything else. Character creation choices, who you trade with, walking through a portal into a gated zone, and any rule you break outside the game client are on you — as is the exported file itself, which is plain text.
