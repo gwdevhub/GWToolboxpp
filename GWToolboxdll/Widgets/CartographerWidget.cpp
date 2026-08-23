@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <map>
+#include <numeric>
 
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Context/CharContext.h>
@@ -276,6 +277,7 @@ namespace {
     // that one is filled after scoring has already run and reads as the whole world on a revisit.
     GW::Constants::MapID map_rect_id = static_cast<GW::Constants::MapID>(0);
     std::pair<int, int> map_rect_min{}, map_rect_max{};
+    ImRect map_rect_bounds;
     bool map_rect_valid = false;
 
     bool EnsureMapRect()
@@ -295,6 +297,7 @@ namespace {
             static_cast<int>(ceilf(bounds.Max.x / kWorldMapUnitsPerCell)),
             static_cast<int>(ceilf(bounds.Max.y / kWorldMapUnitsPerCell)),
         };
+        map_rect_bounds = bounds;
         map_rect_valid = true;
         return true;
     }
@@ -308,6 +311,14 @@ namespace {
         if (!EnsureMapRect()) return true; // no rectangle to clamp against - do not hide everything
         return cx >= map_rect_min.first && cx < map_rect_max.first
             && cy >= map_rect_min.second && cy < map_rect_max.second;
+    }
+
+    // QuestModule::SetCustomQuestMarker only resolves to a real in-map position while the current
+    // map's world-map rectangle contains it; outside it the marker becomes a travel marker instead.
+    bool StandRoutable(const GW::Vec2f& wm)
+    {
+        if (!EnsureMapRect()) return true;
+        return map_rect_bounds.Contains({wm.x, wm.y});
     }
 
     // Measured in game: a tile is reachable beyond the near ring only if walkable ground comes
@@ -388,6 +399,8 @@ namespace {
 
     // Fog nothing on this map can reach; excluded from the overlay so it only shows actionable fog.
     int unreachable_fog_cells = 0;
+    // A queued fog point selection had to pass over because nothing reachable credits it.
+    bool blocked_point = false;
 
     // The client's fog texture is this many texels per cartography cell, so the visible fog is
     // four times finer than the 32-unit grid the bits live on.
@@ -513,21 +526,25 @@ namespace {
     }
 
 
+    // Fine enough to catch the shoreline slivers that are often the only footing near fog. The
+    // half-cell (s+0.5)/kStandSamples offsets keep every sample clear of the cell edges.
+    constexpr int kStandSamples = 6;
+    // Derived from the lattice so the bound cannot drift if the lattice changes.
+    constexpr float kStandSampleOffsetMax = kWorldMapUnitsPerCell * 0.5f * (1.f - 1.f / kStandSamples) * 1.41421356f;
+
     // Coastlines ignore the cell grid, so sample the whole cell: one that is mostly cliff but
     // clips a walkable ledge is still somewhere you can go. Answers both halves of the question:
     // where we can send the player (reachable - ground behind a closed gate paths fine but cannot be
     // walked to) and whether the tile carries walkable ground at all, which is what credit turns on.
     void ProbeStandCell(const int cx, const int cy, StandCell& out)
     {
-        // Fine enough to catch the shoreline slivers that are often the only footing near fog.
-        constexpr int kSamples = 6;
         float best_d2 = FLT_MAX;
         const GW::Vec2f centre = CreditCellCenterWorldMap(cx, cy);
-        for (int sy = 0; sy < kSamples; sy++) {
-            for (int sx = 0; sx < kSamples; sx++) {
+        for (int sy = 0; sy < kStandSamples; sy++) {
+            for (int sx = 0; sx < kStandSamples; sx++) {
                 const GW::Vec2f wm{
-                    (cx + (sx + 0.5f) / kSamples) * kWorldMapUnitsPerCell,
-                    (cy + (sy + 0.5f) / kSamples) * kWorldMapUnitsPerCell,
+                    (cx + (sx + 0.5f) / kStandSamples) * kWorldMapUnitsPerCell,
+                    (cy + (sy + 0.5f) / kStandSamples) * kWorldMapUnitsPerCell,
                 };
                 GW::GamePos gp{};
                 // Reachability is the expensive half and implies walkability, so the cheap BSP
@@ -547,39 +564,60 @@ namespace {
         }
     }
 
+    // Once per session: the rectangle guard is what stops a stand the quest marker cannot express,
+    // and how often it bites is the only way to tell whether it is too tight.
+    bool warned_stand_off_rect = false;
+
     // A fog point marks fog, and fog is rarely somewhere you can stand. Answers with the closest
-    // spot to `from` that is reachable AND sits in a tile the game would credit `fog_wm`'s tile
-    // from. False when nothing here can credit it: another map, or a point dropped on ground that
-    // is already explored.
-    bool ResolveStandWorldPos(const GW::Vec2f& fog_wm, const GW::Vec2f& from, GW::Vec2f& out, std::pair<int, int>& out_cell)
+    // spot to `from` that is reachable, routable, AND sits in a tile the game would credit
+    // `fog_wm`'s tile from. False when no such spot exists.
+    // `any_navmesh` separates "this map has no ground near that fog" - another map's to uncover -
+    // from "it has ground, but none of it is reachable from here", which are different answers.
+    bool ResolveStandWorldPos(const GW::Vec2f& fog_wm, const GW::Vec2f& from, GW::Vec2f& out, std::pair<int, int>& out_cell, bool& any_navmesh)
     {
         const auto [fx, fy] = FogTileAt(fog_wm);
-        const int r = RevealRadius();
-        std::vector<std::pair<int, int>> candidates;
-        for (int dy = -r; dy <= r; dy++) {
-            for (int dx = -r; dx <= r; dx++) {
-                // Credit is decided from the standing tile's side, so the offsets invert here.
-                if (CellCreditableFrom(-dx, -dy, fx, fy)) candidates.push_back({fx + dx, fy + dy});
+        // `covered` is the ring already tried, so the wide pass only visits what the near one did not.
+        const auto try_ring = [&](const int covered, const int r) {
+            std::vector<std::pair<int, int>> candidates;
+            for (int dy = -r; dy <= r; dy++) {
+                for (int dx = -r; dx <= r; dx++) {
+                    if (std::max(abs(dx), abs(dy)) <= covered) continue;
+                    candidates.push_back({fx + dx, fy + dy});
+                }
             }
-        }
-        // Nearest first, so the usual case answers after probing one tile rather than all of them.
-        std::ranges::sort(candidates, [&from](const auto& a, const auto& b) {
-            return Dist2(CreditCellCenterWorldMap(a.first, a.second), from) < Dist2(CreditCellCenterWorldMap(b.first, b.second), from);
-        });
-        for (const auto& cell : candidates) {
-            auto it = probe->cells.find(cell);
-            if (it == probe->cells.end()) {
-                StandCell sc;
-                ProbeStandCell(cell.first, cell.second, sc);
-                it = probe->cells.emplace(cell, sc).first;
-                coverage_stale = true; // scored by the next recompute, not by us - we have no grid here
-            }
-            if (it->second.reachable && WorldMapWidget::GamePosToWorldMap(it->second.pos, out)) {
+            std::ranges::sort(candidates, [&from](const auto& a, const auto& b) {
+                return Dist2(CreditCellCenterWorldMap(a.first, a.second), from) < Dist2(CreditCellCenterWorldMap(b.first, b.second), from);
+            });
+            float best_d2 = FLT_MAX;
+            bool found = false;
+            for (const auto& cell : candidates) {
+                const float centre_d2 = Dist2(CreditCellCenterWorldMap(cell.first, cell.second), from);
+                // A cell's centre only bounds the walk its probed footing actually costs, so ordering
+                // by it is not enough to stop at the first hit - but it is enough to stop early.
+                if (found && sqrtf(centre_d2) - kStandSampleOffsetMax > sqrtf(best_d2)) break;
+                auto it = probe->cells.find(cell);
+                if (it == probe->cells.end()) {
+                    StandCell sc;
+                    ProbeStandCell(cell.first, cell.second, sc);
+                    it = probe->cells.emplace(cell, sc).first;
+                    coverage_stale = true; // scored by the next recompute, not by us - we have no grid here
+                }
+                if (it->second.navmesh) any_navmesh = true;
+                GW::Vec2f wm;
+                if (!it->second.reachable || !WorldMapWidget::GamePosToWorldMap(it->second.pos, wm)) continue;
+                const float d2 = Dist2(wm, from);
+                if (found && d2 >= best_d2) continue;
+                best_d2 = d2;
+                found = true;
+                out = wm;
                 out_cell = cell;
-                return true;
             }
-        }
-        return false;
+            return found;
+        };
+        // Near-range credit is unconditional; BEC range is a guess whose only disproof costs a 15s
+        // dwell, so the wide ring is a fallback rather than a competitor.
+        if (try_ring(-1, kRevealRadius)) return true;
+        return RevealRadius() > kRevealRadius && CellQualifies(fx, fy) && try_ring(kRevealRadius, RevealRadius());
     }
 
     // Keeps the sweep to the fog's fringe instead of probing every cell on the map.
@@ -698,6 +736,10 @@ namespace {
         RebuildFog(grid, map_info);
     }
 
+    // Elsewhere keeps the raw point on purpose: the quest marker turns a position outside this
+    // map's rectangle into a travel marker, which is how the player reaches another map's fog.
+    enum class GoalKind { None, Elsewhere, Waypoint, Stand };
+
     struct Target {
         bool valid = false;
         bool custom = false;
@@ -706,15 +748,12 @@ namespace {
         int cy = 0;
         int reveals = 0;
         GW::Vec2f wm{};
-        bool on_map = true;
-        // Where a fog point actually sends you: the spot in the tile that credits it. Unset for
-        // fog targets, whose `wm` is already the tile to stand in. The cell is carried rather than
-        // re-derived, because `stand_wm` is a round trip through two conversions and a value that
-        // lands on a row boundary parses back into the neighbouring row.
+        // The stand cell is carried rather than re-derived from `stand_wm`: the arrival test
+        // compares cells, and re-deriving one is a second chance to disagree with the client.
         GW::Vec2f stand_wm{};
         int stand_cx = 0;
         int stand_cy = 0;
-        bool stand_valid = false;
+        GoalKind goal = GoalKind::None;
     };
 
     GW::Constants::MapID state_map_id = static_cast<GW::Constants::MapID>(0);
@@ -728,10 +767,14 @@ namespace {
     bool warned_no_data = false;
     bool warned_no_fog = false;
 
-    // Where the player is being sent: a fog point's standing spot, or the target itself.
-    const GW::Vec2f& TargetGoal()
+    // Where the player is being sent. Null means nothing reachable credits the target.
+    const GW::Vec2f* TargetGoal()
     {
-        return target.stand_valid ? target.stand_wm : target.wm;
+        if (!target.valid) return nullptr;
+        if (!target.custom) return &target.wm;
+        return target.goal == GoalKind::Stand ? &target.stand_wm
+            : target.goal == GoalKind::Waypoint || target.goal == GoalKind::Elsewhere ? &target.wm
+            : nullptr;
     }
 
     // The custom quest marker is shared with everything else that sets one, so remember the one we
@@ -763,18 +806,32 @@ namespace {
             ReleaseQuestMarker();
             return;
         }
-        const GW::Vec2f goal = TargetGoal();
+        const GW::Vec2f* goal = TargetGoal();
+        if (!goal) {
+            ReleaseQuestMarker();
+            return;
+        }
+        // Outside the rectangle SetCustomQuestMarker degrades to a travel marker, which is right for
+        // another map's fog and wrong for a square on this one - so leave that square unmarked.
+        if (target.goal == GoalKind::Stand && !StandRoutable(*goal)) {
+            if (!warned_stand_off_rect) {
+                warned_stand_off_rect = true;
+                CARTO_LOG("[cartographer] stand square at wm(%.0f, %.0f) sits outside this map's world-map rectangle; drawing it without a quest marker", goal->x, goal->y);
+            }
+            ReleaseQuestMarker();
+            return;
+        }
         if (marker_placed && Dist2(marker_point, target.wm) < 1.f) {
             // Same point: follow it only while the marker is still ours, so clearing it by hand sticks.
-            if (Dist2(goal, marker_goal) < 1.f || !MarkerStillOurs()) return;
+            if (Dist2(*goal, marker_goal) < 1.f || !MarkerStillOurs()) return;
         }
         else {
             ReleaseQuestMarker();
         }
         marker_placed = true;
         marker_point = target.wm;
-        marker_goal = goal;
-        QuestModule::SetCustomQuestMarker(goal, true);
+        marker_goal = *goal;
+        QuestModule::SetCustomQuestMarker(*goal, true);
     }
 
     void ClearTarget()
@@ -785,17 +842,27 @@ namespace {
         SyncQuestMarker();
     }
 
-    // Re-resolved every scan rather than kept: the sweep keeps learning what is standable, a gate
-    // moving can take the answer away again, and once the tile is credited there is nowhere to send
-    // anyone - a point on explored ground is just a waypoint, so it routes to itself.
+    // A point on explored ground is a waypoint and routes to itself; fog nothing can credit has
+    // nowhere to route at all.
+    GoalKind ResolveGoal(const GW::Vec2f& point_wm, const GW::Vec2f& from, GW::Vec2f& goal_wm, std::pair<int, int>& goal_cell)
+    {
+        CartoGrid grid;
+        const auto [fx, fy] = FogTileAt(point_wm);
+        if (!GetCartoGrid(grid)) return GoalKind::None;
+        if (grid.IsExplored(fx, fy)) return GoalKind::Waypoint;
+        bool any_navmesh = false;
+        if (ResolveStandWorldPos(point_wm, from, goal_wm, goal_cell, any_navmesh)) return GoalKind::Stand;
+        return any_navmesh ? GoalKind::None : GoalKind::Elsewhere;
+    }
+
+    // Re-resolved every scan rather than kept: the sweep keeps learning what is standable, and a
+    // gate moving can take the answer away again.
     void RefreshCustomTargetStand(const GW::Vec2f& from)
     {
         if (!target.valid || !target.custom) return;
-        CartoGrid grid;
-        const auto [fx, fy] = FogTileAt(target.wm);
-        const bool foggy = GetCartoGrid(grid) && !grid.IsExplored(fx, fy);
         std::pair cell{0, 0};
-        target.stand_valid = target.on_map && foggy && ResolveStandWorldPos(target.wm, from, target.stand_wm, cell);
+        target.stand_wm = {};
+        target.goal = ResolveGoal(target.wm, from, target.stand_wm, cell);
         target.stand_cx = cell.first;
         target.stand_cy = cell.second;
         SyncQuestMarker();
@@ -808,9 +875,11 @@ namespace {
         arrived = false;
         warned_no_data = false;
         warned_no_fog = false;
+        warned_stand_off_rect = false;
         map_fog_cells = -1;
         fog_cells.clear();
         unreachable_fog_cells = 0;
+        blocked_point = false;
         map_cell_min = map_cell_max = {};
         player_cell_valid = false;
         map_on_world_map = false;
@@ -843,11 +912,15 @@ namespace {
         ClearTarget();
     }
 
-    void AddCustomPointImpl(const GW::Vec2f& wm)
+    void AddCustomPointImpl(const GW::Vec2f& raw_wm)
     {
         CartoGrid grid;
-        const auto [fx, fy] = FogTileAt(wm);
+        const auto [fx, fy] = FogTileAt(raw_wm);
+        // Credit is per tile, so where in it you clicked carries no information: snapping means two
+        // clicks in one tile are one point, and every distance downstream is measured tile to tile.
+        const GW::Vec2f wm = CreditCellCenterWorldMap(fx, fy);
         const bool foggy = GetCartoGrid(grid) && !grid.IsExplored(fx, fy);
+        std::erase_if(custom_points, [&wm](const CustomPoint& p) { return FogTileAt(p.wm) == FogTileAt(wm); });
         custom_points.push_back({wm, foggy});
         SerializePoints();
         // Taking the target over straight away is what makes the marker point at the fog you just
@@ -856,13 +929,13 @@ namespace {
         target.valid = true;
         target.custom = true;
         target.wm = wm;
-        ImRect bounds;
-        const auto map_info = GW::Map::GetMapInfo(GW::Map::GetMapID());
-        target.on_map = map_info && GW::Map::GetMapWorldMapBounds(map_info, &bounds) && bounds.Contains({wm.x, wm.y});
         arrived = false;
         RefreshCustomTargetStand(player_wm_cached);
         CARTO_LOG("[cartographer] custom fog point added at wm(%.0f, %.0f)%s", wm.x, wm.y,
-                  target.stand_valid ? "" : " - no reachable spot credits it from here");
+                  target.goal == GoalKind::Stand ? ""
+                  : target.goal == GoalKind::Waypoint ? " - already explored, marking the point itself"
+                  : target.goal == GoalKind::Elsewhere ? " - no ground on this map is near it; travelling instead"
+                  : " - this map has ground near it, but none reachable from here");
     }
 
 #ifdef _DEBUG
@@ -1092,8 +1165,10 @@ namespace {
 
     void BuildStatusText(char* buf, const size_t len)
     {
+        static constexpr const char* no_goal = "no reachable square credits your fog point - right-click it on the map to remove it";
         if (!target.valid) {
-            const char* idle = map_fog_cells == 0 ? "nothing left to uncover on this map"
+            const char* idle = blocked_point ? no_goal
+                : map_fog_cells == 0 ? "nothing left to uncover on this map"
                 : !probe->complete ? "scanning this map's fog..."
                 : "nothing reachable left here - travel on, or add a fog point";
             snprintf(buf, len, "%s", idle);
@@ -1105,21 +1180,26 @@ namespace {
                          : "standing in the right tile - if it does not register, take a step or click-walk");
             return;
         }
-        const GW::Vec2f goal = TargetGoal();
-        const float dist_k = sqrtf(Dist2(player_wm_cached, goal)) * kGwinchesPerWorldMapUnit / 1000.f;
+        const GW::Vec2f* goal = TargetGoal();
+        if (!goal) {
+            snprintf(buf, len, "%s", no_goal);
+            return;
+        }
+        const float dist_k = sqrtf(Dist2(player_wm_cached, *goal)) * kGwinchesPerWorldMapUnit / 1000.f;
         if (target.custom) {
-            if (target.stand_valid) {
+            if (target.goal == GoalKind::Stand) {
                 snprintf(buf, len, "stand in the square %.1fk units %s of you to uncover your fog point", dist_k,
-                         CompassDir(player_wm_cached, goal));
+                         CompassDir(player_wm_cached, *goal));
                 return;
             }
-            snprintf(buf, len, "heading to your fog point, %.1fk units %s of you%s", dist_k, CompassDir(player_wm_cached, goal),
-                     target.on_map ? "" : " (another map)");
+            snprintf(buf, len, "heading to your fog point, %.1fk units %s of you%s", dist_k,
+                     CompassDir(player_wm_cached, *goal),
+                     target.goal == GoalKind::Elsewhere ? " (another map)" : "");
             return;
         }
         snprintf(buf, len, "stand in the square %.1fk units %s of you to uncover %d %s%s", dist_k,
                  CompassDir(player_wm_cached, target.wm), target.reveals, target.reveals == 1 ? "square" : "squares",
-                 target.on_map ? "" : " (another map)");
+                 blocked_point ? " (a fog point here credits nothing reachable)" : "");
     }
 
     int FindCustomPointNear(const GW::Vec2f& wm, const float max_dist)
@@ -1163,7 +1243,7 @@ namespace {
         const ImVec2 item_size = {250.f * ImGui::FontScale(), 0.f};
         {
             ImGui::TextColored(ImColor(kTargetColor).Value, ICON_FA_MAP_MARKED_ALT " Cartographer");
-            char status[160];
+            char status[224];
             BuildStatusText(status, sizeof(status));
             ImGui::TextDisabled("%s", status);
             if (map_fog_cells > 0) ImGui::TextDisabled("%d squares left to uncover on this map", map_fog_cells);
@@ -1429,7 +1509,7 @@ namespace {
         }
         // The tile that credits the fog point, drawn with a leader back to the point itself so it
         // is obvious the square is not where the fog is.
-        if (target_active && target.custom && target.stand_valid) {
+        if (target_active && target.custom && target.goal == GoalKind::Stand) {
             const int scx = target.stand_cx;
             const int scy = target.stand_cy;
             ImVec2 cell_min, cell_max, point_at;
@@ -1464,9 +1544,9 @@ namespace {
     {
         if (!CartographerWidget::GetEnabled() || !map_on_world_map) return;
         DrawMapOverlay(dl, [](const GW::Vec2f& wm, ImVec2& out) { return WorldMapWidget::WorldMapToScreen(wm, out); }, true);
-        char status[160];
+        char status[224];
         BuildStatusText(status, sizeof(status));
-        char line[192];
+        char line[256];
         snprintf(line, sizeof(line), ICON_FA_MAP_MARKED_ALT " Cartographer: %s", status);
         dl->AddText({16.f, dl->GetClipRectMax().y - 68.f}, ImGui::GetColorU32(ImGuiCol_Text), line);
     }
@@ -1608,18 +1688,21 @@ void CartographerWidget::Update(float)
     const int player_cy = CreditCellY(player_wm.y);
     player_cell = {player_cx, player_cy};
     player_cell_valid = true;
-    if (target.valid && target.on_map) {
+    if (target.valid) {
         if (target.custom) {
             // Fog points retire when their tile is credited (PruneUncoveredPoints); arriving only
             // starts the clock on whether standing here is going to credit anything at all.
-            if (!target.stand_valid) {
-                // Nothing creditable to walk to - a waypoint, or fog no square here can reach - so
-                // getting to the point itself is all there is to finish it off.
+            if (target.goal == GoalKind::Waypoint) {
+                // Already-explored ground, so getting to the point itself is all there is to finish it off.
                 if (Dist2(player_wm, target.wm) < 2.f * 2.f) {
                     CARTO_LOG("[cartographer] reached custom point wm(%.0f, %.0f)", target.wm.x, target.wm.y);
                     RemoveCustomPointAt(target.wm);
                     ClearTarget();
                 }
+            }
+            else if (target.goal != GoalKind::Stand) {
+                arrived = false;
+                arrived_at = 0;
             }
             // Leaving stops the clock: the verdict below is about standing here, so it must not be
             // reached from somewhere else entirely once the target latches on to the hysteresis.
@@ -1682,7 +1765,7 @@ void CartographerWidget::Update(float)
 
     // Same for a fog point, except the tile that has to credit is the one the player picked: if a
     // wide-range visit has not credited it, demote it so the next resolve sends them closer in.
-    if (arrived && target.valid && target.custom && target.stand_valid && TIMER_DIFF(arrived_at) > 15000) {
+    if (arrived && target.valid && target.custom && target.goal == GoalKind::Stand && TIMER_DIFF(arrived_at) > 15000) {
         const std::pair cell = FogTileAt(target.wm);
         const int dx = target.stand_cx - cell.first;
         const int dy = target.stand_cy - cell.second;
@@ -1698,32 +1781,46 @@ void CartographerWidget::Update(float)
 
     Target cand{};
     float cand_d2 = FLT_MAX;
-    for (const auto& p : custom_points) {
-        const float d2 = Dist2(p.wm, player_wm);
-        if (d2 < cand_d2) {
-            cand = {true, true, 0, 0, 0, p.wm};
-            cand_d2 = d2;
+    blocked_point = false;
+    // A point nothing can credit must not hold the queue hostage - custom points always outrank
+    // suggestions - so selection passes over it and the status line names it instead.
+    std::vector<size_t> by_distance(custom_points.size());
+    std::iota(by_distance.begin(), by_distance.end(), size_t{0});
+    std::ranges::sort(by_distance, [&player_wm](const size_t a, const size_t b) {
+        return Dist2(custom_points[a].wm, player_wm) < Dist2(custom_points[b].wm, player_wm);
+    });
+    for (const size_t i : by_distance) {
+        const GW::Vec2f& wm = custom_points[i].wm;
+        GW::Vec2f goal_wm{};
+        std::pair goal_cell{0, 0};
+        if (ResolveGoal(wm, player_wm, goal_wm, goal_cell) == GoalKind::None) {
+            blocked_point = true;
+            continue;
         }
+
+        cand = {true, true, 0, 0, 0, wm};
+        cand_d2 = Dist2(wm, player_wm);
+        break;
     }
-    bool on_current_map = true;
-    if (cand.valid) {
-        ImRect bounds;
-        on_current_map = GW::Map::GetMapWorldMapBounds(map_info, &bounds) && bounds.Contains({cand.wm.x, cand.wm.y});
-    }
-    else {
+    if (!cand.valid) {
         // Ranked by cells-credited-per-square-walked: a spot crediting several is worth extra steps.
         float best_value = 0.f;
         for (const auto& [cell, sc] : probe->cells) {
             if (!sc.reachable || sc.reveals <= 0) continue;
             if (probe->skipped.contains(cell) || declined_cells.contains(cell)) continue;
-            const auto centre = CreditCellCenterWorldMap(cell.first, cell.second);
-            const float d2 = Dist2(centre, player_wm);
+            // Send them to the probed footing, not the cell centre: for the coastline slivers
+            // ProbeStandCell exists to find, the centre is unwalkable water.
+            GW::Vec2f stand;
+            if (!WorldMapWidget::GamePosToWorldMap(sc.pos, stand)) continue;
+            // Measured to the footing, not the cell centre: the hysteresis below compares this
+            // against the incumbent's `wm`, which is a footing too.
+            const float d2 = Dist2(stand, player_wm);
             const float dist_cells = sqrtf(d2) / kWorldMapUnitsPerCell;
             const float value = static_cast<float>(sc.reveals) / (dist_cells + 2.f);
             if (value > best_value) {
                 best_value = value;
                 cand_d2 = d2;
-                cand = {true, false, cell.first, cell.second, sc.reveals, centre};
+                cand = {true, false, cell.first, cell.second, sc.reveals, stand};
             }
         }
     }
@@ -1743,7 +1840,7 @@ void CartographerWidget::Update(float)
         // Hysteresis: keep the current target unless it became ineligible or the candidate is meaningfully closer.
         const auto current = probe->cells.find({target.cx, target.cy});
         const bool current_eligible = target.custom
-            ? std::ranges::any_of(custom_points, [&](const CustomPoint& p) { return Dist2(p.wm, target.wm) < 1.f; })
+            ? target.goal != GoalKind::None && std::ranges::any_of(custom_points, [&](const CustomPoint& p) { return Dist2(p.wm, target.wm) < 1.f; })
             : current != probe->cells.end() && current->second.reachable && current->second.reveals > 0
             && !probe->skipped.contains({target.cx, target.cy}) && !declined_cells.contains({target.cx, target.cy});
         if (current_eligible && cand_d2 >= 0.7f * Dist2(target.wm, player_wm)) same = true;
@@ -1758,14 +1855,13 @@ void CartographerWidget::Update(float)
         return;
     }
 
-    if (!on_current_map && !cand.custom) return;
-    cand.on_map = on_current_map;
     target = cand;
     arrived = false;
     RefreshCustomTargetStand(player_wm);
     if (target.custom) {
-        CARTO_LOG("[cartographer] target: custom point wm(%.0f, %.0f)%s, stand wm(%.0f, %.0f) valid=%d", target.wm.x, target.wm.y,
-                  on_current_map ? "" : " on another map", target.stand_wm.x, target.stand_wm.y, target.stand_valid);
+        CARTO_LOG("[cartographer] target: custom point wm(%.0f, %.0f), stand wm(%.0f, %.0f) goal=%s", target.wm.x, target.wm.y,
+                  target.stand_wm.x, target.stand_wm.y,
+                  target.goal == GoalKind::Stand ? "stand" : target.goal == GoalKind::Waypoint ? "waypoint" : "none");
     }
     else {
         CARTO_LOG("[cartographer] stand target: cell (%d, %d) wm(%.0f, %.0f) credits %d cells at radius %d",
@@ -1962,6 +2058,7 @@ void CartographerWidget::RemoveCustomPointNear(const GW::Vec2f& world_map_pos, c
     GW::GameThread::Enqueue([world_map_pos, max_dist_wm] {
         const int idx = FindCustomPointNear(world_map_pos, max_dist_wm);
         if (idx < 0) return;
+        blocked_point = false;
         const GW::Vec2f p = custom_points[idx].wm;
         const bool was_target = target.valid && target.custom && Dist2(target.wm, p) < 1.f;
         custom_points.erase(custom_points.begin() + idx);
@@ -1975,6 +2072,7 @@ void CartographerWidget::ClearCustomPoints()
 {
     GW::GameThread::Enqueue([] {
         custom_points.clear();
+        blocked_point = false;
         SerializePoints();
         if (target.valid && target.custom) ClearTarget();
         CARTO_LOG("[cartographer] custom fog points cleared");
@@ -2000,7 +2098,8 @@ void CartographerWidget::GetStatus(char* buf, const size_t len)
 {
     char target_desc[64];
     if (!target.valid) snprintf(target_desc, sizeof(target_desc), "none");
-    else if (target.custom) snprintf(target_desc, sizeof(target_desc), "point(%.0f,%.0f)%s", target.wm.x, target.wm.y, target.stand_valid ? "+stand" : "");
+    else if (target.custom) snprintf(target_desc, sizeof(target_desc), "point(%.0f,%.0f)%s", target.wm.x, target.wm.y,
+                                     target.goal == GoalKind::Stand ? "+stand" : target.goal == GoalKind::Waypoint ? "+waypoint" : "+nogoal");
     else snprintf(target_desc, sizeof(target_desc), "stand(%d,%d)+%d", target.cx, target.cy, target.reveals);
     snprintf(buf, len, "carto: enabled=%d target=%s arrived=%d radius=%d skipped=%u probed=%u declined=%u points=%u fogcells=%d marker=%d",
              GetEnabled(), target_desc, arrived, RevealRadius(),

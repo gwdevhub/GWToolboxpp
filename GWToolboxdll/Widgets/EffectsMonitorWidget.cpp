@@ -257,17 +257,22 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
     const auto effects = GW::Effects::GetPlayerEffects();
 
     if (effects) {
-        std::unordered_map<GW::Constants::SkillID, DWORD> time_remaining_by_effect;
+        // Reused across frames: a handful of effects, so a flat scan beats rebuilding a hash map every frame.
+        static std::vector<std::pair<GW::Constants::SkillID, DWORD>> time_remaining_by_effect;
+        time_remaining_by_effect.clear();
         for (auto& effect : *effects) {
             if (effect.duration <= 0) continue;
             const auto remaining = effect.GetTimeRemaining();
             if (remaining <= 0) continue;
-            const auto found = time_remaining_by_effect.find(effect.skill_id);
-            if (found == time_remaining_by_effect.end() || found->second < remaining) {
-                time_remaining_by_effect[effect.skill_id] = remaining;
+            const auto found = std::ranges::find(time_remaining_by_effect, effect.skill_id, &std::pair<GW::Constants::SkillID, DWORD>::first);
+            if (found == time_remaining_by_effect.end()) {
+                time_remaining_by_effect.emplace_back(effect.skill_id, remaining);
+            }
+            else if (found->second < remaining) {
+                found->second = remaining;
             }
         }
-        for (auto& [skill_id, remaining] : time_remaining_by_effect) {
+        for (const auto& [skill_id, remaining] : time_remaining_by_effect) {
             const auto skill_frame = GW::UI::GetChildFrame(effects_frame, (uint32_t)skill_id + 0x4);
             if (!skill_frame) continue;
             std::array<char, 16> remaining_str;

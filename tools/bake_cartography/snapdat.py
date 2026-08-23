@@ -4,7 +4,8 @@ sys.path.insert(0, '/workspace/context/gw_in_browser')
 sys.path.insert(0, '/workspace/context/kamadanv3/tools/gwupdate')
 import gwpatch, requests, inflate
 
-CACHE = '/tmp/chunkcache'
+CACHE = os.environ.get('GW_CHUNK_CACHE', '/tmp/chunkcache')
+os.makedirs(CACHE, exist_ok=True)
 
 class Snapshot:
     def __init__(self):
