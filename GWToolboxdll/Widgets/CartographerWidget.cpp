@@ -87,11 +87,14 @@ namespace {
     // few ulp; 1/64 is a power of two with plenty of headroom and 1/2048 of a tile.
     constexpr float kCellEps = 1.f / 64.f;
 
-    // The tile the client credits from a standing position. Same grid as the fog bits - both axes
-    // span [32c, 32c+32) - now that GamePosToWorldMap no longer reports positions a unit north of
-    // where they are; the row skew this used to correct for was that offset, not a property of the
-    // client's grid. Epsilon leans off the closed end so a value that arrived through the two
-    // conversions and landed a few ulp short of a boundary still reads as the cell that owns it.
+    // The tile the client credits from a standing position. Rows and columns are the same 32-unit
+    // grid the fog bits are on, but they close on opposite edges: a column owns [32c, 32c+32) while
+    // a row owns (32r, 32r+32]. The grid is anchored in game space, and GamePosToWorldMap flips y,
+    // which turns a half-open game-space interval into one closed at the other end. Measured: at
+    // exactly wm.y == 32r - a value straight navmesh edges hand out, so it is easy to stand on -
+    // the client credits the row to the NORTH. Epsilon leans off each axis's closed end, so a value
+    // that arrived through the two conversions and landed a few ulp past a boundary still reads as
+    // the cell that owns it.
     int CreditCellX(const float x)
     {
         return static_cast<int>(floorf((x + kCellEps) / kWorldMapUnitsPerCell));
@@ -99,7 +102,7 @@ namespace {
 
     int CreditCellY(const float y)
     {
-        return static_cast<int>(floorf((y + kCellEps) / kWorldMapUnitsPerCell));
+        return static_cast<int>(ceilf((y - kCellEps) / kWorldMapUnitsPerCell)) - 1;
     }
 
     std::pair<int, int> CreditCellAt(const GW::Vec2f& wm)
@@ -112,13 +115,14 @@ namespace {
         return {cx * kWorldMapUnitsPerCell + 16.f, cy * kWorldMapUnitsPerCell + 16.f};
     }
 
-    // Which fog bit is drawn under a point - the same index CreditCellAt gives, without the epsilon
-    // that only round-tripped positions need, so a dx/dy between the two never carries a correction.
+    // Which fog bit is drawn under a point. Credit cells and fog bits are one index space, so this
+    // is CreditCellAt without the epsilon that only round-tripped positions need - a dx/dy between
+    // the two then never carries a correction.
     std::pair<int, int> FogTileAt(const GW::Vec2f& wm)
     {
         return {
             static_cast<int>(floorf(wm.x / kWorldMapUnitsPerCell)),
-            static_cast<int>(floorf(wm.y / kWorldMapUnitsPerCell)),
+            static_cast<int>(ceilf(wm.y / kWorldMapUnitsPerCell)) - 1,
         };
     }
 
@@ -283,10 +287,10 @@ namespace {
         ImRect bounds;
         const auto info = GW::Map::GetMapInfo(map_id);
         if (!(info && GW::Map::GetMapWorldMapBounds(info, &bounds) && bounds.GetWidth() >= 1.f && bounds.GetHeight() >= 1.f)) return false;
-        map_rect_min = {
-            static_cast<int>(floorf(bounds.Min.x / kWorldMapUnitsPerCell)),
-            static_cast<int>(floorf(bounds.Min.y / kWorldMapUnitsPerCell)),
-        };
+        // Tile indices, so the credit grid's convention - a row closing on its south edge makes
+        // ceil the right exclusive bound on both axes, and the north edge one row further out than
+        // a plain floor whenever the rectangle starts on a boundary.
+        map_rect_min = {CreditCellX(bounds.Min.x), CreditCellY(bounds.Min.y)};
         map_rect_max = {
             static_cast<int>(ceilf(bounds.Max.x / kWorldMapUnitsPerCell)),
             static_cast<int>(ceilf(bounds.Max.y / kWorldMapUnitsPerCell)),
@@ -295,13 +299,15 @@ namespace {
         return true;
     }
 
-    // Two different boundary rules, both measured: the near ring credits a tile up to one tile past
-    // the map's edge, while a tile only reachable at Bird's Eye Compass range has to be inside it.
-    bool InMapBounds(const int cx, const int cy, const int dilate)
+    // The map boundary only ever gates Bird's Eye Compass range. The near ring has no such rule:
+    // measured on a portal jump to a southern end-of-the-world (Turai's Procession -> Command
+    // Post), it credits as far past the edge as the ring reaches, which is why nothing below
+    // clamps it.
+    bool InMapBounds(const int cx, const int cy)
     {
         if (!EnsureMapRect()) return true; // no rectangle to clamp against - do not hide everything
-        return cx >= map_rect_min.first - dilate && cx < map_rect_max.first + dilate
-            && cy >= map_rect_min.second - dilate && cy < map_rect_max.second + dilate;
+        return cx >= map_rect_min.first && cx < map_rect_max.first
+            && cy >= map_rect_min.second && cy < map_rect_max.second;
     }
 
     // Measured in game: a tile is reachable beyond the near ring only if walkable ground comes
@@ -310,7 +316,7 @@ namespace {
     // range. `strict` stays as a runtime backstop while the navmesh test is still the loose one.
     bool CellQualifies(const int fx, const int fy)
     {
-        if (!InMapBounds(fx, fy, 0)) return false;
+        if (!InMapBounds(fx, fy)) return false;
         if (probe->strict.contains({fx, fy})) return false;
         if (!probe->complete) return true;
         for (int ny = -1; ny <= 1; ny++) {
@@ -324,7 +330,7 @@ namespace {
 
     bool CellCreditableFrom(const int dx, const int dy, const int fx, const int fy)
     {
-        if (abs(dx) <= kRevealRadius && abs(dy) <= kRevealRadius) return InMapBounds(fx, fy, 1);
+        if (abs(dx) <= kRevealRadius && abs(dy) <= kRevealRadius) return true;
         return CellQualifies(fx, fy);
     }
 
@@ -457,85 +463,15 @@ namespace {
         }
     }
 
-    // Credit stops one tile past the end of the world: fog that no placed map's world-map rectangle
-    // comes within a tile of never uncovers, however close you stand to it. Taken from AreaInfo
-    // rather than from the bake so it covers all 350 placed maps, including the 19 the bake has no
-    // map file id for.
-    struct ContinentWorld {
-        int continent = -1;
-        int x0 = 0, y0 = 0, w = 0, h = 0;
-        std::vector<uint8_t> inside;
-
-        // An empty plane means we found no rectangles for this continent, so clamping would hide
-        // everything; answer "in the world" and leave the other tests to decide.
-        bool Get(const int cx, const int cy) const
-        {
-            if (inside.empty()) return true;
-            const int lx = cx - x0, ly = cy - y0;
-            if (lx < 0 || ly < 0 || lx >= w || ly >= h) return false;
-            const size_t bit = static_cast<size_t>(ly) * w + lx;
-            return inside[bit >> 3] >> (bit & 7) & 1;
-        }
-    };
-    ContinentWorld continent_world;
-
-    bool InWorld(const int cx, const int cy)
-    {
-        return continent_world.Get(cx, cy);
-    }
-
-    void BuildContinentWorld(const int continent)
-    {
-        if (continent_world.continent == continent) return;
-        continent_world = {};
-        continent_world.continent = continent;
-
-        // Already dilated by the one tile the client credits beyond a map's edge.
-        std::vector<std::array<int, 4>> rects;
-        int x0 = INT_MAX, y0 = INT_MAX, x1 = INT_MIN, y1 = INT_MIN;
-        for (size_t i = 1; i < static_cast<size_t>(GW::Constants::MapID::Count); i++) {
-            const auto info = GW::Map::GetMapInfo(static_cast<GW::Constants::MapID>(i));
-            if (!(info && info->GetIsOnWorldMap() && static_cast<int>(info->continent) == continent)) continue;
-            ImRect bounds;
-            if (!(GW::Map::GetMapWorldMapBounds(info, &bounds) && bounds.GetWidth() >= 1.f && bounds.GetHeight() >= 1.f)) continue;
-            const std::array r{
-                static_cast<int>(floorf(bounds.Min.x / kWorldMapUnitsPerCell)) - 1,
-                static_cast<int>(floorf(bounds.Min.y / kWorldMapUnitsPerCell)) - 1,
-                static_cast<int>(ceilf(bounds.Max.x / kWorldMapUnitsPerCell)),
-                static_cast<int>(ceilf(bounds.Max.y / kWorldMapUnitsPerCell)),
-            };
-            rects.push_back(r);
-            x0 = std::min(x0, r[0]);
-            y0 = std::min(y0, r[1]);
-            x1 = std::max(x1, r[2]);
-            y1 = std::max(y1, r[3]);
-        }
-        if (rects.empty()) return;
-
-        continent_world.x0 = x0;
-        continent_world.y0 = y0;
-        continent_world.w = x1 - x0 + 1;
-        continent_world.h = y1 - y0 + 1;
-        continent_world.inside.assign((static_cast<size_t>(continent_world.w) * continent_world.h + 7) / 8, 0);
-        for (const auto& r : rects) {
-            for (int cy = r[1]; cy <= r[3]; cy++) {
-                for (int cx = r[0]; cx <= r[2]; cx++) {
-                    const size_t bit = static_cast<size_t>(cy - y0) * continent_world.w + (cx - x0);
-                    continent_world.inside[bit >> 3] |= 1 << (bit & 7);
-                }
-            }
-        }
-    }
-
     // Everything counts as coverable until the sweep finishes, so the overlay does not blink
     // cells out and back in as probing progresses.
     bool FogCellCoverable(const int cx, const int cy)
     {
         // The bake knows the whole continent; the live probe knows the map we are standing in,
         // including the few the bake has no file id for. Either is enough. The mask is dilated by
-        // one tile, so anything it claims is credited from some map's near ring - which is the ring
-        // the one-tile-past-the-edge rule applies to, hence the dilated union here.
-        if (continent_mask.Get(cx, cy)) return InWorld(cx, cy);
+        // one tile, so anything it claims is within the near ring of somewhere standable - and the
+        // near ring is unclamped, so that is the whole test.
+        if (continent_mask.Get(cx, cy)) return true;
         if (!probe->complete) return true;
         const int r = RevealRadius();
         for (int dy = -r; dy <= r; dy++) {
@@ -618,8 +554,6 @@ namespace {
     bool ResolveStandWorldPos(const GW::Vec2f& fog_wm, const GW::Vec2f& from, GW::Vec2f& out, std::pair<int, int>& out_cell)
     {
         const auto [fx, fy] = FogTileAt(fog_wm);
-        // Nothing on this map reaches past its own edge by more than the near ring.
-        if (!InMapBounds(fx, fy, 1)) return false;
         const int r = RevealRadius();
         std::vector<std::pair<int, int>> candidates;
         for (int dy = -r; dy <= r; dy++) {
@@ -1052,10 +986,12 @@ namespace {
                 GW::Vec2f a{}, b{};
                 if (!WorldMapWidget::GamePosToWorldMap(lo, a, map_id)) continue;
                 if (!WorldMapWidget::GamePosToWorldMap(hi, b, map_id)) continue;
-                const int x0 = static_cast<int>(floorf(std::min(a.x, b.x) / kWorldMapUnitsPerCell));
-                const int x1 = static_cast<int>(floorf(std::max(a.x, b.x) / kWorldMapUnitsPerCell));
-                const int y0 = static_cast<int>(floorf(std::min(a.y, b.y) / kWorldMapUnitsPerCell));
-                const int y1 = static_cast<int>(floorf(std::max(a.y, b.y) / kWorldMapUnitsPerCell));
+                // CreditCell*, not a plain floor: trapezoid edges land on exact tile boundaries all
+                // the time, and that is the one place the two disagree.
+                const int x0 = CreditCellX(std::min(a.x, b.x));
+                const int x1 = CreditCellX(std::max(a.x, b.x));
+                const int y0 = CreditCellY(std::min(a.y, b.y));
+                const int y1 = CreditCellY(std::max(a.y, b.y));
                 for (int cy = y0; cy <= y1; cy++) {
                     for (int cx = x0; cx <= x1; cx++) {
                         if (out.standable.insert(TileKey(cx, cy)).second) marked++;
@@ -1294,9 +1230,8 @@ namespace {
                              static_cast<int>(FogCellCoverable(cx, cy)), RevealRadius());
                     // Which half of FogCellCoverable answered: the bake short-circuits before any
                     // live test, so a wrong verdict there is a wrong bake, not a wrong probe.
-                    Log::Log("[cartographer] probe (%d,%d): baked_mask=%d in_world=%d probe_complete=%d",
-                             cx, cy, static_cast<int>(continent_mask.Get(cx, cy)), static_cast<int>(InWorld(cx, cy)),
-                             static_cast<int>(probe->complete));
+                    Log::Log("[cartographer] probe (%d,%d): baked_mask=%d probe_complete=%d",
+                             cx, cy, static_cast<int>(continent_mask.Get(cx, cy)), static_cast<int>(probe->complete));
                     Log::FlushFile();
                 });
                 keep_open = false;
@@ -1633,7 +1568,6 @@ void CartographerWidget::Update(float)
     if (!WorldMapWidget::GamePosToWorldMap(player->pos, player_wm)) return;
     player_wm_cached = player_wm;
     BuildContinentMask(static_cast<int>(map_info->continent));
-    BuildContinentWorld(static_cast<int>(map_info->continent));
     // A completing sweep still needs one last full pass, so the flag is read before the sweep.
     DropProbeIfGatesMoved();
     const bool sweeping = !probe->complete;
