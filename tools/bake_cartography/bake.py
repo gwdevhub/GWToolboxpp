@@ -55,7 +55,10 @@ for n, (mid, (cont, sx, sy, ex, ey), f) in enumerate(todo, 1):
             y0g, y1g = t[8], t[7]
             ax, ay = x0g/96.0+midx, -y0g/96.0+midy
             bx, by = x1g/96.0+midx, -y1g/96.0+midy
-            for cy in range(int(math.floor(min(ay,by)/TILE)), int(math.floor(max(ay,by)/TILE))+1):
+            # Credit rows close on the south edge - (32r, 32r+32] - where columns close on the
+            # west, because the grid is anchored in game space and the y axis is flipped above.
+            # Trapezoid edges sit on exact tile boundaries constantly, so the ceil matters.
+            for cy in range(int(math.ceil(min(ay,by)/TILE))-1, int(math.ceil(max(ay,by)/TILE))):
                 for cx in range(int(math.floor(min(ax,bx)/TILE)), int(math.floor(max(ax,bx)/TILE))+1):
                     tiles.add((cx, cy))
         cont_maps[cont] = cont_maps.get(cont, 0) + 1
