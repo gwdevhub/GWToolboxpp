@@ -969,8 +969,31 @@ void ObjectiveTimerWindow::Draw(IDirect3DDevice9*)
                 ImGui::Text("Enter DoA, FoW, UW, Deep, Urgoz or a Dungeon to begin");
             }
             else {
+                // Thousands of past runs stay loaded and nearly all of them are collapsed and scrolled
+                // out of view. One reserved row each still costs an ImGui item apiece, so coalesce every
+                // contiguous stretch of them into a single Dummy (which also keeps the scroll extent right).
+                const float row_height = ImGui::GetFrameHeight();
+                const float spacing = ImGui::GetStyle().ItemSpacing.y;
+                float skipped_height = 0.f;
+                const auto flush_skipped = [&skipped_height] {
+                    if (skipped_height > 0.f) {
+                        ImGui::Dummy(ImVec2(1.f, skipped_height));
+                        skipped_height = 0.f;
+                    }
+                };
                 for (auto it = objective_sets.rbegin(); it != objective_sets.rend(); ++it) {
                     auto* os = it->second;
+                    if (os->IsFilteredOut()) {
+                        continue;
+                    }
+                    if (os->IsCollapsedRow()) {
+                        const float y = ImGui::GetCursorScreenPos().y + (skipped_height > 0.f ? skipped_height + spacing : 0.f);
+                        if (!ImGui::IsRectVisible({0.f, y}, {1.f, y + row_height})) {
+                            skipped_height = skipped_height > 0.f ? skipped_height + spacing + row_height : row_height;
+                            continue;
+                        }
+                    }
+                    flush_skipped();
                     const bool show = os->Draw();
                     if (!show) {
                         delete os;
@@ -980,6 +1003,7 @@ void ObjectiveTimerWindow::Draw(IDirect3DDevice9*)
                         // if you really want to draw the rest make sure you extensively test this.
                     }
                 }
+                flush_skipped();
             }
         }
         ImGui::End();
@@ -1675,25 +1699,23 @@ const char* ObjectiveTimerWindow::ObjectiveSet::GetDurationStr()
     return cached_time;
 }
 
+bool ObjectiveTimerWindow::ObjectiveSet::IsFilteredOut()
+{
+    if (settings.show_past_runs || !from_disk) {
+        return false;
+    }
+    if (start_yday < 0) {
+        tm timeinfo{};
+        GetStartTime(&timeinfo);
+        start_yday = timeinfo.tm_yday;
+        start_year = timeinfo.tm_year;
+    }
+    return start_yday != today_yday || start_year != today_year;
+}
+
 bool ObjectiveTimerWindow::ObjectiveSet::Draw()
 {
-    if (!settings.show_past_runs && from_disk) {
-        if (start_yday < 0) {
-            tm timeinfo{};
-            GetStartTime(&timeinfo);
-            start_yday = timeinfo.tm_yday;
-            start_year = timeinfo.tm_year;
-        }
-        if (start_yday != today_yday || start_year != today_year) {
-            return true; // Hide this objective set; its from a previous day
-        }
-    }
-
-    // Hundreds of past runs stay loaded, nearly all collapsed and scrolled out of view. Submitting a
-    // CollapsingHeader for each still costs the label measure and item layout, so reserve the row instead.
-    const float collapsed_height = ImGui::GetFrameHeight();
-    if (!drawn_expanded && !ImGui::IsRectVisible(ImVec2(1.f, collapsed_height))) {
-        ImGui::Dummy(ImVec2(1.f, collapsed_height));
+    if (IsFilteredOut()) {
         return true;
     }
 

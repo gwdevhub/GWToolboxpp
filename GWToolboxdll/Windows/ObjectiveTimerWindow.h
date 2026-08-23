@@ -214,6 +214,10 @@ private:
         void Event(EventType type, uint32_t id1, uint32_t id2);
         void CheckSetDone();
         bool Draw(); // returns false when should be deleted
+        // Hidden by the "show past runs" filter, so it occupies no row at all.
+        bool IsFilteredOut();
+        // Renders as a single collapsed header row, so its height is known without drawing it.
+        [[nodiscard]] bool IsCollapsedRow() const { return !drawn_expanded; }
         void StopObjectives();
         struct Serialized {
             std::string name;
