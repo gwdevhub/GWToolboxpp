@@ -536,14 +536,72 @@ namespace {
     // Answers both halves of it: where we can send the player (reachable - ground behind a closed
     // gate paths fine but cannot be walked to) and whether the tile carries walkable ground at all,
     // which is what credit turns on.
+    //
+    // A dense grid over the geometry rather than a map keyed by cell: the build touches every
+    // trapezoid on the map, and a tree node plus a log-n descent per touch is the difference
+    // between a hitch and no hitch.
     struct NavCells {
+        int x0 = 0, y0 = 0, width = 0, height = 0;
+        std::vector<uint8_t> ground; // walkable at all, gate-independent
+        std::vector<uint8_t> standable;
         // Credit is per cell, so any reachable spot inside one reveals exactly the same fog as any
         // other - which trapezoid's overlap the footing comes from does not matter.
-        std::map<std::pair<int, int>, GW::GamePos> stand; // reachable footing, per cell
-        std::set<std::pair<int, int>> ground;             // walkable at all, gate-independent
+        std::vector<GW::GamePos> stand;
+        // Where each grid line sits in game coordinates. The transform is axis-aligned, so a cell's
+        // box is just the neighbouring lines - one conversion per line beats two per trapezoid it
+        // touches, and being the same call on the same input it cannot drift from the anchor.
+        std::vector<float> line_x, line_y;
+        int ground_count = 0, stand_count = 0;
         GW::Constants::MapID map_id = static_cast<GW::Constants::MapID>(0);
         std::vector<uint32_t> blocked_planes;
         bool built = false;
+
+        bool InGrid(const int cx, const int cy) const
+        {
+            return cx >= x0 && cy >= y0 && cx < x0 + width && cy < y0 + height;
+        }
+
+        size_t Index(const int cx, const int cy) const
+        {
+            return static_cast<size_t>(cy - y0) * width + (cx - x0);
+        }
+
+        void Reset(const int min_x, const int min_y, const int max_x, const int max_y)
+        {
+            x0 = min_x;
+            y0 = min_y;
+            width = max_x - min_x + 1;
+            height = max_y - min_y + 1;
+            ground.assign(static_cast<size_t>(width) * height, 0);
+            standable.assign(static_cast<size_t>(width) * height, 0);
+            stand.assign(static_cast<size_t>(width) * height, GW::GamePos{});
+            line_x.clear();
+            line_y.clear();
+        }
+
+        bool BuildLines()
+        {
+            line_x.resize(static_cast<size_t>(width) + 1);
+            line_y.resize(static_cast<size_t>(height) + 1);
+            GW::GamePos gp{};
+            for (int i = 0; i <= width; i++) {
+                if (!WorldMapWidget::WorldMapToGamePos({(x0 + i) * kWorldMapUnitsPerCell, 0.f}, gp)) return false;
+                line_x[i] = gp.x;
+            }
+            for (int j = 0; j <= height; j++) {
+                if (!WorldMapWidget::WorldMapToGamePos({0.f, (y0 + j) * kWorldMapUnitsPerCell}, gp)) return false;
+                line_y[j] = gp.y;
+            }
+            return true;
+        }
+
+        void CellBox(const int cx, const int cy, GW::Vec2f& box_min, GW::Vec2f& box_max) const
+        {
+            const float x_lo = line_x[cx - x0], x_hi = line_x[cx - x0 + 1];
+            const float y_lo = line_y[cy - y0], y_hi = line_y[cy - y0 + 1]; // y flips in the conversion
+            box_min = {std::min(x_lo, x_hi), std::min(y_lo, y_hi)};
+            box_max = {std::max(x_lo, x_hi), std::max(y_lo, y_hi)};
+        }
     };
     NavCells nav_cells;
 
@@ -553,31 +611,52 @@ namespace {
     // will happily path into. False only when the two genuinely do not overlap.
     bool FootingInCell(const Pathing::TrapezoidRef& ref, const int cx, const int cy, GW::GamePos& out)
     {
-        // Both conversions are the same scale-and-flip about a single anchor, so the cell's
-        // world-map rectangle stays an axis-aligned rectangle in game coordinates - the y flip only
-        // swaps which corner is which, which the min/max below undoes.
-        GW::GamePos a{}, b{};
-        if (!WorldMapWidget::WorldMapToGamePos({cx * kWorldMapUnitsPerCell, cy * kWorldMapUnitsPerCell}, a)) return false;
-        if (!WorldMapWidget::WorldMapToGamePos({(cx + 1) * kWorldMapUnitsPerCell, (cy + 1) * kWorldMapUnitsPerCell}, b)) return false;
-        GW::Vec2f footing{};
-        if (!Pathing::TrapezoidOverlapsBox(ref.trapezoid, {std::min(a.x, b.x), std::min(a.y, b.y)},
-                                           {std::max(a.x, b.x), std::max(a.y, b.y)}, footing)) {
-            return false;
-        }
+        GW::Vec2f box_min{}, box_max{}, footing{};
+        nav_cells.CellBox(cx, cy, box_min, box_max);
+        if (!Pathing::TrapezoidOverlapsBox(ref.trapezoid, box_min, box_max, footing)) return false;
         out = GW::GamePos{footing.x, footing.y, ref.plane};
         return true;
     }
 
-    void EnsureNavCells()
+    bool EnsureNavCells()
     {
         const auto map_id = GW::Map::GetMapID();
         std::vector<uint32_t> blocked;
-        Pathing::CopyBlockedPlanes(blocked);
-        if (nav_cells.built && nav_cells.map_id == map_id && nav_cells.blocked_planes == blocked) return;
+        // Without a pathing context there is no gate state to key on, and rebuilding against an
+        // empty one on every call is how this turned into a per-frame full-map sweep.
+        if (!Pathing::CopyBlockedPlanes(blocked)) return false;
+        if (nav_cells.built && nav_cells.map_id == map_id && nav_cells.blocked_planes == blocked) return true;
+        // Built before the reachability walk can find the player, every trapezoid reads as reachable
+        // - and these cells are kept for the life of the map, so that assumption would stick.
+        if (!Pathing::IsReachabilityKnown()) return false;
+
+        const auto started = clock();
+        const auto trapezoids = Pathing::GetTrapezoidsWithReachability();
+        if (trapezoids.empty()) return false;
+
+        // The grid covers the geometry rather than the map's world-map rectangle: credit reaches
+        // past that rectangle's edge, and the raw trapezoid extents cost nothing to take.
+        float min_x = FLT_MAX, min_y = FLT_MAX, max_x = -FLT_MAX, max_y = -FLT_MAX;
+        for (const auto& ref : trapezoids) {
+            const auto* t = ref.trapezoid;
+            min_x = std::min(min_x, std::min(t->XTL, t->XBL));
+            max_x = std::max(max_x, std::max(t->XTR, t->XBR));
+            min_y = std::min(min_y, t->YB);
+            max_y = std::max(max_y, t->YT);
+        }
+        GW::Vec2f lo{}, hi{};
+        if (!WorldMapWidget::GamePosToWorldMap(GW::GamePos{min_x, min_y}, lo)) return false;
+        if (!WorldMapWidget::GamePosToWorldMap(GW::GamePos{max_x, max_y}, hi)) return false;
+        const auto [grid_x0, grid_y0] = FogTileAt({std::min(lo.x, hi.x), std::min(lo.y, hi.y)});
+        const auto [grid_x1, grid_y1] = FogTileAt({std::max(lo.x, hi.x), std::max(lo.y, hi.y)});
+
         nav_cells = {};
         nav_cells.map_id = map_id;
         nav_cells.blocked_planes = std::move(blocked);
-        for (const auto& ref : Pathing::GetTrapezoidsWithReachability()) {
+        nav_cells.Reset(grid_x0, grid_y0, grid_x1, grid_y1);
+        if (!nav_cells.BuildLines()) return false;
+
+        for (const auto& ref : trapezoids) {
             const auto* t = ref.trapezoid;
             const bool reachable = ref.reachable;
             GW::Vec2f a{}, b{};
@@ -590,12 +669,19 @@ namespace {
             const auto [x1, y1] = FogTileAt({std::max(a.x, b.x), std::max(a.y, b.y)});
             for (int cy = y0; cy <= y1; cy++) {
                 for (int cx = x0; cx <= x1; cx++) {
-                    const std::pair cell{cx, cy};
-                    if (nav_cells.ground.contains(cell) && (!reachable || nav_cells.stand.contains(cell))) continue;
+                    if (!nav_cells.InGrid(cx, cy)) continue;
+                    const size_t i = nav_cells.Index(cx, cy);
+                    if (nav_cells.ground[i] && (!reachable || nav_cells.standable[i])) continue;
                     GW::GamePos footing{};
                     if (!FootingInCell(ref, cx, cy, footing)) continue;
-                    nav_cells.ground.insert(cell);
-                    if (reachable) nav_cells.stand.try_emplace(cell, footing);
+                    if (!nav_cells.ground[i]) {
+                        nav_cells.ground[i] = 1;
+                        nav_cells.ground_count++;
+                    }
+                    if (!reachable) continue;
+                    nav_cells.standable[i] = 1;
+                    nav_cells.stand[i] = footing;
+                    nav_cells.stand_count++;
                 }
             }
         }
@@ -606,23 +692,32 @@ namespace {
         GW::Vec2f self_wm{};
         const bool have_self = self && WorldMapWidget::GamePosToWorldMap(self->pos, self_wm);
         const auto self_cell = have_self ? CreditCellAt(self_wm) : std::pair{0, 0};
-        Log::Log("[cartographer] navmesh cells: %u with ground, %u standable; player cell (%d,%d) ground=%d standable=%d%s\n",
-                 static_cast<unsigned>(nav_cells.ground.size()), static_cast<unsigned>(nav_cells.stand.size()),
+        const bool self_in_grid = have_self && nav_cells.InGrid(self_cell.first, self_cell.second);
+        const size_t self_i = self_in_grid ? nav_cells.Index(self_cell.first, self_cell.second) : 0;
+        Log::Log("[cartographer] navmesh cells: %d with ground, %d standable, from %u trapezoids in %dms; grid %dx%d at (%d,%d); "
+                 "player cell (%d,%d) ground=%d standable=%d%s\n",
+                 nav_cells.ground_count, nav_cells.stand_count, static_cast<unsigned>(trapezoids.size()),
+                 static_cast<int>(clock() - started), nav_cells.width, nav_cells.height, nav_cells.x0, nav_cells.y0,
                  self_cell.first, self_cell.second,
-                 have_self && nav_cells.ground.contains(self_cell),
-                 have_self && nav_cells.stand.contains(self_cell),
-                 have_self && !nav_cells.ground.contains(self_cell) ? "  <== MAPPING IS BROKEN" : "");
+                 self_in_grid && nav_cells.ground[self_i], self_in_grid && nav_cells.standable[self_i],
+                 self_in_grid && !nav_cells.ground[self_i] ? "  <== MAPPING IS BROKEN" : "");
         Log::FlushFile();
+        return true;
     }
 
-    void ProbeStandCell(const int cx, const int cy, StandCell& out)
+    // False when the navmesh is not up yet - loading, or no pathing context. Callers must not
+    // cache that: "no ground here" is permanent once it lands in the probe, and answering it from
+    // an unbuilt navmesh kills every square swept before the map finished coming up.
+    bool ProbeStandCell(const int cx, const int cy, StandCell& out)
     {
-        EnsureNavCells();
-        out.navmesh = nav_cells.ground.contains({cx, cy});
-        const auto it = nav_cells.stand.find({cx, cy});
-        if (it == nav_cells.stand.end()) return;
-        out.pos = it->second;
+        if (!EnsureNavCells()) return false;
+        if (!nav_cells.InGrid(cx, cy)) return true; // off the geometry entirely: genuinely nothing there
+        const size_t i = nav_cells.Index(cx, cy);
+        out.navmesh = nav_cells.ground[i] != 0;
+        if (!nav_cells.standable[i]) return true;
+        out.pos = nav_cells.stand[i];
         out.reachable = true;
+        return true;
     }
 
     bool warned_stand_off_rect = false;
@@ -657,7 +752,7 @@ namespace {
                 auto it = probe->cells.find(cell);
                 if (it == probe->cells.end()) {
                     StandCell sc;
-                    ProbeStandCell(cell.first, cell.second, sc);
+                    if (!ProbeStandCell(cell.first, cell.second, sc)) continue;
                     it = probe->cells.emplace(cell, sc).first;
                     coverage_stale = true; // scored by the next recompute, not by us - we have no grid here
                 }
@@ -710,7 +805,7 @@ namespace {
                 if (probe->cells.contains({cx, cy})) continue;
                 if (!CellWorthProbing(grid, cx, cy)) continue;
                 StandCell sc;
-                ProbeStandCell(cx, cy, sc);
+                if (!ProbeStandCell(cx, cy, sc)) return; // navmesh not up; nothing learned, nothing kept
                 probe->cells[{cx, cy}] = sc;
                 budget--;
             }

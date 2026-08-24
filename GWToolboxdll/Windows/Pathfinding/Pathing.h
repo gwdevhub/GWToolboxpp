@@ -52,6 +52,11 @@ namespace Pathing {
         bool reachable;
     };
 
+    // False while the walk above cannot find the player to start from - the state in which callers
+    // assume everything is reachable. Anything that would cache a verdict built on that assumption
+    // should wait instead. Cheap: the answer is cached, and the walk bails early in that state.
+    bool IsReachabilityKnown();
+
     // Every walkable trapezoid on the current map, with its plane and whether the player can reach
     // it. Anything that asks "is there ground inside this box" needs the geometry: sampling a
     // lattice walks straight past a sliver the router will happily path onto. Game thread only.
