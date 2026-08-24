@@ -249,6 +249,10 @@ private:
     };
 
     std::map<DWORD, ObjectiveSet*> objective_sets{};
+    // Newest-first view of objective_sets, rebuilt only when the map changes. Walking the map itself
+    // every frame costs a global CRT lock per step under the debug CRT's checked iterators.
+    std::vector<ObjectiveSet*> display_order{};
+    bool display_order_dirty = true;
 
     ObjectiveSet* GetCurrentObjectiveSet() const;
     bool clear_cached_times = false;

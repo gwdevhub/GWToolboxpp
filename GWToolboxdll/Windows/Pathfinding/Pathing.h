@@ -46,6 +46,27 @@ namespace Pathing {
     // Game thread only.
     std::unordered_set<const GW::PathingTrapezoid*> FindReachableTrapezoids();
 
+    struct TrapezoidRef {
+        const GW::PathingTrapezoid* trapezoid;
+        uint32_t plane;
+        bool reachable;
+    };
+
+    // Every walkable trapezoid on the current map, with its plane and whether the player can reach
+    // it. Anything that asks "is there ground inside this box" needs the geometry: sampling a
+    // lattice walks straight past a sliver the router will happily path onto. Game thread only.
+    std::vector<TrapezoidRef> GetTrapezoidsWithReachability();
+
+    // True if `p` lies within this trapezoid, in 2D. Game thread only.
+    bool IsOnTrapezoid(const GW::PathingTrapezoid* t, const GW::Vec2f& p);
+
+    // Exact 2D overlap between `t` and the axis-aligned box [box_min, box_max], in game
+    // coordinates - any of it counts, down to a sliver along one edge. A lattice of IsOnTrapezoid
+    // probes instead walks past every sliver narrower than its spacing, and next to fog a sliver is
+    // often the only footing there is. `out_point` is the overlap's centroid, so it lands inside
+    // the walkable geometry rather than on its edge. Pure geometry, so any thread.
+    bool TrapezoidOverlapsBox(const GW::PathingTrapezoid* t, const GW::Vec2f& box_min, const GW::Vec2f& box_max, GW::Vec2f& out_point);
+
     // True if `point` is walkable AND the player can actually get there. Terrain behind a closed
     // gate or across a gap is walkable but not reachable, and the difference matters to anything
     // that suggests somewhere to go. Result is cached until the map or the gate state changes.

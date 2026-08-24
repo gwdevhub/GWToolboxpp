@@ -609,6 +609,7 @@ void ObjectiveTimerWindow::AddObjectiveSet(ObjectiveSet* os)
         cos.second->need_to_collapse = true;
     }
     objective_sets.emplace(os->system_time, os);
+    display_order_dirty = true;
     if (os->active) {
         current_objective_set = os;
     }
@@ -972,6 +973,15 @@ void ObjectiveTimerWindow::Draw(IDirect3DDevice9*)
                 // Thousands of past runs stay loaded and nearly all of them are collapsed and scrolled
                 // out of view. One reserved row each still costs an ImGui item apiece, so coalesce every
                 // contiguous stretch of them into a single Dummy (which also keeps the scroll extent right).
+                if (display_order_dirty) {
+                    display_order.assign(objective_sets.size(), nullptr);
+                    size_t n = display_order.size();
+                    for (const auto& [_, os] : objective_sets) {
+                        display_order[--n] = os;
+                    }
+                    display_order_dirty = false;
+                }
+
                 const float row_height = ImGui::GetFrameHeight();
                 const float spacing = ImGui::GetStyle().ItemSpacing.y;
                 float skipped_height = 0.f;
@@ -981,8 +991,8 @@ void ObjectiveTimerWindow::Draw(IDirect3DDevice9*)
                         skipped_height = 0.f;
                     }
                 };
-                for (auto it = objective_sets.rbegin(); it != objective_sets.rend(); ++it) {
-                    auto* os = it->second;
+                for (size_t i = 0; i < display_order.size(); i++) {
+                    auto* os = display_order[i];
                     if (os->IsFilteredOut()) {
                         continue;
                     }
@@ -994,13 +1004,11 @@ void ObjectiveTimerWindow::Draw(IDirect3DDevice9*)
                         }
                     }
                     flush_skipped();
-                    const bool show = os->Draw();
-                    if (!show) {
+                    if (!os->Draw()) {
+                        objective_sets.erase(os->system_time);
                         delete os;
-                        objective_sets.erase(--it.base());
-                        break;
-                        // iterators go crazy, don't even bother, we're skipping a frame. NBD.
-                        // if you really want to draw the rest make sure you extensively test this.
+                        display_order_dirty = true;
+                        break; // we're skipping the rest of this frame; NBD
                     }
                 }
                 flush_skipped();
@@ -1173,6 +1181,7 @@ void ObjectiveTimerWindow::LoadRuns()
                             os->need_to_collapse = true;
                             os->from_disk = true;
                             instance.objective_sets.emplace(os->system_time, os);
+                            instance.display_order_dirty = true;
                         }
                     }
                     file.close();
@@ -1239,6 +1248,8 @@ void ObjectiveTimerWindow::ClearObjectiveSets()
         delete os.second;
     }
     objective_sets.clear();
+    display_order.clear();
+    display_order_dirty = true;
 }
 
 void ObjectiveTimerWindow::StopObjectives()

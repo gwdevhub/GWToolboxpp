@@ -370,6 +370,99 @@ namespace Pathing {
         return FindClosestPositionOnTrapezoid(point, &mapContext->path->staticData->map);
     }
 
+    bool IsOnTrapezoid(const GW::PathingTrapezoid* t, const GW::Vec2f& p)
+    {
+        return t && IsOnPathingTrapezoid(t, p);
+    }
+
+    namespace {
+        // A convex polygon clipped by four half-planes gains at most one vertex per clip.
+        constexpr size_t kMaxClipVerts = 8;
+
+        // Sutherland-Hodgman against one axis-aligned half-plane. `axis` is 0 for x, 1 for y;
+        // `keep_above` keeps the side at or above `limit`. Winding does not matter - inside is a
+        // coordinate test, not a side-of-edge test.
+        size_t ClipHalfPlane(GW::Vec2f (&poly)[kMaxClipVerts], size_t count, const int axis, const float limit, const bool keep_above)
+        {
+            if (!count) return 0;
+            const auto coord = [axis](const GW::Vec2f& p) { return axis == 0 ? p.x : p.y; };
+            const auto inside = [&](const GW::Vec2f& p) { return keep_above ? coord(p) >= limit : coord(p) <= limit; };
+
+            GW::Vec2f out[kMaxClipVerts];
+            size_t out_count = 0;
+            const auto emit = [&](const GW::Vec2f& p) {
+                if (out_count < kMaxClipVerts) out[out_count++] = p;
+            };
+            for (size_t i = 0; i < count; i++) {
+                const GW::Vec2f& a = poly[i];
+                const GW::Vec2f& b = poly[(i + 1) % count];
+                const bool a_in = inside(a);
+                if (a_in) emit(a);
+                if (a_in == inside(b)) continue;
+                // The edge crosses, so the two coordinates differ and the divide is safe.
+                const float da = coord(a) - limit;
+                const float t = da / (da - (coord(b) - limit));
+                emit({a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t});
+            }
+            std::copy_n(out, out_count, poly);
+            return out_count;
+        }
+    } // namespace
+
+    bool TrapezoidOverlapsBox(const GW::PathingTrapezoid* t, const GW::Vec2f& box_min, const GW::Vec2f& box_max, GW::Vec2f& out_point)
+    {
+        if (!t) return false;
+        // Box-on-box first: most trapezoids miss most boxes, and this is the loop that asks.
+        if (std::min(t->XTL, t->XBL) > box_max.x || std::max(t->XTR, t->XBR) < box_min.x) return false;
+        if (t->YB > box_max.y || t->YT < box_min.y) return false;
+
+        GW::Vec2f poly[kMaxClipVerts] = {{t->XTL, t->YT}, {t->XTR, t->YT}, {t->XBR, t->YB}, {t->XBL, t->YB}};
+        size_t count = 4;
+        count = ClipHalfPlane(poly, count, 0, box_min.x, true);
+        count = ClipHalfPlane(poly, count, 0, box_max.x, false);
+        count = ClipHalfPlane(poly, count, 1, box_min.y, true);
+        count = ClipHalfPlane(poly, count, 1, box_max.y, false);
+        if (count < 3) return false; // they miss, or meet only along an edge or at a corner
+
+        // Signed area and area centroid in one pass; the sign cancels in the centroid divide. The
+        // centroid, rather than any vertex, only so the point sits strictly inside the overlap
+        // instead of on the seam, where a walkability test can go either way.
+        float area2 = 0.f;
+        GW::Vec2f centroid{0.f, 0.f};
+        for (size_t i = 0; i < count; i++) {
+            const GW::Vec2f& a = poly[i];
+            const GW::Vec2f& b = poly[(i + 1) % count];
+            const float cross = a.x * b.y - b.x * a.y;
+            area2 += cross;
+            centroid.x += (a.x + b.x) * cross;
+            centroid.y += (a.y + b.y) * cross;
+        }
+        // Collinear after clipping - an overlap with no width is not somewhere to stand. The
+        // threshold is in square gwinches, so anything with real extent clears it by orders.
+        if (fabsf(area2) < 1e-3f) return false;
+        out_point = {centroid.x / (3.f * area2), centroid.y / (3.f * area2)};
+        return true;
+    }
+
+    std::vector<TrapezoidRef> GetTrapezoidsWithReachability()
+    {
+        std::vector<TrapezoidRef> out;
+        auto* mapContext = GW::GetMapContext();
+        if (!mapContext || !mapContext->path || !mapContext->path->staticData) return out;
+        const auto reachable = FindReachableTrapezoids();
+        auto* map = &mapContext->path->staticData->map;
+        for (uint32_t z = 0; z < map->size(); ++z) {
+            const auto& m = (*map)[z];
+            for (uint32_t i = 0; i < m.trapezoid_count; ++i) {
+                const auto* t = &m.trapezoids[i];
+                // Empty means the player's position is unknown, which callers read as "assume
+                // everything is reachable" rather than "nothing is".
+                out.emplace_back(t, z, reachable.empty() || reachable.contains(t));
+            }
+        }
+        return out;
+    }
+
     bool IsPositionWalkable(const GW::GamePos& point)
     {
         auto* mapContext = GW::GetMapContext();

@@ -526,46 +526,105 @@ namespace {
     }
 
 
-    // Fine enough to catch the shoreline slivers that are often the only footing near fog. The
-    // half-cell (s+0.5)/kStandSamples offsets keep every sample clear of the cell edges.
-    constexpr int kStandSamples = 6;
-    // Derived from the lattice so the bound cannot drift if the lattice changes.
-    constexpr float kStandSampleOffsetMax = kWorldMapUnitsPerCell * 0.5f * (1.f - 1.f / kStandSamples) * 1.41421356f;
+    // A footing sits anywhere in its cell, so it can be a half-diagonal off the cell centre that
+    // the ring search sorts by - which is the slack that search has to allow before it stops early.
+    constexpr float kStandOffsetMax = kWorldMapUnitsPerCell * 0.5f * 1.41421356f;
 
-    // Coastlines ignore the cell grid, so sample the whole cell: one that is mostly cliff but
-    // clips a walkable ledge is still somewhere you can go. Answers both halves of the question:
-    // where we can send the player (reachable - ground behind a closed gate paths fine but cannot be
-    // walked to) and whether the tile carries walkable ground at all, which is what credit turns on.
-    void ProbeStandCell(const int cx, const int cy, StandCell& out)
+    // Which cells hold ground, and where in each one to stand. Coastlines ignore the cell grid, so
+    // the question is a geometric one: does this cell's rectangle overlap a walkable trapezoid at
+    // all - a cell that is mostly cliff but clips a walkable ledge is still somewhere you can go.
+    // Answers both halves of it: where we can send the player (reachable - ground behind a closed
+    // gate paths fine but cannot be walked to) and whether the tile carries walkable ground at all,
+    // which is what credit turns on.
+    struct NavCells {
+        // Credit is per cell, so any reachable spot inside one reveals exactly the same fog as any
+        // other - which trapezoid's overlap the footing comes from does not matter.
+        std::map<std::pair<int, int>, GW::GamePos> stand; // reachable footing, per cell
+        std::set<std::pair<int, int>> ground;             // walkable at all, gate-independent
+        GW::Constants::MapID map_id = static_cast<GW::Constants::MapID>(0);
+        std::vector<uint32_t> blocked_planes;
+        bool built = false;
+    };
+    NavCells nav_cells;
+
+    // The overlap between the trapezoid and the cell's rectangle, exactly - not sampled. A lattice
+    // of point probes walks past any sliver narrower than its spacing, and next to fog a sliver is
+    // often the only footing there is, so it reported cells as having no ground that the router
+    // will happily path into. False only when the two genuinely do not overlap.
+    bool FootingInCell(const Pathing::TrapezoidRef& ref, const int cx, const int cy, GW::GamePos& out)
     {
-        float best_d2 = FLT_MAX;
-        const GW::Vec2f centre = CreditCellCenterWorldMap(cx, cy);
-        for (int sy = 0; sy < kStandSamples; sy++) {
-            for (int sx = 0; sx < kStandSamples; sx++) {
-                const GW::Vec2f wm{
-                    (cx + (sx + 0.5f) / kStandSamples) * kWorldMapUnitsPerCell,
-                    (cy + (sy + 0.5f) / kStandSamples) * kWorldMapUnitsPerCell,
-                };
-                GW::GamePos gp{};
-                // Reachability is the expensive half and implies walkability, so the cheap BSP
-                // descent goes first and answers `navmesh` on its own.
-                if (!WorldMapWidget::WorldMapToGamePos(wm, gp) || !Pathing::IsPositionWalkable(gp)) continue;
-                out.navmesh = true;
-                if (!Pathing::IsPositionReachable(gp)) continue;
-                // Aiming central keeps our own routing error from landing the player in the
-                // neighbouring tile.
-                const float d2 = Dist2(wm, centre);
-                if (!out.reachable || d2 < best_d2) {
-                    best_d2 = d2;
-                    out.pos = gp;
-                    out.reachable = true;
+        // Both conversions are the same scale-and-flip about a single anchor, so the cell's
+        // world-map rectangle stays an axis-aligned rectangle in game coordinates - the y flip only
+        // swaps which corner is which, which the min/max below undoes.
+        GW::GamePos a{}, b{};
+        if (!WorldMapWidget::WorldMapToGamePos({cx * kWorldMapUnitsPerCell, cy * kWorldMapUnitsPerCell}, a)) return false;
+        if (!WorldMapWidget::WorldMapToGamePos({(cx + 1) * kWorldMapUnitsPerCell, (cy + 1) * kWorldMapUnitsPerCell}, b)) return false;
+        GW::Vec2f footing{};
+        if (!Pathing::TrapezoidOverlapsBox(ref.trapezoid, {std::min(a.x, b.x), std::min(a.y, b.y)},
+                                           {std::max(a.x, b.x), std::max(a.y, b.y)}, footing)) {
+            return false;
+        }
+        out = GW::GamePos{footing.x, footing.y, ref.plane};
+        return true;
+    }
+
+    void EnsureNavCells()
+    {
+        const auto map_id = GW::Map::GetMapID();
+        std::vector<uint32_t> blocked;
+        Pathing::CopyBlockedPlanes(blocked);
+        if (nav_cells.built && nav_cells.map_id == map_id && nav_cells.blocked_planes == blocked) return;
+        nav_cells = {};
+        nav_cells.map_id = map_id;
+        nav_cells.blocked_planes = std::move(blocked);
+        for (const auto& ref : Pathing::GetTrapezoidsWithReachability()) {
+            const auto* t = ref.trapezoid;
+            const bool reachable = ref.reachable;
+            GW::Vec2f a{}, b{};
+            if (!WorldMapWidget::GamePosToWorldMap(GW::GamePos{std::min(t->XTL, t->XBL), t->YB}, a)) continue;
+            if (!WorldMapWidget::GamePosToWorldMap(GW::GamePos{std::max(t->XTR, t->XBR), t->YT}, b)) continue;
+            // FogTileAt, not CreditCell*: this range only has to be a superset of the cells the
+            // overlap test below will accept, and the epsilon CreditCell* leans by rounds away
+            // exactly the boundary-hugging cells that test is here to catch.
+            const auto [x0, y0] = FogTileAt({std::min(a.x, b.x), std::min(a.y, b.y)});
+            const auto [x1, y1] = FogTileAt({std::max(a.x, b.x), std::max(a.y, b.y)});
+            for (int cy = y0; cy <= y1; cy++) {
+                for (int cx = x0; cx <= x1; cx++) {
+                    const std::pair cell{cx, cy};
+                    if (nav_cells.ground.contains(cell) && (!reachable || nav_cells.stand.contains(cell))) continue;
+                    GW::GamePos footing{};
+                    if (!FootingInCell(ref, cx, cy, footing)) continue;
+                    nav_cells.ground.insert(cell);
+                    if (reachable) nav_cells.stand.try_emplace(cell, footing);
                 }
             }
         }
+        nav_cells.built = true;
+        // The player is by definition standing on the navmesh, so their own cell has to be in here.
+        // If it is not, the trapezoid-to-cell mapping is wrong and every verdict built on it is too.
+        const auto* self = GW::Agents::GetControlledCharacter();
+        GW::Vec2f self_wm{};
+        const bool have_self = self && WorldMapWidget::GamePosToWorldMap(self->pos, self_wm);
+        const auto self_cell = have_self ? CreditCellAt(self_wm) : std::pair{0, 0};
+        Log::Log("[cartographer] navmesh cells: %u with ground, %u standable; player cell (%d,%d) ground=%d standable=%d%s\n",
+                 static_cast<unsigned>(nav_cells.ground.size()), static_cast<unsigned>(nav_cells.stand.size()),
+                 self_cell.first, self_cell.second,
+                 have_self && nav_cells.ground.contains(self_cell),
+                 have_self && nav_cells.stand.contains(self_cell),
+                 have_self && !nav_cells.ground.contains(self_cell) ? "  <== MAPPING IS BROKEN" : "");
+        Log::FlushFile();
     }
 
-    // Once per session: the rectangle guard is what stops a stand the quest marker cannot express,
-    // and how often it bites is the only way to tell whether it is too tight.
+    void ProbeStandCell(const int cx, const int cy, StandCell& out)
+    {
+        EnsureNavCells();
+        out.navmesh = nav_cells.ground.contains({cx, cy});
+        const auto it = nav_cells.stand.find({cx, cy});
+        if (it == nav_cells.stand.end()) return;
+        out.pos = it->second;
+        out.reachable = true;
+    }
+
     bool warned_stand_off_rect = false;
 
     // A fog point marks fog, and fog is rarely somewhere you can stand. Answers with the closest
@@ -594,7 +653,7 @@ namespace {
                 const float centre_d2 = Dist2(CreditCellCenterWorldMap(cell.first, cell.second), from);
                 // A cell's centre only bounds the walk its probed footing actually costs, so ordering
                 // by it is not enough to stop at the first hit - but it is enough to stop early.
-                if (found && sqrtf(centre_d2) - kStandSampleOffsetMax > sqrtf(best_d2)) break;
+                if (found && sqrtf(centre_d2) - kStandOffsetMax > sqrtf(best_d2)) break;
                 auto it = probe->cells.find(cell);
                 if (it == probe->cells.end()) {
                     StandCell sc;
@@ -852,7 +911,10 @@ namespace {
         if (grid.IsExplored(fx, fy)) return GoalKind::Waypoint;
         bool any_navmesh = false;
         if (ResolveStandWorldPos(point_wm, from, goal_wm, goal_cell, any_navmesh)) return GoalKind::Stand;
-        return any_navmesh ? GoalKind::None : GoalKind::Elsewhere;
+        // Elsewhere exists to hand another map's fog to the travel marker. "No ground near it" is not
+        // that: on this map it would mark the fog itself, and the router snaps that to whatever ground
+        // is nearest - which is how you get walked to a square that credits nothing.
+        return WorldMapWidget::GetMapIdForLocation(point_wm) == GW::Map::GetMapID() ? GoalKind::None : GoalKind::Elsewhere;
     }
 
     // Re-resolved every scan rather than kept: the sweep keeps learning what is standable, and a
@@ -931,6 +993,31 @@ namespace {
         target.wm = wm;
         arrived = false;
         RefreshCustomTargetStand(player_wm_cached);
+#ifdef _DEBUG
+        // One dump of the whole near ring: which square the client would credit from, what the probe
+        // thinks of it, and how far it is. Without this the verdict is a single bit with no reason.
+        Log::Log("[carto-ring] fog tile (%d, %d) wm(%.0f, %.0f) player wm(%.0f, %.0f) radius=%d\n",
+                 fx, fy, wm.x, wm.y, player_wm_cached.x, player_wm_cached.y, RevealRadius());
+        for (int dy = -kRevealRadius; dy <= kRevealRadius; dy++) {
+            for (int dx = -kRevealRadius; dx <= kRevealRadius; dx++) {
+                const std::pair cell{fx + dx, fy + dy};
+                const auto it = probe->cells.find(cell);
+                const auto centre = CreditCellCenterWorldMap(cell.first, cell.second);
+                GW::GamePos gp{};
+                const bool converted = WorldMapWidget::WorldMapToGamePos(centre, gp);
+                Log::Log("[carto-ring]   (%+d,%+d) cell(%d,%d) centre wm(%.0f,%.0f) game(%.0f,%.0f) probed=%d navmesh=%d reachable=%d live_walkable=%d live_reachable=%d dist=%.0f%s\n",
+                         dx, dy, cell.first, cell.second, centre.x, centre.y, gp.x, gp.y,
+                         it != probe->cells.end(),
+                         it != probe->cells.end() && it->second.navmesh,
+                         it != probe->cells.end() && it->second.reachable,
+                         converted && Pathing::IsPositionWalkable(gp),
+                         converted && Pathing::IsPositionReachable(gp),
+                         sqrtf(Dist2(centre, player_wm_cached)),
+                         target.goal == GoalKind::Stand && cell == std::pair{target.stand_cx, target.stand_cy} ? "  <== CHOSEN" : "");
+            }
+        }
+        Log::FlushFile();
+#endif
         CARTO_LOG("[cartographer] custom fog point added at wm(%.0f, %.0f)%s", wm.x, wm.y,
                   target.goal == GoalKind::Stand ? ""
                   : target.goal == GoalKind::Waypoint ? " - already explored, marking the point itself"
@@ -1308,6 +1395,23 @@ namespace {
                              stand != probe->cells.end() ? static_cast<int>(stand->second.reachable) : 0,
                              stand != probe->cells.end() ? stand->second.reveals : 0,
                              static_cast<int>(FogCellCoverable(cx, cy)), RevealRadius());
+                    // Where the nearest real ground is. This is the primitive AStar snaps its
+                    // endpoints with, so it answers the only question that matters when a marker
+                    // paths somewhere the probe calls dead: is that ground in THIS cell or a
+                    // neighbour's? A marker pathing "there" only proves ground exists nearby.
+                    if (converted) {
+                        GW::GamePos snapped = gp;
+                        GW::Vec2f snapped_wm{};
+                        const bool found = Pathing::FindClosestPositionOnTrapezoid(snapped) != nullptr;
+                        const bool back = found && WorldMapWidget::GamePosToWorldMap(snapped, snapped_wm);
+                        const auto snapped_cell = back ? CreditCellAt(snapped_wm) : std::pair{0, 0};
+                        Log::Log("[cartographer] probe (%d,%d): nearest ground found=%d game(%.0f,%.0f) wm(%.1f,%.1f) cell(%d,%d) %s dist=%.0f gwinch reachable=%d",
+                                 cx, cy, found, snapped.x, snapped.y, snapped_wm.x, snapped_wm.y,
+                                 snapped_cell.first, snapped_cell.second,
+                                 back && snapped_cell == std::pair{cx, cy} ? "IN THIS CELL" : "in a DIFFERENT cell",
+                                 sqrtf((snapped.x - gp.x) * (snapped.x - gp.x) + (snapped.y - gp.y) * (snapped.y - gp.y)),
+                                 found && Pathing::IsPositionReachable(snapped));
+                    }
                     // Which half of FogCellCoverable answered: the bake short-circuits before any
                     // live test, so a wrong verdict there is a wrong bake, not a wrong probe.
                     Log::Log("[cartographer] probe (%d,%d): baked_mask=%d probe_complete=%d",
