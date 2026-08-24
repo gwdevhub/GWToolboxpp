@@ -55,11 +55,10 @@ registry key, then the usual Program Files paths. `Gw.dat` is the same container
 where the CDN takes 20. Only the fallback needs `gwpatch` and `requests`; both routes need
 `inflate` (the DAT decompressor) - set `$GW_INFLATE_DIR` if yours is somewhere unusual.
 
-**Check `nostream` in the STATS line.** A local dat only holds what the account has visited,
-and a map it has never downloaded contributes nothing - leaving holes, which are worse than
-the over-marking the exact clip removes. `Gw.exe -image` fetches all content and makes the
-problem go away. Failing that, keep the previous `out/` as `out.prev/`, list the missing map
-ids in `merge_incomplete.py`, and run it to produce `out.final/` for `make_header.py`.
+**Check `nostream` in the STATS line; it has to be 0.** A local dat only holds what the account
+has visited, and a map it has never downloaded contributes nothing - so those tiles vanish from
+the table entirely, which is worse than the over-marking the exact clip exists to remove. It is
+quiet, too: the run still reports `err=0`. `Gw.exe -image` fetches all content and fixes it.
 
 The in-game bake needs none of this:
 
