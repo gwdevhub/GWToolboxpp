@@ -431,6 +431,9 @@ namespace {
         int continent = -1;
         int x0 = 0, y0 = 0, w = 0, h = 0;
         std::vector<uint8_t> coverable;
+        // Undilated, as baked: which tile a dilated claim actually came from, which is the only
+        // way to ask whether it is a claim about this map or about the one next door.
+        const CartographyData::Continent* raw = nullptr;
 
         bool Get(const int cx, const int cy) const
         {
@@ -438,6 +441,16 @@ namespace {
             if (lx < 0 || ly < 0 || lx >= w || ly >= h) return false;
             const size_t bit = static_cast<size_t>(ly) * w + lx;
             return coverable[bit >> 3] >> (bit & 7) & 1;
+        }
+
+        bool RawGet(const int cx, const int cy) const
+        {
+            if (!raw) return false;
+            const int lx = cx - raw->x0, ly = cy - raw->y0;
+            if (lx < 0 || ly < 0 || lx >= raw->width || ly >= raw->height) return false;
+            const size_t bit = static_cast<size_t>(ly) * raw->width + lx;
+            if (bit / 8 >= static_cast<size_t>(raw->byte_count)) return false;
+            return raw->bits[bit >> 3] >> (bit & 7) & 1;
         }
     };
     ContinentMask continent_mask;
@@ -453,6 +466,7 @@ namespace {
             if (c.id == continent) { src = &c; break; }
         }
         if (!src) return;
+        continent_mask.raw = src;
         // Grow the grid by the radius so tiles credited from the edge are still representable.
         continent_mask.x0 = src->x0 - radius;
         continent_mask.y0 = src->y0 - radius;
@@ -476,6 +490,21 @@ namespace {
         }
     }
 
+    // Whether the baked mask's claim on this tile rests on ground outside the map we are standing
+    // in. Inside it the live navmesh is exact and the bake is not - it files whole trapezoid boxes,
+    // so it marks tiles a slanted edge only passes near - so a claim we can check ourselves is one
+    // the bake does not get to make. The mask is dilated by one tile, hence the ring.
+    bool BakeClaimsGroundElsewhere(const int cx, const int cy)
+    {
+        if (!EnsureMapRect()) return continent_mask.Get(cx, cy); // no rectangle to judge ownership by
+        for (int dy = -kMaskRadius; dy <= kMaskRadius; dy++) {
+            for (int dx = -kMaskRadius; dx <= kMaskRadius; dx++) {
+                if (continent_mask.RawGet(cx + dx, cy + dy) && !InMapBounds(cx + dx, cy + dy)) return true;
+            }
+        }
+        return false;
+    }
+
     // Everything counts as coverable until the sweep finishes, so the overlay does not blink
     // cells out and back in as probing progresses.
     bool FogCellCoverable(const int cx, const int cy)
@@ -484,7 +513,7 @@ namespace {
         // including the few the bake has no file id for. Either is enough. The mask is dilated by
         // one tile, so anything it claims is within the near ring of somewhere standable - and the
         // near ring is unclamped, so that is the whole test.
-        if (continent_mask.Get(cx, cy)) return true;
+        if (BakeClaimsGroundElsewhere(cx, cy)) return true;
         if (!probe->complete) return true;
         const int r = RevealRadius();
         for (int dy = -r; dy <= r; dy++) {
@@ -1230,9 +1259,10 @@ namespace {
             for (uint32_t t = 0; t < plane.trapezoid_count; t++) {
                 const auto& trap = plane.trapezoids[t];
                 if (!component.contains(&trap)) continue;
-                // The trapezoid's game-space box, converted through this map's own anchor. A tile
-                // is 3072 gwinches, so taking the box rather than the exact quad costs at most a
-                // sliver of over-marking on a slanted edge.
+                // The trapezoid's game-space box, converted through this map's own anchor, as the
+                // candidate range only - a tile is 3072 gwinches, so marking the whole box files
+                // tiles a slanted edge merely passes near, and the widget then dilates those into
+                // fog it claims you can uncover.
                 GW::GamePos lo{}, hi{};
                 lo.x = std::min(trap.XTL, trap.XBL);
                 lo.y = trap.YB;
@@ -1241,14 +1271,18 @@ namespace {
                 GW::Vec2f a{}, b{};
                 if (!WorldMapWidget::GamePosToWorldMap(lo, a, map_id)) continue;
                 if (!WorldMapWidget::GamePosToWorldMap(hi, b, map_id)) continue;
-                // CreditCell*, not a plain floor: trapezoid edges land on exact tile boundaries all
-                // the time, and that is the one place the two disagree.
-                const int x0 = CreditCellX(std::min(a.x, b.x));
-                const int x1 = CreditCellX(std::max(a.x, b.x));
-                const int y0 = CreditCellY(std::min(a.y, b.y));
-                const int y1 = CreditCellY(std::max(a.y, b.y));
+                const auto [x0, y0] = FogTileAt({std::min(a.x, b.x), std::min(a.y, b.y)});
+                const auto [x1, y1] = FogTileAt({std::max(a.x, b.x), std::max(a.y, b.y)});
                 for (int cy = y0; cy <= y1; cy++) {
                     for (int cx = x0; cx <= x1; cx++) {
+                        GW::GamePos ca{}, cb{};
+                        if (!WorldMapWidget::WorldMapToGamePos({cx * kWorldMapUnitsPerCell, cy * kWorldMapUnitsPerCell}, ca, map_id)) continue;
+                        if (!WorldMapWidget::WorldMapToGamePos({(cx + 1) * kWorldMapUnitsPerCell, (cy + 1) * kWorldMapUnitsPerCell}, cb, map_id)) continue;
+                        GW::Vec2f footing{};
+                        if (!Pathing::TrapezoidOverlapsBox(&trap, {std::min(ca.x, cb.x), std::min(ca.y, cb.y)},
+                                                           {std::max(ca.x, cb.x), std::max(ca.y, cb.y)}, footing)) {
+                            continue;
+                        }
                         if (out.standable.insert(TileKey(cx, cy)).second) marked++;
                     }
                 }
