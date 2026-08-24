@@ -46,16 +46,24 @@ format to `Settings/cartography/`. Prefer it - this directory is for a machine w
 
 ## Running it
 
-    pip install requests
     python3 bake.py          # regenerates fileids.txt, writes out/standable_L<n>.bin
     python3 make_header.py   # out/ -> GWToolboxdll/Widgets/CartographyData.h
 
-`bake.py` needs `gwpatch` and `inflate` (the CDN manifest reader and the DAT decompressor) on
-`sys.path`; without them, bake in game and point the second step at its output:
+`snapdat.open_dat()` prefers a local install - `$GW_DAT`, then the `ArenaNet\Guild Wars`
+registry key, then the usual Program Files paths. `Gw.dat` is the same container as
+`Gw.snapshot`, it opens read-only while the client is running, and it takes about 5 minutes
+where the CDN takes 20. Only the fallback needs `gwpatch` and `requests`; both routes need
+`inflate` (the DAT decompressor) - set `$GW_INFLATE_DIR` if yours is somewhere unusual.
+
+**Check `nostream` in the STATS line.** A local dat only holds what the account has visited,
+and a map it has never downloaded contributes nothing - leaving holes, which are worse than
+the over-marking the exact clip removes. `Gw.exe -image` fetches all content and makes the
+problem go away. Failing that, keep the previous `out/` as `out.prev/`, list the missing map
+ids in `merge_incomplete.py`, and run it to produce `out.final/` for `make_header.py`.
+
+The in-game bake needs none of this:
 
     python3 make_header.py ~/Documents/GWToolboxpp/<COMPUTERNAME>/cartography
-
-`bake.py` takes about 20 minutes; the chunk cache in `/tmp` makes re-runs much faster.
 
 `make_header.py` reads its arrays back out of the header it just wrote and compares them to the
 `.bin` bytes before finishing. That check exists because the first version of this generator
