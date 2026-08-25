@@ -31,7 +31,7 @@ struct Build {
     bool IsPlayerBuild() const { return hero_id == GW::Constants::HeroID::NoHero; }
 
     // Returns the elite skill name from the build code as a fallback display name.
-    std::string GetFallbackBuildName();
+    const std::string& GetFallbackBuildName();
 
     // Decode skill template from code. Returns nullptr if code is invalid.
     GW::SkillbarMgr::SkillTemplate* Decode();
@@ -42,7 +42,7 @@ struct Build {
     void ResetDecodeCache();
 
     void View() const;
-    std::string DisplayName();
+    const std::string& DisplayName();
     void Send();
     std::string GetChatBuildCode();
     void Load() const;
@@ -56,12 +56,21 @@ struct Build {
 
 private:
     GW::SkillbarMgr::SkillTemplate skill_template_{};
+
+    std::string fallback_name_{};
+    std::string fallback_src_code_{};
+    GW::Constants::SkillID fallback_elite_skill_ = GW::Constants::SkillID::No_Skill;
+    std::string display_name_{};
+    std::string display_name_src_name_{};
+    std::string display_name_src_fallback_{};
+    std::string display_name_src_hero_name_{};
+    GW::Constants::HeroID display_name_src_hero_id_ = GW::Constants::HeroID::NoHero;
 };
 
 struct TeamBuild {
     static uint32_t s_cur_ui_id;
 
-    TeamBuild() = default;
+    TeamBuild();
     explicit TeamBuild(std::string_view name, std::string_view ui_id = {});
     TeamBuild(const TeamBuild& other);
     TeamBuild& operator=(const TeamBuild& other);
@@ -110,6 +119,13 @@ private:
     int editing_build_idx_ = -1; // which build row is expanded (player-builds layout)
     bool send_all_confirming_ = false;
     mutable std::optional<std::wstring> encoded_cache_{};
+
+    std::string edit_winname_{};
+    std::string edit_winname_src_{};
+    std::string detached_winname_{};
+    std::string detached_winname_src_{};
+
+    void RefreshTitles();
 
     // Returns the encoded wstring, computing and caching it on first call.
     const std::wstring& GetEncoded() const;

@@ -21,7 +21,6 @@
 #include <Utils/GuiUtils.h>
 #include <Utils/ToolboxUtils.h>
 #include <Color.h>
-#include <Defines.h>
 #include "EffectsMonitorWidget.h"
 
 #include <Utils/FontLoader.h>
@@ -30,6 +29,17 @@ namespace {
     EffectsMonitorWidget::Settings settings;
 
     GW::UI::Frame* effects_frame = nullptr;
+
+    GW::HookEntry effects_frame_hook;
+    void OnEffectsFrameUIMessage(GW::HookStatus*, const GW::UI::Frame* frame, const GW::UI::UIMessage message_id, void*, void*) {
+        switch (message_id) {
+        case GW::UI::UIMessage::kDestroyFrame:
+        case GW::UI::UIMessage::kSetLayout:
+            if (frame == effects_frame)
+                effects_frame = nullptr;
+            break;
+        }
+    }
 
     ImGuiViewport* viewport = nullptr;
     ImDrawList* draw_list = nullptr;
@@ -203,9 +213,9 @@ namespace {
             ImGui::PopFont(draw_list);
         }
     }
-    
+
     std::unordered_map<uint32_t, clock_t> effect_timestamps;
-    
+
     GW::HookEntry OnPreUIMessage_HookEntry;
     void OnPreUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* wparam, void*) {
         switch (message_id) {
@@ -229,7 +239,8 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
     if (!visible) {
         return;
     }
-    effects_frame = GW::UI::GetFrameByLabel(L"Effects");
+    if (!effects_frame)
+        effects_frame = GW::UI::GetFrameByLabel(L"Effects");
     if (!effects_frame) {
         return;
     }
@@ -286,6 +297,8 @@ void EffectsMonitorWidget::Initialize()
     ToolboxWidget::Initialize();
     SettingsRegistry::Register(this, settings);
     RegisterUIMessageCallback(&OnPreUIMessage_HookEntry, GW::UI::UIMessage::kEffectAdd, OnPreUIMessage, -0x6000);
+    GW::UI::RegisterFrameUIMessageCallback(&effects_frame_hook, GW::UI::UIMessage::kDestroyFrame, OnEffectsFrameUIMessage);
+    GW::UI::RegisterFrameUIMessageCallback(&effects_frame_hook, GW::UI::UIMessage::kSetLayout, OnEffectsFrameUIMessage);
 
     GW::UI::UIMessage spirit_messages[] = {
         GW::UI::UIMessage::kAgentSkillActivated,
@@ -300,6 +313,8 @@ void EffectsMonitorWidget::Terminate()
 {
     ToolboxWidget::Terminate();
     GW::UI::RemoveUIMessageCallback(&OnPreUIMessage_HookEntry);
+    GW::UI::RemoveFrameUIMessageCallback(&effects_frame_hook);
+    effects_frame = nullptr;
     GW::UI::RemoveUIMessageCallback(&spirit_ui_hook);
     for (const auto& [agent_id, skill_id] : tracked_spirits) {
         GW::Effects::RemoveCustomEffect(SpiritEffectId(skill_id));

@@ -322,13 +322,17 @@ namespace {
     struct MergeStack {
         uint16_t quantity;
         std::string description;
+        int displayed_quantity = -1;
+        std::string description_one_line;
         std::set<ItemRef*, ItemCompare> i;
         MergeStack(const UUID& account, const std::string& _description);
-        std::string GetDescription()
+        const std::string& GetDescription()
         {
-            std::string build_desc = description;
-            if (quantity > 1) build_desc = std::to_string(quantity) + " " + build_desc;
-            auto description_one_line = TextUtils::ctre_regex_replace<L"\n", L" - ">(build_desc);
+            if (displayed_quantity != quantity) {
+                auto build_desc = quantity > 1 ? std::to_string(quantity) + " " + description : description;
+                description_one_line = TextUtils::ctre_regex_replace<L"\n", L" - ">(build_desc);
+                displayed_quantity = quantity;
+            }
             return description_one_line;
         }
     };
@@ -336,10 +340,10 @@ namespace {
     {
         int sort_direction = 1;
         int delta = 0;
-        if (rms.i.size() == 0) return false;
-        if (lms.i.size() == 0) return true;
-        auto l = *(lms.i.begin());
-        auto r = *(rms.i.begin());
+        if (rms.i.empty()) return false;
+        if (lms.i.empty()) return true;
+        const auto l = *(lms.i.begin());
+        const auto r = *(rms.i.begin());
         if (sort_specs) {
             for (int n = 0; n < sort_specs->SpecsCount; n++) {
                 const ImGuiTableColumnSortSpecs* sort_spec = &sort_specs->Specs[n];
@@ -365,7 +369,7 @@ namespace {
         // fallback
         if (delta == 0) delta = l->character_name.compare(r->character_name);
         if (delta == 0) delta = l->location.compare(r->location);
-        if (delta == 0) delta = (int)l->bag_id - (int)r->bag_id;
+        if (delta == 0) delta = static_cast<int>(l->bag_id) - static_cast<int>(r->bag_id);
         if (delta == 0) delta = l->slot - r->slot;
         if (delta == 0) delta = memcmp(&l->account->uuid, &r->account->uuid, sizeof(l->account->uuid));
         return delta * sort_direction < 0;
@@ -451,6 +455,10 @@ namespace {
         bool is_loaded = false;
         GUID account{};
         std::string ini_ID{}; // = GuidToString(account)
+        std::mutex io_mutex;
+        std::string queued_json;
+        bool delete_requested = false;
+        std::atomic_bool io_pending{false};
         explicit InventoryFile(std::filesystem::path _location) : location_on_disk(std::move(_location)) {}
     };
 
@@ -474,7 +482,7 @@ namespace {
     std::deque<ItemRef> item_refs{};
     std::vector<MergeStack> inventory_sorted{};
     // ini files, 1 per character/chest
-    std::unordered_map<std::filesystem::path, std::unique_ptr<InventoryFile>> ini_by_path{};
+    std::unordered_map<std::filesystem::path, std::shared_ptr<InventoryFile>> ini_by_path{};
     std::unordered_map<std::string, InventoryFile*> ini_by_character{};
     // change tracker to reduce writes
     std::unordered_set<std::string> inventory_dirty{};
@@ -485,6 +493,8 @@ namespace {
     bool initializing = false;
     bool needs_sorting = true;
     bool needs_filter = true;
+    bool sort_awaiting_decode = false;
+    clock_t decode_sort_timer{};
     bool show_delete_note = false;
     size_t filtered_item_count = 0;
     std::string last_character{};
@@ -927,11 +937,14 @@ namespace {
             ms->i.insert(&r);
         }
         filtered_item_count = inventory_sorted.size();
+        for (auto& ims : inventory_sorted) ims.GetDescription();
 
         if (inventory_sorted.size() > 1) std::sort(inventory_sorted.begin(), inventory_sorted.end(), ItemCompare{sort_specs, current_account});
 
         if (sort_specs) sort_specs->SpecsDirty = false;
         needs_sorting = any_decoding;
+        sort_awaiting_decode = any_decoding;
+        if (any_decoding) decode_sort_timer = TIMER_INIT();
     }
 
     bool CheckIniDirty(InventoryFile* ini, std::filesystem::file_time_type write_time)
@@ -977,7 +990,7 @@ namespace {
         }
         else {
             Resources::EnsureFolderExists(Resources::GetPath(L"inventories"));
-            auto owned = std::make_unique<InventoryFile>(path);
+            auto owned = std::make_shared<InventoryFile>(path);
             ini = owned.get();
             ini_by_path[path] = std::move(owned);
         }
@@ -1183,7 +1196,7 @@ namespace {
             const auto path = file.path();
             if (!IsInventoryIniFilename(path)) continue; // ignore legacy/unrelated files
             visited.insert(path);
-            if (!ini_by_path.contains(path)) ini_by_path[path] = std::make_unique<InventoryFile>(path);
+            if (!ini_by_path.contains(path)) ini_by_path[path] = std::make_shared<InventoryFile>(path);
             auto* ini = ini_by_path[path].get();
             if (only_foreign && ini->account == current_account) continue;
             const bool dirty = CheckIniDirty(ini, file.last_write_time());
@@ -1232,6 +1245,47 @@ namespace {
         needs_sorting = true;
     }
 
+    void EnqueueIniIO(std::shared_ptr<InventoryFile> ini)
+    {
+        if (ini->io_pending.exchange(true)) return;
+        Resources::EnqueueWorkerTask([ini] {
+            for (;;) {
+                std::string payload;
+                bool remove_file = false;
+                bool done = false;
+                {
+                    std::scoped_lock lock(ini->io_mutex);
+                    payload = std::move(ini->queued_json);
+                    ini->queued_json.clear();
+                    remove_file = ini->delete_requested;
+                    ini->delete_requested = false;
+                    if (remove_file || payload.empty()) {
+                        ini->io_pending = false;
+                        done = true;
+                    }
+                }
+                if (done) {
+                    if (remove_file) DeleteFileW(ini->location_on_disk.wstring().c_str());
+                    return;
+                }
+                std::ofstream f(ini->location_on_disk, std::ios::binary | std::ios::trunc);
+                if (!f) {
+                    Log::Error("Account Inventory: Failed to save inventory file. Inventory tracking data will be lost.");
+                    std::scoped_lock lock(ini->io_mutex);
+                    ini->queued_json = std::move(payload);
+                    ini->io_pending = false;
+                    return;
+                }
+                f.write(payload.data(), static_cast<std::streamsize>(payload.size()));
+                f.close();
+                std::error_code ec;
+                const auto write_time = std::filesystem::last_write_time(ini->location_on_disk, ec);
+                std::scoped_lock lock(ini->io_mutex);
+                ini->last_change_time = write_time;
+            }
+        });
+    }
+
     // Write (or delete) the JSON file for one account.
     void SyncAccountFile(const std::string& ini_ID, const GUID& account)
     {
@@ -1240,10 +1294,14 @@ namespace {
         Account* acc = FindAccount(account);
         AccountJson aj;
         if (acc) aj = BuildAccountJson(*acc);
+        const auto path = ini->location_on_disk;
         if (!acc || !AccountJsonHasData(aj)) {
-            // nothing to store -> remove the file and forget it
-            DeleteFileW(ini->location_on_disk.wstring().c_str());
-            const auto path = ini->location_on_disk;
+            {
+                std::scoped_lock lock(ini->io_mutex);
+                ini->queued_json.clear();
+                ini->delete_requested = true;
+            }
+            EnqueueIniIO(ini_by_path[path]);
             ini_by_character.erase(ini_ID);
             ini_by_path.erase(path);
             return;
@@ -1254,16 +1312,11 @@ namespace {
             return;
         }
         const std::string json = glz::prettify_json(compact);
-        std::ofstream f(ini->location_on_disk, std::ios::binary | std::ios::trunc);
-        if (!f) {
-            Log::Error("Account Inventory: Failed to save inventory file. Inventory tracking data will be lost.");
-            return;
+        {
+            std::scoped_lock lock(ini->io_mutex);
+            ini->queued_json = std::move(json);
         }
-        f.write(json.data(), static_cast<std::streamsize>(json.size()));
-        f.close();
-        // remember our own write so the next scan doesn't treat it as an external change
-        std::error_code ec;
-        ini->last_change_time = std::filesystem::last_write_time(ini->location_on_disk, ec);
+        EnqueueIniIO(ini_by_path[path]);
     }
 
     void SaveToFiles(bool include_foreign)
@@ -2127,7 +2180,10 @@ void AccountInventoryWindow::Draw(IDirect3DDevice9*)
     ImGui::TableNextColumn();
 
     ImGuiTableSortSpecs* item_sort_specs = ImGui::TableGetSortSpecs();
-    if (needs_sorting || (item_sort_specs && item_sort_specs->SpecsDirty)) {
+    const bool specs_dirty = item_sort_specs && item_sort_specs->SpecsDirty;
+    const bool decode_retry_due = !sort_awaiting_decode || TIMER_DIFF(decode_sort_timer) >= 250;
+    if ((needs_sorting && decode_retry_due) || specs_dirty) {
+        sort_awaiting_decode = false;
         SortAndFilterInventory(item_sort_specs);
     }
 
@@ -2170,7 +2226,7 @@ void AccountInventoryWindow::Draw(IDirect3DDevice9*)
             ImGui::Text("%d", i_front->item->model_id);
             ImGui::TableNextColumn();
             style.ButtonTextAlign = ImVec2(0.f, 0.5f);
-            const auto description_one_line = ims.GetDescription();
+            const auto& description_one_line = ims.GetDescription();
             clicked = ImGui::Button(description_one_line.c_str());
             if (ImGui::IsItemHovered()) {
                 ImGui::SetTooltip([ms = &ims]() {

@@ -2148,7 +2148,6 @@ bool GameSettings::WndProc(const UINT Message, WPARAM, LPARAM)
     static clock_t set_online_timer = TIMER_INIT();
     if (settings.auto_set_online && TIMER_DIFF(set_online_timer) > 5000 // to avoid spamming in case of failure
         && GW::FriendListMgr::GetMyStatus() == GW::FriendStatus::Away) {
-        printf("%X\n", Message);
         GW::FriendListMgr::SetFriendListStatus(GW::FriendStatus::Online);
         set_online_timer = TIMER_INIT();
     }

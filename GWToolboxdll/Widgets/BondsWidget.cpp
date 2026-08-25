@@ -92,6 +92,8 @@ namespace {
 
     std::vector<GW::Constants::SkillID> bond_list{};               // index to skill id
     std::unordered_map<GW::Constants::SkillID, size_t> bond_map{}; // skill id to index
+    std::array<uint32_t, 8> fetched_skill_ids{};
+    bool bond_skills_dirty = true;
 
     bool UseBuff(GW::AgentID agent_id, GW::Constants::SkillID skill_id)
     {
@@ -127,8 +129,17 @@ namespace {
     {
         const GW::Skillbar* bar = GW::SkillbarMgr::GetPlayerSkillbar();
         if (!bar || !bar->IsValid()) {
+            bond_skills_dirty = true;
             return false;
         }
+        std::array<uint32_t, 8> skill_ids{};
+        for (size_t i = 0; i < skill_ids.size(); i++) {
+            skill_ids[i] = std::to_underlying(bar->skills[i].skill_id);
+        }
+        if (!bond_skills_dirty && skill_ids == fetched_skill_ids)
+            return true;
+        bond_skills_dirty = false;
+        fetched_skill_ids = skill_ids;
         bond_list.clear();
         bond_map.clear();
         for (const auto& skill : bar->skills) {
@@ -272,19 +283,21 @@ bool BondsWidget::GetBondPosition(uint32_t agent_id, GW::Constants::SkillID skil
     if (!health_bar_pos)
         return false;
 
-    if (!party_indeces_by_agent_id.contains(agent_id))
+    const auto party_slot_it = party_indeces_by_agent_id.find(agent_id);
+    if (party_slot_it == party_indeces_by_agent_id.end())
         return false;
-    const auto party_slot = party_indeces_by_agent_id[agent_id];
+    const auto party_slot = party_slot_it->second;
     if (party_slot >= allies_start_idx && !settings.show_allies)
         return false;
 
-    if (!bond_map.contains(skill_id)) {
+    const auto bond_it = bond_map.find(skill_id);
+    if (bond_it == bond_map.end()) {
         return false; // bond with a skill not in skillbar
     }
 
     const auto img_width = health_bar_pos->bottom_right.y - health_bar_pos->top_left.y;
     const auto y = health_bar_pos->top_left.y;
-    const auto x = ImGui::GetCurrentWindow()->Pos.x + (img_width * bond_map[skill_id]);
+    const auto x = ImGui::GetCurrentWindow()->Pos.x + (img_width * bond_it->second);
 
     *top_left_out = { x, y };
     *bottom_right_out = { x + img_width, y + img_width };
@@ -306,15 +319,16 @@ void BondsWidget::Draw(IDirect3DDevice9*)
     }
     // note: info->heroes, ->henchmen, and ->others CAN be invalid during normal use.
 
-    // @Cleanup: This doesn't need to be done every frame - only when player skills have changed
     if (!FetchBondSkills()) {
         return;
     }
     if (bond_list.empty()) {
         return; // Don't display bonds widget if we've not got any bonds on our skillbar
     }
-    // @Cleanup: Only call when the party window has been moved or updated
     if (!(FetchPartyInfo() && RecalculatePartyPositions())) {
+        return;
+    }
+    if (agent_health_bar_positions.empty()) {
         return;
     }
 
@@ -476,6 +490,7 @@ void BondsWidget::DrawSettingsInternal()
                                  ? ImGui::CheckboxWithHelp(label_buf, &bond.enabled, bond.help_text)
                                  : ImGui::Checkbox(label_buf, &bond.enabled);
         if (changed) {
+            bond_skills_dirty = true;
             FetchBondSkills();
         }
     }

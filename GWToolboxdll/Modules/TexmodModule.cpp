@@ -24,6 +24,7 @@
 #include <ImGuiAddons.h>
 #include <Defender.h>
 #include <Modules/Resources.h>
+#include <Timer.h>
 #include <Utils/FontLoader.h>
 #include <Utils/TextUtils.h>
 
@@ -1133,6 +1134,9 @@ void TexmodModule::Update(float)
     }
 
     if (gmodReady) return;
+    static clock_t last_init_attempt = 0;
+    if (last_init_attempt && TIMER_DIFF(last_init_attempt) < 1000) return;
+    last_init_attempt = TIMER_INIT();
     InitGMod();
 }
 

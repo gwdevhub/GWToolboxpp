@@ -155,15 +155,30 @@ void GuildWarsUI_Tab::AddChild(GuildWarsUI_Frame* child)
     AddGuildWarsUI_Frame(frame, child);
 }
 
+bool GuildWarsUI_Tab::ShouldPoll()
+{
+    if (frame) return false;
+    if (TIMER_DIFF(last_poll_) < kPollMs) return false;
+    last_poll_ = TIMER_INIT();
+    return true;
+}
+
 void GuildWarsUI_Tab::Poll(GW::TabsFrame* tabs)
 {
-    if (frame) return;
-    if (TIMER_DIFF(last_poll_) < kPollMs) return;
-    last_poll_ = TIMER_INIT();
+    if (!ShouldPoll()) return;
     if (!tabs) return;
     frame = CreateNativeFrame(tabs->frame_id);
     // Deliberately not calling ApplyLayout() - see the class comment: a tab's item is sized by the
     // engine from kMeasureContent's answer, not imposed via SetSize/margins like a plain child's.
+}
+
+void GuildWarsUI_Tab::Poll(GW::TabsFrame* (*get_tabs)())
+{
+    if (!ShouldPoll()) return;
+    if (!get_tabs) return;
+    const auto tabs = get_tabs();
+    if (!tabs) return;
+    frame = CreateNativeFrame(tabs->frame_id);
 }
 
 GW::UI::Frame* GuildWarsUI_Tab::CreateNativeFrame(uint32_t parent_frame_id)

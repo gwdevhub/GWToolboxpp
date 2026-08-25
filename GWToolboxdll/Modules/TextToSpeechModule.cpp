@@ -195,6 +195,11 @@ namespace {
     float GetSystemVolume(bool cache = true)
     {
         if (cache && TIMER_DIFF(last_cached_system_volume) < 10000) return cached_system_volume;
+        if (cache) {
+            last_cached_system_volume = TIMER_INIT();
+            Resources::EnqueueWorkerTask([] { GetSystemVolume(false); });
+            return cached_system_volume;
+        }
 
         HRESULT hr = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
         bool needs_uninit = SUCCEEDED(hr);

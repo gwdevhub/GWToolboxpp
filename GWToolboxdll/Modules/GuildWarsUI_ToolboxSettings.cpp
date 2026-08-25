@@ -63,8 +63,7 @@ void GuildWarsUI_ToolboxSettings::Initialize()
 void GuildWarsUI_ToolboxSettings::Update(float)
 {
     // Poll rather than hook kFrameVisibilityChanged: that fires for every frame, and walking
-    // Options' relation.children mid open-cascade froze the game. Poll() throttles anyway.
-    settings_tab.Poll(GetOptionsTabs());
+    settings_tab.Poll(GetOptionsTabs);
 }
 
 void GuildWarsUI_ToolboxSettings::SignalTerminate()

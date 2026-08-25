@@ -93,8 +93,6 @@ private:
     std::array<Skill, 8> m_skills{};
 
     [[nodiscard]] Color UptimeToColor(uint32_t uptime) const;
-    static std::vector<Effect> get_effects(GW::Constants::SkillID skillId);
-    static Effect get_longest_effect(GW::Constants::SkillID skillId);
     void skill_cooldown_to_string(char arr[16], uint32_t cd) const;
     void DrawDurationThresholds();
 };

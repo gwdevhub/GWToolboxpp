@@ -443,8 +443,6 @@ void AgentRenderer::DrawSettings()
             }
         });
 
-        
-
         struct AgentColorRow {
             const char* label;
             Color* color;
@@ -889,6 +887,8 @@ void AgentRenderer::Render(IDirect3DDevice9* device)
             return;
         }
 
+        RefreshRelevantPolys();
+
         const GW::AgentLiving* player = GW::Agents::GetControlledCharacter();
         const GW::Agent* target = GW::Agents::GetTarget();
         if (target) {
@@ -1092,7 +1092,7 @@ void AgentRenderer::Render(IDirect3DDevice9* device)
             Enqueue(player);
         }
     }
-    
+
     D3DVertexBuffer::Render(device);
 }
 
@@ -1102,6 +1102,42 @@ void AgentRenderer::Enqueue(const GW::Agent* agent, const CustomAgent* ca)
     const auto size = GetSize(agent, ca);
     const auto shape = GetShape(agent, ca);
     return Enqueue(shape, agent, size, color);
+}
+
+void AgentRenderer::RefreshRelevantPolys()
+{
+    const auto map_id = GW::Map::GetMapID();
+    relevant_polygons.clear();
+    relevant_markers.clear();
+    for (const CustomRenderer::CustomPolygon& polygon : Minimap::Instance().custom_renderer.polygons) {
+        if (!((polygon.visible && polygon.map == GW::Constants::MapID::None) || polygon.map == map_id)) {
+            continue;
+        }
+        if (polygon.points.empty() || !(polygon.color_sub & IM_COL32_A_MASK)) {
+            continue;
+        }
+        auto& cached = relevant_polygons.emplace_back();
+        cached.polygon = &polygon;
+        cached.min_x = cached.max_x = polygon.points[0].x;
+        cached.min_y = cached.max_y = polygon.points[0].y;
+        for (const GW::GamePos& point : polygon.points) {
+            cached.min_x = std::min(cached.min_x, point.x);
+            cached.max_x = std::max(cached.max_x, point.x);
+            cached.min_y = std::min(cached.min_y, point.y);
+            cached.max_y = std::max(cached.max_y, point.y);
+        }
+    }
+    for (const CustomRenderer::CustomMarker& marker : Minimap::Instance().custom_renderer.markers) {
+        if (!((marker.visible && marker.map == GW::Constants::MapID::None) || marker.map == map_id)) {
+            continue;
+        }
+        if (!(marker.color_sub & IM_COL32_A_MASK)) {
+            continue;
+        }
+        auto& cached = relevant_markers.emplace_back();
+        cached.marker = &marker;
+        cached.radius_squared = marker.size * marker.size;
+    }
 }
 
 Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) const
@@ -1162,16 +1198,7 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
                 }
             }
         }
-        const auto& polygons = Minimap::Instance().custom_renderer.polygons;
-        const auto& markers = Minimap::Instance().custom_renderer.markers;
-        const auto is_relevant = [living](const CustomRenderer::CustomPolygon& polygon)-> bool {
-            return (polygon.visible && polygon.map == GW::Constants::MapID::None || polygon.map == GW::Map::GetMapID()) && !polygon.points.empty() && (polygon.color_sub & IM_COL32_A_MASK) != 0 &&
-                   GetDistance(living->pos, polygon.points.at(0)) < 2500.f;
-        };
-        const auto is_relevant_circle = [living](const CustomRenderer::CustomMarker& marker) {
-            return (marker.visible && marker.map == GW::Constants::MapID::None || marker.map == GW::Map::GetMapID()) && (marker.color_sub & IM_COL32_A_MASK) != 0 &&
-                   GetDistance(living->pos, marker.pos) < 2500.f;
-        };
+        constexpr auto relevance_range_squared = 2500.f * 2500.f;
         const auto is_inside = [](const GW::GamePos pos, const std::vector<GW::GamePos>& points) -> bool {
             bool b = false;
             //TODO: This might need adjust to take into account zlevels
@@ -1185,24 +1212,30 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
             return b;
         };
 
-        auto is_inside_circle = [](const GW::Vec2f pos, const GW::Vec2f circle, const float radius) -> bool {
-            return GetSquareDistance(pos, circle) <= radius * radius;
-        };
-        for (const auto& polygon : polygons) {
-            if (!is_relevant(polygon)) {
+        for (const auto& cached : relevant_polygons) {
+            const auto& polygon = *cached.polygon;
+            if (living->pos.x < cached.min_x || living->pos.x > cached.max_x || living->pos.y < cached.min_y || living->pos.y > cached.max_y) {
+                continue;
+            }
+            const auto& origin = polygon.points[0];
+            const float dx = living->pos.x - origin.x;
+            const float dy = living->pos.y - origin.y;
+            if (dx * dx + dy * dy >= relevance_range_squared) {
                 continue;
             }
             if (is_inside(living->pos, polygon.points)) {
                 c = &polygon.color_sub;
             }
         }
-        for (const auto& marker : markers) {
-            if (!is_relevant_circle(marker)) {
+        for (const auto& cached : relevant_markers) {
+            const auto& marker = *cached.marker;
+            const float dx = living->pos.x - marker.pos.x;
+            const float dy = living->pos.y - marker.pos.y;
+            const float dist_squared = dx * dx + dy * dy;
+            if (dist_squared >= relevance_range_squared || dist_squared > cached.radius_squared) {
                 continue;
             }
-            if (is_inside_circle(living->pos, marker.pos, marker.size)) {
-                c = &marker.color_sub;
-            }
+            c = &marker.color_sub;
         }
         if (living->hp > 0.9f) {
             return *c;

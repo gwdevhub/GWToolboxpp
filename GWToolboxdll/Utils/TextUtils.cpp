@@ -471,8 +471,18 @@ namespace TextUtils {
         if (!valid) return false;
         if (regex) return std::regex_search(subject.begin(), subject.end(), *regex);
         if (lowered.empty()) return false;
+        static constexpr auto fold_table = [] {
+            std::array<CharT, 256> table{};
+            for (size_t i = 0; i < 256; i++) {
+                const auto c = static_cast<CharT>(i);
+                table[i] = c >= static_cast<CharT>('A') && c <= static_cast<CharT>('Z') ? static_cast<CharT>(c | static_cast<CharT>(0x20)) : c;
+            }
+            return table;
+        }();
         // `lowered` is already lowercased, so only the subject needs folding as we go.
-        const auto folded_equals = [](const CharT a, const CharT b) { return std::tolower(a, std::locale()) == b; };
+        const auto folded_equals = [](const CharT a, const CharT b) {
+            return (a >= 0 && static_cast<size_t>(a) < 256 ? fold_table[a] : a) == b;
+        };
         if (exact) return std::ranges::equal(subject, lowered, folded_equals);
         return !std::ranges::search(subject, lowered, folded_equals).empty();
     }
