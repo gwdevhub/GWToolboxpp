@@ -37,7 +37,8 @@
 #include <Modules/GuildWarsSettingsModule.h>
 #include <Modules/ItemTooltipModule.h>
 #include <Modules/LoginModule.h>
-#if defined(_DEBUG) || defined(GWTB_HARNESS)
+#ifdef _DEBUG
+#include <Modules/TestHarness.h>
 #endif
 
 #include <Modules/MouseFix.h>
@@ -185,6 +186,9 @@ namespace {
         ResignLogModule::Instance(),
         PathfindingWindow::Instance(),
         QuestModule::Instance(),
+#ifdef _DEBUG
+        TestHarness::Instance(),
+#endif
         VanquishMapOverlayWidget::Instance(),
         PartyBroadcast::Instance(),
         CodeOptimiserModule::Instance(),

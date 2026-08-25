@@ -54,5 +54,9 @@ public:
     static void GetStatus(char* buf, size_t len);
 #ifdef _DEBUG
     static void DrawBakeSettings();
+    static void LogProbeAtCell(int cx, int cy);
+    static void StartContinentBake();
+    static void SetGateGlitchAllowed(bool allowed);
+    static bool ContinentBakeRunning();
 #endif
 };
