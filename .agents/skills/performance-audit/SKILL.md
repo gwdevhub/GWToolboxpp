@@ -11,12 +11,18 @@ microsecond the game does not get, and the costs are additive across ~80 modules
 
 ## 1. Know the cost model before reading any code
 
-Two hot entry points per module (`GWToolboxdll/ToolboxModule.h`):
+Two hot entry points per module (`GWToolboxdll/ToolboxModule.h`), dispatched from
+`GWToolbox::Update` and `GWToolbox::Draw` (`GWToolboxdll/GWToolbox.cpp`):
 
-- `Update(float delta)` - **game thread**, once per frame, for *every loaded module* whether or
-  not its window is visible. Cheapest place to be wrong and the most commonly abused.
-- `Draw(IDirect3DDevice9*)` - **render thread**, inside the ImGui frame, for every *enabled*
-  module. UI elements draw their window here; plain modules paint overlays here.
+- `Update(float delta)` - **game thread**, once per frame, for every module in
+  `modules_enabled`. "Enabled" is not "visible": a window the user has closed still gets
+  `Update` every frame. Cheapest place to be wrong and the most commonly abused.
+- `Draw(IDirect3DDevice9*)` - **render thread**, inside the ImGui frame. UI elements draw their
+  window; plain modules in `other_modules_enabled` paint overlays. The loop is gated on
+  `GW::UI::GetIsUIDrawn()`, and skips elements without `ShowOnWorldMap()` while the world map is
+  up - but **`Draw` is called on every enabled element regardless of `visible`**; the
+  `if (!visible) return;` at the top of each `Draw` is the element's own responsibility. An
+  element that does work before that check pays it while closed.
 
 Plus: GWCA hooks/callbacks (`UIMgr` message callbacks, packet callbacks, `RenderHook`),
 and direct D3D work in the world renderers (`Widgets/Minimap/*`, `Modules/*Module.cpp` overlays).
@@ -47,6 +53,12 @@ Settings: `slow_threshold_us` (highlight threshold) and `stream_to_csv`, which a
 snapshots to `performance_log_<compiler>.csv` in the settings folder. The window's **Compare**
 tab loads two CSVs and diffs them - that is the before/after harness for any fix.
 
+**The instrumentation only runs while that window is open** - `PerformanceWindow::Draw` calls
+`GWToolbox::SetProfilingEnabled(visible)`, and every timing site is gated on it. That includes
+the hitch logger: with profiling on, any `Update`/`Draw` over 60ms writes a
+`[hitch] <Module>::Draw took N us` line to `log.txt`, which is the fastest way to catch a
+one-off stall that a 1s average hides. Ask for the log as well as the CSV.
+
 Ask for (or capture) a CSV from the scenario that hurts: idle in an outpost, busy explorable
 with a full party, and the specific window/widget open. Anything over ~100us avg is worth a
 look; over ~1000us is a bug.
@@ -58,6 +70,9 @@ confirmed regressions.
 
 Work through these classes. For each hit, judge it against: *does this run every frame? does
 it scale with agents/items/rows? does it allocate? does it touch the device, disk or network?*
+
+The classes overlap by design (a hot `std::map` is both E and F; a per-frame rebuild is both B
+and J). Report each finding once, under whichever class drives the fix.
 
 ### A. D3D state and device churn
 - `CreateStateBlock`, `GetRenderState`/`SetRenderState` loops, `GetTransform`, `GetTexture`
@@ -131,8 +146,9 @@ grep -rnE "std::vector<[^>]+> [a-z_]+;" GWToolboxdll --include=*.cpp   # locals 
 - `std::map` / `std::unordered_map` keyed by `std::string` looked up every frame - each lookup
   hashes or compares a string, and often *constructs* one from a `const char*`. Prefer an id,
   an enum, a `string_view` key, or resolving the iterator once and holding it.
-- `std::map` where a flat `std::vector` + index would be both smaller and cache-friendly. The
-  codebase has ~150 `std::map` declarations; the ones that matter are those touched per frame.
+- `std::map` where a flat `std::vector` + index would be both smaller and cache-friendly. There
+  are well over a hundred `std::map` declarations in the DLL; the ones that matter are the ones
+  touched per frame, so let the profiler or the call path pick them, not the grep count.
 - Repeated `.find()` on the same key in one function - do it once.
 - `operator[]` on a map in a read path (it inserts, and grows the map forever).
 - **Spatial data in a `std::map<std::pair<int,int>,...>` / `std::set<std::pair<int,int>>`.** One
@@ -216,15 +232,18 @@ far more often than it should - check class B/C/J before settling for the micro-
 
 ```
 grep -rn "\.at(" GWToolboxdll
-grep -rn "\[[a-z_]*\] =\|\[key\]\|\[name\]" GWToolboxdll --include=*.cpp   # map operator[] in read paths
-grep -rn "push_back" GWToolboxdll | grep -v reserve   # then check the enclosing loop
 grep -rn "std::function<" GWToolboxdll
+grep -rn -B3 "push_back\|emplace_back" GWToolboxdll --include=*.cpp | grep -A3 "for (\|while ("   # growth inside a loop; check for a reserve() above it
 ```
+
+`operator[]`-on-a-map has no usable grep - it looks identical to array indexing. Find it by
+reading the modules the Performance window flags, or by grepping the map's variable name
+(`grep -rn "<map_name>\[" GWToolboxdll`) once you know which map is hot.
 
 ### G. Blocking work on the frame threads
 - File IO (`std::ifstream`/`std::ofstream`/`CreateFile`), `Resources::` loads, texture decode,
   network calls, `std::mutex` contention, JSON parse - none of these belong in `Update`/`Draw`.
-  Push them through `Resources::EnqueueWorkerTask` (47 call sites already do) or make them lazy
+  Push them through `Resources::EnqueueWorkerTask` (already the norm across the DLL) or make them lazy
   (`perf(account-inventory): fetch item icons lazily during draw`).
 - Settings saved on change per frame instead of debounced.
 
@@ -308,6 +327,10 @@ Not per-frame cost, but they show up as "toolbox gets slower the longer I play":
   code you are about to optimise actually runs.
 
 ## 4. Verify before claiming a fix
+
+If you cannot run the client (headless, no GW install), you cannot complete this section - say
+so explicitly, label every finding **suspected**, and hand over the exact scenario and the
+module name to watch in the Performance window. Do not describe an unmeasured change as a fix.
 
 1. Re-run the same scenario with `stream_to_csv` on, before and after, and diff in the Compare
    tab. Quote the module's avg/max us both ways.
