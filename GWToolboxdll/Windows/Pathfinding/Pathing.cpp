@@ -1,5 +1,6 @@
 #include "stdafx.h"
 
+#include <algorithm>
 #include <array>
 #include <map>
 
@@ -512,10 +513,8 @@ namespace Pathing {
         GW::Constants::InstanceType portal_cache_instance = GW::Constants::InstanceType::Loading;
 
         struct PortalDoorway {
-            GW::Vec2f left{}, right{}; // gate line, when the prop has a facing
             GW::Vec2f pos{};
-            float radius_sq = 0.f; // footprint fallback when it does not
-            bool has_facing = false;
+            float radius_sq = 0.f;
         };
         std::vector<PortalDoorway> doorway_cache;
 
@@ -532,52 +531,46 @@ namespace Pathing {
                 doorway_cache.reserve(portal_cache.size());
                 for (const auto& portal : portal_cache) {
                     const float half_width = PortalHalfWidth(portal);
-                    PortalDoorway d{};
-                    d.pos = {portal.pos.x, portal.pos.y};
-                    d.radius_sq = half_width * half_width;
-                    d.has_facing = portal.has_facing;
-                    if (portal.has_facing) {
-                        const float cos_f = cosf(portal.facing_radians);
-                        const float sin_f = sinf(portal.facing_radians);
-                        // The doorway spans across the facing, so the gate line runs along the perpendicular.
-                        d.left = {portal.pos.x - sin_f * half_width, portal.pos.y + cos_f * half_width};
-                        d.right = {portal.pos.x + sin_f * half_width, portal.pos.y - cos_f * half_width};
-                    }
-                    doorway_cache.push_back(d);
+                    doorway_cache.push_back({{portal.pos.x, portal.pos.y}, half_width * half_width});
                 }
             }
             return doorway_cache;
         }
 
-        float SideOfLine(const GW::Vec2f& a, const GW::Vec2f& b, const GW::Vec2f& p)
+        float DistanceToSegmentSq(const GW::Vec2f& p, const GW::Vec2f& a, const GW::Vec2f& b)
         {
-            return (b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x);
+            const float dx = b.x - a.x;
+            const float dy = b.y - a.y;
+            const float len_sq = dx * dx + dy * dy;
+            float t = 0.f;
+            if (len_sq > 0.f)
+                t = std::clamp(((p.x - a.x) * dx + (p.y - a.y) * dy) / len_sq, 0.f, 1.f);
+            const float ox = a.x + dx * t - p.x;
+            const float oy = a.y + dy * t - p.y;
+            return ox * ox + oy * oy;
         }
 
-        bool SegmentsCross(const GW::Vec2f& a, const GW::Vec2f& b, const GW::Vec2f& c, const GW::Vec2f& d)
+        // The doorway blocks as a disc the width of the prop, not as a line drawn across it. A
+        // walk that only clips the opening, or that creeps over it in steps too short to straddle
+        // a line, is still going through the gate.
+        bool SegmentHitsDoorway(const GW::Vec2f& a, const GW::Vec2f& b, const PortalDoorway& doorway)
         {
-            const float d1 = SideOfLine(a, b, c);
-            const float d2 = SideOfLine(a, b, d);
-            const float d3 = SideOfLine(c, d, a);
-            const float d4 = SideOfLine(c, d, b);
-            return ((d1 > 0) != (d2 > 0)) && ((d3 > 0) != (d4 > 0));
+            return DistanceToSegmentSq(doorway.pos, a, b) < doorway.radius_sq;
+        }
+
+        bool DoorwayContains(const PortalDoorway& doorway, const GW::Vec2f& p)
+        {
+            const float dx = p.x - doorway.pos.x;
+            const float dy = p.y - doorway.pos.y;
+            return dx * dx + dy * dy < doorway.radius_sq;
         }
     } // namespace
 
     bool CrossesTravelPortal(const GW::Vec2f& a, const GW::Vec2f& b)
     {
-        for (const auto& doorway : CurrentMapDoorways()) {
-            if (!doorway.has_facing) {
-                // No facing to build a doorway from, so fall back to the prop's footprint: block
-                // when the step ends up inside it.
-                const float dx = b.x - doorway.pos.x;
-                const float dy = b.y - doorway.pos.y;
-                if (dx * dx + dy * dy < doorway.radius_sq) return true;
-                continue;
-            }
-            if (SegmentsCross(a, b, doorway.left, doorway.right)) return true;
-        }
-        return false;
+        return std::ranges::any_of(CurrentMapDoorways(), [&](const PortalDoorway& doorway) {
+            return SegmentHitsDoorway(a, b, doorway);
+        });
     }
 
     bool CopyBlockedPlanes(std::vector<uint32_t>& out)
@@ -623,6 +616,17 @@ namespace Pathing {
             return GW::Vec2f{(t->XTL + t->XTR + t->XBL + t->XBR) * .25f, (t->YT + t->YB) * .5f};
         };
 
+        // A gate the player is standing in cannot be what separates them from anywhere, and you
+        // arrive on top of one every time you zone in through it. Testing against it would block
+        // the very first step and leave the whole map looking unreachable.
+        std::vector<const PortalDoorway*> gates;
+        for (const auto& doorway : CurrentMapDoorways()) {
+            if (!DoorwayContains(doorway, {player->pos.x, player->pos.y})) gates.push_back(&doorway);
+        }
+        const auto crosses_gate = [&](const GW::Vec2f& from, const GW::Vec2f& to) {
+            return std::ranges::any_of(gates, [&](const PortalDoorway* g) { return SegmentHitsDoorway(from, to, *g); });
+        };
+
         for (size_t head = 0; head < queue.size(); head++) {
             const auto [trap, plane_idx] = queue[head];
             const GW::Vec2f from = centre(trap);
@@ -630,7 +634,7 @@ namespace Pathing {
                 if (!adj || reachable.contains(adj)) continue;
                 // Stepping into a travel portal changes map, so the ground past one is not
                 // somewhere walking gets you - it belongs to the map on the other side.
-                if (CrossesTravelPortal(from, centre(adj))) continue;
+                if (crosses_gate(from, centre(adj))) continue;
                 reachable.insert(adj);
                 queue.push_back({adj, plane_idx});
             }
@@ -647,7 +651,7 @@ namespace Pathing {
                 for (uint32_t i = 0; i < pair->count; i++) {
                     const auto* t = pair->trapezoids[i];
                     if (!t || reachable.contains(t)) continue;
-                    if (CrossesTravelPortal(from, centre(t))) continue;
+                    if (crosses_gate(from, centre(t))) continue;
                     reachable.insert(t);
                     queue.push_back({t, target_plane});
                 }
