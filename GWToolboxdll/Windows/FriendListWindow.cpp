@@ -79,6 +79,7 @@ namespace {
     bool friends_changed = false;
     bool friend_list_ready = false; // Allow processing when this is true.
     bool need_to_reorder_friends = true;
+    std::vector<FriendListWindow::Friend*> friends_online_sorted{};
 
     constexpr const char* alias_types[] = {
         "None",
@@ -832,6 +833,9 @@ bool FriendListWindow::RemoveFriend(const Friend* f)
         uuid_by_name.erase(char_key);
     }
     uuid_by_name.erase(f->GetAliasW());
+    // Cached view may hold the pointer we're about to free.
+    friends_online_sorted.clear();
+    need_to_reorder_friends = true;
     delete f;
     return true;
 }
@@ -1101,26 +1105,29 @@ void FriendListWindow::Draw(IDirect3DDevice9*)
             GW::FriendListMgr::SetFriendListStatus(static_cast<GW::FriendStatus>(status));
         }
     }
-    std::vector<Friend*> friends_online;
-    for (const auto& it : friends) {
-        Friend* lfp = it.second;
-        if (lfp->type != GW::FriendType::Friend) {
-            continue;
+    if (need_to_reorder_friends) {
+        friends_online_sorted.clear();
+        friends_online_sorted.reserve(friends.size());
+        for (const auto& it : friends) {
+            Friend* lfp = it.second;
+            if (lfp->type != GW::FriendType::Friend) {
+                continue;
+            }
+            if (lfp->IsOffline()) {
+                continue;
+            }
+            if (lfp->GetAliasW().empty()) {
+                continue;
+            }
+            friends_online_sorted.push_back(lfp);
         }
-        // Get actual object instead of pointer just in case it becomes invalid half way through the draw.
-        if (lfp->IsOffline()) {
-            continue;
-        }
-        if (lfp->GetAliasW().empty()) {
-            continue;
-        }
-        friends_online.push_back(lfp);
+        std::ranges::sort(friends_online_sorted, [](const Friend* lhs, const Friend* rhs) {
+            return lhs->GetAliasW().compare(rhs->GetAliasW()) < 0;
+        });
+        need_to_reorder_friends = false;
     }
-    std::ranges::sort(friends_online, [](const Friend* lhs, const Friend* rhs) {
-        return lhs->GetAliasW().compare(rhs->GetAliasW()) < 0;
-    });
     char tmpbuf[32];
-    for (Friend* lfp : friends_online) {
+    for (Friend* lfp : friends_online_sorted) {
         colIdx = 0;
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, settings.hover_background_color.value);
@@ -1352,6 +1359,7 @@ void FriendListWindow::LoadFromFile()
                 uuid_by_name[it.first] = lf;
             }
             uuid_by_name[lf->GetAliasW()] = lf;
+            need_to_reorder_friends = true;
         }
         Log::Log("%s: Loaded friends from disk\n", Name());
         friends_list_checked = false;
