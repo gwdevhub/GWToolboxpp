@@ -20,9 +20,12 @@ namespace {
     std::unordered_map<std::string, ToolboxModule*> modules_loaded{};
 
     std::unordered_map<ToolboxModule*, std::vector<SectionDrawCallback>> module_setting_draw_callbacks;
+
+    uint32_t settings_draw_callbacks_revision = 0;
 } // namespace
 
 const std::unordered_map<std::string, SectionDrawCallbackList>& ToolboxModule::GetSettingsCallbacks() { return settings_draw_callbacks; }
+uint32_t ToolboxModule::GetSettingsCallbacksRevision() { return settings_draw_callbacks_revision; }
 const std::unordered_map<std::string, const char*>& ToolboxModule::GetSettingsIcons() { return settings_icons; }
 const std::unordered_map<std::string, ToolboxModule*>& ToolboxModule::GetModulesLoaded() { return modules_loaded; }
 
@@ -53,6 +56,7 @@ void ToolboxModule::Terminate()
         while (modules_it != callbacks_it->second.end()) {
             if (modules_it->module == this) {
                 callbacks_it->second.erase(modules_it);
+                settings_draw_callbacks_revision++;
                 modules_it = callbacks_it->second.begin();
                 continue;
             }
@@ -129,4 +133,5 @@ void ToolboxModule::RegisterSettingsContent(const char* section, const char* ico
         return pair.weighting > weighting;
     });
     callbacks.insert(it, {weighting, callback, this});
+    settings_draw_callbacks_revision++;
 }

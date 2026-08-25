@@ -502,72 +502,68 @@ void SettingsWindow::Draw(IDirect3DDevice9*)
 
         const auto& settings_sections = GetSettingsCallbacks();
 
-        std::vector<std::string> sections_to_draw;
-
         DrawSettingsSection(ToolboxTheme::Instance().SettingsName());
         DrawSettingsSection(ToolboxSettings::Instance().SettingsName());
 
-        const auto sort = [](const ToolboxModule* a, const ToolboxModule* b) {
-            return strcmp(a->Name(), b->Name()) < 0;
+        // Section names only change when a module is toggled or (un)registers settings content, not per frame.
+        struct CachedSections {
+            std::vector<ToolboxModule*> source;
+            std::vector<std::string> sections;
         };
-        const auto queue_settings_for_module = [&](ToolboxModule* m) {
-            for (const auto& [section, cb] : settings_sections) {
-                for (const auto& cbs : cb) {
-                    if (cbs.module == m) {
-                        sections_to_draw.push_back(section);
-                        break;
-                    }
-                }
-            }
-            sections_to_draw.emplace_back(m->SettingsName());
-        };
-        const auto sort_and_draw_settings = [&] {
-            std::ranges::sort(sections_to_draw);
-            for (auto& s : sections_to_draw) {
-                DrawSettingsSection(s.c_str());
-            }
-            sections_to_draw.clear();
-        };
+        static CachedSections modules, windows, widgets;
+        static uint32_t cached_callbacks_revision = static_cast<uint32_t>(-1);
 
+        const auto callbacks_revision = ToolboxModule::GetSettingsCallbacksRevision();
+        const bool callbacks_changed = cached_callbacks_revision != callbacks_revision;
+        cached_callbacks_revision = callbacks_revision;
 
-        static std::vector<ToolboxModule*> modules, windows, widgets;
-        const auto sync_sorted = [&](std::vector<ToolboxModule*>& dst, const auto& src) {
-            if (dst.size() == src.size() && std::ranges::equal(dst, src)) {
+        const auto sync_sections = [&](CachedSections& cache, const auto& src) {
+            if (!callbacks_changed && std::ranges::equal(cache.source, src)) {
                 return;
             }
-            dst.assign(src.begin(), src.end());
-            std::ranges::sort(dst, sort);
+            cache.source.assign(src.begin(), src.end());
+            std::vector<ToolboxModule*> sorted(cache.source);
+            std::ranges::sort(sorted, [](const ToolboxModule* a, const ToolboxModule* b) {
+                return strcmp(a->Name(), b->Name()) < 0;
+            });
+
+            cache.sections.clear();
+            for (const auto m : sorted) {
+                if (!m->HasSettings()) {
+                    continue;
+                }
+                for (const auto& [section, cb] : settings_sections) {
+                    for (const auto& cbs : cb) {
+                        if (cbs.module == m) {
+                            cache.sections.push_back(section);
+                            break;
+                        }
+                    }
+                }
+                cache.sections.emplace_back(m->SettingsName());
+            }
+            std::ranges::sort(cache.sections);
+        };
+        const auto draw_sections = [&](const CachedSections& cache) {
+            for (const auto& s : cache.sections) {
+                DrawSettingsSection(s.c_str());
+            }
         };
 
-        sync_sorted(modules, GWToolbox::GetModules());
-        for (const auto m : modules) {
-            if (m->HasSettings()) {
-                queue_settings_for_module(m);
-            }
-        }
-        sort_and_draw_settings();
+        sync_sections(modules, GWToolbox::GetModules());
+        draw_sections(modules);
 
-        sync_sorted(windows, GWToolbox::GetWindows());
-        if (!windows.empty()) {
+        sync_sections(windows, GWToolbox::GetWindows());
+        if (!windows.source.empty()) {
             ImGui::Text("Windows:");
         }
-        for (const auto m : windows) {
-            if (m->HasSettings()) {
-                queue_settings_for_module(m);
-            }
-        }
-        sort_and_draw_settings();
+        draw_sections(windows);
 
-        sync_sorted(widgets, GWToolbox::GetWidgets());
-        if (!widgets.empty()) {
+        sync_sections(widgets, GWToolbox::GetWidgets());
+        if (!widgets.source.empty()) {
             ImGui::Text("Widgets:");
         }
-        for (const auto m : widgets) {
-            if (m->HasSettings()) {
-                queue_settings_for_module(m);
-            }
-        }
-        sort_and_draw_settings();
+        draw_sections(widgets);
 
         if (ImGui::Button("Save Now", ImVec2(w, 0))) {
             GWToolbox::SaveSettings();
