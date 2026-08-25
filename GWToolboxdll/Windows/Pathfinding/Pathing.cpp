@@ -440,6 +440,7 @@ namespace Pathing {
     }
 
     namespace {
+        bool gate_glitch_allowed = false;
         std::unordered_set<const GW::PathingTrapezoid*> reachable_cache;
         std::vector<uint32_t> reachable_cache_blocked_planes;
         GW::Constants::MapID reachable_cache_map = static_cast<GW::Constants::MapID>(0);
@@ -566,6 +567,43 @@ namespace Pathing {
         }
     } // namespace
 
+    GW::Vec2f TrapezoidCentre(const GW::PathingTrapezoid* t)
+    {
+        return {(t->XTL + t->XTR + t->XBL + t->XBR) * .25f, (t->YT + t->YB) * .5f};
+    }
+
+    std::vector<TravelDoorway> MakeTravelDoorways(const std::vector<PortalProp>& props)
+    {
+        std::vector<TravelDoorway> out;
+        out.reserve(props.size());
+        for (const auto& portal : props) {
+            const float half_width = PortalHalfWidth(portal);
+            out.push_back({{portal.pos.x, portal.pos.y}, half_width * half_width});
+        }
+        return out;
+    }
+
+    std::vector<TravelDoorway> GetTravelDoorways()
+    {
+        std::vector<TravelDoorway> out;
+        for (const auto& d : CurrentMapDoorways()) out.push_back({d.pos, d.radius_sq});
+        return out;
+    }
+
+    void SetGateGlitchAllowed(const bool allowed)
+    {
+        if (gate_glitch_allowed == allowed) return;
+        gate_glitch_allowed = allowed;
+        reachable_cache_map = static_cast<GW::Constants::MapID>(0); // force the walk to run again
+    }
+
+    bool CrossesTravelDoorway(const std::vector<TravelDoorway>& doorways, const GW::Vec2f& a, const GW::Vec2f& b)
+    {
+        return std::ranges::any_of(doorways, [&](const TravelDoorway& d) {
+            return DistanceToSegmentSq(d.pos, a, b) < d.radius_sq;
+        });
+    }
+
     bool CrossesTravelPortal(const GW::Vec2f& a, const GW::Vec2f& b)
     {
         return std::ranges::any_of(CurrentMapDoorways(), [&](const PortalDoorway& doorway) {
@@ -612,29 +650,20 @@ namespace Pathing {
         std::vector<TrapRef> queue{{start_trap, start_plane}};
         reachable.insert(start_trap);
 
-        const auto centre = [](const GW::PathingTrapezoid* t) {
-            return GW::Vec2f{(t->XTL + t->XTR + t->XBL + t->XBR) * .25f, (t->YT + t->YB) * .5f};
-        };
-
-        // A gate the player is standing in cannot be what separates them from anywhere, and you
-        // arrive on top of one every time you zone in through it. Testing against it would block
-        // the very first step and leave the whole map looking unreachable.
-        std::vector<const PortalDoorway*> gates;
-        for (const auto& doorway : CurrentMapDoorways()) {
-            if (!DoorwayContains(doorway, {player->pos.x, player->pos.y})) gates.push_back(&doorway);
+        // The gate you are standing in cannot be what separates you from anywhere, and you arrive on
+        // top of one every time you zone in through it - testing it would block the very first step.
+        std::vector<TravelDoorway> gates;
+        for (const auto& d : gate_glitch_allowed ? std::vector<TravelDoorway>{} : GetTravelDoorways()) {
+            const float dx = player->pos.x - d.pos.x, dy = player->pos.y - d.pos.y;
+            if (dx * dx + dy * dy >= d.radius_sq) gates.push_back(d);
         }
-        const auto crosses_gate = [&](const GW::Vec2f& from, const GW::Vec2f& to) {
-            return std::ranges::any_of(gates, [&](const PortalDoorway* g) { return SegmentHitsDoorway(from, to, *g); });
-        };
 
         for (size_t head = 0; head < queue.size(); head++) {
             const auto [trap, plane_idx] = queue[head];
-            const GW::Vec2f from = centre(trap);
+            const GW::Vec2f from = TrapezoidCentre(trap);
             for (const auto* adj : trap->adjacent) {
                 if (!adj || reachable.contains(adj)) continue;
-                // Stepping into a travel portal changes map, so the ground past one is not
-                // somewhere walking gets you - it belongs to the map on the other side.
-                if (crosses_gate(from, centre(adj))) continue;
+                if (CrossesTravelDoorway(gates, from, TrapezoidCentre(adj))) continue;
                 reachable.insert(adj);
                 queue.push_back({adj, plane_idx});
             }
@@ -651,7 +680,7 @@ namespace Pathing {
                 for (uint32_t i = 0; i < pair->count; i++) {
                     const auto* t = pair->trapezoids[i];
                     if (!t || reachable.contains(t)) continue;
-                    if (crosses_gate(from, centre(t))) continue;
+                    if (CrossesTravelDoorway(gates, from, TrapezoidCentre(t))) continue;
                     reachable.insert(t);
                     queue.push_back({t, target_plane});
                 }

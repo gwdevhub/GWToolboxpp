@@ -56,6 +56,7 @@ public:
     static void DrawBakeSettings();
     static void LogProbeAtCell(int cx, int cy);
     static void StartContinentBake();
+    static void SetGateGlitchAllowed(bool allowed);
     static bool ContinentBakeRunning();
 #endif
 };

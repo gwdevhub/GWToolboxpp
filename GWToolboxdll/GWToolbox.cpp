@@ -834,9 +834,11 @@ void GWToolbox::Initialize(LPVOID module)
     AttachRenderCallback();
     GW::EnableHooks();
 
-    UpdateInitialising(.0f);
-    AttachGameLoopCallback();
+    // Module init registers GWCA packet/UI callbacks, which push_back into vectors the game thread
+    // is already iterating with a cached begin(). Let the game-loop callback drive Initialising
+    // instead, so every registration is serialised against packet dispatch.
     pending_detach_dll = false;
+    AttachGameLoopCallback();
 }
 
 std::filesystem::path GWToolbox::LoadSettings()

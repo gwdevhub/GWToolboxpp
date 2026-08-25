@@ -118,6 +118,15 @@ namespace {
             write_status(b);
             return;
         }
+        if (verb == "glitch") {
+            int on = 0;
+            is >> on;
+            CartographerWidget::SetGateGlitchAllowed(on != 0);
+            Log::Log("[harness] gate glitching = %d", on);
+            Log::FlushFile();
+            write_status(std::format("glitch: {}", on));
+            return;
+        }
         if (verb == "cartobake") {
             CartographerWidget::StartContinentBake();
             Log::Log("[harness] continent bake started");

@@ -57,6 +57,22 @@ namespace Pathing {
 
     bool CrossesTravelPortal(const GW::Vec2f& a, const GW::Vec2f& b);
 
+    // A travel portal blocks as a disc of the prop's width: a walk that only clips the opening, or
+    // creeps over it in steps too short to straddle a line, is still going through the gate.
+    struct TravelDoorway {
+        GW::Vec2f pos{};
+        float radius_sq = 0.f;
+    };
+    // Both the live reachability walk and the baked largest-component walk must apply the same rule,
+    // or the overlay contradicts the table it is drawn from.
+    GW::Vec2f TrapezoidCentre(const GW::PathingTrapezoid* t);
+    std::vector<TravelDoorway> MakeTravelDoorways(const std::vector<PortalProp>& props);
+    std::vector<TravelDoorway> GetTravelDoorways();
+    // When set, the reachability walk steps straight through travel portals, matching the baked
+    // _glitched masks. Both sides have to be told the same thing or the overlay contradicts them.
+    void SetGateGlitchAllowed(bool allowed);
+    bool CrossesTravelDoorway(const std::vector<TravelDoorway>& doorways, const GW::Vec2f& a, const GW::Vec2f& b);
+
     bool CopyBlockedPlanes(std::vector<uint32_t>& out);
 
     class MilePath {
