@@ -710,17 +710,16 @@ namespace ImGui {
         return value_changed;
     }
 
-    std::unordered_map<std::string_view, ImVec2> original_positions;
+    std::unordered_map<ImGuiID, ImVec2> original_positions;
 
     void ClampWindowToScreen(ImGuiWindow* window)
     {
-        ImVec2 window_pos = window->Pos;                        // Get the current window position
-        ImVec2 window_size = window->Size;                // Get the current window size
-        const auto viewport = ImGui::GetMainViewport();
-        const ImVec2 display_size = viewport->Size; // Get the display size
-        const std::string_view window_name = window->Name;      // Get the window name
+        ImVec2 window_pos = window->Pos;
+        ImVec2 window_size = window->Size;
+        const ImVec2 display_size = ImGui::GetMainViewport()->Size;
 
-        const ImVec2 original_pos = original_positions.contains(window_name) ? original_positions[window_name] : window_pos;
+        const auto stored = original_positions.empty() ? original_positions.end() : original_positions.find(window->ID);
+        const ImVec2 original_pos = stored == original_positions.end() ? window_pos : stored->second;
 
         const bool needs_clamping = original_pos.x + window_size.x > display_size.x ||
                                     original_pos.y + window_size.y > display_size.y ||
@@ -728,9 +727,7 @@ namespace ImGui {
                                     original_pos.y < 0;
 
         if (needs_clamping) {
-            if (!original_positions.contains(window_name)) {
-                original_positions[window_name] = window_pos;
-            }
+            const auto entry = original_positions.try_emplace(window->ID, window_pos).first;
 
             if (window_pos.x + window_size.x > display_size.x) window_pos.x = display_size.x - window_size.x;
             if (window_pos.x < 0) window_pos.x = 0;
@@ -739,7 +736,7 @@ namespace ImGui {
 
             ImGui::SetWindowPos(window, window_pos, ImGuiCond_Always);
             if (window->Collapsed) {
-                original_positions[window_name] = window_pos;
+                entry->second = window_pos;
             }
             if (window_size.x > display_size.x
                 || window_size.y > display_size.y) {
@@ -748,17 +745,11 @@ namespace ImGui {
                 ImGui::SetWindowSize(window, window_size);
             }
         }
-        else {
+        else if (stored != original_positions.end()) {
             const bool is_moving_window = ImGui::GetIO().WantCaptureMouse && ImGui::IsMouseDown(ImGuiMouseButton_Left);
-            if (!is_moving_window && original_positions.contains(window_name)) {
-                const ImVec2& stored_pos = original_positions.at(window_name);
-                if (window_pos.x != stored_pos.x || window_pos.y != stored_pos.y) {
-                    ImGui::SetWindowPos(window, original_pos, ImGuiCond_Always);
-                    original_positions.erase(window_name);
-                }
-                else {
-                    original_positions[window_name] = window_pos;
-                }
+            if (!is_moving_window && (window_pos.x != original_pos.x || window_pos.y != original_pos.y)) {
+                ImGui::SetWindowPos(window, original_pos, ImGuiCond_Always);
+                original_positions.erase(stored);
             }
         }
     }
@@ -767,16 +758,18 @@ namespace ImGui {
     {
         if (clamp) {
             for (const auto window : ImGui::GetCurrentContext()->Windows) {
-                // if (window->Collapsed || !window->Active) continue;
+                // Collapsed windows still need clamping - their title bar is what stays on screen.
+                if (!window->Active) continue;
                 ClampWindowToScreen(window);
             }
         }
         else {
-            // restore positions and delete the original position if it's restored
-            for (auto it = original_positions.begin(); it != original_positions.end();) {
-                ImGui::SetWindowPos(it->first.data(), it->second, ImGuiCond_Always);
-                it = original_positions.erase(it);
+            for (const auto& [window_id, original_pos] : original_positions) {
+                if (const auto window = ImGui::FindWindowByID(window_id)) {
+                    ImGui::SetWindowPos(window, original_pos, ImGuiCond_Always);
+                }
             }
+            original_positions.clear();
         }
     }
 
