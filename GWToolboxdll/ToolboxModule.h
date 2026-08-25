@@ -45,6 +45,9 @@ public:
     static const std::unordered_map<std::string, SectionDrawCallbackList>& GetSettingsCallbacks();
     static const std::unordered_map<std::string, const char*>& GetSettingsIcons();
 
+    // Bumped on every settings callback add/remove, so callers can cache anything derived from them.
+    static uint32_t GetSettingsCallbacksRevision();
+
     static const std::unordered_map<std::string, ToolboxModule*>& GetModulesLoaded();
 
     virtual void Initialize();
