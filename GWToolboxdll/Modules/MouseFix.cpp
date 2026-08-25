@@ -177,22 +177,19 @@ namespace {
         DEBUG_ASSERT(address);
         if(address && GW::Scanner::IsValidPtr(*(uintptr_t*)address)) {
             ProcessInput_Func = (OnProcessInput_pt)GW::Scanner::ToFunctionStart(address, 0xfff);
-            HasRegisteredTrackMouseEvent = *(bool**)address;
-            gw_mouse_move = (GwMouseMove*)(HasRegisteredTrackMouseEvent - 0x28);
-        }
-        if (address) {
-            // mov dword ptr [esi], <event id> ; movsx eax, word ptr [edi+0xc] ; mov [ebp-8], eax
-            // i.e. the branch of the WM_MOUSEMOVE handler that runs while the camera is captured.
-            const uintptr_t event_id_address = GW::Scanner::FindInRange(
-                "\xc7\x06\x00\x00\x00\x00\x0f\xbf\x47\x0c\x89\x45\xf8", "xx?xxxxxxxxxx", 2, address, address + 0x100);
-            if (event_id_address) {
-                mouse_look_event_id = *(uint32_t*)event_id_address;
+
+            address = GW::Scanner::FindInRange("\x83\x3d????\x00", "xx????x", 2, address, address - 0x30);
+            if (address && GW::Scanner::IsValidPtr(*(uintptr_t*)address)) {
+                HasRegisteredTrackMouseEvent = *(bool**)address;
+                gw_mouse_move = (GwMouseMove*)(HasRegisteredTrackMouseEvent - 0x28);
             }
         }
+        mouse_look_event_id = 0x11; // AI thought it would be a good idea to scan for this...
         SetCursorPosCenter_Func = (SetCursorPosCenter_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("OsInput.cpp", "basis", 0, 0));
         DEBUG_ASSERT(ProcessInput_Func);
         DEBUG_ASSERT(SetCursorPosCenter_Func);
-        DEBUG_ASSERT(mouse_look_event_id);
+        DEBUG_ASSERT(HasRegisteredTrackMouseEvent);
+        DEBUG_ASSERT(gw_mouse_move);
 
         GWCA_INFO("[SCAN] ProcessInput_Func = %p", ProcessInput_Func);
         GWCA_INFO("[SCAN] HasRegisteredTrackMouseEvent = %p", HasRegisteredTrackMouseEvent);
