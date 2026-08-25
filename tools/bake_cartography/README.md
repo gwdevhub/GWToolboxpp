@@ -72,8 +72,13 @@ breaking the syntax.
 
 ## What it stores
 
-Standable, not discoverable. Discoverable is this dilated by the reveal radius, and that radius
-depends on the Bird's Eye Compass, so it stays a runtime choice.
+Standable, not discoverable. Discoverable is this dilated by **one** tile, whatever compass you
+carry - which is why `kMaskRadius` is 1 and not the reveal radius. The client builds its own
+per-map grid at tile resolution in `FUN_00721d00`: `1` where the map has geometry, `2` where a
+tile merely touches one that does, `0` elsewhere. The reveal, `FUN_00817d00`, writes a tile
+outside your own 3x3 block only where that grid is non-zero, so a Bird's Eye Compass widens how
+far away you may stand and nothing else. Two tiles past the edge of the terrain cannot be
+uncovered at all.
 
 Each map is reduced to its **largest connected component** (trapezoid adjacency plus unblocked
 portals, all planes treated as open since blocked-plane state only exists at runtime) so terrain

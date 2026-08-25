@@ -421,8 +421,10 @@ namespace {
 
     // The baked standable tiles for the continent we are on, dilated by ONE tile so a lookup answers
     // "could standing somewhere credit this tile" in one test. One tile regardless of the Bird's Eye
-    // Compass: the bake's standable set is also its navmesh model, so a tile the wide rings could
-    // reach is already a tile something stands next to. Dilating by 3 claimed fog nothing can credit.
+    // Compass: the client dilates by one itself. FUN_00721d00 builds the map's reveal grid - 1 for
+    // geometry, 2 for touching it, 0 elsewhere - and FUN_00817d00 writes tiles outside your own 3x3
+    // block only where that grid is set, so the wide rings reach further without reaching anything
+    // new. Dilating by 3 claimed fog nothing can credit.
     // Built once per continent; the live probe still covers the map we are actually in, which the
     // bake does not have for the handful of maps with no file id.
     constexpr int kMaskRadius = 1;
