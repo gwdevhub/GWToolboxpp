@@ -97,7 +97,137 @@ percentage that is `std::format`-ed inside `Draw`.
 - `91994a5e perf(account-inventory): fetch item icons lazily during draw` - only request the
   resource for rows actually being drawn.
 
-## 7. Compute natively instead of querying the client per element
+## 7. Cache a whole-map computation, keyed on its real invalidation state
+
+`3d23ad84 perf fix` (Pathing)
+
+`FindReachableTrapezoids` visits every adjacency on the map and tests each against every travel
+portal - far too expensive per query. The accessor caches it and rebuilds only when the state
+that can change the answer changes:
+
+```cpp
+const std::unordered_set<const GW::PathingTrapezoid*>& CachedReachableTrapezoids()
+{
+    const auto map_id = GW::Map::GetMapID();
+    const auto instance_type = GW::Map::GetInstanceType();
+    std::vector<uint32_t> blocked;
+    CopyBlockedPlanes(blocked);
+    if (map_id != reachable_cache_map || instance_type != reachable_cache_instance || blocked != reachable_cache_blocked_planes) {
+        auto found = FindReachableTrapezoids();
+        // Empty means it could not find the player to start from, which callers read as
+        // "assume everything is reachable". Keeping that would pin the assumption for the
+        // life of the map; the walk bails immediately in that state, so retrying is free.
+        if (found.empty()) return reachable_cache = {};
+        reachable_cache = std::move(found);
+        reachable_cache_blocked_planes = std::move(blocked);
+        reachable_cache_map = map_id;
+        reachable_cache_instance = instance_type;
+    }
+    return reachable_cache;
+}
+```
+
+Three things to copy: the key is map + instance + gate state (nothing else moves regions in and
+out of reach), the accessor returns `const&`, and a **degenerate result is never stored**.
+
+Related failure in the same commit: `EnsureNavCells` rebuilt when `CopyBlockedPlanes` returned
+nothing (no pathing context), so the key never matched and a per-map build became a per-frame
+full-map sweep. Bail instead of building against missing input.
+
+`e4d3805c` adds the lifetime half: keep the expensive per-map result in a session cache
+(`std::map<MapID, MapProbe>`, keyed additionally on the character), and let `ResetState()` clear
+only transient overlay state - not the sweep.
+
+## 8. Hoist inner-loop invariants into the per-map cache
+
+`3d23ad84 perf fix` (Pathing) - `CrossesTravelPortal` is called for every adjacency in the
+reachability walk, hundreds of thousands of times, and each call recomputed the portal's gate
+line from its facing:
+
+```cpp
+const float cos_f = cosf(portal.facing_radians);   // per call, per portal
+const float sin_f = sinf(portal.facing_radians);
+const GW::Vec2f left{...}, right{...};
+```
+
+Fix: resolve each portal to a `PortalDoorway { left, right, pos, radius_sq, has_facing }` once
+when the per-map portal cache is built, and let the hot loop read the precomputed line.
+
+## 9. Dense grid instead of a map keyed by cell
+
+`3d23ad84 perf fix` (CartographerWidget) - `std::map<std::pair<int,int>, GW::GamePos>` plus
+`std::set<std::pair<int,int>>` became a flat grid, because the build touches every trapezoid on
+the map and "a tree node plus a log-n descent per touch is the difference between a hitch and
+no hitch":
+
+```cpp
+struct NavCells {
+    int x0 = 0, y0 = 0, width = 0, height = 0;
+    std::vector<uint8_t> ground, standable;
+    std::vector<GW::GamePos> stand;
+    std::vector<float> line_x, line_y;   // grid lines in game coords, one conversion per line
+    bool InGrid(int cx, int cy) const;
+    size_t Index(int cx, int cy) const { return static_cast<size_t>(cy - y0) * width + (cx - x0); }
+};
+```
+
+The `line_x`/`line_y` arrays are the same idea one level down: one coordinate conversion per
+grid line instead of two per trapezoid touched, and being the same call on the same input they
+cannot drift from the anchor.
+
+## 10. Hook the client's own change message instead of polling
+
+`75fbfeee Cartographer: recompute on the client's own carto-updated message`
+
+Traced in Ghidra: the StoC reveal handler writes the tile block and broadcasts UI message
+`0x10000090` with no payload. The module hooks that instead of recomputing every second. Because
+the message only says "something changed", it diffs a snapshot of the client's bitmap to find
+what actually flipped:
+
+```cpp
+for (uint32_t i = 0; i < grid.dword_count; i++) {
+    const uint32_t changed = carto_snapshot[i] ^ grid.bits[i];
+    if (!changed) continue;
+    carto_snapshot[i] = grid.bits[i];
+    ...  // emit only the tiles whose bit flipped
+}
+```
+
+If the snapshot size does not match, fall back to a wholesale rebuild - there is no basis for a
+diff.
+
+## 11. Refresh the one entity, not the whole instance
+
+`905b79a3 Refresh only the agent whose allegiance changed` - the handler toggled the global name
+tag filter off and on, which rebuilds every tag in the instance, for a packet that carried the
+agent id. GWCA gained `RefreshAgentNameTag`; the global-toggle signature and its two globals
+were deleted. Look for the same shape wherever a single-entity event triggers a global reset.
+
+Related: `13969de7 Game Settings: cache nametag player colors per map instance` - resolving a
+name colour walked the friend list and guild roster *on every hover*; now cached in an
+`unordered_map` keyed by player name and cleared on map load and party join/leave.
+
+And `26ffb484` - prefer the client's own forced-refresh helper over faking a refresh by
+toggling state.
+
+## 12. Move the computation offline
+
+`9bb0a10b Cartographer: drop the runtime bake` - the in-game bake (a per-tick `StepBake` driver,
+a per-map trapezoid walk, a largest-component search and a `.bin` writer) was deleted once
+`tools/bake_cartography/` produced the same table offline from the same sources into
+`CartographyData.h`. If a computation depends only on `Gw.dat`, `AreaInfo` or constants, it does
+not need a client and does not belong at runtime.
+
+## 13. Consolidate duplicated helpers, then optimise once
+
+`57c399e3 refactor(in-game rendering): share one pruned multi-plane altitude query` -
+`GameWorldRenderer` and `RiverModule` each carried their own `HighestSurfaceZ`/`ClosestSurfaceZ`:
+four copies of the same all-planes `QueryAltitude` loop, three different "no data" sentinels, and
+none of them pruning planes with no trapezoid near the point (which `TerrainDrape` had been doing
+for a while). Collapsed into `TerrainDrape::HighestZ`/`HighestZOnPlanes`/`ClosestZ` over one
+`PrunedPlaneZ`. When you find the same hot helper copy-pasted, fix the copies into one first.
+
+## 14. Compute natively instead of querying the client per element
 
 `a96dff52 perf(terrain): compute draped altitude natively instead of per-frame QueryAltitude` -
 when a GW API call is the inner loop, see whether the data can be read once and evaluated in
