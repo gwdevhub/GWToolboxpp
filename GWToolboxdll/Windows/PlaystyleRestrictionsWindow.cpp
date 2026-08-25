@@ -356,8 +356,7 @@ namespace {
             }
             break;
             case GW::UI::UIMessage::kSendUseItem: {
-                const auto packet = static_cast<GW::UI::UIPacket::kSendUseItem*>(wparam);
-                const auto item = packet ? GW::Items::GetItemById(packet->item_id) : nullptr;
+                const auto item = GW::Items::GetItemById((uint32_t)wparam);
                 if (const auto reason = item ? GetItemUseBlockReason(item) : nullptr) {
                     Deny(status, reason);
                 }

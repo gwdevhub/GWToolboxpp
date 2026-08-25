@@ -604,7 +604,7 @@ namespace GW {
 			kSendMoveItem = 0x30000000 | 0x5,        // 0x30000005, wparam = UIPacket::kSendMoveItem*
 			kSendMerchantRequestQuote = 0x30000000 | 0x6,  // 0x30000006, wparam = UIPacket::kSendMerchantRequestQuote*
 			kSendMerchantTransactItem = 0x30000000 | 0x7,  // 0x30000007, wparam = UIPacket::kSendMerchantTransactItem*
-			kSendUseItem = 0x30000000 | 0x8,         // 0x30000008, wparam = UIPacket::kSendUseItem*
+			kSendUseItem = 0x30000000 | 0x8,         // 0x30000008, wparam = uint32_t item_id
 			kSendSetActiveQuest = 0x30000000 | 0x9,  // 0x30000009, wparam = uint32_t quest_id
 			kSendAbandonQuest = 0x30000000 | 0xA,    // 0x3000000a, wparam = uint32_t quest_id
 			kSendChangeTarget = 0x30000000 | 0xB,    // 0x3000000b, wparam = UIPacket::kSendChangeTarget* // e.g. tell the gw client to focus on a different target
@@ -954,10 +954,6 @@ namespace GW {
 				Merchant::QuoteInfo give;
 				uint32_t gold_recv;
 				Merchant::QuoteInfo recv;
-			};
-			struct kSendUseItem {
-				uint32_t item_id;
-				uint16_t quantity; // Unused, but would be cool
 			};
 			struct kSendChatMessage {
 				wchar_t* message;
