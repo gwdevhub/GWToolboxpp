@@ -51,6 +51,11 @@ namespace {
     // far too heavy for the button-state message that reads it.
     bool mission_entry_blocked = false;
 
+    // Blocking a template load leaves the skill window showing a bar the server never got, so the
+    // skillbar rules are reactive: keep the last bar that satisfied them, and put it back on a breach.
+    std::unordered_map<uint32_t, GW::SkillbarMgr::SkillTemplate> last_legal_skillbars;
+    bool restoring_skillbar = false;
+
     bool Contains(const std::vector<uint32_t>& haystack, const uint32_t needle)
     {
         return std::ranges::find(haystack, needle) != haystack.end();
@@ -249,14 +254,20 @@ namespace {
 
     // ==== Skill helpers ====
 
-    const char* GetSkillTemplateBlockReason(const GW::SkillbarMgr::SkillTemplate* skill_template)
+    // Reason this bar isn't allowed for this agent, or nullptr. Static storage: caller uses it immediately.
+    const char* GetSkillbarViolation(const uint32_t agent_id, const GW::SkillbarMgr::SkillTemplate& skill_template)
     {
         static char reason[128];
-        if (profile.lock_skillbar) {
-            return "your profile locks the skillbar";
+        if (agent_id == GW::Agents::GetControlledCharacterId()) {
+            if (profile.lock_skillbar) {
+                return "your profile locks the skillbar";
+            }
+        }
+        else if (profile.lock_hero_skillbars) {
+            return "your profile locks hero skillbars";
         }
         auto attribute = GW::Constants::AttributeByte::None;
-        for (const auto skill_id : skill_template->skills) {
+        for (const auto skill_id : skill_template.skills) {
             const auto skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
             if (!skill) {
                 continue;
@@ -273,6 +284,64 @@ namespace {
             }
         }
         return nullptr;
+    }
+
+    bool AnySkillbarRuleEnabled()
+    {
+        return settings.enforce && (profile.lock_skillbar || profile.lock_hero_skillbars
+            || profile.restrict_skills_to_unlocked_campaigns || profile.single_attribute_line);
+    }
+
+    bool SameSkillbar(const GW::SkillbarMgr::SkillTemplate& a, const GW::SkillbarMgr::SkillTemplate& b)
+    {
+        if (a.primary != b.primary || a.secondary != b.secondary || a.attributes_count != b.attributes_count) {
+            return false;
+        }
+        if (!std::ranges::equal(a.skills, b.skills)) {
+            return false;
+        }
+        for (uint32_t i = 0; i < a.attributes_count && i < _countof(a.attribute_ids); i++) {
+            if (a.attribute_ids[i] != b.attribute_ids[i] || a.attribute_values[i] != b.attribute_values[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    void RestoreSkillbar(const uint32_t agent_id, const char* reason)
+    {
+        const auto found = last_legal_skillbars.find(agent_id);
+        if (!AnySkillbarRuleEnabled() || found == last_legal_skillbars.end()) {
+            return;
+        }
+        restoring_skillbar = true;
+        GW::SkillbarMgr::LoadSkillTemplate(agent_id, found->second);
+        restoring_skillbar = false;
+        Log::Warning("[Playstyle Restrictions] Reverted: %s", reason);
+    }
+
+    // Called once the client has applied a change: a legal bar becomes the new fallback, an
+    // illegal one goes back to the last legal bar we saw.
+    void EnforceSkillbar(const uint32_t agent_id)
+    {
+        const auto found = last_legal_skillbars.find(agent_id);
+        if (!AnySkillbarRuleEnabled() || found == last_legal_skillbars.end()) {
+            return;
+        }
+        GW::SkillbarMgr::SkillTemplate current;
+        if (!GW::SkillbarMgr::GetSkillTemplate(agent_id, current)) {
+            return;
+        }
+        const auto reason = GetSkillbarViolation(agent_id, current);
+        if (!reason) {
+            found->second = current;
+            return;
+        }
+        // Equal means there's nothing better to go back to - the fallback itself breaks the rule,
+        // which happens when a rule is switched on mid-session. Bailing also stops a revert loop.
+        if (!SameSkillbar(current, found->second)) {
+            RestoreSkillbar(agent_id, reason);
+        }
     }
 
     // ==== Enforcement ====
@@ -395,17 +464,28 @@ namespace {
                 }
             }
             break;
+            case GW::UI::UIMessage::kUpdateSkillbar: {
+                const auto agent_id = wparam ? *static_cast<uint32_t*>(wparam) : 0;
+                if (agent_id && !restoring_skillbar) {
+                    GW::GameThread::Enqueue([agent_id] { EnforceSkillbar(agent_id); });
+                }
+            }
+            break;
             case GW::UI::UIMessage::kSendLoadSkillTemplate: {
                 const auto packet = static_cast<GW::UI::UIPacket::kSendLoadSkillTemplate*>(wparam);
-                if (!packet || !packet->skill_template) {
+                if (!packet || !packet->skill_template || restoring_skillbar) {
                     break;
                 }
-                if (profile.lock_hero_skillbars && packet->agent_id != GW::Agents::GetControlledCharacterId()) {
-                    Deny(status, "your profile locks hero skillbars");
+                const auto found = last_legal_skillbars.find(packet->agent_id);
+                if (found == last_legal_skillbars.end() || SameSkillbar(*packet->skill_template, found->second)) {
                     break;
                 }
-                if (const auto reason = GetSkillTemplateBlockReason(packet->skill_template)) {
-                    Deny(status, reason);
+                // The client hasn't applied this yet, so judge the incoming bar rather than the live one;
+                // kUpdateSkillbar alone would miss a load that only moves attribute points.
+                if (const auto reason = GetSkillbarViolation(packet->agent_id, *packet->skill_template)) {
+                    GW::GameThread::Enqueue([agent_id = packet->agent_id, why = std::string(reason)] {
+                        RestoreSkillbar(agent_id, why.c_str());
+                    });
                 }
             }
             break;
@@ -500,7 +580,7 @@ void PlaystyleRestrictionsWindow::Initialize()
     ToolboxWindow::Initialize();
     SettingsRegistry::Register(this, settings);
 
-    constexpr GW::UI::UIMessage blockable[] = {
+    constexpr GW::UI::UIMessage watched[] = {
         GW::UI::UIMessage::kTravel,
         GW::UI::UIMessage::kDisableEnterMissionBtn,
         GW::UI::UIMessage::kShowXunlaiChest,
@@ -508,12 +588,14 @@ void PlaystyleRestrictionsWindow::Initialize()
         GW::UI::UIMessage::kSendUseItem,
         GW::UI::UIMessage::kEquipItem,
         GW::UI::UIMessage::kSendMerchantTransactItem,
-        GW::UI::UIMessage::kSendLoadSkillTemplate
+        GW::UI::UIMessage::kSendLoadSkillTemplate,
+        GW::UI::UIMessage::kUpdateSkillbar
     };
-    for (const auto message_id : blockable) {
+    for (const auto message_id : watched) {
         GW::UI::RegisterUIMessageCallback(&hook_entry, message_id, OnUIMessage);
     }
     GW::UI::RegisterUIMessageCallback(&hook_entry, GW::UI::UIMessage::kMapLoaded, [](GW::HookStatus*, GW::UI::UIMessage, void*, void*) {
+        last_legal_skillbars.clear();
         RefreshEnterMissionButton();
     }, 0x8000);
 }
@@ -522,6 +604,37 @@ void PlaystyleRestrictionsWindow::Terminate()
 {
     ToolboxWindow::Terminate();
     GW::UI::RemoveUIMessageCallback(&hook_entry);
+}
+
+// Tracks the player's and your heroes' bars, so a later change has something to revert to.
+void PlaystyleRestrictionsWindow::Update(float)
+{
+    if (!AnySkillbarRuleEnabled()) {
+        last_legal_skillbars.clear();
+        return;
+    }
+    const auto me = GW::Agents::GetControlledCharacter();
+    const auto party = GW::PartyMgr::GetPartyInfo();
+    if (!me || !party) {
+        return;
+    }
+    std::vector<uint32_t> watched{me->agent_id};
+    for (const auto& hero : party->heroes) {
+        if (hero.owner_player_id == me->login_number) {
+            watched.push_back(hero.agent_id);
+        }
+    }
+    for (const auto agent_id : watched) {
+        if (last_legal_skillbars.contains(agent_id)) {
+            continue;
+        }
+        GW::SkillbarMgr::SkillTemplate snapshot;
+        // The bar streams in a few frames after the agent itself; an empty first slot means it's not here yet.
+        if (GW::SkillbarMgr::GetSkillTemplate(agent_id, snapshot) && snapshot.skills[0] != GW::Constants::SkillID::No_Skill) {
+            last_legal_skillbars.emplace(agent_id, snapshot);
+        }
+    }
+    std::erase_if(last_legal_skillbars, [&watched](const auto& entry) { return !Contains(watched, entry.first); });
 }
 
 void PlaystyleRestrictionsWindow::Draw(IDirect3DDevice9*)
@@ -577,6 +690,7 @@ void PlaystyleRestrictionsWindow::Draw(IDirect3DDevice9*)
         ImGui::ShowHelp("Approximates \"what a fresh account would have unlocked\" by the campaign the skill belongs to");
         ImGui::Checkbox("One attribute line only", &profile.single_attribute_line);
         ImGui::Checkbox("Lock the skillbar entirely", &profile.lock_skillbar);
+        ImGui::ShowHelp("Skillbar rules put the bar back to the last one that satisfied them instead of refusing the change");
         ImGui::Checkbox("No elite tomes", &profile.block_elite_tomes);
     }
 
@@ -629,7 +743,7 @@ void PlaystyleRestrictionsWindow::Draw(IDirect3DDevice9*)
 void PlaystyleRestrictionsWindow::DrawSettingsInternal()
 {
     ToolboxWindow::DrawSettingsInternal();
-    ImGui::TextDisabled("Gates are enforced where the client routes the action through something toolbox can block; anything else stays on the honour system.");
+    ImGui::TextDisabled("Gates are enforced where the client routes the action through a UI message toolbox can block or undo; anything else stays on the honour system.");
 }
 
 void PlaystyleRestrictionsWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
