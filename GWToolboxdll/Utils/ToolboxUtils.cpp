@@ -772,7 +772,6 @@ namespace GW {
                 case GW::Constants::ItemID::BottleOfJuniberryGin:
                 case GW::Constants::ItemID::BottleOfVabbianWine:
                 case GW::Constants::ItemID::ZehtukasJug:
-                case GW::Constants::ItemID::BattleIsleIcedTea:
                     return 1;
                 case GW::Constants::ItemID::Grog:
                 case GW::Constants::ItemID::SpikedEggnog:
