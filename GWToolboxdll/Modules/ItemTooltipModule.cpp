@@ -371,23 +371,46 @@ namespace {
 
     GW::HookEntry UIMessage_HookEntry;
     std::wstring tmp_item_name_tag;
+    struct NameTagSections {
+        time_t built_time = 0;
+        std::wstring encoded;
+    };
+    std::unordered_map<uint32_t, NameTagSections> name_tag_sections_cache;
+
     void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* wParam, void*)
     {
         if (message_id != GW::UI::UIMessage::kSetAgentNameTagAttribs) return;
 
         auto* packet = static_cast<GW::UI::AgentNameTagInfo*>(wParam);
         if (!packet->underline) return;
-        if (packet->extra_info_enc != tmp_item_name_tag.data()) {
-            tmp_item_name_tag.assign(packet->extra_info_enc ? packet->extra_info_enc : L"");
-        }
         const auto agent = static_cast<GW::AgentItem*>(GW::Agents::GetAgentByID(packet->agent_id));
         if (!(agent && agent->GetIsItemType())) return;
         if (agent->owner && agent->owner != GW::Agents::GetControlledCharacterId()) return;
 
         const auto item_id = agent->item_id;
-        if (settings.show_salvage_info) AppendSalvageInfo(item_id, tmp_item_name_tag);
-        if (settings.show_trader_prices) AppendPriceInfo(item_id, tmp_item_name_tag);
-        if (settings.show_nicholas_info) AppendNicholasInfo(item_id, tmp_item_name_tag);
+        const auto current_time = time(nullptr);
+        if (packet->extra_info_enc != tmp_item_name_tag.data()) {
+            tmp_item_name_tag.assign(packet->extra_info_enc ? packet->extra_info_enc : L"");
+            auto cached = name_tag_sections_cache.find(item_id);
+            if (cached != name_tag_sections_cache.end() && current_time - cached->second.built_time < 60) {
+                tmp_item_name_tag += cached->second.encoded;
+            }
+            else {
+                if (cached == name_tag_sections_cache.end() && name_tag_sections_cache.size() > 64) {
+                    std::erase_if(name_tag_sections_cache, [current_time](const auto& entry) {
+                        return current_time - entry.second.built_time >= 60;
+                    });
+                }
+                const auto sections_start = tmp_item_name_tag.size();
+                if (settings.show_salvage_info) AppendSalvageInfo(item_id, tmp_item_name_tag);
+                if (settings.show_trader_prices) AppendPriceInfo(item_id, tmp_item_name_tag);
+                if (settings.show_nicholas_info) AppendNicholasInfo(item_id, tmp_item_name_tag);
+                if (cached == name_tag_sections_cache.end())
+                    cached = name_tag_sections_cache.emplace(item_id, NameTagSections{}).first;
+                cached->second.built_time = current_time;
+                cached->second.encoded.assign(tmp_item_name_tag, sections_start);
+            }
+        }
 
         packet->extra_info_enc = tmp_item_name_tag.data();
     }

@@ -103,7 +103,7 @@ namespace {
 
     bool EncInfoField(const char* label, const wchar_t* enc_string)
     {
-        std::string info_string;
+        static thread_local std::string info_string;
         const size_t size_reqd = enc_string ? wcslen(enc_string) * 7 + 1 : 0;
         info_string.resize(size_reqd, 0); // 7 chars = 0xFFFF plus a space
         size_t offset = 0;

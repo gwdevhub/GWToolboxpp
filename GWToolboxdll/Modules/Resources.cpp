@@ -41,6 +41,7 @@
 #include <Modules/GwDatModule.h>
 #include <Constants/EncStrings.h>
 #include <Utils/TextUtils.h>
+#include <Timer.h>
 #include <wincodec.h>
 
 #include <d3d9.h>
@@ -158,6 +159,8 @@ namespace {
     std::queue<std::function<void(IDirect3DDevice9*)>> dx_jobs;
     // tasks to be done in main thread
     std::queue<std::function<void()>> main_jobs;
+
+    constexpr clock_t dx_update_budget_ms = 2;
 
     IDirect3DTexture9* empty_texture_ptr = nullptr;
     bool should_stop = false;
@@ -424,7 +427,7 @@ void Resources::Cleanup()
     should_stop = true;
     for (const auto worker : workers) {
         for (size_t i = 0; i < 5000; i += 10) {
-            if (!worker->is_running) 
+            if (!worker->is_running)
                 break;
             Sleep(10);
         }
@@ -897,7 +900,8 @@ bool Resources::ResourceToFile(const WORD id, const std::filesystem::path& path_
 
 void Resources::DxUpdate(IDirect3DDevice9* device)
 {
-    while (true) {
+    const auto started = TIMER_INIT();
+    while (TIMER_DIFF(started) < dx_update_budget_ms) {
         dx_mutex.lock();
         if (dx_jobs.empty()) {
             dx_mutex.unlock();

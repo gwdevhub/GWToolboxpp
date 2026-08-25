@@ -27,6 +27,17 @@ namespace {
     ImGuiViewport* viewport = nullptr;
     ImDrawList* draw_list = nullptr;
 
+    GW::HookEntry effects_frame_hook;
+    void OnEffectsFrameUIMessage(GW::HookStatus*, const GW::UI::Frame* frame, const GW::UI::UIMessage message_id, void*, void*) {
+        switch (message_id) {
+        case GW::UI::UIMessage::kDestroyFrame:
+        case GW::UI::UIMessage::kSetLayout:
+            if (frame == effects_frame)
+                effects_frame = nullptr;
+            break;
+        }
+    }
+
     struct BountyState {
         GW::Constants::TitleID title_id;
         uint32_t points_per_kill;
@@ -302,12 +313,16 @@ void BountyKillTrackerWidget::Initialize()
     for (const auto msg : messages) {
         RegisterUIMessageCallback(&UIMessage_HookEntry, msg, OnUIMessage, -0x6000);
     }
+    GW::UI::RegisterFrameUIMessageCallback(&effects_frame_hook, GW::UI::UIMessage::kDestroyFrame, OnEffectsFrameUIMessage);
+    GW::UI::RegisterFrameUIMessageCallback(&effects_frame_hook, GW::UI::UIMessage::kSetLayout, OnEffectsFrameUIMessage);
 }
 
 void BountyKillTrackerWidget::Terminate()
 {
     ToolboxWidget::Terminate();
     GW::UI::RemoveUIMessageCallback(&UIMessage_HookEntry);
+    GW::UI::RemoveFrameUIMessageCallback(&effects_frame_hook);
+    effects_frame = nullptr;
     active_bounties.clear();
     effect_id_to_skill.clear();
 }
@@ -317,7 +332,8 @@ void BountyKillTrackerWidget::Draw(IDirect3DDevice9*)
     if (!visible) return;
     if (active_bounties.empty()) return;
 
-    effects_frame = GW::UI::GetFrameByLabel(L"Effects");
+    if (!effects_frame)
+        effects_frame = GW::UI::GetFrameByLabel(L"Effects");
     if (!effects_frame) return;
 
     DummyWindow();

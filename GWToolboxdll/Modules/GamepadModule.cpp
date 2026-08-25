@@ -38,6 +38,9 @@ namespace {
     
     void HookXInput() {
         if (XInputGetState_Func) return;
+        static clock_t last_attempt = 0;
+        if (last_attempt && TIMER_DIFF(last_attempt) < 1000) return;
+        last_attempt = TIMER_INIT();
         HMODULE hXInput = GetModuleHandleA("xinput1_4.dll");
         XInputGetState_Func = hXInput ? (XInputGetState_pt)GetProcAddress(hXInput, "XInputGetState") : nullptr;
         if (XInputGetState_Func) {

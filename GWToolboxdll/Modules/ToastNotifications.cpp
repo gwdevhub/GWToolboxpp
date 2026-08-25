@@ -25,6 +25,7 @@
 #include <Utils/ToolboxUtils.h>
 #include <Defines.h>
 #include <Utils/TextUtils.h>
+#include <Modules/Resources.h>
 
 namespace {
     bool is_platform_compatible = false;
@@ -33,11 +34,17 @@ namespace {
 
     std::wstring original_window_title;
     std::vector<std::wstring> pending_title_notifications;
+    bool title_apply_pending = false;
+    uint32_t last_title_apply = 0;
+
+    constexpr uint32_t TITLE_APPLY_COALESCE_MS = 500;
 
     const wchar_t* party_ready_toast_title = L"Party Ready";
 
     // Pointers deleted in ChatSettings::Terminate
     std::map<std::wstring, ToastNotifications::Toast*> toasts;
+
+    std::mutex toasts_mutex;
 
     bool ShouldNotifyInstanceType(const bool notify)
     {
@@ -122,12 +129,14 @@ namespace {
             return;
         }
         pending_title_notifications.emplace_back(descriptor);
-        UpdateWindowTitle();
+        title_apply_pending = true;
     }
 
     void ClearWindowTitleNotifications()
     {
         pending_title_notifications.clear();
+        title_apply_pending = false;
+        last_title_apply = 0;
         UpdateWindowTitle();
     }
 
@@ -211,6 +220,25 @@ namespace {
         const auto nonconst = const_cast<ToastNotifications::Toast*>(toast);
         nonconst->callback = nullptr;
         nonconst->dismiss();
+    }
+
+    void ShowToastAsync(ToastNotifications::Toast* toast)
+    {
+        Resources::EnqueueWorkerTask([toast, key = toast->title] {
+            const std::lock_guard lock(toasts_mutex);
+            const auto found = toasts.find(key);
+            if (found == toasts.end() || found->second != toast) {
+                return;
+            }
+            const auto hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+            const bool co_initialized_here = SUCCEEDED(hr);
+            if (!toast->send()) {
+                TriggerToastCallback(toast, false);
+            }
+            if (co_initialized_here) {
+                CoUninitialize();
+            }
+        });
     }
 
     // ReSharper disable once CppParameterMayBeConst
@@ -457,6 +485,7 @@ bool ToastNotifications::Toast::dismiss()
 
 bool ToastNotifications::DismissToast(const wchar_t* title)
 {
+    const std::lock_guard lock(toasts_mutex);
     const auto found = toasts.find(title);
     if (found != toasts.end()) {
         delete found->second;
@@ -473,6 +502,7 @@ ToastNotifications::Toast* ToastNotifications::SendToast(const wchar_t* title, c
     if (!CanNotify()) {
         return nullptr;
     }
+    const std::lock_guard lock(toasts_mutex);
     const auto found = toasts.find(title);
     Toast* toast = found != toasts.end() ? found->second : nullptr;
     if (!toast) {
@@ -485,10 +515,7 @@ ToastNotifications::Toast* ToastNotifications::SendToast(const wchar_t* title, c
     toast->message = message;
     toast->callback = callback;
     toast->extra_args = extra_args;
-    if (!toast->send()) {
-        TriggerToastCallback(toast, false);
-        return nullptr;
-    }
+    ShowToastAsync(toast);
     return toast;
 }
 
@@ -530,12 +557,29 @@ void ToastNotifications::Terminate()
     }
     GW::UI::RemoveUIMessageCallback(&OnWhisper_Entry);
     GW::UI::RemoveUIMessageCallback(&OnTeamChat_Entry);
-    for (const auto& toast : toasts | std::views::values) {
-        TriggerToastCallback(toast, false);
-        delete toast;
+    {
+        const std::lock_guard lock(toasts_mutex);
+        for (const auto& toast : toasts | std::views::values) {
+            TriggerToastCallback(toast, false);
+            delete toast;
+        }
+        toasts.clear();
     }
-    toasts.clear();
     ClearWindowTitleNotifications();
+}
+
+void ToastNotifications::Update(const float)
+{
+    if (!title_apply_pending) {
+        return;
+    }
+    const uint32_t now = GetTickCount();
+    if (last_title_apply && now - last_title_apply < TITLE_APPLY_COALESCE_MS) {
+        return;
+    }
+    title_apply_pending = false;
+    last_title_apply = now;
+    UpdateWindowTitle();
 }
 
 bool ToastNotifications::WndProc(const UINT Message, const WPARAM wParam, LPARAM)

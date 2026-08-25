@@ -52,6 +52,7 @@ public:
     void SaveSettings(SettingsDoc& doc) override;
     void Terminate() override;
     void DrawSettingsInternal() override;
+    void Update(float delta) override;
     bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam) override;
 
     class Toast;

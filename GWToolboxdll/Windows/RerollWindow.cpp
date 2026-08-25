@@ -565,10 +565,17 @@ void RerollWindow::Draw(IDirect3DDevice9*)
         const ImVec2 btn_dim = {btnw, 0.f};
         std::string buf;
         ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.f, 0.5f));
-        auto available_chars_vector = std::ranges::to<std::vector>(*available_chars_ptr);
-        std::ranges::sort(available_chars_vector, [](const auto& a, const auto& b) {
-            return std::wstring_view(a.player_name) < std::wstring_view(b.player_name);
-        });
+        static std::vector<GW::AvailableCharacterInfo> available_chars_snapshot;
+        static std::vector<GW::AvailableCharacterInfo> available_chars_vector;
+        const auto available_chars_size = available_chars_ptr->size();
+        if (available_chars_snapshot.size() != available_chars_size
+            || (available_chars_size && memcmp(available_chars_snapshot.data(), available_chars_ptr->begin(), available_chars_size * sizeof(GW::AvailableCharacterInfo)) != 0)) {
+            available_chars_snapshot.assign(available_chars_ptr->begin(), available_chars_ptr->end());
+            available_chars_vector = available_chars_snapshot;
+            std::ranges::sort(available_chars_vector, [](const auto& a, const auto& b) {
+                return std::wstring_view(a.player_name) < std::wstring_view(b.player_name);
+            });
+        }
         for (const auto& [idx, character] : available_chars_vector | std::views::enumerate) {
             const wchar_t* player_name = character.player_name;
             const auto profession = character.primary();
@@ -602,7 +609,7 @@ void RerollWindow::Draw(IDirect3DDevice9*)
                     uv_x0 = 0.75f;
                 else if (character.is_dhuums_covenant())
                     uv_x0 = 0.50f;
-                else if (character.is_reforged())         
+                else if (character.is_reforged())
                     uv_x0 = 0.25f;
                 if (uv_x0 >= 0.f) {
                     const ImVec2 item_min = ImGui::GetItemRectMin();
@@ -695,7 +702,7 @@ void RerollWindow::Update(float)
             if (!GW::LoginMgr::IsCharSelectReady()) {
                 return;
             }
-            
+
             GW::FriendListMgr::SetFriendListStatus(online_status);
             if (!GW::LoginMgr::SelectCharacterToPlay(reroll_to_player_name, true)) {
                 RerollFailed(L"Failed to select character to play");

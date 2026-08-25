@@ -35,6 +35,14 @@ const wchar_t* SkillListingWindow::Skill::Name()
     return name_dec;
 }
 
+const std::wstring& SkillListingWindow::Skill::NameLower()
+{
+    if (name_lower.empty()) {
+        name_lower = TextUtils::ToLower(Name());
+    }
+    return name_lower;
+}
+
 const wchar_t* SkillListingWindow::Skill::GWWDescription()
 {
     const wchar_t* raw_description = Description();
@@ -222,46 +230,56 @@ void SkillListingWindow::Draw(IDirect3DDevice9*)
     if (ImGui::InputText("Search", buf, sizeof buf)) {
         search_term = TextUtils::ToLower(TextUtils::StringToWString(buf));
     }
+    static std::vector<size_t> visible_skills;
+    visible_skills.clear();
     for (size_t i = 0; i < skills.size(); i++) {
         if (!skills[i]) {
             continue;
         }
-        if (!search_term.empty() && TextUtils::ToLower(skills[i]->Name()).find(search_term) == std::wstring::npos) {
+        if (!search_term.empty() && skills[i]->NameLower().find(search_term) == std::wstring::npos) {
             continue;
         }
-        offset = 0;
-        ImGui::Text("%d", i);
-        if (!ImGui::IsItemVisible()) {
-            continue;
-        }
-        ImGui::SameLine(offset += tiny_text_width);
-        const auto low_res_img = skills[i]->skill->icon_file_id ? GwDatModule::LoadTextureFromFileId(skills[i]->skill->icon_file_id) : nullptr;
-        const auto hi_res_img = skills[i]->skill->icon_file_id_2 ? GwDatModule::LoadTextureFromFileId(skills[i]->skill->icon_file_id_2) : nullptr;
-        const auto to_use = low_res_img ? low_res_img : hi_res_img;
-        if (to_use) 
-            ImGui::ImageCropped(to_use ? *to_use : nullptr, {20.f, 20.f});
-
-        ImGui::SameLine(offset += tiny_text_width);
-        ImGui::Text("%S", skills[i]->Name());
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("%S,\n%S", skills[i]->GWWDescription(), ""); // skills[i]->GWWConcise());
-        }
-        ImGui::SameLine(offset += long_text_width);
-        ImGui::Text("%d", skills[i]->skill->attribute);
-        ImGui::SameLine(offset += tiny_text_width);
-        ImGui::Text("%s", ToolboxUtils::GetProfessionAcronym(static_cast<GW::Constants::Profession>(skills[i]->skill->profession))->string().c_str());
-        ImGui::SameLine(offset += tiny_text_width);
-        ImGui::Text("%d", skills[i]->skill->type);
-        ImGui::SameLine();
-        char buf2[32];
-        snprintf(buf2, _countof(buf2), "Wiki###wiki_%d", i);
-        if (ImGui::SmallButton(buf2)) {
-            auto url = new char[128];
-            snprintf(url, 128, "https://wiki.guildwars.com/wiki/Game_link:Skill_%d", skills[i]->skill->skill_id);
-            GW::GameThread::Enqueue([url] {
-                SendUIMessage(GW::UI::UIMessage::kOpenWikiUrl, url);
-                delete[] url;
-            });
+        visible_skills.push_back(i);
+    }
+    constexpr float icon_size = 20.f;
+    const float row_height = std::max(icon_size, ImGui::GetTextLineHeight()) + ImGui::GetStyle().ItemSpacing.y;
+    ImGuiListClipper clipper;
+    clipper.Begin(static_cast<int>(visible_skills.size()), row_height);
+    while (clipper.Step()) {
+        for (auto row = clipper.DisplayStart; row < clipper.DisplayEnd; row++) {
+            const auto i = visible_skills[row];
+            offset = 0;
+            ImGui::Text("%d", i);
+            ImGui::SameLine(offset += tiny_text_width);
+            const auto low_res_img = skills[i]->skill->icon_file_id ? GwDatModule::LoadTextureFromFileId(skills[i]->skill->icon_file_id) : nullptr;
+            const auto hi_res_img = skills[i]->skill->icon_file_id_2 ? GwDatModule::LoadTextureFromFileId(skills[i]->skill->icon_file_id_2) : nullptr;
+            const auto to_use = low_res_img ? low_res_img : hi_res_img;
+            if (to_use)
+                ImGui::ImageCropped(*to_use, {icon_size, icon_size});
+            else
+                ImGui::Dummy({icon_size, icon_size});
+            ImGui::SameLine(offset += tiny_text_width);
+            ImGui::Text("%S", skills[i]->Name());
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("%S,\n%S", skills[i]->GWWDescription(), "");
+            }
+            ImGui::SameLine(offset += long_text_width);
+            ImGui::Text("%d", skills[i]->skill->attribute);
+            ImGui::SameLine(offset += tiny_text_width);
+            ImGui::Text("%s", ToolboxUtils::GetProfessionAcronym(static_cast<GW::Constants::Profession>(skills[i]->skill->profession))->string().c_str());
+            ImGui::SameLine(offset += tiny_text_width);
+            ImGui::Text("%d", skills[i]->skill->type);
+            ImGui::SameLine();
+            char buf2[32];
+            snprintf(buf2, _countof(buf2), "Wiki###wiki_%d", i);
+            if (ImGui::SmallButton(buf2)) {
+                auto url = new char[128];
+                snprintf(url, 128, "https://wiki.guildwars.com/wiki/Game_link:Skill_%d", skills[i]->skill->skill_id);
+                GW::GameThread::Enqueue([url] {
+                    SendUIMessage(GW::UI::UIMessage::kOpenWikiUrl, url);
+                    delete[] url;
+                });
+            }
         }
     }
     if (ImGui::Button("Export to JSON")) {

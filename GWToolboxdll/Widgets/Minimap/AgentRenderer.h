@@ -5,6 +5,7 @@
 #include <GWCA/GameContainers/GamePos.h>
 
 #include <D3DContainers.h>
+#include <Widgets/Minimap/CustomRenderer.h>
 
 
 namespace GW {
@@ -168,6 +169,19 @@ private:
     Color GetColor(const GW::Agent* agent, const CustomAgent* ca = nullptr) const;
     float GetSize(const GW::Agent* agent, const CustomAgent* ca = nullptr) const;
     Shape_e GetShape(const GW::Agent* agent, const CustomAgent* ca = nullptr) const;
+
+    struct CachedPolygon {
+        const CustomRenderer::CustomPolygon* polygon = nullptr;
+        float min_x = 0.f, min_y = 0.f, max_x = 0.f, max_y = 0.f;
+    };
+    struct CachedMarker {
+        const CustomRenderer::CustomMarker* marker = nullptr;
+        float radius_squared = 0.f;
+    };
+    void RefreshRelevantPolys();
+    std::vector<CachedPolygon> relevant_polygons;
+    std::vector<CachedMarker> relevant_markers;
+
     float GetSeededDefaultSize(GW::Constants::Allegiance allegiance, float fallback) const;
 
     struct RenderPosition {

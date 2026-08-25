@@ -27,7 +27,10 @@
 #include <Windows/FriendListWindow.h>
 #include <Windows/TradeWindow.h>
 #include <GWToolbox.h>
+#include <Timer.h>
 #include <Utils/TextUtils.h>
+
+#include <atomic>
 
 namespace tradechat_api {
     struct SearchRequest {
@@ -76,6 +79,8 @@ namespace {
         uint32_t timestamp = 0;
         std::string name;
         std::string message;
+        clock_t relative_time_updated = 0;
+        char relative_time[64] = {0};
     };
 
     GW::HookEntry OnPartySearch_Entry;
@@ -109,7 +114,7 @@ namespace {
 
     CircularBuffer<Message> messages;
 
-    bool ws_window_connecting = false;
+    std::atomic<bool> ws_window_connecting = false;
 
     easywsclient::WebSocket* ws_window = nullptr;
 
@@ -188,7 +193,7 @@ namespace {
 
         const wchar_t* message = nullptr;
         switch (message_id) {
-            case GW::UI::UIMessage::kPlayerChatMessage: { 
+            case GW::UI::UIMessage::kPlayerChatMessage: {
                 const auto packet = (GW::UI::UIPacket::kPlayerChatMessage*)wparam;
                 if (packet->channel != GW::Chat::Channel::CHANNEL_TRADE) break;
                 message = packet->message;
@@ -228,14 +233,21 @@ void TradeWindow::Initialize()
 
     should_stop = false;
     worker = new std::thread([this] {
-        while (!should_stop) {
-            if (thread_jobs.empty()) {
+        for (;;) {
+            std::function<void()> job;
+            {
+                std::lock_guard lock(thread_jobs_mutex);
+                if (!thread_jobs.empty()) {
+                    job = std::move(thread_jobs.front());
+                    thread_jobs.pop();
+                }
+            }
+            if (!job) {
+                if (should_stop) break;
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                continue;
             }
-            else {
-                thread_jobs.front()();
-                thread_jobs.pop();
-            }
+            job();
         }
     });
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"pc", CmdPricecheck);
@@ -268,6 +280,8 @@ void TradeWindow::Initialize()
 void TradeWindow::Terminate()
 {
     ToolboxWindow::Terminate();
+    DeleteWebSocket(ws_window);
+    ws_window = nullptr;
     should_stop = true;
     if (worker) {
         ASSERT(worker->joinable());
@@ -275,8 +289,6 @@ void TradeWindow::Terminate()
         delete worker;
         worker = nullptr;
     }
-    DeleteWebSocket(ws_window);
-    ws_window = nullptr;
     if (wsaData.wVersion) {
         WSACleanup();
         wsaData = { 0 };
@@ -594,9 +606,12 @@ void TradeWindow::Draw(IDirect3DDevice9*)
 
                 ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(.7f, .7f, .7f, 1.0f));
 
-                const auto timetext = TextUtils::RelativeTime(msg.timestamp);
-                ImGui::SetCursorPosX(playername_left - innerspacing - ImGui::CalcTextSize(timetext.c_str()).x);
-                ImGui::TextUnformatted(timetext.c_str());
+                if (!msg.relative_time_updated || TIMER_DIFF(msg.relative_time_updated) > 1000) {
+                    snprintf(msg.relative_time, sizeof(msg.relative_time), "%s", TextUtils::RelativeTime(msg.timestamp).c_str());
+                    msg.relative_time_updated = TIMER_INIT();
+                }
+                ImGui::SetCursorPosX(playername_left - innerspacing - ImGui::CalcTextSize(msg.relative_time).x);
+                ImGui::TextUnformatted(msg.relative_time);
                 ImGui::PopStyleColor();
             }
 
@@ -732,15 +747,22 @@ void TradeWindow::AsyncWindowConnect(const bool force)
         return;
     }
     ws_window_connecting = true;
-    thread_jobs.push([this] {
-        if ((ws_window = WebSocket::from_url(settings.is_kamadan_chat ? ws_host_kmd : ws_host_asc)) == nullptr) {
-            printf("Couldn't connect to the host '%s'", settings.is_kamadan_chat ? ws_host_kmd : ws_host_asc);
-        }
-        ws_window_connecting = false;
-        if (messages.size() == 0 && pending_query_string.empty()) {
-            search(""); // Initial draw, gets latest N messages
-        }
-    });
+    {
+        std::lock_guard lock(thread_jobs_mutex);
+        thread_jobs.push([this] {
+            auto new_ws = WebSocket::from_url(settings.is_kamadan_chat ? ws_host_kmd : ws_host_asc);
+            if (!new_ws) {
+                printf("Couldn't connect to the host '%s'", settings.is_kamadan_chat ? ws_host_kmd : ws_host_asc);
+            }
+            GW::GameThread::Enqueue([this, new_ws] {
+                ws_window = new_ws;
+                ws_window_connecting = false;
+                if (messages.size() == 0 && pending_query_string.empty()) {
+                    search("");
+                }
+            });
+        });
+    }
 }
 
 void TradeWindow::DeleteWebSocket(WebSocket* ws)
@@ -748,13 +770,16 @@ void TradeWindow::DeleteWebSocket(WebSocket* ws)
     if (!ws) {
         return;
     }
-    if (ws->getReadyState() == WebSocket::OPEN) {
-        ws->close();
-    }
-    while (ws->getReadyState() != WebSocket::CLOSED) {
-        ws->poll();
-    }
-    delete ws;
+    std::lock_guard lock(Instance().thread_jobs_mutex);
+    Instance().thread_jobs.push([ws] {
+        if (ws->getReadyState() == WebSocket::OPEN) {
+            ws->close();
+        }
+        while (ws->getReadyState() != WebSocket::CLOSED) {
+            ws->poll();
+        }
+        delete ws;
+    });
 }
 
 void TradeWindow::SwitchSockets()

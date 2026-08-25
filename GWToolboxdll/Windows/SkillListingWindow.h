@@ -41,6 +41,7 @@ public:
 
         skilllist_export::SkillJson ToJson();
         const wchar_t* Name();
+        const std::wstring& NameLower();
         const wchar_t* GWWDescription();
         const wchar_t* GWWConcise();
         //const wchar_t* Description(uint32_t attribute_level, wchar_t* buffer);
@@ -59,6 +60,7 @@ public:
     private:
         wchar_t name_enc[64] = {0};
         wchar_t name_dec[256] = {0};
+        std::wstring name_lower;
         wchar_t desc_enc[64] = {0};
         wchar_t desc_dec[256] = {0};
         wchar_t desc_gww[256] = {0};

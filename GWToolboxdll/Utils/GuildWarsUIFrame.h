@@ -86,6 +86,8 @@ public:
 
     void Poll(GW::TabsFrame* tabs);
 
+    void Poll(GW::TabsFrame* (*get_tabs)());
+
     // Removes the tab if active. Safe to call unconditionally (e.g. on module terminate).
     void Remove();
 
@@ -103,6 +105,8 @@ private:
     uint32_t tabs_frame_id_ = 0;
     uint32_t tab_id_ = 0;
     clock_t last_poll_ = 0;
+
+    bool ShouldPoll();
     bool needs_redraw_ = true;
 
     GW::UI::UIInteractionCallback default_item_callback_ = nullptr;

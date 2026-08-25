@@ -235,6 +235,8 @@ namespace {
 
     bool minimap_enabled = false;
 
+    bool can_render_toolbox = false;
+
     bool is_right_clicking = false;
     bool mouse_moved_whilst_right_clicking = false;
     LPARAM right_click_lparam;
@@ -490,7 +492,7 @@ namespace {
             return CallWindowProc(OldWndProc, hWnd, Message, wParam, lParam);
         }
 
-        if (!(CanRenderToolbox() && GWToolbox::IsInitialized())) {
+        if (!(can_render_toolbox && GWToolbox::IsInitialized())) {
             return CallWindowProc(OldWndProc, hWnd, Message, wParam, lParam);
         }
 
@@ -1108,6 +1110,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
         imgui_inifile_changed = false;
     }
     if (gwtoolbox_disabled) {
+        can_render_toolbox = false;
         if (!ShouldDisableToolbox()) {
             Enable();
         }
@@ -1120,7 +1123,8 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
 
     Resources::DxUpdate(device);
 
-    if (!CanRenderToolbox()) return;
+    can_render_toolbox = CanRenderToolbox();
+    if (!can_render_toolbox) return;
 
     // Once-per-frame tick for the shared in-world compositor (installs its hook lazily, resets the
     // per-frame draw guard) so any module that registered an under-UI draw runs this frame.

@@ -213,15 +213,14 @@ namespace {
         return player_name && wcsncmp(player_name, _player_name, wcslen(player_name)) == 0;
     }
 
-    // Matches a sender against the user-defined "Hide messages from" block list.
-    bool IsAuthorBlocked(const std::wstring& sender)
+    bool IsAuthorBlocked(const std::wstring& sanitised_sender)
     {
         using namespace TextUtils;
         if (!settings.messagebyauthor || byauthor_words.empty()) {
             return false;
         }
         // Normalise the same way ParseBuffer normalises the stored names.
-        const auto normalised = RemoveDiacritics(SanitizePlayerName(sender));
+        const auto normalised = RemoveDiacritics(sanitised_sender);
         for (const auto& blocked : byauthor_words) {
             if (blocked.Matches(normalised)) {
                 return true;
@@ -232,8 +231,12 @@ namespace {
 
     bool ShouldIgnoreBySender(const std::wstring& sender)
     {
+        const bool author_filtering = settings.messagebyauthor && !byauthor_words.empty();
+        if (!author_filtering && GW::FriendListMgr::GetNumberOfIgnores() == 0) {
+            return false;
+        }
         const auto sanitised = TextUtils::SanitizePlayerName(sender);
-        return IsAuthorBlocked(sender) || FriendListWindow::GetIsPlayerIgnored(sanitised) || GW::FriendListMgr::GetFriend(nullptr, sanitised.c_str(), GW::FriendType::Ignore) != nullptr;
+        return IsAuthorBlocked(sanitised) || FriendListWindow::GetIsPlayerIgnored(sanitised) || GW::FriendListMgr::GetFriend(nullptr, sanitised.c_str(), GW::FriendType::Ignore) != nullptr;
     }
 
     // Should this message be ignored by encoded string?
@@ -751,7 +754,7 @@ void ChatFilter::BlockMessageForMs(const wchar_t* message_contains, clock_t ms) 
 }
 
 bool ChatFilter::IsSenderBlocked(const std::wstring& sender) {
-    return IsAuthorBlocked(sender);
+    return IsAuthorBlocked(TextUtils::SanitizePlayerName(sender));
 }
 
 void ChatFilter::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)

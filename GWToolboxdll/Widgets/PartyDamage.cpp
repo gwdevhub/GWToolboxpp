@@ -588,8 +588,10 @@ void PartyDamage::Update(const float)
             entry.recent_healing = 0;
         }
     }
-    FetchPartyInfo();
-    ReconcileDamageIndices();
+    if (visible) {
+        FetchPartyInfo();
+        ReconcileDamageIndices();
+    }
 
     // Update names for damage entries whose names weren't decoded yet,
     // and restore departed entries when names become available

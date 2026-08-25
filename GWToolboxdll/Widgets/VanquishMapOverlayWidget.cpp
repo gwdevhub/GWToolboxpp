@@ -919,7 +919,8 @@ void VanquishMapOverlayWidget::DrawVanquishToggleButton()
 void VanquishMapOverlayWidget::Update(float)
 {
     const bool render_ready = MissionMapWidget::IsRenderReady();
-    should_draw = render_ready && visible && ToolboxUtils::IsExplorable();
+    const bool explorable = ToolboxUtils::IsExplorable();
+    should_draw = render_ready && visible && explorable;
 
     if (render_ready) {
         cached_px_to_game = MissionMapWidget::GetPxToGame();
@@ -965,8 +966,10 @@ void VanquishMapOverlayWidget::Update(float)
     static clock_t last_check = TIMER_INIT();
     if (!ToolboxUtils::FrameRateCheck(last_check, 30)) return;
 
+    if (!visible && explorable) return;
+
     const auto player_pos = GW::PlayerMgr::GetPlayerPosition();
-    if (ToolboxUtils::IsExplorable()) {
+    if (explorable) {
         UpdateEnemyTracking();
         if (UpdateExploration(player_pos))
             UpdateFrontierIncremental();
