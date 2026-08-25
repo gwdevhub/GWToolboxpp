@@ -216,11 +216,12 @@ namespace FontLoader {
                 if (!file.is_open())
                     continue;
                 file.seekg(0, std::ios::end);
-                const auto file_size = file.tellg();
-                if (file_size <= 0)
+                const auto file_end = file.tellg();
+                if (file_end <= 0)
                     continue;
+                const auto file_size = static_cast<size_t>(file_end);
                 font.data = ImGui::MemAlloc(file_size);
-                font.data_size = static_cast<size_t>(file_size);
+                font.data_size = file_size;
                 file.seekg(0);
                 if (!file.read(static_cast<char*>(font.data), font.data_size)) {
                     ImGui::MemFree(font.data);
