@@ -233,6 +233,49 @@ for a while). Collapsed into `TerrainDrape::HighestZ`/`HighestZOnPlanes`/`Closes
 when a GW API call is the inner loop, see whether the data can be read once and evaluated in
 toolbox instead. Ghidra is available for finding the underlying structures.
 
+## 15. Sidestep iterator debugging in hot loops
+
+We play in Debug, and the Debug config links `MultiThreadedDebug`, so `_ITERATOR_DEBUG_LEVEL=2`
+is in force: checked iterators, an owner back-pointer per iterator, an invalidation sweep per
+mutation, and no inlining of the `std::` wrappers. Flipping the level project-wide is not an
+option - it is an ABI property, and `Dependencies/GWCA/lib/gwca.lib` is one prebuilt binary
+shared by both configs.
+
+Vector, per-element hot loop:
+
+```cpp
+// Before - two checked iterator operations per element, none inlined in Debug
+for (const auto& item : items) { Consume(item); }
+
+// After - one bounds-derived index, raw buffer access
+if (items.empty()) return;
+const auto* data = items.data();
+const size_t count = items.size();
+for (size_t i = 0; i < count; i++) { Consume(data[i]); }
+```
+
+Safe only when nothing inside the loop resizes `items`, the indices come from `size()`, and the
+empty case is handled (`data()` may be null; `&items[0]` asserts). Do this in measured hot loops
+only - elsewhere the checks are worth keeping, which is the whole reason we run Debug.
+
+Map, repeated lookups on one key:
+
+```cpp
+// Before - three checked tree walks, and operator[] inserts
+if (m.count(key)) { Use(m[key]); m[key].hits++; }
+
+// After - one walk, then work through the reference
+if (const auto it = m.find(key); it != m.end()) {
+    auto& entry = it->second;
+    Use(entry);
+    entry.hits++;
+}
+```
+
+And prefer getting out of the node-based container entirely when the key space allows it - a
+dense `std::vector` indexed by a bounded integer (pattern 9) has no nodes to allocate and no
+per-node debug bookkeeping, in either config.
+
 ## Measuring a fix
 
 1. Windows -> Performance, enable `stream_to_csv`.
