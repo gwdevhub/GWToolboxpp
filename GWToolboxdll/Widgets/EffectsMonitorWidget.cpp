@@ -225,8 +225,7 @@ namespace {
             case GW::Constants::SkillID::Aspect_of_Exhaustion:
             case GW::Constants::SkillID::Aspect_of_Depletion_energy_loss:
             case GW::Constants::SkillID::Scorpion_Aspect:
-                if (!effect_timestamps.contains((uint32_t)packet->effect->skill_id))
-                    effect_timestamps[(uint32_t)packet->effect->skill_id] = GW::MemoryMgr::GetSkillTimer();
+                effect_timestamps.try_emplace((uint32_t)packet->effect->skill_id, GW::MemoryMgr::GetSkillTimer());
                 break;
             }
         } break;

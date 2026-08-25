@@ -391,9 +391,7 @@ void TimerWidget::Initialize()
     ToolboxWidget::Initialize();
     SettingsRegistry::Register(this, settings);
     for (const auto& skill_id : spirit_effects | std::views::keys) {
-        if (!spirit_effects_enabled.contains(skill_id)) {
-            spirit_effects_enabled[skill_id] = false;
-        }
+        spirit_effects_enabled.try_emplace(skill_id, false);
     }
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DisplayDialogue>(

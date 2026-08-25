@@ -617,7 +617,8 @@ namespace Pathing {
         };
 
         // A gate the player is standing in cannot be what separates them from anywhere, and you
-        // arrive on top of one every time you zone in through it.
+        // arrive on top of one every time you zone in through it. Testing against it would block
+        // the very first step and leave the whole map looking unreachable.
         std::vector<const PortalDoorway*> gates;
         for (const auto& doorway : CurrentMapDoorways()) {
             if (!DoorwayContains(doorway, {player->pos.x, player->pos.y})) gates.push_back(&doorway);

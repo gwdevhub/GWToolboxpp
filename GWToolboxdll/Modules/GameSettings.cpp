@@ -620,10 +620,9 @@ namespace {
                 if (IsPlayerInParty(pending_reinvite.identifier)) {
                     return;
                 }
-                const auto aliases = PartyWindowModule::Instance().GetAliasedPlayerNames();
-                if (aliases.contains(player->name)) {
-                    const auto orig_name = aliases.at(player->name).c_str();
-                    GW::PartyMgr::InvitePlayer(orig_name);
+                const auto& aliases = PartyWindowModule::Instance().GetAliasedPlayerNames();
+                if (const auto found_alias = aliases.find(player->name); found_alias != aliases.end()) {
+                    GW::PartyMgr::InvitePlayer(found_alias->second.c_str());
                 }
                 else {
                     GW::PartyMgr::InvitePlayer(pending_reinvite.identifier);
@@ -1282,9 +1281,10 @@ namespace {
                     const auto title_id = static_cast<GW::Constants::TitleID>(reinterpret_cast<uint32_t>(wParam));
                     const auto title = GW::PlayerMgr::GetTitleTrack(title_id);
                     // @Cleanup: I don't think this behaves itself.
-                    if (title && title->max_title_tier_index == title->current_title_tier_index && last_recorded_tiers.contains(title_id) && last_recorded_tiers[title_id] != title->current_title_tier_index) {
+                    const auto recorded_tier = last_recorded_tiers.find(title_id);
+                    if (title && title->max_title_tier_index == title->current_title_tier_index && recorded_tier != last_recorded_tiers.end() && recorded_tier->second != title->current_title_tier_index) {
                         if (GW::Map::GetIsMapLoaded() && !GW::UI::IsLoadingScreenShown()) pending_screenshot = TIMER_INIT();
-                        last_recorded_tiers[title_id] = title->current_title_tier_index;
+                        recorded_tier->second = title->current_title_tier_index;
                     }
                 }
             } break;
