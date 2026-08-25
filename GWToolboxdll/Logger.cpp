@@ -1,5 +1,6 @@
 #include "stdafx.h"
 
+#include <condition_variable>
 #include <share.h> // _SH_DENYWR for _wfsopen (shared-read log.txt in Debug)
 
 #include <GWCA/Utilities/Debug.h>
@@ -30,6 +31,46 @@ namespace {
     };
 
     [[maybe_unused]] bool crash_dumped = false;
+
+#ifdef _DEBUG
+    // The console is written from its own thread so QuickEdit stays usable: selecting text puts the
+    // console in Select mode, which blocks the write - on the game thread that is a frozen client.
+    // log.txt is still written synchronously, so a crash cannot lose lines that matter.
+    std::mutex console_mutex;
+    std::condition_variable console_cv;
+    std::deque<std::string> console_queue;
+    std::thread console_thread;
+    bool console_stop = false;
+
+    void ConsoleWriter()
+    {
+        for (;;) {
+            std::deque<std::string> batch;
+            {
+                std::unique_lock lock(console_mutex);
+                console_cv.wait(lock, [] { return console_stop || !console_queue.empty(); });
+                if (console_stop && console_queue.empty()) return;
+                batch.swap(console_queue);
+            }
+            for (const auto& line : batch) fputs(line.c_str(), stdout);
+            fflush(stdout);
+        }
+    }
+
+    void EmitConsole(std::string text)
+    {
+        if (!console_thread.joinable()) return;
+        {
+            std::lock_guard lock(console_mutex);
+            // A wedged console must not grow this without bound; drop the oldest instead.
+            if (console_queue.size() > 4096) console_queue.pop_front();
+            console_queue.push_back(std::move(text));
+        }
+        console_cv.notify_one();
+    }
+#else
+    void EmitConsole(const std::string&) {}
+#endif
 
     bool log_transient = false;
 
@@ -83,14 +124,22 @@ namespace {
         const std::string buf = TextUtils::VStrPrintf(format, argv);
         if (!buf.empty()) _chatlog(log_type, TextUtils::StringToWString(buf).c_str());
     }
-    void PrintTimestamp()
+    std::string Timestamp()
     {
-        if (!logfile && !logfile2) return;
         const auto now = std::chrono::floor<std::chrono::milliseconds>(std::chrono::system_clock::now());
         const auto ms = now.time_since_epoch().count() % 1000;
-        const std::string ts = TextUtils::TimeToString(std::chrono::system_clock::to_time_t(now), true, static_cast<int>(ms));
-        if (logfile) fprintf(logfile, "[%s] ", ts.c_str());
-        if (logfile2) fprintf(logfile2, "[%s] ", ts.c_str());
+        return std::format("[{}] ", TextUtils::TimeToString(std::chrono::system_clock::to_time_t(now), true, static_cast<int>(ms)));
+    }
+
+    // In Debug `logfile` is the console and gets the async path; in Release it is log.txt itself.
+    void Emit(const std::string& line)
+    {
+#ifdef _DEBUG
+        EmitConsole(line);
+#else
+        if (logfile) fputs(line.c_str(), logfile);
+#endif
+        if (logfile2) fputs(line.c_str(), logfile2);
     }
 
 
@@ -101,7 +150,7 @@ namespace {
     {
         GW::Hook::EnterHook();
         if (format && !wcsstr(format, L"Invalid tag name")) {
-            vfwprintf(logfile, format, argList);
+            Emit(TextUtils::WStringToString(TextUtils::VStrPrintfW(format, argList)));
         }
         LogWithArguments_Ret(severity, format, argList);
         GW::Hook::LeaveHook();
@@ -165,15 +214,16 @@ bool Log::InitializeLog()
     freopen_s(&stderr_file, "CONOUT$", "w", stderr);
     SetConsoleTitle("GWTB++ Debug Console");
     SetConsoleCtrlHandler(ConsoleCtrlHandler, TRUE);
-    // QuickEdit: one stray click puts the console in Select mode, which blocks console writes ->
-    // the game thread wedges on its next Log call until someone presses Esc in the console.
+    // QuickEdit on so the console can be selected and copied. Select mode still blocks the write,
+    // but ConsoleWriter absorbs that instead of the game thread.
     if (const HANDLE conin = CreateFileA("CONIN$", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, 0, nullptr); conin != INVALID_HANDLE_VALUE) {
         DWORD mode = 0;
         if (GetConsoleMode(conin, &mode)) {
-            SetConsoleMode(conin, (mode | ENABLE_EXTENDED_FLAGS) & ~ENABLE_QUICK_EDIT_MODE);
+            SetConsoleMode(conin, mode | ENABLE_EXTENDED_FLAGS | ENABLE_QUICK_EDIT_MODE);
         }
         CloseHandle(conin);
     }
+    console_thread = std::thread(ConsoleWriter);
     // Debug also writes to log.txt on disk (the harness reads it), keeping the console as the primary
     // sink. _wfsopen with _SH_DENYWR allows other processes to READ the file while we hold it open --
     // _wfopen_s opens it exclusively, which would block the harness host from tailing it.
@@ -210,6 +260,14 @@ void Log::Terminate()
     GW::RegisterPanicHandler(nullptr, nullptr);
 
 #ifdef _DEBUG
+    if (console_thread.joinable()) {
+        {
+            std::lock_guard lock(console_mutex);
+            console_stop = true;
+        }
+        console_cv.notify_one();
+        console_thread.join();
+    }
     if (stdout_file) {
         fclose(stdout_file);
     }
@@ -239,16 +297,8 @@ void Log::Log(const char* msg, ...)
     if (!logfile && !logfile2) {
         return;
     }
-    PrintTimestamp();
-    const bool nl = msg[strlen(msg) - 1] != '\n';
-    if (logfile) {
-        va_list args; va_start(args, msg); vfprintf(logfile, msg, args); va_end(args);
-        if (nl) fprintf(logfile, "\n");
-    }
-    if (logfile2) {
-        va_list args; va_start(args, msg); vfprintf(logfile2, msg, args); va_end(args);
-        if (nl) fprintf(logfile2, "\n");
-    }
+    va_list args; va_start(args, msg); const std::string body = TextUtils::VStrPrintf(msg, args); va_end(args);
+    Emit(Timestamp() + body + (msg[strlen(msg) - 1] != '\n' ? "\n" : ""));
 }
 
 void Log::LogW(const wchar_t* msg, ...)
@@ -256,21 +306,15 @@ void Log::LogW(const wchar_t* msg, ...)
     if (!logfile && !logfile2) {
         return;
     }
-    PrintTimestamp();
-    const bool nl = msg[wcslen(msg) - 1] != '\n';
-    if (logfile) {
-        va_list args; va_start(args, msg); vfwprintf(logfile, msg, args); va_end(args);
-        if (nl) fprintf(logfile, "\n");
-    }
-    if (logfile2) {
-        va_list args; va_start(args, msg); vfwprintf(logfile2, msg, args); va_end(args);
-        if (nl) fprintf(logfile2, "\n");
-    }
+    va_list args; va_start(args, msg); const std::wstring body = TextUtils::VStrPrintfW(msg, args); va_end(args);
+    Emit(Timestamp() + TextUtils::WStringToString(body) + (msg[wcslen(msg) - 1] != '\n' ? "\n" : ""));
 }
 
 void Log::FlushFile()
 {
+#ifndef _DEBUG
     if (logfile) fflush(logfile);
+#endif
     if (logfile2) fflush(logfile2);
 }
 

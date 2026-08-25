@@ -153,6 +153,15 @@ else()
     add_link_options($<$<NOT:$<CONFIG:Debug>>:/LTCG>)
 endif()
 
+# Debug is what we profile in, and /RTC1 puts a check on every function entry/exit - measured
+# ~20% of the whole imgui frame on its own, and it can't coexist with /O2 on the hot third-party
+# targets (see cmake/imgui.cmake). Turn GWTB_DEBUG_RUNTIME_CHECKS on to get the checks back.
+option(GWTB_DEBUG_RUNTIME_CHECKS "MSVC /RTC1 runtime checks in Debug builds" OFF)
+if(MSVC AND NOT GWTB_DEBUG_RUNTIME_CHECKS)
+    string(REPLACE "/RTC1" "" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
+    string(REPLACE "/RTC1" "" CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
+endif()
+
 set(CMAKE_CXX_STANDARD 26)
 # CMake 4.3 doesn't yet know MSVC 14.50 supports C++26 — fall back to 23 for MSVC.
 if(MSVC AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")

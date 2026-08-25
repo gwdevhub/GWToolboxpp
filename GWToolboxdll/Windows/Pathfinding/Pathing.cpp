@@ -370,6 +370,134 @@ namespace Pathing {
         return FindClosestPositionOnTrapezoid(point, &mapContext->path->staticData->map);
     }
 
+    bool IsOnTrapezoid(const GW::PathingTrapezoid* t, const GW::Vec2f& p)
+    {
+        return t && IsOnPathingTrapezoid(t, p);
+    }
+
+    namespace {
+        // A convex polygon clipped by four half-planes gains at most one vertex per clip.
+        constexpr size_t kMaxClipVerts = 8;
+
+        // Sutherland-Hodgman against one axis-aligned half-plane. `axis` is 0 for x, 1 for y;
+        // `keep_above` keeps the side at or above `limit`. Winding does not matter - inside is a
+        // coordinate test, not a side-of-edge test.
+        size_t ClipHalfPlane(GW::Vec2f (&poly)[kMaxClipVerts], size_t count, const int axis, const float limit, const bool keep_above)
+        {
+            if (!count) return 0;
+            const auto coord = [axis](const GW::Vec2f& p) { return axis == 0 ? p.x : p.y; };
+            const auto inside = [&](const GW::Vec2f& p) { return keep_above ? coord(p) >= limit : coord(p) <= limit; };
+
+            GW::Vec2f out[kMaxClipVerts];
+            size_t out_count = 0;
+            const auto emit = [&](const GW::Vec2f& p) {
+                if (out_count < kMaxClipVerts) out[out_count++] = p;
+            };
+            for (size_t i = 0; i < count; i++) {
+                const GW::Vec2f& a = poly[i];
+                const GW::Vec2f& b = poly[(i + 1) % count];
+                const bool a_in = inside(a);
+                if (a_in) emit(a);
+                if (a_in == inside(b)) continue;
+                // The edge crosses, so the two coordinates differ and the divide is safe.
+                const float da = coord(a) - limit;
+                const float t = da / (da - (coord(b) - limit));
+                emit({a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t});
+            }
+            std::copy_n(out, out_count, poly);
+            return out_count;
+        }
+    } // namespace
+
+    bool TrapezoidOverlapsBox(const GW::PathingTrapezoid* t, const GW::Vec2f& box_min, const GW::Vec2f& box_max, GW::Vec2f& out_point)
+    {
+        if (!t) return false;
+        // Box-on-box first: most trapezoids miss most boxes, and this is the loop that asks.
+        if (std::min(t->XTL, t->XBL) > box_max.x || std::max(t->XTR, t->XBR) < box_min.x) return false;
+        if (t->YB > box_max.y || t->YT < box_min.y) return false;
+
+        GW::Vec2f poly[kMaxClipVerts] = {{t->XTL, t->YT}, {t->XTR, t->YT}, {t->XBR, t->YB}, {t->XBL, t->YB}};
+        size_t count = 4;
+        count = ClipHalfPlane(poly, count, 0, box_min.x, true);
+        count = ClipHalfPlane(poly, count, 0, box_max.x, false);
+        count = ClipHalfPlane(poly, count, 1, box_min.y, true);
+        count = ClipHalfPlane(poly, count, 1, box_max.y, false);
+        if (count < 3) return false; // they miss, or meet only along an edge or at a corner
+
+        // Signed area and area centroid in one pass; the sign cancels in the centroid divide. The
+        // centroid, rather than any vertex, only so the point sits strictly inside the overlap
+        // instead of on the seam, where a walkability test can go either way.
+        float area2 = 0.f;
+        GW::Vec2f centroid{0.f, 0.f};
+        for (size_t i = 0; i < count; i++) {
+            const GW::Vec2f& a = poly[i];
+            const GW::Vec2f& b = poly[(i + 1) % count];
+            const float cross = a.x * b.y - b.x * a.y;
+            area2 += cross;
+            centroid.x += (a.x + b.x) * cross;
+            centroid.y += (a.y + b.y) * cross;
+        }
+        // Collinear after clipping - an overlap with no width is not somewhere to stand. The
+        // threshold is in square gwinches, so anything with real extent clears it by orders.
+        if (fabsf(area2) < 1e-3f) return false;
+        out_point = {centroid.x / (3.f * area2), centroid.y / (3.f * area2)};
+        return true;
+    }
+
+    namespace {
+        std::unordered_set<const GW::PathingTrapezoid*> reachable_cache;
+        std::vector<uint32_t> reachable_cache_blocked_planes;
+        GW::Constants::MapID reachable_cache_map = static_cast<GW::Constants::MapID>(0);
+        GW::Constants::InstanceType reachable_cache_instance = GW::Constants::InstanceType::Loading;
+
+        // The walk visits every adjacency on the map and tests each against every travel portal, so
+        // it is far too expensive to redo per query. Gates opening or closing move whole regions in
+        // and out of reach, so that state - and nothing else - is what rebuilds it.
+        const std::unordered_set<const GW::PathingTrapezoid*>& CachedReachableTrapezoids()
+        {
+            const auto map_id = GW::Map::GetMapID();
+            const auto instance_type = GW::Map::GetInstanceType();
+            std::vector<uint32_t> blocked;
+            CopyBlockedPlanes(blocked);
+            if (map_id != reachable_cache_map || instance_type != reachable_cache_instance || blocked != reachable_cache_blocked_planes) {
+                auto found = FindReachableTrapezoids();
+                // Empty means it could not find the player to start from, which callers read as
+                // "assume everything is reachable". Keeping that would pin the assumption for the
+                // life of the map; the walk bails immediately in that state, so retrying is free.
+                if (found.empty()) return reachable_cache = {};
+                reachable_cache = std::move(found);
+                reachable_cache_blocked_planes = std::move(blocked);
+                reachable_cache_map = map_id;
+                reachable_cache_instance = instance_type;
+            }
+            return reachable_cache;
+        }
+    } // namespace
+
+    bool IsReachabilityKnown()
+    {
+        return !CachedReachableTrapezoids().empty();
+    }
+
+    std::vector<TrapezoidRef> GetTrapezoidsWithReachability()
+    {
+        std::vector<TrapezoidRef> out;
+        auto* mapContext = GW::GetMapContext();
+        if (!mapContext || !mapContext->path || !mapContext->path->staticData) return out;
+        const auto& reachable = CachedReachableTrapezoids();
+        auto* map = &mapContext->path->staticData->map;
+        for (uint32_t z = 0; z < map->size(); ++z) {
+            const auto& m = (*map)[z];
+            for (uint32_t i = 0; i < m.trapezoid_count; ++i) {
+                const auto* t = &m.trapezoids[i];
+                // Empty means the player's position is unknown, which callers read as "assume
+                // everything is reachable" rather than "nothing is".
+                out.emplace_back(t, z, reachable.empty() || reachable.contains(t));
+            }
+        }
+        return out;
+    }
+
     bool IsPositionWalkable(const GW::GamePos& point)
     {
         auto* mapContext = GW::GetMapContext();
@@ -398,7 +526,18 @@ namespace Pathing {
         GW::Constants::MapID portal_cache_map = static_cast<GW::Constants::MapID>(0);
         GW::Constants::InstanceType portal_cache_instance = GW::Constants::InstanceType::Loading;
 
-        const std::vector<PortalProp>& CurrentMapPortals()
+        // The doorway a portal blocks, resolved once. The reachability walk asks about every portal
+        // on every adjacency in the map - hundreds of thousands of times - and deriving the gate
+        // line from the facing there meant a sinf and a cosf on each one.
+        struct PortalDoorway {
+            GW::Vec2f left{}, right{}; // gate line, when the prop has a facing
+            GW::Vec2f pos{};
+            float radius_sq = 0.f; // footprint fallback when it does not
+            bool has_facing = false;
+        };
+        std::vector<PortalDoorway> doorway_cache;
+
+        const std::vector<PortalDoorway>& CurrentMapDoorways()
         {
             const auto map_id = GW::Map::GetMapID();
             const auto instance_type = GW::Map::GetInstanceType();
@@ -407,8 +546,25 @@ namespace Pathing {
                 ParsePortalPropsFromMapContext(GW::GetMapContext(), portal_cache);
                 portal_cache_map = map_id;
                 portal_cache_instance = instance_type;
+                doorway_cache.clear();
+                doorway_cache.reserve(portal_cache.size());
+                for (const auto& portal : portal_cache) {
+                    const float half_width = PortalHalfWidth(portal);
+                    PortalDoorway d{};
+                    d.pos = {portal.pos.x, portal.pos.y};
+                    d.radius_sq = half_width * half_width;
+                    d.has_facing = portal.has_facing;
+                    if (portal.has_facing) {
+                        const float cos_f = cosf(portal.facing_radians);
+                        const float sin_f = sinf(portal.facing_radians);
+                        // The doorway spans across the facing, so the gate line runs along the perpendicular.
+                        d.left = {portal.pos.x - sin_f * half_width, portal.pos.y + cos_f * half_width};
+                        d.right = {portal.pos.x + sin_f * half_width, portal.pos.y - cos_f * half_width};
+                    }
+                    doorway_cache.push_back(d);
+                }
             }
-            return portal_cache;
+            return doorway_cache;
         }
 
         float SideOfLine(const GW::Vec2f& a, const GW::Vec2f& b, const GW::Vec2f& p)
@@ -428,22 +584,16 @@ namespace Pathing {
 
     bool CrossesTravelPortal(const GW::Vec2f& a, const GW::Vec2f& b)
     {
-        for (const auto& portal : CurrentMapPortals()) {
-            const float half_width = PortalHalfWidth(portal);
-            if (!portal.has_facing) {
+        for (const auto& doorway : CurrentMapDoorways()) {
+            if (!doorway.has_facing) {
                 // No facing to build a doorway from, so fall back to the prop's footprint: block
                 // when the step ends up inside it.
-                const float dx = b.x - portal.pos.x;
-                const float dy = b.y - portal.pos.y;
-                if (dx * dx + dy * dy < half_width * half_width) return true;
+                const float dx = b.x - doorway.pos.x;
+                const float dy = b.y - doorway.pos.y;
+                if (dx * dx + dy * dy < doorway.radius_sq) return true;
                 continue;
             }
-            // The doorway spans across the facing, so the gate line runs along the perpendicular.
-            const float cos_f = cosf(portal.facing_radians);
-            const float sin_f = sinf(portal.facing_radians);
-            const GW::Vec2f left{portal.pos.x - sin_f * half_width, portal.pos.y + cos_f * half_width};
-            const GW::Vec2f right{portal.pos.x + sin_f * half_width, portal.pos.y - cos_f * half_width};
-            if (SegmentsCross(a, b, left, right)) return true;
+            if (SegmentsCross(a, b, doorway.left, doorway.right)) return true;
         }
         return false;
     }
@@ -530,13 +680,6 @@ namespace Pathing {
         return reachable;
     }
 
-    namespace {
-        std::unordered_set<const GW::PathingTrapezoid*> reachable_cache;
-        std::vector<uint32_t> reachable_cache_blocked_planes;
-        GW::Constants::MapID reachable_cache_map = static_cast<GW::Constants::MapID>(0);
-        GW::Constants::InstanceType reachable_cache_instance = GW::Constants::InstanceType::Loading;
-    } // namespace
-
     bool IsPositionReachable(const GW::GamePos& point)
     {
         auto* mapContext = GW::GetMapContext();
@@ -544,26 +687,15 @@ namespace Pathing {
         if (!path || !path->staticData) return false;
         auto* map = &path->staticData->map;
 
-        const auto map_id = GW::Map::GetMapID();
-        const auto instance_type = GW::Map::GetInstanceType();
-        std::vector<uint32_t> blocked;
-        CopyBlockedPlanes(blocked);
-        // Gates opening or closing move whole regions in and out of reach, so the set is rebuilt
-        // on any change to that state rather than held for the life of the map.
-        if (map_id != reachable_cache_map || instance_type != reachable_cache_instance || blocked != reachable_cache_blocked_planes) {
-            reachable_cache = FindReachableTrapezoids();
-            reachable_cache_blocked_planes = std::move(blocked);
-            reachable_cache_map = map_id;
-            reachable_cache_instance = instance_type;
-        }
+        const auto& reachable = CachedReachableTrapezoids();
         // No start trapezoid means we cannot say what is cut off, so fall back to walkability
         // rather than declaring the whole map unreachable.
-        if (reachable_cache.empty()) return IsPositionWalkable(point);
+        if (reachable.empty()) return IsPositionWalkable(point);
 
         for (uint32_t z = 0; z < map->size(); ++z) {
             GW::GamePos probe = point;
             probe.zplane = z;
-            if (const auto* trap = FindTrapezoid(probe, map); trap && reachable_cache.contains(trap)) return true;
+            if (const auto* trap = FindTrapezoid(probe, map); trap && reachable.contains(trap)) return true;
         }
         return false;
     }

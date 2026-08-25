@@ -72,4 +72,11 @@ if(EMSCRIPTEN)
         "${CMAKE_CURRENT_LIST_DIR}/../Dependencies/GWCA/source")
 endif()
 
+# imgui is the per-frame hot path and nobody steps into it, so keep it optimised in Debug too:
+# unoptimised imgui is most of what a Debug-build profile measures (~25us for a 28-button window
+# vs ~7us once this is on), which buries the toolbox's own costs under framework noise.
+if(MSVC AND NOT GWTB_DEBUG_RUNTIME_CHECKS)
+    target_compile_options(imgui PRIVATE $<$<CONFIG:Debug>:/O2;/Ob2>)
+endif()
+
 set_target_properties(imgui PROPERTIES FOLDER "Dependencies/")

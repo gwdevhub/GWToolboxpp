@@ -1,6 +1,6 @@
 import sys, os, struct, time, math, json
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from snapdat import Snapshot, Dat, read_stream_full
+from snapdat import open_dat, read_stream_full
 from ffna import chunks, game_bounds, parse_planes, largest_component, MAP_PATH, MAP_INFO
 
 TILE = 32.0
@@ -19,7 +19,36 @@ for line in open(os.path.join(HERE, 'fileids.txt')):
 todo = [(m, placed[m], fid[m]) for m in sorted(placed) if m in fid]
 print(f"{len(placed)} placed maps, {len(todo)} with a file id, {len(placed)-len(todo)} without", flush=True)
 
-snap = Snapshot(); dat = Dat(snap)
+
+def _clip(poly, axis, limit, keep_above):
+    # Sutherland-Hodgman against one axis-aligned half-plane. Winding does not matter: inside is
+    # a coordinate test, not a side-of-edge test.
+    out = []
+    n = len(poly)
+    for i in range(n):
+        a, b = poly[i], poly[(i+1) % n]
+        ca, cb = a[axis], b[axis]
+        a_in = ca >= limit if keep_above else ca <= limit
+        b_in = cb >= limit if keep_above else cb <= limit
+        if a_in: out.append(a)
+        if a_in != b_in:
+            u = (ca-limit) / ((ca-limit) - (cb-limit))
+            out.append((a[0] + (b[0]-a[0])*u, a[1] + (b[1]-a[1])*u))
+    return out
+
+
+def overlaps(quad, x0, y0, x1, y1):
+    # True when the quad and the tile share actual area - a sliver along one edge counts, a shared
+    # edge or corner does not. Mirrors Pathing::TrapezoidOverlapsBox.
+    poly = _clip(_clip(_clip(_clip(quad, 0, x0, True), 0, x1, False), 1, y0, True), 1, y1, False)
+    if len(poly) < 3: return False
+    area2 = 0.0
+    for i in range(len(poly)):
+        a, b = poly[i], poly[(i+1) % len(poly)]
+        area2 += a[0]*b[1] - b[0]*a[1]
+    return abs(area2) > 1e-7  # world-map units squared; a tile is 1024
+
+dat = open_dat()
 cont_tiles = {}
 cont_maps = {}
 stats = {'ok':0,'nostream':0,'nopath':0,'err':0}
@@ -55,9 +84,20 @@ for n, (mid, (cont, sx, sy, ex, ey), f) in enumerate(todo, 1):
             y0g, y1g = t[8], t[7]
             ax, ay = x0g/96.0+midx, -y0g/96.0+midy
             bx, by = x1g/96.0+midx, -y1g/96.0+midy
-            for cy in range(int(math.floor(min(ay,by)/TILE)), int(math.floor(max(ay,by)/TILE))+1):
+            # The quad in world-map units. The conversion is a scale and a flip, so clipping here
+            # is the same answer as clipping in game space, and the tile boxes are then integers.
+            quad = [(t[3]/96.0+midx, -t[7]/96.0+midy),   # XTL, YT
+                    (t[4]/96.0+midx, -t[7]/96.0+midy),   # XTR, YT
+                    (t[6]/96.0+midx, -t[8]/96.0+midy),   # XBR, YB
+                    (t[5]/96.0+midx, -t[8]/96.0+midy)]   # XBL, YB
+            # The box is the candidate range only. Marking all of it files tiles a slanted edge
+            # merely passes near, and the widget dilates those into fog it claims you can uncover;
+            # the overlap test below is the same one Pathing::TrapezoidOverlapsBox does in game.
+            for cy in range(int(math.ceil(min(ay,by)/TILE))-1, int(math.ceil(max(ay,by)/TILE))):
                 for cx in range(int(math.floor(min(ax,bx)/TILE)), int(math.floor(max(ax,bx)/TILE))+1):
-                    tiles.add((cx, cy))
+                    if (cx, cy) in tiles: continue
+                    if overlaps(quad, cx*TILE, cy*TILE, (cx+1)*TILE, (cy+1)*TILE):
+                        tiles.add((cx, cy))
         cont_maps[cont] = cont_maps.get(cont, 0) + 1
         stats['ok'] += 1
     except Exception as e:

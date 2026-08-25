@@ -214,6 +214,10 @@ private:
         void Event(EventType type, uint32_t id1, uint32_t id2);
         void CheckSetDone();
         bool Draw(); // returns false when should be deleted
+        // Hidden by the "show past runs" filter, so it occupies no row at all.
+        bool IsFilteredOut();
+        // Renders as a single collapsed header row, so its height is known without drawing it.
+        [[nodiscard]] bool IsCollapsedRow() const { return !drawn_expanded; }
         void StopObjectives();
         struct Serialized {
             std::string name;
@@ -245,6 +249,10 @@ private:
     };
 
     std::map<DWORD, ObjectiveSet*> objective_sets{};
+    // Newest-first view of objective_sets, rebuilt only when the map changes. Walking the map itself
+    // every frame costs a global CRT lock per step under the debug CRT's checked iterators.
+    std::vector<ObjectiveSet*> display_order{};
+    bool display_order_dirty = true;
 
     ObjectiveSet* GetCurrentObjectiveSet() const;
     bool clear_cached_times = false;

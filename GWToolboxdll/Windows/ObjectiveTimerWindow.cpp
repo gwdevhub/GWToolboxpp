@@ -609,6 +609,7 @@ void ObjectiveTimerWindow::AddObjectiveSet(ObjectiveSet* os)
         cos.second->need_to_collapse = true;
     }
     objective_sets.emplace(os->system_time, os);
+    display_order_dirty = true;
     if (os->active) {
         current_objective_set = os;
     }
@@ -969,17 +970,48 @@ void ObjectiveTimerWindow::Draw(IDirect3DDevice9*)
                 ImGui::Text("Enter DoA, FoW, UW, Deep, Urgoz or a Dungeon to begin");
             }
             else {
-                for (auto it = objective_sets.rbegin(); it != objective_sets.rend(); ++it) {
-                    auto* os = it->second;
-                    const bool show = os->Draw();
-                    if (!show) {
+                // Thousands of past runs stay loaded and nearly all of them are collapsed and scrolled
+                // out of view. One reserved row each still costs an ImGui item apiece, so coalesce every
+                // contiguous stretch of them into a single Dummy (which also keeps the scroll extent right).
+                if (display_order_dirty) {
+                    display_order.assign(objective_sets.size(), nullptr);
+                    size_t n = display_order.size();
+                    for (const auto& [_, os] : objective_sets) {
+                        display_order[--n] = os;
+                    }
+                    display_order_dirty = false;
+                }
+
+                const float row_height = ImGui::GetFrameHeight();
+                const float spacing = ImGui::GetStyle().ItemSpacing.y;
+                float skipped_height = 0.f;
+                const auto flush_skipped = [&skipped_height] {
+                    if (skipped_height > 0.f) {
+                        ImGui::Dummy(ImVec2(1.f, skipped_height));
+                        skipped_height = 0.f;
+                    }
+                };
+                for (size_t i = 0; i < display_order.size(); i++) {
+                    auto* os = display_order[i];
+                    if (os->IsFilteredOut()) {
+                        continue;
+                    }
+                    if (os->IsCollapsedRow()) {
+                        const float y = ImGui::GetCursorScreenPos().y + (skipped_height > 0.f ? skipped_height + spacing : 0.f);
+                        if (!ImGui::IsRectVisible({0.f, y}, {1.f, y + row_height})) {
+                            skipped_height = skipped_height > 0.f ? skipped_height + spacing + row_height : row_height;
+                            continue;
+                        }
+                    }
+                    flush_skipped();
+                    if (!os->Draw()) {
+                        objective_sets.erase(os->system_time);
                         delete os;
-                        objective_sets.erase(--it.base());
-                        break;
-                        // iterators go crazy, don't even bother, we're skipping a frame. NBD.
-                        // if you really want to draw the rest make sure you extensively test this.
+                        display_order_dirty = true;
+                        break; // we're skipping the rest of this frame; NBD
                     }
                 }
+                flush_skipped();
             }
         }
         ImGui::End();
@@ -1149,6 +1181,7 @@ void ObjectiveTimerWindow::LoadRuns()
                             os->need_to_collapse = true;
                             os->from_disk = true;
                             instance.objective_sets.emplace(os->system_time, os);
+                            instance.display_order_dirty = true;
                         }
                     }
                     file.close();
@@ -1215,6 +1248,8 @@ void ObjectiveTimerWindow::ClearObjectiveSets()
         delete os.second;
     }
     objective_sets.clear();
+    display_order.clear();
+    display_order_dirty = true;
 }
 
 void ObjectiveTimerWindow::StopObjectives()
@@ -1675,25 +1710,23 @@ const char* ObjectiveTimerWindow::ObjectiveSet::GetDurationStr()
     return cached_time;
 }
 
+bool ObjectiveTimerWindow::ObjectiveSet::IsFilteredOut()
+{
+    if (settings.show_past_runs || !from_disk) {
+        return false;
+    }
+    if (start_yday < 0) {
+        tm timeinfo{};
+        GetStartTime(&timeinfo);
+        start_yday = timeinfo.tm_yday;
+        start_year = timeinfo.tm_year;
+    }
+    return start_yday != today_yday || start_year != today_year;
+}
+
 bool ObjectiveTimerWindow::ObjectiveSet::Draw()
 {
-    if (!settings.show_past_runs && from_disk) {
-        if (start_yday < 0) {
-            tm timeinfo{};
-            GetStartTime(&timeinfo);
-            start_yday = timeinfo.tm_yday;
-            start_year = timeinfo.tm_year;
-        }
-        if (start_yday != today_yday || start_year != today_year) {
-            return true; // Hide this objective set; its from a previous day
-        }
-    }
-
-    // Hundreds of past runs stay loaded, nearly all collapsed and scrolled out of view. Submitting a
-    // CollapsingHeader for each still costs the label measure and item layout, so reserve the row instead.
-    const float collapsed_height = ImGui::GetFrameHeight();
-    if (!drawn_expanded && !ImGui::IsRectVisible(ImVec2(1.f, collapsed_height))) {
-        ImGui::Dummy(ImVec2(1.f, collapsed_height));
+    if (IsFilteredOut()) {
         return true;
     }
 
