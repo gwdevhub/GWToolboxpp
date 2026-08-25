@@ -131,6 +131,7 @@ namespace {
     constexpr ImU32 kGridDotColor = IM_COL32(255, 255, 255, 70);
     constexpr ImU32 kCurrentTileColor = IM_COL32(120, 185, 255, 255);
     constexpr ImU32 kUnexpectedColor = IM_COL32(255, 110, 220, 255);
+    constexpr ImU32 kUncoverableColor = IM_COL32(150, 150, 150, 255);
 
     ImU32 WithAlpha(const ImU32 color, const int alpha)
     {
@@ -283,6 +284,28 @@ namespace {
             && cy >= map_rect_min.second && cy < map_rect_max.second;
     }
 
+    // Credit stops one square past the standing map's rectangle, not wherever the ring reaches:
+    // measured on Shenzun Tunnels ground a row past its south edge, which credits that row, not the next.
+    constexpr int kBoundarySlack = 1;
+
+    bool InCreditableBounds(const int cx, const int cy)
+    {
+        if (!EnsureMapRect()) return true;
+        return cx >= map_rect_min.first - kBoundarySlack && cx < map_rect_max.first + kBoundarySlack
+            && cy >= map_rect_min.second - kBoundarySlack && cy < map_rect_max.second + kBoundarySlack;
+    }
+
+    bool InCreditableBoundsOf(const GW::Constants::MapID map_id, const int cx, const int cy, const int slack = kBoundarySlack)
+    {
+        const auto info = GW::Map::GetMapInfo(map_id);
+        ImRect bounds;
+        if (!(info && GW::Map::GetMapWorldMapBounds(info, &bounds))) return false;
+        return cx >= CreditCellX(bounds.Min.x) - slack
+            && cx < static_cast<int>(ceilf(bounds.Max.x / kWorldMapUnitsPerCell)) + slack
+            && cy >= CreditCellY(bounds.Min.y) - slack
+            && cy < static_cast<int>(ceilf(bounds.Max.y / kWorldMapUnitsPerCell)) + slack;
+    }
+
     // QuestModule::SetCustomQuestMarker only resolves to a real in-map position while the current
     // map's world-map rectangle contains it; outside it the marker becomes a travel marker instead.
     bool StandRoutable(const GW::Vec2f& wm)
@@ -307,7 +330,7 @@ namespace {
 
     bool CellCreditableFrom(const int dx, const int dy, const int fx, const int fy)
     {
-        if (abs(dx) <= kRevealRadius && abs(dy) <= kRevealRadius) return true;
+        if (abs(dx) <= kRevealRadius && abs(dy) <= kRevealRadius) return InCreditableBounds(fx, fy);
         return CellQualifies(fx, fy);
     }
 
@@ -365,10 +388,21 @@ namespace {
 
     // Fog nothing on this map can reach; excluded from the overlay so it only shows actionable fog.
     int unreachable_fog_cells = 0;
+
+    // Why a foggy square was dropped, so the overlay can say it rather than just omitting the square.
+    enum class FogSkip { PastMapBoundary, NoGroundInRange, Unreachable };
+
+    struct UncoverableCell {
+        int cx = 0, cy = 0;
+        FogSkip why = FogSkip::NoGroundInRange;
+    };
+    constexpr size_t kUncoverableListMax = 4096;
+    std::vector<UncoverableCell> uncoverable_cells;
     // A queued fog point selection had to pass over because nothing reachable credits it.
     bool blocked_point = false;
 
     bool show_unexpected = false;
+    bool show_uncoverable = true;
     int explored_tiles = 0;
     int coverable_tiles = 0;
     int coverable_tiles_radius = -1;
@@ -399,28 +433,25 @@ namespace {
     struct ContinentMask {
         int continent = -1;
         int x0 = 0, y0 = 0, w = 0, h = 0;
-        std::vector<uint8_t> coverable;
-        // Undilated, as baked: which tile a dilated claim actually came from, which is the only
-        // way to ask whether it is a claim about this map or about the one next door.
-        const CartographyData::Continent* raw = nullptr;
+        // Which tiles this continent's ground can credit, already clipped per map at bake time,
+        // and the undilated ground it came from - the only way to ask whether a claim is about
+        // this map or the one next door.
+        const CartographyData::Mask* credit = nullptr;
+        const CartographyData::Mask* raw = nullptr;
 
-        bool Get(const int cx, const int cy) const
+        static bool Sample(const CartographyData::Mask* m, const int cx, const int cy)
         {
-            const int lx = cx - x0, ly = cy - y0;
-            if (lx < 0 || ly < 0 || lx >= w || ly >= h) return false;
-            const size_t bit = static_cast<size_t>(ly) * w + lx;
-            return coverable[bit >> 3] >> (bit & 7) & 1;
+            if (!m) return false;
+            const int lx = cx - m->x0, ly = cy - m->y0;
+            if (lx < 0 || ly < 0 || lx >= m->width || ly >= m->height) return false;
+            const size_t bit = static_cast<size_t>(ly) * m->width + lx;
+            if (bit / 8 >= static_cast<size_t>(m->byte_count)) return false;
+            return m->bits[bit >> 3] >> (bit & 7) & 1;
         }
 
-        bool RawGet(const int cx, const int cy) const
-        {
-            if (!raw) return false;
-            const int lx = cx - raw->x0, ly = cy - raw->y0;
-            if (lx < 0 || ly < 0 || lx >= raw->width || ly >= raw->height) return false;
-            const size_t bit = static_cast<size_t>(ly) * raw->width + lx;
-            if (bit / 8 >= static_cast<size_t>(raw->byte_count)) return false;
-            return raw->bits[bit >> 3] >> (bit & 7) & 1;
-        }
+        bool Get(const int cx, const int cy) const { return Sample(credit, cx, cy); }
+        bool RawGet(const int cx, const int cy) const { return Sample(raw, cx, cy); }
+        bool Empty() const { return !credit; }
     };
     ContinentMask continent_mask;
 
@@ -429,34 +460,17 @@ namespace {
         if (continent_mask.continent == continent) return;
         continent_mask = {};
         continent_mask.continent = continent;
-        constexpr int radius = kMaskRadius;
         const CartographyData::Continent* src = nullptr;
         for (const auto& c : CartographyData::kContinents) {
             if (c.id == continent) { src = &c; break; }
         }
         if (!src) return;
-        continent_mask.raw = src;
-        // Grow the grid by the radius so tiles credited from the edge are still representable.
-        continent_mask.x0 = src->x0 - radius;
-        continent_mask.y0 = src->y0 - radius;
-        continent_mask.w = src->width + radius * 2;
-        continent_mask.h = src->height + radius * 2;
-        continent_mask.coverable.assign((static_cast<size_t>(continent_mask.w) * continent_mask.h + 7) / 8, 0);
-        for (int y = 0; y < src->height; y++) {
-            for (int x = 0; x < src->width; x++) {
-                const size_t bit = static_cast<size_t>(y) * src->width + x;
-                if (bit / 8 >= static_cast<size_t>(src->byte_count)) continue;
-                if (!(src->bits[bit >> 3] >> (bit & 7) & 1)) continue;
-                for (int dy = -radius; dy <= radius; dy++) {
-                    for (int dx = -radius; dx <= radius; dx++) {
-                        const int lx = x + radius + dx, ly = y + radius + dy;
-                        if (lx < 0 || ly < 0 || lx >= continent_mask.w || ly >= continent_mask.h) continue;
-                        const size_t b = static_cast<size_t>(ly) * continent_mask.w + lx;
-                        continent_mask.coverable[b >> 3] |= 1 << (b & 7);
-                    }
-                }
-            }
-        }
+        continent_mask.raw = &src->standable;
+        continent_mask.credit = &src->creditable;
+        continent_mask.x0 = src->creditable.x0;
+        continent_mask.y0 = src->creditable.y0;
+        continent_mask.w = src->creditable.width;
+        continent_mask.h = src->creditable.height;
     }
 
     bool BakeClaimsGroundElsewhere(const int cx, const int cy)
@@ -474,6 +488,9 @@ namespace {
     // cells out and back in as probing progresses.
     bool FogCellCoverable(const int cx, const int cy)
     {
+        // No map's ground can credit it, so no map you stand in changes that - answer the same
+        // everywhere rather than deferring to whichever navmesh happens to be loaded.
+        if (!continent_mask.Empty() && !continent_mask.Get(cx, cy)) return false;
         if (BakeClaimsGroundElsewhere(cx, cy)) return true;
         if (!probe->complete) return true;
         const int r = RevealRadius();
@@ -487,10 +504,30 @@ namespace {
         return false;
     }
 
+    // Normal range comes straight from the bake, which already clipped each map's dilation to its
+    // own rectangle; only the extra Bird's Eye rings still have to be walked over the raw ground.
+    // Which of FogCellCoverable's three exits dropped the square. Ground within reach but no credit
+    // means the bake clipped it: the ground belongs to a map this square is too far outside of.
+    FogSkip WhyNotCoverable(const int cx, const int cy)
+    {
+        if (!continent_mask.Empty() && !continent_mask.Get(cx, cy)) {
+            const int r = RevealRadius();
+            for (int dy = -r; dy <= r; dy++) {
+                for (int dx = -r; dx <= r; dx++) {
+                    if (continent_mask.RawGet(cx + dx, cy + dy)) return FogSkip::PastMapBoundary;
+                }
+            }
+            return FogSkip::NoGroundInRange;
+        }
+        return FogSkip::Unreachable;
+    }
+
     bool StandableWithin(const int cx, const int cy, const int radius)
     {
+        if (continent_mask.Get(cx, cy)) return true;
         for (int dy = -radius; dy <= radius; dy++) {
             for (int dx = -radius; dx <= radius; dx++) {
+                if (std::max(abs(dx), abs(dy)) <= kMaskRadius) continue;
                 if (continent_mask.RawGet(cx + dx, cy + dy)) return true;
             }
         }
@@ -506,7 +543,7 @@ namespace {
         if (!grid.bits || !row_words) return;
         const uint32_t words = std::min(grid.dword_count, row_words * grid.height);
         const int radius = RevealRadius();
-        const bool have_bake = !continent_mask.coverable.empty();
+        const bool have_bake = !continent_mask.Empty();
         for (uint32_t i = 0; i < words; i++) {
             uint32_t word = grid.bits[i];
             if (!word) continue;
@@ -855,6 +892,7 @@ namespace {
     void RebuildFog(const CartoGrid& grid, GW::AreaInfo* map_info)
     {
         unreachable_fog_cells = 0;
+        uncoverable_cells.clear();
         fog_cells.clear();
         map_fog_cells = -1;
         ImRect bounds;
@@ -867,7 +905,7 @@ namespace {
         map_cell_max = {x1, y1};
         // With the baked data we can answer for the whole continent, not just the map we are in -
         // which is the point of it: the world map then shows everything still worth walking to.
-        if (show_whole_continent && !continent_mask.coverable.empty()) {
+        if (show_whole_continent && !continent_mask.Empty()) {
             x0 = continent_mask.x0;
             y0 = continent_mask.y0;
             x1 = continent_mask.x0 + continent_mask.w;
@@ -878,6 +916,12 @@ namespace {
                 if (!grid.InGrid(cx, cy) || grid.IsExplored(cx, cy)) continue;
                 if (!FogCellCoverable(cx, cy)) {
                     unreachable_fog_cells++;
+                    // Only where ground is actually near: the empty space between maps is most of
+                    // the continent grid and was never fog anyone could clear, so greying it says nothing.
+                    const auto why = WhyNotCoverable(cx, cy);
+                    if (why != FogSkip::NoGroundInRange && uncoverable_cells.size() < kUncoverableListMax) {
+                        uncoverable_cells.push_back({cx, cy, why});
+                    }
                     continue;
                 }
                 FogCell f;
@@ -897,6 +941,100 @@ namespace {
         }
         RebuildFog(grid, map_info);
     }
+
+#ifdef _DEBUG
+    // Everything FogCellCoverable consults, in the order it consults it. The verdict is map-dependent
+    // on purpose (BakeClaimsGroundElsewhere defers to the map that owns the claim), so a probe is only
+    // interpretable next to the map it was taken in.
+    void LogProbe(const GW::Vec2f& at)
+    {
+        CartoGrid g;
+        if (!GetCartoGrid(g)) {
+            Log::Log("[cartographer] probe: no cartography data");
+            Log::FlushFile();
+            return;
+        }
+        // Both indices, because they agreeing is the invariant this widget rests on:
+        // one being off from the other means the position conversion has drifted again.
+        const auto [cx, cy] = FogTileAt(at);
+        const auto [ccx, ccy] = CreditCellAt(at);
+        GW::GamePos gp{};
+        const bool converted = WorldMapWidget::WorldMapToGamePos(at, gp);
+        const auto stand = probe->cells.find({ccx, ccy});
+        Log::Log("[cartographer] probe wm(%.2f,%.2f) fog_tile(%d,%d) credit_cell(%d,%d): explored=%d, grid %ux%u (%u words/row), game(%.0f,%.0f), walkable here=%d, reachable here=%d, probed=%d reachable=%d reveals=%d, coverable=%d, radius=%d",
+                 at.x, at.y, cx, cy, ccx, ccy, static_cast<int>(g.IsExplored(cx, cy)),
+                 g.width, g.height, RowWords(g.width),
+                 gp.x, gp.y, converted && Pathing::IsPositionWalkable(gp), converted && Pathing::IsPositionReachable(gp),
+                 static_cast<int>(stand != probe->cells.end()),
+                 stand != probe->cells.end() ? static_cast<int>(stand->second.reachable) : 0,
+                 stand != probe->cells.end() ? stand->second.reveals : 0,
+                 static_cast<int>(FogCellCoverable(cx, cy)), RevealRadius());
+        if (converted) {
+            GW::GamePos snapped = gp;
+            GW::Vec2f snapped_wm{};
+            const bool found = Pathing::FindClosestPositionOnTrapezoid(snapped) != nullptr;
+            const bool back = found && WorldMapWidget::GamePosToWorldMap(snapped, snapped_wm);
+            const auto snapped_cell = back ? CreditCellAt(snapped_wm) : std::pair{0, 0};
+            Log::Log("[cartographer] probe (%d,%d): nearest ground found=%d game(%.0f,%.0f) wm(%.1f,%.1f) cell(%d,%d) %s dist=%.0f gwinch reachable=%d",
+                     cx, cy, found, snapped.x, snapped.y, snapped_wm.x, snapped_wm.y,
+                     snapped_cell.first, snapped_cell.second,
+                     back && snapped_cell == std::pair{cx, cy} ? "IN THIS CELL" : "in a DIFFERENT cell",
+                     sqrtf((snapped.x - gp.x) * (snapped.x - gp.x) + (snapped.y - gp.y) * (snapped.y - gp.y)),
+                     found && Pathing::IsPositionReachable(snapped));
+        }
+        const bool elsewhere = BakeClaimsGroundElsewhere(cx, cy);
+        const bool rect = EnsureMapRect();
+        const bool credit = continent_mask.Empty() || continent_mask.Get(cx, cy);
+        Log::Log("[carto-bake] (%d,%d) verdict=%d decided_by=%s | bake_elsewhere=%d credit_mask=%d raw_here=%d in_map_bounds=%d probe_complete=%d",
+                 cx, cy, static_cast<int>(FogCellCoverable(cx, cy)),
+                 !credit ? "no_map_can_credit_it" : elsewhere ? "bake_elsewhere" : !probe->complete ? "probe_incomplete" : "live_probe",
+                 static_cast<int>(elsewhere), static_cast<int>(continent_mask.Get(cx, cy)),
+                 static_cast<int>(continent_mask.RawGet(cx, cy)), static_cast<int>(InMapBounds(cx, cy)),
+                 static_cast<int>(probe->complete));
+        Log::Log("[carto-bake] (%d,%d) map=%d instance=%d rect_valid=%d rect_cells=[%d,%d)-[%d,%d) continent=%d mask_origin=(%d,%d) mask_size=%dx%d",
+                 cx, cy, static_cast<int>(GW::Map::GetMapID()), static_cast<int>(GW::Map::GetInstanceType()), static_cast<int>(rect),
+                 map_rect_min.first, map_rect_min.second, map_rect_max.first, map_rect_max.second,
+                 continent_mask.continent, continent_mask.x0, continent_mask.y0, continent_mask.w, continent_mask.h);
+        Log::Log("[carto-bake] (%d,%d) nav_grid origin=(%d,%d) size=%dx%d ground_cells=%d stand_cells=%d built=%d",
+                 cx, cy, nav_cells.x0, nav_cells.y0, nav_cells.width, nav_cells.height,
+                 nav_cells.ground_count, nav_cells.stand_count, static_cast<int>(nav_cells.built));
+        // Which baked tile the dilated claim came from, and whether this map owns it: the pair
+        // (raw=1, in_bounds=0) anywhere here is the whole reason the verdict flips between maps.
+        for (int dy = -kMaskRadius; dy <= kMaskRadius; dy++) {
+            for (int dx = -kMaskRadius; dx <= kMaskRadius; dx++) {
+                const int bx = cx + dx, by = cy + dy;
+                const bool raw = continent_mask.RawGet(bx, by);
+                if (!raw && (dx || dy)) continue;
+                Log::Log("[carto-bake]   (%+d,%+d) cell(%d,%d) raw=%d in_map_bounds=%d%s",
+                         dx, dy, bx, by, static_cast<int>(raw), static_cast<int>(InMapBounds(bx, by)),
+                         raw && !InMapBounds(bx, by) ? "  <== claims ground OUTSIDE this map" : "");
+            }
+        }
+        // The other half, for when the bake defers: every cell the client would credit this tile
+        // from, and what this map's navmesh probe made of it.
+        const int r = RevealRadius();
+        for (int dy = -r; dy <= r; dy++) {
+            for (int dx = -r; dx <= r; dx++) {
+                const bool creditable = CellCreditableFrom(dx, dy, cx, cy);
+                const auto it = probe->cells.find({cx + dx, cy + dy});
+                const bool probed = it != probe->cells.end();
+                if (!creditable && !probed) continue;
+                Log::Log("[carto-probe]   (%+d,%+d) cell(%d,%d) creditable=%d probed=%d in_nav_grid=%d navmesh=%d reachable=%d reveals=%d%s",
+                         dx, dy, cx + dx, cy + dy, static_cast<int>(creditable), static_cast<int>(probed),
+                         static_cast<int>(nav_cells.InGrid(cx + dx, cy + dy)),
+                         probed ? static_cast<int>(it->second.navmesh) : 0,
+                         probed ? static_cast<int>(it->second.reachable) : 0, probed ? it->second.reveals : 0,
+                         creditable && probed && it->second.reachable ? "  <== would make it coverable" : "");
+            }
+        }
+        const auto listed = std::ranges::find_if(uncoverable_cells, [&](const UncoverableCell& u) { return u.cx == cx && u.cy == cy; });
+        Log::Log("[carto-bake] (%d,%d) fog_cells=%u uncoverable_cells=%u drawn_grey=%d why=%d",
+                 cx, cy, static_cast<unsigned>(fog_cells.size()), static_cast<unsigned>(uncoverable_cells.size()),
+                 static_cast<int>(listed != uncoverable_cells.end()),
+                 listed != uncoverable_cells.end() ? static_cast<int>(listed->why) : -1);
+        Log::FlushFile();
+    }
+#endif
 
     // Elsewhere keeps the raw point on purpose: the quest marker turns a position outside this
     // map's rectangle into a travel marker, which is how the player reaches another map's fog.
@@ -1038,6 +1176,7 @@ namespace {
         map_fog_cells = -1;
         fog_cells.clear();
         unreachable_fog_cells = 0;
+        uncoverable_cells.clear();
         blocked_point = false;
         map_cell_min = map_cell_max = {};
         player_cell_valid = false;
@@ -1194,24 +1333,6 @@ namespace {
         bool under_tile = false;
     };
 
-    const char* MapKindLabel(const GW::Constants::MapID map_id)
-    {
-        const auto info = GW::Map::GetMapInfo(map_id);
-        if (!info) return "Unknown";
-        switch (info->type) {
-            case GW::RegionType::City:
-            case GW::RegionType::Challenge:
-            case GW::RegionType::CompetitiveMission:
-            case GW::RegionType::CooperativeMission:
-            case GW::RegionType::EliteMission:
-            case GW::RegionType::MissionOutpost:
-            case GW::RegionType::Outpost:
-                return "Outpost";
-            default:
-                return "Explorable";
-        }
-    }
-
     // Which map file holds the ground that credits a foggy square, resolved from the DAT because
     // the overlapping world-map rectangles routinely name a map that has no ground there at all.
     struct OwnerQuery {
@@ -1220,6 +1341,7 @@ namespace {
         size_t next = 0;
         std::vector<TileOwner> owners;
         int radius = kRevealRadius;
+        int out_of_reach_maps = 0;
         bool unreadable = false;
         bool done = false;
     };
@@ -1253,17 +1375,17 @@ namespace {
             return;
         }
         const int r = owner_query.radius;
-        const ImRect block(
-            ImVec2{(cell.first - r) * kWorldMapUnitsPerCell, (cell.second - r) * kWorldMapUnitsPerCell},
-            ImVec2{(cell.first + r + 1) * kWorldMapUnitsPerCell, (cell.second + r + 1) * kWorldMapUnitsPerCell});
         std::set<uint32_t> file_ids;
         for (size_t i = 1; i < static_cast<size_t>(GW::Constants::MapID::Count); i++) {
             const auto map_id = static_cast<GW::Constants::MapID>(i);
             const auto info = GW::Map::GetMapInfo(map_id);
             if (!(info && info->GetIsOnWorldMap() && info->continent == here->continent)) continue;
-            ImRect bounds;
-            if (!GW::Map::GetMapWorldMapBounds(info, &bounds)) continue;
-            if (!bounds.Overlaps(block)) continue;
+            // A map's ground can sit outside its own rectangle, so the rectangle only bounds what it
+            // may credit - test that, not whether it overlaps the reveal ring.
+            if (!InCreditableBoundsOf(map_id, cell.first, cell.second)) {
+                if (InCreditableBoundsOf(map_id, cell.first, cell.second, r + 1)) owner_query.out_of_reach_maps++;
+                continue;
+            }
             const uint32_t file_id = PathfindingWindow::GetMapFileId(map_id);
             if (!file_id || !file_ids.insert(file_id).second) continue;
             owner_query.queue.push_back(map_id);
@@ -1350,7 +1472,7 @@ namespace {
             const auto& name = Resources::GetMapName(owner.map_id)->string();
             const auto& travel = Resources::GetMapName(owner.travel_to)->string();
             if (!out.empty()) out += "\n";
-            out += std::format("{} ({})", name.empty() ? "Unnamed map" : name.c_str(), MapKindLabel(owner.map_id));
+            out += name.empty() ? "Unnamed map" : name;
             out += owner.travel_to == GW::Constants::MapID::None || travel.empty() ? "\nNo outpost travels there" : "\nTravel to " + travel;
             out += std::format("\nGround is {} (map {}, file 0x{:X}){}",
                                owner.under_tile ? "under the square" : "within reveal range of the square, not under it",
@@ -1363,6 +1485,7 @@ namespace {
 #ifdef _DEBUG
     struct ContinentBake {
         std::unordered_set<uint64_t> standable; // (cy << 32) | (uint32)cx
+        std::unordered_set<uint64_t> creditable;
         int maps = 0;
     };
 
@@ -1406,6 +1529,7 @@ namespace {
         }
         const auto component = LargestComponent(data);
         auto& out = bake.continents[continent];
+        std::unordered_set<uint64_t> mine;
         int marked = 0;
         for (const auto& plane : data.planes) {
             for (uint32_t t = 0; t < plane.trapezoid_count; t++) {
@@ -1431,8 +1555,20 @@ namespace {
                                                            {std::max(ca.x, cb.x), std::max(ca.y, cb.y)}, footing)) {
                             continue;
                         }
+                        mine.insert(TileKey(cx, cy));
                         if (out.standable.insert(TileKey(cx, cy)).second) marked++;
                     }
+                }
+            }
+        }
+        // Dilated here rather than at runtime because credit stops one square past THIS map's
+        // rectangle, and a flat continent bitmap cannot say which map a tile's ground belongs to.
+        for (const auto key : mine) {
+            const int sx = static_cast<int>(static_cast<uint32_t>(key & 0xffffffff));
+            const int sy = static_cast<int>(static_cast<uint32_t>(key >> 32));
+            for (int dy = -kMaskRadius; dy <= kMaskRadius; dy++) {
+                for (int dx = -kMaskRadius; dx <= kMaskRadius; dx++) {
+                    if (InCreditableBoundsOf(map_id, sx + dx, sy + dy)) out.creditable.insert(TileKey(sx + dx, sy + dy));
                 }
             }
         }
@@ -1441,41 +1577,49 @@ namespace {
                   static_cast<int>(map_id), file_id, continent, static_cast<int>(data.planes.size()), marked);
     }
 
+    void WriteTileSet(const std::unordered_set<uint64_t>& tiles, const int continent, const wchar_t* kind, const char* magic)
+    {
+        if (tiles.empty()) return;
+        int x0 = INT_MAX, y0 = INT_MAX, x1 = INT_MIN, y1 = INT_MIN;
+        for (const auto key : tiles) {
+            const int cx = static_cast<int>(static_cast<uint32_t>(key & 0xffffffff));
+            const int cy = static_cast<int>(static_cast<uint32_t>(key >> 32));
+            x0 = std::min(x0, cx);
+            x1 = std::max(x1, cx);
+            y0 = std::min(y0, cy);
+            y1 = std::max(y1, cy);
+        }
+        const int w = x1 - x0 + 1;
+        const int h = y1 - y0 + 1;
+        std::vector<uint8_t> bits((static_cast<size_t>(w) * h + 7) / 8, 0);
+        for (const auto key : tiles) {
+            const int cx = static_cast<int>(static_cast<uint32_t>(key & 0xffffffff)) - x0;
+            const int cy = static_cast<int>(static_cast<uint32_t>(key >> 32)) - y0;
+            const size_t bit = static_cast<size_t>(cy) * w + cx;
+            bits[bit >> 3] |= 1 << (bit & 7);
+        }
+        const int32_t header[5] = {continent, x0, y0, w, h};
+        const auto path = Resources::GetPath(L"cartography", std::format(L"{}_L{}.bin", kind, continent));
+        std::error_code ec;
+        std::filesystem::create_directories(path.parent_path(), ec);
+        std::ofstream file(path, std::ios::binary);
+        if (!file) {
+            CARTO_LOG("[carto-bake] could not write %ls", path.wstring().c_str());
+            return;
+        }
+        file.write(magic, 4);
+        file.write(reinterpret_cast<const char*>(header), sizeof(header));
+        file.write(reinterpret_cast<const char*>(bits.data()), static_cast<std::streamsize>(bits.size()));
+        CARTO_LOG("[carto-bake] continent %d %ls: %u tiles, grid %dx%d at (%d,%d), %u bytes",
+                  continent, kind, static_cast<unsigned>(tiles.size()), w, h, x0, y0,
+                  static_cast<unsigned>(bits.size()));
+    }
+
     void WriteBakeFiles()
     {
         for (const auto& [continent, data] : bake.continents) {
-            if (data.standable.empty()) continue;
-            int x0 = INT_MAX, y0 = INT_MAX, x1 = INT_MIN, y1 = INT_MIN;
-            for (const auto key : data.standable) {
-                const int cx = static_cast<int>(static_cast<uint32_t>(key & 0xffffffff));
-                const int cy = static_cast<int>(static_cast<uint32_t>(key >> 32));
-                x0 = std::min(x0, cx);
-                x1 = std::max(x1, cx);
-                y0 = std::min(y0, cy);
-                y1 = std::max(y1, cy);
-            }
-            const int w = x1 - x0 + 1;
-            const int h = y1 - y0 + 1;
-            std::vector<uint8_t> bits((static_cast<size_t>(w) * h + 7) / 8, 0);
-            for (const auto key : data.standable) {
-                const int cx = static_cast<int>(static_cast<uint32_t>(key & 0xffffffff)) - x0;
-                const int cy = static_cast<int>(static_cast<uint32_t>(key >> 32)) - y0;
-                const size_t bit = static_cast<size_t>(cy) * w + cx;
-                bits[bit >> 3] |= 1 << (bit & 7);
-            }
-            const int32_t header[5] = {continent, x0, y0, w, h};
-            const auto path = Resources::GetPath(L"cartography", std::format(L"standable_L{}.bin", continent));
-            std::ofstream file(path, std::ios::binary);
-            if (!file) {
-                CARTO_LOG("[carto-bake] could not write %ls", path.wstring().c_str());
-                continue;
-            }
-            file.write("CSM1", 4);
-            file.write(reinterpret_cast<const char*>(header), sizeof(header));
-            file.write(reinterpret_cast<const char*>(bits.data()), static_cast<std::streamsize>(bits.size()));
-            CARTO_LOG("[carto-bake] continent %d: %d maps, %u tiles, grid %dx%d at (%d,%d), %u bytes",
-                      continent, data.maps, static_cast<unsigned>(data.standable.size()), w, h, x0, y0,
-                      static_cast<unsigned>(bits.size()));
+            WriteTileSet(data.standable, continent, L"standable", "CSM1");
+            WriteTileSet(data.creditable, continent, L"creditable", "CCM1");
         }
     }
 
@@ -1648,46 +1792,7 @@ namespace {
 #ifdef _DEBUG
             if (ImGui::Button("Log what the helper sees here", item_size)) {
                 const GW::Vec2f at = click_wm;
-                GW::GameThread::Enqueue([at] {
-                    CartoGrid g;
-                    if (!GetCartoGrid(g)) {
-                        Log::Log("[cartographer] probe: no cartography data");
-                        return;
-                    }
-                    // Both indices, because they agreeing is the invariant this widget rests on:
-                    // one being off from the other means the position conversion has drifted again.
-                    const auto [cx, cy] = FogTileAt(at);
-                    const auto [ccx, ccy] = CreditCellAt(at);
-                    GW::GamePos gp{};
-                    const bool converted = WorldMapWidget::WorldMapToGamePos(at, gp);
-                    const auto stand = probe->cells.find({ccx, ccy});
-                    Log::Log("[cartographer] probe wm(%.2f,%.2f) fog_tile(%d,%d) credit_cell(%d,%d): explored=%d, grid %ux%u (%u words/row), game(%.0f,%.0f), walkable here=%d, reachable here=%d, probed=%d reachable=%d reveals=%d, coverable=%d, radius=%d",
-                             at.x, at.y, cx, cy, ccx, ccy, static_cast<int>(g.IsExplored(cx, cy)),
-                             g.width, g.height, RowWords(g.width),
-                             gp.x, gp.y, converted && Pathing::IsPositionWalkable(gp), converted && Pathing::IsPositionReachable(gp),
-                             static_cast<int>(stand != probe->cells.end()),
-                             stand != probe->cells.end() ? static_cast<int>(stand->second.reachable) : 0,
-                             stand != probe->cells.end() ? stand->second.reveals : 0,
-                             static_cast<int>(FogCellCoverable(cx, cy)), RevealRadius());
-                    if (converted) {
-                        GW::GamePos snapped = gp;
-                        GW::Vec2f snapped_wm{};
-                        const bool found = Pathing::FindClosestPositionOnTrapezoid(snapped) != nullptr;
-                        const bool back = found && WorldMapWidget::GamePosToWorldMap(snapped, snapped_wm);
-                        const auto snapped_cell = back ? CreditCellAt(snapped_wm) : std::pair{0, 0};
-                        Log::Log("[cartographer] probe (%d,%d): nearest ground found=%d game(%.0f,%.0f) wm(%.1f,%.1f) cell(%d,%d) %s dist=%.0f gwinch reachable=%d",
-                                 cx, cy, found, snapped.x, snapped.y, snapped_wm.x, snapped_wm.y,
-                                 snapped_cell.first, snapped_cell.second,
-                                 back && snapped_cell == std::pair{cx, cy} ? "IN THIS CELL" : "in a DIFFERENT cell",
-                                 sqrtf((snapped.x - gp.x) * (snapped.x - gp.x) + (snapped.y - gp.y) * (snapped.y - gp.y)),
-                                 found && Pathing::IsPositionReachable(snapped));
-                    }
-                    // Which half of FogCellCoverable answered: the bake short-circuits before any
-                    // live test, so a wrong verdict there is a wrong bake, not a wrong probe.
-                    Log::Log("[cartographer] probe (%d,%d): baked_mask=%d probe_complete=%d",
-                             cx, cy, static_cast<int>(continent_mask.Get(cx, cy)), static_cast<int>(probe->complete));
-                    Log::FlushFile();
-                });
+                GW::GameThread::Enqueue([at] { LogProbe(at); });
                 keep_open = false;
             }
 #endif
@@ -1763,9 +1868,12 @@ namespace {
             tooltip_out = OwnerTooltip(*resolved);
             return;
         }
-        tooltip_out = std::format("Unexplored square ({}, {})\nNo map file on this continent has ground that credits it", hovered->cx, hovered->cy);
+        tooltip_out = std::format("Unexplored square ({}, {})\nNo map that could credit it has ground within reveal range", hovered->cx, hovered->cy);
         const auto rect_name = MapRectName(hovered->cx, hovered->cy);
         if (!rect_name.empty()) tooltip_out += "\nThe world map rectangle it falls in belongs to " + rect_name;
+        if (resolved->out_of_reach_maps) {
+            tooltip_out += std::format("\n{} nearby map(s) skipped: this square is more than one past their boundary, which is as far as a map can credit", resolved->out_of_reach_maps);
+        }
         if (resolved->unreadable) tooltip_out += "\nSome of those map files are not in your Gw.dat yet";
     }
 
@@ -1807,6 +1915,40 @@ namespace {
         }
     }
 
+    // Foggy squares no ground can credit, drawn grey rather than silently omitted: an empty patch
+    // of world map reads as "already done", which is the wrong answer to "is there anything left".
+    void DrawUncoverableCells(ImDrawList* dl, const ProjectToScreen project, const ImVec2& mouse, std::string& tooltip_out)
+    {
+        const ImRect clip(dl->GetClipRectMin(), dl->GetClipRectMax());
+        for (const auto& [cx, cy, why] : uncoverable_cells) {
+            ImVec2 cell_min, cell_max;
+            if (!ProjectCell(project, cx, cy, cell_min, cell_max)) continue;
+            if (!clip.Overlaps(ImRect(cell_min, cell_max))) continue;
+            dl->AddRectFilled(cell_min, cell_max, WithAlpha(kUncoverableColor, 60));
+            dl->AddRect(cell_min, cell_max, WithAlpha(kUncoverableColor, 150), 0.f, 0, 1.f);
+            if (!ImRect(cell_min, cell_max).Contains(mouse)) continue;
+            tooltip_out = std::format("Unexplored square ({}, {}) that cannot be uncovered", cx, cy);
+            switch (why) {
+                case FogSkip::PastMapBoundary:
+                    tooltip_out += std::format("\nGround is within {} square(s) of it, but it belongs to a map whose boundary this square"
+                                               "\nis more than one square outside, and credit stops one square past a map's rectangle."
+                                               "\nStanding on that ground reveals the squares nearer its own map, never this one.",
+                                               RevealRadius());
+                    break;
+                case FogSkip::NoGroundInRange:
+                    tooltip_out += std::format("\nNo map on this continent has standable ground within {} square(s) of it", RevealRadius());
+                    break;
+                case FogSkip::Unreachable:
+                    tooltip_out += "\nGround that could credit it exists, but nothing reachable in this map is close enough";
+                    break;
+            }
+            const auto rect_name = MapRectName(cx, cy);
+            if (!rect_name.empty()) {
+                tooltip_out += "\nThe world map rectangle it falls in belongs to " + rect_name;
+            }
+        }
+    }
+
     // Explored squares the baked table says nothing could have credited: either ground the bake
     // missed, or ground reached in a way the bake does not model.
     void DrawUnexpectedCells(ImDrawList* dl, const ProjectToScreen project, const ImVec2& mouse, std::string& tooltip_out)
@@ -1821,7 +1963,7 @@ namespace {
             if (!ImRect(cell_min, cell_max).Contains(mouse)) continue;
             const auto rect_name = MapRectName(cx, cy);
             tooltip_out = std::format("Explored square ({}, {}) with no baked ground within {} squares of it", cx, cy, RevealRadius());
-            if (!rect_name.empty()) tooltip_out += "\nThe world map rectangle it falls in belongs to " + rect_name;
+            tooltip_out += "\nThe world map rectangle it falls in belongs to " + rect_name;
         }
     }
 
@@ -1857,6 +1999,9 @@ namespace {
         }
         if (show_grid) {
             DrawGrid(dl, project);
+        }
+        if (show_uncoverable) {
+            DrawUncoverableCells(dl, project, mouse, fog_tooltip);
         }
         if (show_unexpected) {
             DrawUnexpectedCells(dl, project, mouse, fog_tooltip);
@@ -1945,6 +2090,7 @@ void CartographerWidget::Initialize()
     SettingsRegistry::RegisterField(this, "show_stand_cells", &show_stand_cells);
     SettingsRegistry::RegisterField(this, "show_grid", &show_grid);
     SettingsRegistry::RegisterField(this, "show_unexpected", &show_unexpected);
+    SettingsRegistry::RegisterField(this, "show_uncoverable", &show_uncoverable);
     SettingsRegistry::RegisterField(this, "show_whole_continent", &show_whole_continent);
     SettingsRegistry::RegisterField(this, "using_bec", &using_bec);
     SettingsRegistry::RegisterField(this, "set_quest_marker", &set_quest_marker);
@@ -2258,6 +2404,10 @@ void CartographerWidget::DrawWorldMapOptions()
     ImGui::ShowHelp("Draws every square still worth uncovering anywhere on this continent, not just the map you are in, using data baked from the game's own map files. Turn off to show only the current map.");
     ImGui::Checkbox("Show the cartography grid", &show_grid);
     ImGui::ShowHelp("Draws the 32x32 tile boundaries. Exploration is credited a whole tile at a time, so this is what tells you which tile you are actually standing in. Hidden when zoomed out far enough that the lines would smear together.");
+    if (ImGui::Checkbox("Show squares that cannot be uncovered", &show_uncoverable)) {
+        GW::GameThread::Enqueue([] { coverage_stale = true; });
+    }
+    ImGui::ShowHelp("Draws foggy squares no map's ground can credit in grey, with a note on why. Without them the world\nmap shows a blank patch where fog you can never clear used to be, which reads as \"already done\".");
     ImGui::Checkbox("Show unexpected explored squares", &show_unexpected);
     ImGui::ShowHelp("Draws every square you have already uncovered that the baked map data says has no standable ground within reveal range, so nothing should have been able to credit it. Either the bake is missing that ground, or it was uncovered from somewhere the bake does not model. The reveal range follows the Bird's Eye Compass setting below.");
     if (ImGui::Checkbox("Using a Bird's Eye Compass", &using_bec)) {
@@ -2342,7 +2492,7 @@ void CartographerWidget::DrawSettingsInternal()
     }
     ImGui::Separator();
     ImGui::TextDisabled("This map: %u squares probed, %u standable, %u worth visiting", static_cast<unsigned>(probe->cells.size()), standable, useful);
-    ImGui::TextDisabled("Foggy squares: %d reachable, %d out of reach", map_fog_cells, unreachable_fog_cells);
+    ImGui::TextDisabled("Foggy squares: %d reachable, %d that nothing can credit", map_fog_cells, unreachable_fog_cells);
     if (coverable_tiles > 0) {
         ImGui::TextDisabled("This continent: %d squares explored of %d the baked data can credit at radius %d (%.2f%%)",
                             explored_tiles, coverable_tiles, RevealRadius(), 100.f * explored_tiles / coverable_tiles);
@@ -2367,7 +2517,7 @@ void CartographerWidget::DrawSettingsInternal()
         }
         ImGui::EndChild();
     }
-    if (continent_mask.coverable.empty()) {
+    if (continent_mask.Empty()) {
         ImGui::TextDisabled("No baked data for this continent - showing this map only.");
     }
     else {
@@ -2406,11 +2556,31 @@ void CartographerWidget::DrawBakeSettings()
                             bake.area_fid_agrees, bake.area_fid_differs, bake.area_fid_missing);
     }
     for (const auto& [continent, data] : bake.continents) {
-        ImGui::TextDisabled("  continent %d: %d maps, %u standable squares", continent, data.maps, static_cast<unsigned>(data.standable.size()));
+        ImGui::TextDisabled("  continent %d: %d maps, %u standable, %u creditable squares", continent, data.maps,
+                            static_cast<unsigned>(data.standable.size()), static_cast<unsigned>(data.creditable.size()));
     }
 }
 #endif
 
+
+#ifdef _DEBUG
+void CartographerWidget::LogProbeAtCell(const int cx, const int cy)
+{
+    LogProbe(CreditCellCenterWorldMap(cx, cy));
+}
+#endif
+
+#ifdef _DEBUG
+void CartographerWidget::StartContinentBake()
+{
+    StartBake();
+}
+
+bool CartographerWidget::ContinentBakeRunning()
+{
+    return bake.running;
+}
+#endif
 
 void CartographerWidget::SetEnabled(const bool on)
 {

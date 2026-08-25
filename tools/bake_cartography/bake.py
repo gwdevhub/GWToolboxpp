@@ -52,6 +52,8 @@ dat = open_dat()
 cont_tiles = {}
 cont_maps = {}
 stats = {'ok':0,'nostream':0,'nopath':0,'err':0}
+SLACK = 1
+cont_credit = {}
 t0 = time.time()
 seen_file = {}
 for n, (mid, (cont, sx, sy, ex, ey), f) in enumerate(todo, 1):
@@ -78,6 +80,7 @@ for n, (mid, (cont, sx, sy, ex, ey), f) in enumerate(todo, 1):
         midx = sx - gmnx/96.0
         midy = sy + gmxy/96.0 + 1.0
         tiles = cont_tiles.setdefault(cont, set())
+        mine = set()
         for (pi, ti) in comp:
             t = planes[pi]['traps'][ti]
             x0g, x1g = min(t[3], t[5]), max(t[4], t[6])
@@ -95,9 +98,20 @@ for n, (mid, (cont, sx, sy, ex, ey), f) in enumerate(todo, 1):
             # the overlap test below is the same one Pathing::TrapezoidOverlapsBox does in game.
             for cy in range(int(math.ceil(min(ay,by)/TILE))-1, int(math.ceil(max(ay,by)/TILE))):
                 for cx in range(int(math.floor(min(ax,bx)/TILE)), int(math.floor(max(ax,bx)/TILE))+1):
-                    if (cx, cy) in tiles: continue
+                    if (cx, cy) in mine: continue
                     if overlaps(quad, cx*TILE, cy*TILE, (cx+1)*TILE, (cy+1)*TILE):
-                        tiles.add((cx, cy))
+                        mine.add((cx, cy))
+        tiles |= mine
+        # Credit stops one square past THIS map's rectangle, so the dilation has to happen here,
+        # while the tiles are still attributable - a merged continent bitmap cannot say whose they are.
+        cred = cont_credit.setdefault(cont, set())
+        bx0, by0 = math.floor(sx/TILE) - SLACK, math.ceil(sy/TILE) - 1 - SLACK
+        bx1, by1 = math.ceil(ex/TILE) + SLACK, math.ceil(ey/TILE) + SLACK
+        for tx, ty in mine:
+            for dy in (-1, 0, 1):
+                for dx in (-1, 0, 1):
+                    nx, ny = tx + dx, ty + dy
+                    if bx0 <= nx < bx1 and by0 <= ny < by1: cred.add((nx, ny))
         cont_maps[cont] = cont_maps.get(cont, 0) + 1
         stats['ok'] += 1
     except Exception as e:
@@ -109,8 +123,8 @@ for n, (mid, (cont, sx, sy, ex, ey), f) in enumerate(todo, 1):
               f"({el:.0f}s, {el/n:.1f}s/map, eta {(len(todo)-n)*el/n/60:.0f}min)", flush=True)
 
 os.makedirs('out', exist_ok=True)
-for cont, tiles in sorted(cont_tiles.items()):
-    if not tiles: continue
+
+def write_mask(path, cont, tiles, magic):
     x0 = min(t[0] for t in tiles); x1 = max(t[0] for t in tiles)
     y0 = min(t[1] for t in tiles); y1 = max(t[1] for t in tiles)
     w, h = x1-x0+1, y1-y0+1
@@ -118,10 +132,20 @@ for cont, tiles in sorted(cont_tiles.items()):
     for cx, cy in tiles:
         b = (cy-y0)*w + (cx-x0)
         bits[b>>3] |= 1 << (b & 7)
-    p = f'out/standable_L{cont}.bin'
-    with open(p, 'wb') as fh:
-        fh.write(b'CSM1')
+    with open(path, 'wb') as fh:
+        fh.write(magic)
         fh.write(struct.pack('<5i', cont, x0, y0, w, h))
         fh.write(bits)
+    return w, h, x0, y0, len(bits)
+
+for cont, tiles in sorted(cont_tiles.items()):
+    if not tiles: continue
+    p = f'out/standable_L{cont}.bin'
+    w, h, x0, y0, n = write_mask(p, cont, tiles, b'CSM1')
+    cred = cont_credit.get(cont) or set()
+    if cred:
+        cp = f'out/creditable_L{cont}.bin'
+        cw, chh, cx0, cy0, cn = write_mask(cp, cont, cred, b'CCM1')
+        print(f"continent {cont}: {len(cred)} creditable tiles, grid {cw}x{chh} at ({cx0},{cy0}), {cn} bytes -> {cp}", flush=True)
     print(f"continent {cont}: {cont_maps.get(cont,0)} maps, {len(tiles)} tiles, grid {w}x{h} at ({x0},{y0}), {os.path.getsize(p)} bytes -> {p}", flush=True)
 print("STATS", json.dumps(stats), f"total {time.time()-t0:.0f}s", flush=True)

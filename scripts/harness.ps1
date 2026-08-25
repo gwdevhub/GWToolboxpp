@@ -6,13 +6,14 @@
   the log to log.txt (Logger.cpp) in addition to the console, so the harness can read it. Pass
   -Config RelWithDebInfo (+ define GWTB_HARNESS) only if you deliberately want it in a release build.
 
-  Pairs with the in-DLL TestHarness module: it polls <HarnessDir>\harness_command.txt and auto-fires
-  the waypoint from harness_config.txt; it writes harness_status.txt and the runtime log.txt.
+  Pairs with the in-DLL TestHarness module: it polls <HarnessDir>\harness_command.txt and writes
+  harness_status.txt alongside the runtime log.txt.
 
   Loop (GW already in-game, toolbox injected once):
       .\harness.ps1 reload          # shutdown old DLL -> rebuild -> re-inject (GW stays open)
-      .\harness.ps1 goto 1234 -5678 0
-      .\harness.ps1 tail            # follow log.txt for [timing]/[AStar]
+      .\harness.ps1 travel 216      # travel to a map id
+      .\harness.ps1 probe 105 60    # dump what the cartographer sees at a fog tile
+      .\harness.ps1 tail            # follow log.txt for [harness]/[carto]
   Cold start (GW not running): GW Launcher logs the account in and early-injects the Debug DLL.
   NEVER launch Gw.exe directly.
       .\harness.ps1 up
@@ -104,6 +105,8 @@ switch ($Cmd) {
   'build'   { Build-Dll }
   'inject'  { Inject; if (Wait-Status 'harness_initialized|waypoint_set|login' 20) { '[harness] injected.' } else { '[harness] WARN: no status (harness may not have loaded).' } }
   'goto'    { Send-Command ("waypoint " + ($Rest -join ' ')) }
+  'travel'  { Send-Command ("travel " + ($Rest -join ' ')) }
+  'probe'   { Send-Command ("cartoprobe " + ($Rest -join ' ')) }
   'setgoal' { Send-Command 'setgoal'; if (Wait-Status 'goal_captured' 6) { '[harness] ' + (Get-Content (Join-Path (Resolve-HarnessDir) 'harness_status.txt') -Raw) } }
   'repath'  { Send-Command 'repath' }
   'login'   { Send-Command 'login' }
@@ -113,10 +116,7 @@ switch ($Cmd) {
     if (-not (Wait-DllUnloaded)) { throw "DLL did not unload; cannot relink." }
     Build-Dll
     Inject
-    if (-not (Wait-Status 'harness_initialized|path_set' 20)) { '[harness] WARN: no status after inject.' }
-    Start-Sleep -Milliseconds 600
-    Send-Command 'repath' # force a path to the quest marker (in case the auto-fire raced the quest load)
-    if (Wait-Status 'path_set' 10) { '[harness] reloaded + repathed.' } else { '[harness] reloaded (no path_set yet).' }
+    if (Wait-Status 'harness_initialized' 20) { '[harness] reloaded.' } else { '[harness] WARN: no status after inject.' }
   }
   'up'      {
     if (Get-GwPid) {
@@ -140,7 +140,7 @@ switch ($Cmd) {
   'tail'    {
     $log = Join-Path (Resolve-HarnessDir) 'log.txt'
     if (-not (Test-Path $log)) { throw "log not found: $log" }
-    Get-Content $log -Tail 60 -Wait | Where-Object { $_ -match '\[harness|\[timing|\[AStar' }
+    Get-Content $log -Tail 60 -Wait | Where-Object { $_ -match '\[harness|\[timing|\[AStar|\[carto' }
   }
-  default   { "Unknown '$Cmd'. Use: status|build|inject|goto|login|shutdown|reload|up|tail" }
+  default   { "Unknown '$Cmd'. Use: status|build|inject|goto|travel|probe|login|shutdown|reload|up|tail" }
 }
