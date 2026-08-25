@@ -1,6 +1,6 @@
 ---
 name: performance-audit
-description: Audit GWToolbox++ for in-game performance problems - FPS drops, stutter, slow modules/widgets, hot per-frame code. Use when asked to "audit performance", "find what's tanking FPS", "why is toolbox slow", "profile a module", or before a release to sweep for regressions. Covers the frame cost model, the built-in Performance window, a per-class checklist with grep recipes, and the fix patterns already used in this repo.
+description: Audit GWToolbox++ for in-game performance problems - FPS drops, stutter, slow modules/widgets, hot per-frame code, and Debug-build container overhead (we play in Debug, so iterator debugging cost counts). Use when asked to "audit performance", "find what's tanking FPS", "why is toolbox slow in debug", "profile a module", or before a release to sweep for regressions. Covers the frame cost model, the built-in Performance window, a per-class checklist with grep recipes, and the fix patterns already used in this repo.
 ---
 
 # GWToolbox++ performance audit
@@ -25,9 +25,11 @@ Three multipliers to keep in mind:
 
 - **Per frame x per module x per element.** A loop over agents/items/rows inside `Draw` is
   O(frame x N). ImGui submits real layout work per item even for off-screen rows.
-- **Debug builds.** MSVC iterator debugging and non-inlined `std::` wrappers make container
-  churn 10-50x worse. Marc's "debug builds manhandle my pc" is usually a real hot path
-  amplified, not a debug-only artifact - find the underlying churn, don't dismiss it.
+- **Debug builds are a first-class target, not an afterthought.** The team *plays* in Debug so
+  crashes are caught at runtime, so Debug framerate matters as much as Release. MSVC iterator
+  debugging and non-inlined `std::` wrappers make container access 10-50x more expensive there
+  - see class F, which is the one class where a Debug-only measurement is enough to justify a
+  fix.
 - **D3D state.** Anything touching the device between GW's own draws must save/restore state.
   Doing that the naive way (`CreateStateBlock(D3DSBT_ALL)`) costs ~45us *per use per frame*;
   the explicit `D3DStateGuard` in `GWToolboxdll/D3DContainers.cpp` costs ~0.5us.
@@ -145,14 +147,79 @@ grep -rn "std::map<std::string\|unordered_map<std::string" GWToolboxdll
 grep -rn "std::map<std::pair\|std::set<std::pair" GWToolboxdll
 ```
 
-### F. Debug-build amplifiers
-Real code smells that debug builds punish hardest, worth fixing regardless:
+### F. Debug-build container overhead
 
-- Passing containers by value; range-for over a temporary.
-- `at()` in loops; index-checked access in tight loops - take `.data()` once and index the raw
-  pointer, or take a `std::span` over it.
-- Deep helper chains that only inline in release (tiny getters inside per-vertex loops).
-- `std::function` called per element instead of a template/lambda.
+**We play in Debug.** Running the Debug build in-game is how crashes get caught, so a module
+that is fine in Release and unusable in Debug is a real bug to this project, not a build
+artifact. Treat a Debug-only regression as actionable on its own.
+
+`CMAKE_MSVC_RUNTIME_LIBRARY` is `MultiThreadedDebug` for the Debug config, which means MSVC's
+default `_ITERATOR_DEBUG_LEVEL=2`: every iterator carries a back-pointer to its container and is
+registered in a linked list, every `++`/`*`/comparison validates against the owner, every
+container mutation walks and invalidates that list, and none of the `std::` wrappers inline. A
+`std::map` lookup that is a handful of compares in Release becomes a checked tree walk with
+debug-heap allocation on every node insert.
+
+Do **not** try to fix this by flipping `_ITERATOR_DEBUG_LEVEL` project-wide: the level is part
+of the ABI, `Dependencies/GWCA/lib/gwca.lib` ships as one prebuilt binary used by both configs,
+and the vcpkg deps are built to their triplet's default. MSVC's `detect_mismatch` linker check
+exists precisely because mixing levels is an ODR violation. Fix the hot code instead.
+
+**`std::vector` - take the buffer once.** In a hot loop, hoist `.data()` and `.size()` and index
+the raw pointer (or wrap it in a `std::span`), so the loop pays no per-element owner check:
+
+```cpp
+const auto* items = v.data();
+const size_t count = v.size();
+for (size_t i = 0; i < count; i++) { ... items[i] ... }
+```
+
+Only "when safe to do so": the container must not be resized or reallocated inside the loop
+(that dangles the pointer - which is exactly what iterator debugging would have caught for you),
+indices must come from `size()`, and `data()` may be null when empty, so early-out on `empty()`.
+Use `.data()`, never `&v[0]`, which asserts on an empty vector. For anything not measurably hot,
+leave the range-for - the checks are worth having.
+
+**`std::map` / `std::unordered_map` - look up once, hold the result.** Every lookup in Debug is
+a checked walk, and the usual sin is doing several against the same key:
+
+```cpp
+const auto it = m.find(key);        // once
+if (it == m.end()) return;
+auto& entry = it->second;           // then work through the reference
+```
+
+- Never `m[key]` in a read path - it default-constructs and inserts, growing the map forever and
+  allocating a node through the debug heap.
+- Iterate once with `for (auto& [k, v] : m)` rather than looping keys and looking each one up.
+- Better still, get out of the node-based container: for a bounded integer/enum key use a flat
+  `std::vector`/`std::array` indexed directly, which is both faster in Release and free of the
+  per-node debug bookkeeping (see the `NavCells` grid in class E). For a small set, a sorted
+  `std::vector` plus `std::ranges::lower_bound`, or even a linear scan, beats a `std::map`.
+- Cache the resolved pointer/reference across frames when the key is stable (module state, the
+  player's agent, the current map's entry) instead of re-looking it up every frame.
+
+**Everything else in a hot loop:**
+- `at()` anywhere in a loop - bounds-checked in both configs, and non-inlined in Debug.
+- Passing containers by value, range-for over a temporary, returning containers by value from a
+  helper called per element. Pass `const&` or `std::span`.
+- `push_back` in a loop without `reserve()` - each reallocation is a debug-heap alloc plus a
+  full iterator-invalidation sweep.
+- Deep helper chains that only inline in Release (tiny getters inside per-vertex loops).
+- `std::function` called per element instead of a template parameter or a plain lambda.
+- `std::string` temporaries (`substr`, concatenation, `c_str()` round-trips) - prefer
+  `std::string_view` over the existing buffer.
+
+Sanity check the direction of a "fix": if raw-pointer access makes a loop dramatically faster in
+Debug but changes nothing in Release, the win is real but it is *also* telling you the loop runs
+far more often than it should - check class B/C/J before settling for the micro-optimisation.
+
+```
+grep -rn "\.at(" GWToolboxdll
+grep -rn "\[[a-z_]*\] =\|\[key\]\|\[name\]" GWToolboxdll --include=*.cpp   # map operator[] in read paths
+grep -rn "push_back" GWToolboxdll | grep -v reserve   # then check the enclosing loop
+grep -rn "std::function<" GWToolboxdll
+```
 
 ### G. Blocking work on the frame threads
 - File IO (`std::ifstream`/`std::ofstream`/`CreateFile`), `Resources::` loads, texture decode,
@@ -247,7 +314,13 @@ Not per-frame cost, but they show up as "toolbox gets slower the longer I play":
 2. Confirm behaviour is unchanged - especially for D3D changes (state must be fully restored;
    GW's own rendering corrupting is worse than the frame cost) and for list culling (scroll
    extent, filtering, click targets).
-3. Check both build configs if the finding was debug-specific.
+3. **Measure Debug and Release separately, and report both.** The CSVs are already written per
+   compiler (`performance_log_msvc-*.csv` / `performance_log_clang-*.csv`); keep the configs
+   apart too. A fix that only helps Debug still counts - we play in Debug - but say so rather
+   than implying a Release win that is not there.
+4. For a `.data()`/raw-pointer change, re-check the safety conditions by hand: nothing resizes
+   the container inside the loop, indices are bounded by `size()`, and the empty case is handled.
+   You have removed the checking that would have caught a mistake there.
 
 ## 5. Report format
 
