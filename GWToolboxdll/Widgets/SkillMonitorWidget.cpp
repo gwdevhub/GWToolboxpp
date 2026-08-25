@@ -90,8 +90,8 @@ namespace {
             return skill_activation.status == CASTING && skill_activation.id == skill_id;
         });
         float casttime = 0.f;
-        if (casttime_map.contains(agent_id)) {
-            casttime = casttime_map[agent_id];
+        if (const auto found_casttime = casttime_map.find(agent_id); found_casttime != casttime_map.end()) {
+            casttime = found_casttime->second;
         }
         else {
             const auto skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
@@ -121,8 +121,8 @@ namespace {
             return skill_activation.status == CASTING && skill_activation.id == skill_id;
         });
         float casttime = 0.f;
-        if (casttime_map.contains(agent_id)) {
-            casttime = casttime_map[agent_id];
+        if (const auto found_casttime = casttime_map.find(agent_id); found_casttime != casttime_map.end()) {
+            casttime = found_casttime->second;
         }
         else {
             const auto skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
