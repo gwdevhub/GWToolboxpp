@@ -41,9 +41,6 @@ namespace {
     constexpr float kAltUnknown = TerrainDrape::kNoAltitude; // sentinel: no terrain data at this (x,y)
     constexpr size_t kMaxVertices = 1500000;          // safety cap on total surface geometry per map (raise cell_size if hit)
 
-    // Settings (persisted scalars via SettingsRegistry; rivers persisted separately as JSON).
-    // Occlusion behind terrain is shared with the "In-game rendering" module
-    // via GameWorldRenderer::GetOccludeBehindTerrain() so it's set in one place.
     float render_max_distance = 5000.f;
     float fog_factor = 1.0f;     // distance-fade strength fed to the shader
     float glow = 0.4f;           // emissive brightness boost (0 = plain texture)
@@ -110,10 +107,6 @@ namespace {
     bool mesh_dirty = true;
     uint32_t built_map_id = 0xFFFFFFFFu;
 
-    // Incremental ground-mesh build. Tessellating every trapezoid (one QueryAltitude per grid vertex) across a
-    // large explorable is far too heavy for one frame, and QueryAltitude isn't thread-safe (it swaps the global
-    // map context), so the work can't move to a worker. Instead we spread it across frames on the render thread
-    // under a per-frame query budget: the floor fills in over a handful of frames and the load never stalls.
     constexpr int kQueriesPerFrame = 2000; // max QueryAltitude calls per frame while a build is in progress
     struct GroundGridVert {
         float x, y, z;
@@ -224,10 +217,6 @@ namespace {
         }
     }
 
-    // Tessellate one pathing trapezoid into its texture bucket: grid it (fine enough for the wave displacement to
-    // read), drape each sub-vertex onto the trapezoid's own plane via an altitude query, and tile the texture by
-    // world position so it's seamless across trapezoids. Returns the number of QueryAltitude calls made, or -1 if
-    // the per-map geometry cap was hit (the caller should stop the build).
     int EmitGroundTrapezoid(const GW::PathingTrapezoid& tz, const uint32_t p)
     {
         if (tz.YT == tz.YB) return 0; // degenerate connector
@@ -375,9 +364,6 @@ namespace {
             return;
         }
 
-        // One vertex bucket per selected texture; concatenated into mesh_vertices with a TexRange each.
-        // The cover-entire-ground flood is built incrementally (see BeginGroundBuild); here we only lay down the
-        // authored rivers, which are few enough to build in a single frame.
         std::vector<std::vector<LavaVertex>> buckets(num);
         size_t river_count = 0;
         if (const auto it = rivers_by_map.find(map_id); it != rivers_by_map.end()) {

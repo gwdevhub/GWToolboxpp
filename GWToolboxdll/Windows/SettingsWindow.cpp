@@ -152,9 +152,6 @@ namespace {
         ctx->TestEngineHookItems = locate.HooksNeeded();
     }
 
-    // Section a module's registered settings can actually be navigated to, or empty if it doesn't draw
-    // any settings content in this window (e.g. a module that draws its settings in its own UI instead).
-    // Usually SettingsName(), but a module is free to register its content into someone else's section.
     std::string NavSectionForModule(ToolboxModule* module)
     {
         if (!module) {

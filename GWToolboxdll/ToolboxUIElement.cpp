@@ -194,9 +194,6 @@ void ToolboxUIElement::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 
 void ToolboxUIElement::SaveSettings(SettingsDoc& doc)
 {
-    // Sync current mode's stored positions from the live window.
-    // Guard with context check: SaveSettings is called a second time after ImGui is destroyed
-    // (from UpdateTerminating -> ToggleModule), at which point FindWindowByName would crash.
     if (ImGui::GetCurrentContext()) {
         if (const auto window = ImGui::FindWindowByName(Name())) {
             if (ToolboxSettings::is_in_mobile_mode) {
@@ -680,9 +677,6 @@ void ToolboxUIElement::DrawBreakoutButton(IDirect3DDevice9*)
         breakout_pos_set = true;
     }
     else if (const auto bw = ImGui::FindWindowByName(window_id); bw && !(flags & ImGuiWindowFlags_NoMove)) {
-        // Keep buttons from overlapping: push this one clear of the others, unless the user is dragging it
-        // (in which case the buttons it's dragged onto move out of the way instead). Locked buttons never move,
-        // so the other button yields to them.
         const ImGuiContext* g = ImGui::GetCurrentContext();
         const bool being_moved = g && g->MovingWindow && g->MovingWindow->RootWindow == bw->RootWindow;
         if (!being_moved) {

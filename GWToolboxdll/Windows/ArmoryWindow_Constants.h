@@ -10,11 +10,6 @@ namespace GWArmory {
 
     using namespace GW::Constants;
 
-    // Arg3:
-    //  - Costume = 0x20000006
-    //  - Armor =   0x20110007 (3)
-    //  - Chaos glove = 0x20110407 (38)
-
     constexpr uint32_t headpiece_dummy_interaction = 0x20001206;
 
 

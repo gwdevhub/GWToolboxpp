@@ -71,9 +71,6 @@
 #pragma warning(disable: 5027) // 'type': move assignment operator was implicitly defined as deleted
 #pragma warning(disable: 5045) // Compiler will insert Spectre mitigation for memory load if /Qspectre switch specified
 
-// Every launcher dialog title carries the launcher version, so a user's screenshot of
-// any message box immediately tells us which build produced it. Use these in place of
-// MessageBoxW/MessageBoxA throughout the launcher.
 inline std::wstring GwtbDialogTitle(const wchar_t* base)
 {
     return std::wstring(base) + L" (v" GWTOOLBOXEXE_VERSION L")";

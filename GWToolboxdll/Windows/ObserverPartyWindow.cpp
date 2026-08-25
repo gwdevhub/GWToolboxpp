@@ -501,10 +501,6 @@ void ObserverPartyWindow::Draw(IDirect3DDevice9*)
         return ImGui::End();
     }
 
-    // TODO: background colour in the currently following player
-    // TODO: background colour in the currently targetted player
-    // use ObserverPartyWindow::Draw for inspiration for colouring in backgrounds
-
     ObserverModule& observer_module = ObserverModule::Instance();
 
     // this should work with both 2/3(+?) parties, with preference on 2
@@ -533,14 +529,7 @@ void ObserverPartyWindow::Draw(IDirect3DDevice9*)
     text_short = 55.0f * global;
     text_tiny = 40.0f * global;
 
-    // DrawHeaders(actual_party_count);
-    // ImGui::Text(""); // new line
-    // ImGui::Separator();
-
     for (auto party_member_index = -1; party_member_index < static_cast<int>(max_party_size); party_member_index += 1) {
-        // `party_member_offset == -1` is the party info
-        // `party_member_offset == 0` is player 1
-        // put a separator before player 1
         if (party_member_index == 0) {
             ImGui::Text("");
             ImGui::Separator();

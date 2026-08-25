@@ -146,9 +146,6 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device, float zoom)
     constexpr float pi = std::numbers::pi_v<float>;
     static float tau = 0.0f;
     const float fps = ImGui::GetIO().Framerate;
-    // tau of += 0.05f is good for 60 fps, adapt that for any
-    // note: framerate is a moving average of the last 120 frames, so it won't adapt quickly.
-    // when the framerate changes a lot, the quest marker may speed up or down for a bit.
     tau += 0.05f * 60.0f / std::max(fps, 1.0f);
     if (tau > 10 * pi) {
         tau -= 10 * pi;

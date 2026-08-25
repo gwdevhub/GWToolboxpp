@@ -240,24 +240,6 @@ void SkillListingWindow::Draw(IDirect3DDevice9*)
         const auto to_use = low_res_img ? low_res_img : hi_res_img;
         if (to_use) 
             ImGui::ImageCropped(to_use ? *to_use : nullptr, {20.f, 20.f});
-        /*
-        if (low_res_img && *low_res_img) {
-            const auto filename = std::format("{}_lowres.jpg", (uint32_t)skills[i]->skill->skill_id);
-            const auto write_to = Resources::GetPath("skill_images", filename);
-            if (!std::filesystem::exists(write_to)) {
-                Resources::EnsureFolderExists(Resources::GetPath("skill_images"));
-                Resources::SaveTextureToFile(*low_res_img, write_to);
-            }
-        }
-        if (hi_res_img && *hi_res_img) {
-            const auto filename = std::format("{}_hires.jpg", (uint32_t)skills[i]->skill->skill_id);
-            const auto write_to = Resources::GetPath("skill_images", filename);
-            if (!std::filesystem::exists(write_to)) {
-                Resources::EnsureFolderExists(Resources::GetPath("skill_images"));
-                Resources::SaveTextureToFile(*hi_res_img, write_to);
-            }
-        }
-        */
 
         ImGui::SameLine(offset += tiny_text_width);
         ImGui::Text("%S", skills[i]->Name());

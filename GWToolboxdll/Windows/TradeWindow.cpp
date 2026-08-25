@@ -55,9 +55,6 @@ namespace tradechat_api {
 
 namespace {
     GW::HookEntry ChatCmd_HookEntry;
-    // Every connection cost 30 seconds.
-    // You have 2 tries.
-    // After that, you can try every 30 seconds.
     constexpr uint32_t COST_PER_CONNECTION_MS = 30 * 1000;
     constexpr uint32_t COST_PER_CONNECTION_MAX_MS = 60 * 1000;
     static const char* months[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};

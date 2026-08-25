@@ -36,9 +36,6 @@ namespace {
 
     GW::Agent* player = nullptr;
 
-    // Pcon Settings
-    // todo: tonic pop?
-    // todo: morale / dp removal
     GW::HookEntry AgentSetPlayer_Entry;
     GW::HookEntry AddExternalBond_Entry;
     GW::HookEntry PostProcess_Entry;

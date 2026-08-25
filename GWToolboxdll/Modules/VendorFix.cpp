@@ -15,10 +15,6 @@ namespace {
 
     void RefreshVendorItems(GW::UI::Frame* frame) {
         if (!frame) return;
-        /*
-        A freshly created vendor frame doesn't pick up inventory items past the 56th slot;
-        spoofing kInventorySlotUpdated for those slots makes the collector see them.
-        */
 
         const auto inventory = GW::Items::GetInventory();
         ASSERT(inventory);

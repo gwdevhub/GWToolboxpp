@@ -24,15 +24,6 @@ constexpr auto GWTOOLBOX_MODULES_FOLDERNAME = L"modules";
 #define CLEAR_PTR_VEC(var) for(size_t i=0;i < var.size();i++) { delete var[i]; }; var.clear()
 
 #define CHAT_CMD_FUNC(fn) fn([[maybe_unused]] GW::HookStatus* status, [[maybe_unused]] const wchar_t* message,[[maybe_unused]] int argc,[[maybe_unused]] const LPWSTR* argv)
-/*
-Notes:
-- EXCEPT_EXPRESSION_ENTRY is for the initialization
-- EXCEPT_EXPRESSION_LOOP is in every loop (main, render, input)
-
-- Logger::GenerateDump(GetExceptionInformation()) will create a dump
-- EXCEPTION_CONTINUE_SEARCH will not catch the exception and result in crash
-- EXCEPTION_EXECUTE_HANDLER will catch the exception and ignore the error
-*/
 
 #ifndef EXCEPT_EXPRESSION_ENTRY
 #define EXCEPT_EXPRESSION_ENTRY CrashHandler::Crash(GetExceptionInformation())

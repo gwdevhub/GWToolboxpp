@@ -124,9 +124,6 @@ namespace {
         clock_t calculating = 0;
         GW::Vec2f goal_world{};
         bool has_full_route = false;
-        // Latched once the on-map A* proves the goal is unreachable on the current map though it projects onto it — an
-        // isolate region that only shares a file id with a co-located map. Forces cross-map routing for this goal so we
-        // don't re-fail the on-map attempt every position update. Cleared when the goal changes.
         bool goal_cross_map = false;
         std::vector<GW::Vec2f> route_world{}; // world-map coords (PATH_BREAK between maps)
         std::vector<GW::GamePos> route_map{};
@@ -294,9 +291,6 @@ namespace {
                         cqp->UpdateUI();
                     }
                     else if (cqp && same_map) {
-                        // The goal projects onto this map but the on-map A* couldn't reach it — an isolate region that only
-                        // shares a file id with a co-located map. Latch cross-map so future position updates route through
-                        // other maps directly, and compute that full route now.
                         cqp->goal_cross_map = true;
                         GW::Vec2f from_world{};
                         WorldMapWidget::GamePosToWorldMap(from, from_world);

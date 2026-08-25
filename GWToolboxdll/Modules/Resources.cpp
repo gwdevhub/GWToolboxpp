@@ -1348,10 +1348,6 @@ IDirect3DTexture9** Resources::GetItemImage(uint32_t model_file_id, uint32_t int
     if (!model_file_id)
         return nullptr;
 
-    // Composite items (armor/runes): mirrors the client's own CICompositePlayer::GetCompositeGeometry
-    // slot order - file_ids[10] is the shared geometry/icon slot, tried first regardless of gender;
-    // only when that's absent does it fall back to the gendered slot (file_ids[5] female, [0] male).
-    // The other slots are skin/pattern textures for the 3D worn model, not icons.
     if (interaction & 4) {
         const auto model_file_info = GW::Items::GetCompositeModelInfo(model_file_id);
         if (model_file_info) {
@@ -1615,9 +1611,6 @@ bool Resources::SaveBackbufferRectToFile(IDirect3DDevice9* device, const RECT* r
         backbuffer = resolved;
     }
 
-    // GetRenderTargetData requires a SYSTEMMEM destination of identical
-    // dimensions & format. We copy the whole back buffer, then construct a
-    // DirectX::Image that points at just the sub-rect.
     IDirect3DSurface9* sysmem = nullptr;
     hr = device->CreateOffscreenPlainSurface(desc.Width, desc.Height, desc.Format, D3DPOOL_SYSTEMMEM, &sysmem, nullptr);
     if (FAILED(hr) || !sysmem) {
@@ -1763,9 +1756,6 @@ static UINT DxtBlockBytes(D3DFORMAT fmt)
     }
 }
 
-// SEH-guarded row copy (no unwinding objects, so __try is allowed). LockRect can
-// return a pointer whose backing store is gone (lost surface, reused memory); on a
-// fault we bail instead of crashing. Callers must keep row_bytes <= pitch.
 static bool SafeCopyRows(uint8_t* dst, const uint8_t* src, size_t rows, size_t row_bytes, size_t pitch)
 {
     __try {

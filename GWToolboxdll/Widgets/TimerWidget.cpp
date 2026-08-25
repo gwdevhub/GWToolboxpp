@@ -195,9 +195,6 @@ namespace {
 
         const clock_t diff = TIMER_DIFF(start) / 1000;
 
-        // a 30s timer starts when you enter the aspect
-        // a 30s timer starts 100s after you enter the aspect
-        // a 30s timer starts 200s after you enter the aspect
         long timer = 30 - diff % 30;
         if (diff > 100) {
             timer = std::min(timer, 30 - (diff - 100) % 30);

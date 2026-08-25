@@ -296,9 +296,6 @@ void ObjectiveTimerWindow::Initialize()
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyDefeated>(
         &PartyDefeated_Entry, [this](GW::HookStatus*, GW::Packet::StoC::PartyDefeated*) { StopObjectives(); });
 
-    // NB: Server may not send packets in the order we want them
-    // e.g. InstanceLoadInfo comes in before ExamplePlugin which means the run start is whacked out
-    // keep track of the packets and only trigger relevant events when the needed packets are in.
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(
         &InstanceLoadInfo_Entry,
         [this](GW::HookStatus*, const GW::Packet::StoC::InstanceLoadInfo* packet) {
@@ -770,20 +767,6 @@ void ObjectiveTimerWindow::AddDoAObjectiveSet(const GW::Vec2f spawn)
 
 void ObjectiveTimerWindow::AddUrgozObjectiveSet()
 {
-    // Zone 1, Weakness = already open on start
-    // Zone 2, Life Drain = Starts when door 45420 opens
-    // Zone 3, Levers = Starts when door 11692 opens
-    // Zone 4, Bridge = Starts when door 54552 opens
-    // Zone 5, Wolves = Starts when door 1760 opens
-    // Zone 6, Energy Drain = Starts when door 40330 opens
-    // Zone 7, Exhaustion = Starts when door 29537 opens 60114? 54756?
-    // Zone 8, Pillars = Starts when door 37191 opens
-    // Zone 9, Blood Drinkers = Starts when door 35500 opens
-    // Zone 10, Jons Fail Room = Starts when door 34278 opens
-    // Zone 11, Urgoz = Starts when door 15529 opens
-    // Urgoz = 3750
-    // Objective for Urgoz = 357
-
     const auto os = new ObjectiveSet;
     os->name = Resources::GetMapName(GW::Constants::MapID::Urgozs_Warren)->string();
     os->AddObjective(new Objective("Zone 1 | Weakness"))->SetStarted();
@@ -970,9 +953,6 @@ void ObjectiveTimerWindow::Draw(IDirect3DDevice9*)
                 ImGui::Text("Enter DoA, FoW, UW, Deep, Urgoz or a Dungeon to begin");
             }
             else {
-                // Thousands of past runs stay loaded and nearly all of them are collapsed and scrolled
-                // out of view. One reserved row each still costs an ImGui item apiece, so coalesce every
-                // contiguous stretch of them into a single Dummy (which also keeps the scroll extent right).
                 if (display_order_dirty) {
                     display_order.assign(objective_sets.size(), nullptr);
                     size_t n = display_order.size();

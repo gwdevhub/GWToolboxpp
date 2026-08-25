@@ -10,31 +10,6 @@
 #include <Utils/RateLimiter.h>
 #include <easywsclient/easywsclient.hpp>
 
-// ThreadedWebSocket wraps easywsclient with a self-managed background thread,
-// send queue, rate-limited reconnect, and lifecycle callbacks.
-//
-// Intended usage pattern:
-//
-//   ThreadedWebSocket ws;
-//   ws.SetUrl("wss://example.com");
-//   ws.SetHeadersFactory([] { return easywsclient::HeaderKeyValuePair{{"X-Key", "value"}}; });
-//   ws.SetOnMessage([](const std::string& msg) { /* handle */ });
-//   ws.SetOnOpen([]  { /* connected */ });
-//   ws.SetOnClose([] { /* disconnected */ });
-//
-//   ws.Connect();              // Start connecting immediately (no message needed)
-//   ws.Send(payload);          // Enqueue a message; also starts connecting if not already
-//   ws.Disconnect();           // Requests graceful shutdown (non-blocking)
-//   ws.Update();               // Call from your main/game thread each tick to join finished threads
-//   bool done = ws.IsIdle();   // True once thread has fully stopped after Disconnect()
-//
-// Thread safety:
-//   Connect()    - safe to call from any thread
-//   Send()       - safe to call from any thread
-//   Disconnect() - safe to call from any thread
-//   Update()     - must be called from a single owner thread (e.g. game/main thread)
-//   All callbacks are invoked on the background worker thread.
-
 class ThreadedWebSocket {
 public:
     using MessageCallback = std::function<void(const std::string&)>;
@@ -86,9 +61,6 @@ public:
     // poll loop iteration, then close the socket and invoke on_close_.
     void Disconnect(bool blocking = false);
 
-    // Call once per tick from your owner/game thread.
-    // Joins and cleans up the worker thread after it has finished.
-    // Returns true if the thread was just joined (useful for resetting state etc.)
     bool Update();
 
     // True when no thread is running and no disconnect is pending.

@@ -738,16 +738,6 @@ void PacketLoggerWindow::Draw(IDirect3DDevice9*)
     ImGui::Checkbox("Log Packet Content", &log_packet_content);
     ImGui::SameLine();
     ImGui::CheckboxWithHelp("Auto ignore incoming packets", &auto_ignore_packets, "While ticked, any StoC packets received will be added to the ignore list.");
-    /*if ( ImGui::Button("Export Map Info")) {
-        if (maps.empty()) {
-            FetchMapInfo();
-        }
-        else {
-            ExportMapInfo();
-        }
-    }
-    ImGui::ShowHelp("Export current map info to disk");
-    */
     ImGui::CheckboxWithHelp("Log NPC Dialogs", &log_npc_dialogs, "Log encoded strings and their translated output to debug console");
     if (ImGui::CollapsingHeader("Ignored Packets")) {
         if (ImGui::Button("Select All")) {

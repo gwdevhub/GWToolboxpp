@@ -89,9 +89,6 @@ namespace {
 
     void TrackSpirit(const uint32_t agent_id, const GW::Constants::SkillID skill_id)
     {
-        // Evict any previously tracked spirit for this skill_id.
-        // The old agent's kAgentDestroy may arrive after us, so we must unlink it
-        // from tracked_spirits now so RemoveTrackedSpirit doesn't kill our new effect.
         for (auto it = tracked_spirits.begin(); it != tracked_spirits.end();) {
             if (it->second == skill_id && it->first != agent_id) {
                 tracked_spirits.erase(it); // don't call RemoveTrackedSpirit - that would remove the effect
@@ -329,9 +326,6 @@ void EffectsMonitorWidget::Update(float delta)
             const auto now = GW::MemoryMgr::GetSkillTimer();
             const clock_t diff = (now - timestamp) / 1000;
 
-            // a 30s timer starts when you enter the aspect
-            // a 30s timer starts 100s after you enter the aspect
-            // a 30s timer starts 200s after you enter the aspect
             long duration = 30 - diff % 30;
             if (diff > 100) duration = std::min(duration, 30 - (diff - 100) % 30);
             if (diff > 200) duration = std::min(duration, 30 - (diff - 200) % 30);

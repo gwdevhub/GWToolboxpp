@@ -32,9 +32,6 @@
 #include <Utils/TextUtils.h>
 #include <Utils/ToolboxUtils.h>
 
-// Every connection cost 30 seconds.
-// You have 2 tries.
-// After that, you can try every 30 seconds.
 static constexpr uint32_t COST_PER_CONNECTION_MS = 30 * 1000;
 static constexpr uint32_t COST_PER_CONNECTION_MAX_MS = 60 * 1000;
 using easywsclient::WebSocket;
@@ -607,23 +604,6 @@ void PartySearchWindow::Draw(IDirect3DDevice9*)
     /* Main trade chat area */
 
     /* Connection checks */
-    /*if (!ws_window && !ws_window_connecting) {
-        char buf[255];
-        snprintf(buf, 255, "The connection to %s has timed out.", ws_host);
-        ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize(buf).x) / 2);
-        ImGui::SetCursorPosY(ImGui::GetWindowHeight() / 2);
-        ImGui::Text(buf);
-        ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize("Click to reconnect").x) / 2);
-        if (ImGui::Button("Click to reconnect")) {
-            AsyncWindowConnect(true);
-        }
-        display_messages = false;
-    } else if (ws_window_connecting || (ws_window && ws_window->getReadyState() == WebSocket::CONNECTING)) {
-        ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize("Connecting...").x) / 2);
-        ImGui::SetCursorPosY(ImGui::GetWindowHeight() / 2);
-        ImGui::Text("Connecting...");
-        display_messages = false;
-    } */
     if (display_messages) {
         const float& innerspacing = ImGui::GetStyle().ItemInnerSpacing.x;
         const float playernamewidth = 200.0f * font_scale;
@@ -703,17 +683,6 @@ void PartySearchWindow::Draw(IDirect3DDevice9*)
             ImGui::TextColored(party->party_size < max_party_size ? white : yellow, "%d/%d", party->party_size, max_party_size);
             ImGui::SameLine(districtleft);
             ImGui::TextColored(party->language == language && party->district == district && party->map_id == map ? white : yellow, "%s - %d", DistrictAbbr(party->region_id, party->language), party->district);
-
-            /*auto map_name = map_names_by_id.find(party->map_id);
-            if (map_name == map_names_by_id.end()) {
-                std::wstring* map_name_ws = new std::wstring();
-                map_names_by_id[party->map_id] = { {0}, map_name_ws };
-                GW::AreaInfo* map = GW::Map::GetMapInfo(static_cast<GW::Constants::MapID>(party->map_id));
-                if (map && GW::UI::UInt32ToEncStr(map->name_id, map_names_by_id[party->map_id].first) {
-                    uint32_t map_id = 0;
-                    if()
-                }
-            }*/
 
             ImGui::SameLine(message_left);
             ImGui::Text(party->is_hard_mode ? "[Hard Mode] [%s] %s" : "[%s] %s", party_types[party->search_type], party->message.c_str());

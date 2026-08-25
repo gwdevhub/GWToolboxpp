@@ -584,10 +584,6 @@ Gender GetGenderByFileId(const uint32_t file_id)
             if (!duration) duration = EstimateAudioDuration(path);
         }
 
-        // --- Phase 2: call into the audio system WITHOUT holding the lock ---
-        // shared_ptr keeps `this` alive even if another thread calls ClearSounds()
-        // or CancelDialogSpeech() here — they will Stop() and drop their shared_ptr
-        // but our refcount won't hit zero until this scope exits.
         const auto pos = GetAgentVec3f(agent_id);
         VoiceLog("Playing audio file: %s (estimated duration: %dms)", path.filename().string().c_str(), duration);
         const uint32_t flags = is_dialog_window ? SoundFlags_Dialog : (SoundFlags_Dialog | SoundFlags_Positional);
@@ -1229,9 +1225,6 @@ Gender GetGenderByFileId(const uint32_t file_id)
             return bail();
         }
 
-        // --- Hand off to worker thread ---
-        // Capture a weak_ptr; if audio is cancelled while we're waiting for the
-        // network call, lock() will return nullptr and we bail safely.
         std::weak_ptr<PendingNPCAudio> weak_audio = audio;
         // Release our strong ref now — pending_audio still holds one.
         audio.reset();

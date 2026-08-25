@@ -279,9 +279,6 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
         return 0;
     }
     if (settings.reinstall) {
-        // @Enhancement:
-        // Uninstall shouldn't remove the existing data, that would instead be a
-        // "repair" or something along those lines.
         Uninstall(settings.quiet, error);
         Install(settings.quiet, error);
         return 0;

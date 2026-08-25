@@ -125,10 +125,6 @@ protected:
 
     GW::Constants::MapID mapid = GW::Constants::MapID::None;
     GW::Constants::InstanceType maptype = GW::Constants::InstanceType::Loading;
-    // loops over the inventory, counting the items according to QuantityForEach
-    // if 'used' is not null, it will also use the first item found,
-    // and, if so, used *used to true
-    // returns the number of items found, or -1 in case of error
     int CheckInventory(
         bool* used = nullptr, size_t* used_qty = nullptr,
         size_t from_bag = static_cast<size_t>(GW::Constants::Bag::Backpack),

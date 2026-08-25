@@ -19,9 +19,6 @@
 #include "Widgets/Minimap/Shaders/game_world_renderer_dotted_ps.h"
 
 namespace {
-    // === FrCache compositor: draw registered overlays between GW's world and UI passes ===
-    // GW's deferred command buffer holds FRCACHE_GPU_RENDER (3D world) then frame entries (HUD);
-    // split at the boundary, flush the world, run the callbacks, then let GW render the HUD on top.
     enum FrCacheEntryType : uint32_t {
         FRCACHE_GPU_RENDER = 0,
         FRCACHE_FRAME_CALLBACK = 1,
@@ -115,17 +112,6 @@ namespace {
 
         auto& buffer = frame_render_context->render_buffer;
 
-        // The main 3D scene starts with the FIRST GPU_RENDER entry; the HUD follows, possibly interleaved
-        // with further GPU entries (e.g. Domain of Anguish's frame keeps GPU slices to the very end). GPU
-        // entries are (index, count) slices of ONE contiguous GR command stream - FlushCommandQueue at the
-        // boundary materialises the whole queued world regardless of where the slices sit, so splitting
-        // right after the first GPU entry is safe. A GPU entry whose index does NOT continue the stream
-        // (index != previous index + count) is a SECOND world-render dispatch (e.g. a 3D bust in the
-        // hero/character panel): running that in a split-off second call re-runs the per-object cloth/hair
-        // physics off a fixed 1/30s accumulator not designed to advance twice in one real frame, desyncing
-        // constraint indices from the double-buffered positions (garbage spring-solver index / GrBound.cpp
-        // assert in wild dumps). UI-only/sub-render passes have no GPU entry, so boundary stays 0 and is
-        // skipped below.
         uint32_t boundary = 0;
         bool stream_restart = false;
         uint32_t stream_expect = 0;

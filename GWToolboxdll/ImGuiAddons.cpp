@@ -461,10 +461,6 @@ namespace ImGui {
             items_getter(data, *current_item, &preview_text);
         }
 
-        // this is actually shared between all combos. It's kinda ok because there is
-        // only one combo open at any given time, however it causes a problem where
-        // if you open combo -> keyboard select (but no enter) and close, the
-        // keyboard_selected will stay as-is when re-opening the combo, or even others.
         static int keyboard_selected = -1;
 
         if (!BeginCombo(label, preview_text)) {

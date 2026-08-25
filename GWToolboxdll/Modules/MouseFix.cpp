@@ -124,9 +124,6 @@ namespace {
             goto forward_call; // Not moving the camera, or GW hasn't yet called TrackMouseEvent
         }
 
-        // NB: this has to be the mouse-look event; the button-down event id sits right next to it
-        // in GW's enum and would make the client act on whatever button index the previous event
-        // left in the (uncleared) output struct - typically walking the character forward.
         lParam[0] = mouse_look_event_id;
         // Set the output parameters to be the relative position of the mouse to the center of the screen
         // NB: Original function uses ClientToScreen here; we've already grabbed the correct value via CursorFixWndProc

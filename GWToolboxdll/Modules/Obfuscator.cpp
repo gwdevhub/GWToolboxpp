@@ -33,9 +33,6 @@
 
 
 namespace {
-    /*IWbemServices* pSvc = 0;
-    IWbemLocator* pLoc = 0;
-    HRESULT CoInitializeEx_result = -1;*/
     Obfuscator::Settings settings;
     char own_player_name[20]{};
     std::wstring own_player_name_w{};

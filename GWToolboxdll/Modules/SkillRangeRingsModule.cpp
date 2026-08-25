@@ -25,9 +25,6 @@ namespace {
     constexpr float kMaxRingRadius = 5200.f; // ignore bogus range data past compass-ish sizes
     constexpr uint8_t kTargetNone = 0;        // Skill.target == no_target (flash enchant / stance / self-cast form)
 
-    // Skills whose aoe_range is a leftover from a pre-rework version of the skill; const_effect holds the
-    // live radius and is drawn AS the AoE ring (Double Dragon: aoe_range=240 "nearby" from its 2008
-    // incarnation, const_effect=156 is the actual adjacent pulse since the 2012 rework).
     constexpr GW::Constants::SkillID kStaleAoeRange[] = {
         GW::Constants::SkillID::Double_Dragon,
     };
@@ -53,9 +50,6 @@ namespace {
         bool at_target;
     };
 
-    // Draped ring geometry (absolute world coords) drawn with DrawPrimitiveUP. The per-vertex terrain drape
-    // is expensive, so `scratch` is cached and only rebuilt when an anchor moves, the hovered skill changes,
-    // or settings change - not every frame.
     std::vector<RingSpec> built_specs;
     std::vector<RingVertex> scratch;
     GW::Constants::SkillID built_skill = static_cast<GW::Constants::SkillID>(0);
@@ -85,9 +79,6 @@ namespace {
         const bool shout_like = type == Shout || type == Chant || type == EchoRefrain;
         const bool spell_like = type == Spell || type == Hex || type == Enchantment || type == Well
                                 || type == Signet || type == ItemSpell || type == WeaponSpell;
-        // No cast-range ring: the caster already knows their own cast range and it's just clutter. Only the
-        // skill's actual area of effect is shown. `targets_other` still decides whether an AoE anchors to
-        // the target vs the caster (self/flash skills have Skill.target == no_target -> around the caster).
         const bool targets_other = skill.target != kTargetNone;
         if (shout_like) {
             out.push_back({GW::Constants::Range::Earshot, color_earshot, false});

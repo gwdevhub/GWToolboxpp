@@ -62,9 +62,6 @@ namespace {
         return it != hero_build_groups.end() ? it->second.sort_order : SIZE_MAX;
     }
 
-    // Creates the group if it doesn't exist, assigning a provisional sort_order
-    // equal to the current group count (so first-seen order is preserved).
-    // Returns the group (existing or newly created).
     HerobuildGroup& UpsertGroup(const std::string& name)
     {
         if (!hero_build_groups.contains(name)) {
@@ -92,9 +89,6 @@ namespace {
 
     using GW::Constants::HeroID;
 
-    // hero index is an arbitrary index.
-    // We aim to have the same order as in the gw client.
-    // Razah is after the mesmers because all players that don't have mercenaries have it set as mesmer.
     constexpr std::array HeroIndexToID = {
         HeroID::NoHero,
         HeroID::Goren,

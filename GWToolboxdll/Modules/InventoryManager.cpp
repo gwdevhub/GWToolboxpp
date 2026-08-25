@@ -2293,12 +2293,6 @@ bool InventoryManager::DrawItemContextMenu(const bool open)
     ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0, 0));
     ImGui::PushStyleColor(ImGuiCol_Button, ImColor(0, 0, 0, 0).Value);
     const auto size = ImVec2(250.0f * ImGui::FontScale(), 0);
-    /*IDirect3DTexture9** tex = Resources::GetItemImage(context_item.wiki_name.wstring());
-    if (tex && *tex) {
-        const float text_height = ImGui::CalcTextSize(" ").y;
-        ImGui::Image(*tex, ImVec2(text_height, text_height));
-        ImGui::SameLine();
-    }*/
     ImGui::Text(context_item.name->string().c_str());
     ImGui::Separator();
     const auto bag = context_item_actual->bag;
@@ -2530,17 +2524,6 @@ bool InventoryManager::DrawItemContextMenu(const bool open)
 
 uint16_t InventoryManager::MoveItem(const Item* item, const uint16_t quantity)
 {
-    // Expected behaviors
-    //  When clicking on item in inventory
-    //   case storage close (or move_item_to_current_storage_pane = false):
-    //    - If the item is a material, it look if it can move it to the material page.
-    //    - If the item is stackable, search in all the storage if there is already similar items and completes the stack
-    //    - If not everything was moved, move the remaining in the first empty slot of the storage.
-    //   case storage open:
-    //    - If the item is a material, it look if it can move it to the material page.
-    //    - If the item is stackable, search for incomplete stacks in the current storage page and completes them
-    //    - If not everything was moved, move the remaining in the first empty slot of the current page.
-
     // @Cleanup: Bad
     if (item->model_file_id == 0x0002f301) {
         Log::Error("Ctrl+click doesn't work with birthday presents yet");

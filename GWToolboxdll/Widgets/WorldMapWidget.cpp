@@ -283,9 +283,6 @@ namespace {
         ImGui::PopStyleVar();
         ImGui::Separator();
         if (!ContextMenuMarkerButtons()) return false;
-        // The cartographer's suggestion carries a custom quest marker, so right-clicking it
-        // lands here rather than on the plain map menu — its actions belong here too. Their
-        // actions act on the clicked position, which only resolves at zoom 1.0.
         if (world_map_click_pos_valid) {
             for (const auto& cb : context_menu_callbacks) {
                 if (!cb()) return false;
@@ -588,10 +585,6 @@ namespace {
                 world_map_scale = world_map_zoomed_out_size.x / world_map_size_in_coords.x;
             }
         }
-        // Per-frame pixels-per-world-coord from the live visible rect (top_left..bottom_right),
-        // which the client re-derives every frame from the animating zoom. Projecting through it
-        // tracks the zoom animation, where world_map_scale (rest states only) cannot. Falls back
-        // to the rest-state factor until the client populates the rect.
         world_map_proj_scale = {ui_scale.x * world_map_scale, ui_scale.y * world_map_scale};
         if (world_map_frame) {
             const auto frame_size = world_map_frame->position.GetSizeOnScreen();
@@ -1002,13 +995,6 @@ namespace {
         ImRect map_bounds;
         if (!area_info || !GW::Map::GetMapWorldMapBounds(area_info, &map_bounds)) return false;
 
-        // Signed, not abs: the conversions below need Min.x - game_min.x/96 and Min.y + game_max.y/96,
-        // which abs() only happens to give for a map whose bounds straddle the origin the usual way.
-        //
-        // Measured in game: the north edge of the geometry sits one world-map unit inside the
-        // rectangle, not on it, so anchoring game_max.y straight onto Min.y reports every position
-        // 96 gwinches too far north. x has no such offset - it anchors on the min edge, which the
-        // axis flip leaves alone.
         mid_out = {
             map_bounds.Min.x - (game_min.x / gwinches_per_unit),
             map_bounds.Min.y + (game_max.y / gwinches_per_unit) + 1.f,
@@ -1154,10 +1140,6 @@ void WorldMapWidget::SaveSettings(SettingsDoc& doc)
     doc.SetStruct(Name(), settings);
 
     const std::filesystem::path map_info_by_file_id_file = Resources::GetPath(L"MapInfoByFileId.txt");
-    // File format (plain text, one map block per entry):
-    //   MAP <map_file_id> <world_pos_start.x> <world_pos_start.y> <world_pos_end.x> <world_pos_end.y> <portal_count> <map_id>
-    //   PORTAL <map_file_id> <prop_model_file_id> <world_pos.x> <world_pos.y>
-    //   ...
     std::ofstream out(map_info_by_file_id_file);
     if (!out.is_open()) return;
     for (const auto& [file_id, info] : map_info_by_file_id) {
@@ -1282,9 +1264,6 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
         }
         ImGui::Unindent();
     }
-    // ImGui::InputFloat("region.x", &tarnished_coast.x, 10.f);
-    // ImGui::InputFloat("region.y", &tarnished_coast.y, 10.f);
-    // ImGui::InputFloat("default_scale", &default_scale, 0.001f);
     ImGui::End();
     ImGui::PopStyleColor();
 
@@ -1354,26 +1333,6 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
         });
     }
 
-    /*for (const auto& portal : map_portals) {
-        static constexpr auto uv0 = ImVec2(0.0f, 0.0f);
-        static constexpr auto ICON_SIZE = ImVec2(24.0f, 24.0f);
-
-        const ImVec2 portal_pos = {
-            ui_scale.x * (portal.world_pos.x - world_map_context->top_left.x) + viewport_offset.x - (ICON_SIZE.x / 2.f),
-            ui_scale.y * (portal.world_pos.y - world_map_context->top_left.y) + viewport_offset.y - (ICON_SIZE.y / 2.f)
-        };
-
-        const ImRect hover_rect = {
-            portal_pos, {portal_pos.x + ICON_SIZE.x, portal_pos.y + ICON_SIZE.y}
-        };
-
-        draw_list->AddImage(*GwDatModule::LoadTextureFromFileId(0x1b4d5), hover_rect.GetTL(), hover_rect.GetBR());
-
-
-        if (hover_rect.Contains(ImGui::GetMousePos())) {
-            ImGui::SetTooltip("Portal");
-        }
-    }*/
     if (settings.show_lines_on_world_map) {
         const auto& lines = Minimap::Instance().custom_renderer.GetLines();
         const auto map_id = GW::Map::GetMapID();
@@ -1406,9 +1365,6 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
             draw_list->AddLine(p1, p2, line->color);
         }
 
-        // Navmesh debug overlay: it's a batched in-world VB now (not CustomLines), so redraw its source segments
-        // here in 2D — the world map is a top-down view. Empty unless the navmesh overlay is on. Matches the
-        // pre-batch behaviour where the navmesh rode along as custom lines on the world map.
         if (GameWorldRenderer::GetNavmeshWorldMapMapId() == map_id) {
             for (const auto& e : GameWorldRenderer::GetNavmeshWorldMapLines()) {
                 if (!GamePosToWorldMap(e.a, line_start)) continue;

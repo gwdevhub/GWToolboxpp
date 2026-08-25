@@ -583,9 +583,6 @@ namespace {
     }
 
     void OnMapChange(GW::HookStatus*, GW::UI::UIMessage, void*, void*) {
-        // NB: Friends list messages don't play well when clearing the chat log after the map has loaded.
-        // Instead, we trigger this immediately before map load.
-        // When the game world is rebuilt during map load, the log works properly again.
         Init();
         Save(); // Save the chat log on every map transition
     }

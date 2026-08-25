@@ -33,9 +33,6 @@ public:
 
     void DrawSettingsInternal() override;
 
-    // Fetch (and cache) prices from kamadan.gwtoolbox.com, or directly from presearing.com's
-    // community price-check spreadsheet while in pre-searing (see GW::Map::IsPreSearing()).
-    // Returns the current price map; triggers a background refresh if stale.
     static const std::unordered_map<std::string, uint32_t>& FetchPrices();
 
     // Returns the trader sell price for the given item or material slot.
@@ -46,9 +43,6 @@ public:
     // Returns the fixed NPC merchant sell price for a material.
     static uint32_t GetMerchantSellPrice(GW::Constants::MaterialSlot material);
 
-    // Look up the price for an item by inspecting its mod struct.
-    // mod_start_index allows retrieving a second distinct price on the same item.
-    // Populates item_name_out when non-null.
     static uint32_t GetPriceByItem(const GW::Item* item,
         std::string* item_name_out = nullptr,
         unsigned int mod_start_index = 0);

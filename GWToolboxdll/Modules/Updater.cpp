@@ -182,10 +182,6 @@ namespace {
             });
     }
 
-    // Shown once, the first time a freshly-updated build runs. A heartfelt, human
-    // ask — Toolbox gets flagged as a false positive because it injects into Gw.exe,
-    // and a lively, well-starred GitHub project reads as more trustworthy to AV
-    // vendors over time, which means fewer false detections for everyone.
     void DrawStarRequest()
     {
         if (!show_star_request) {
@@ -280,10 +276,6 @@ void Updater::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
     settings.update_mode = Mode::DontCheckForUpdates;
     settings.update_release_type = ReleaseType::Beta;
 #else
-    // If the version we ran last differs from this one, Toolbox was just updated
-    // (in-app or by hand) — show the star request once. SaveSettings rewrites
-    // dllversion below, so it won't fire again until the next update.
-    // Don't show if user has already starred.
     std::string previous_version;
     if (doc.Get(Name(), "dllversion", previous_version) && !previous_version.empty() && previous_version != GWTOOLBOXDLL_VERSION && !settings.has_starred) {
         show_star_request = true;

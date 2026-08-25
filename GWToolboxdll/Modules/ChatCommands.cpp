@@ -2647,10 +2647,6 @@ void CHAT_CMD_FUNC(ChatCommands::CmdToggle)
         return;
     }
     const std::vector<ToolboxUIElement*> windows = MatchingWindows(status, message, ignore_last_arg ? argc - 1 : argc, argv);
-    /*if (windows.empty()) {
-        Log::Error("Cannot find window or command '%ls'", argc > 1 ? argv[1] : L"");
-        return;
-    }*/
     for (ToolboxUIElement* window : windows) {
         switch (action) {
             case On:

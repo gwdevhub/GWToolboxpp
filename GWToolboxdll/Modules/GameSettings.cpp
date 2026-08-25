@@ -87,10 +87,6 @@ namespace {
         }
         const std::wstring title = GetPlayerName();
         if (!title.empty()) {
-            // Guild Wars' window may be registered as an ANSI (non-Unicode) window class; in that
-            // case SetWindowTextW() gets thunked down to the system codepage before being applied,
-            // corrupting any character outside it. Sending WM_SETTEXT via DefWindowProcW directly
-            // bypasses that thunking, same trick already used for our own windows in imgui_impl_win32.cpp.
             DefWindowProcW(hwnd, WM_SETTEXT, 0, reinterpret_cast<LPARAM>(title.c_str()));
         }
     }
@@ -122,9 +118,6 @@ namespace {
         SetMessageColor(chan, color.value);
     }
 
-    // For some reason no matter whether this call is wrapped in Draw or Update or main thread, it passes garbage to window title on first load.
-    // Even tried compiling in unicode, still no dice.
-    // I've given up trying, so here is a timer that triggers a 3s delay to do it in the Update loop, whatever
     clock_t set_window_title_delay = 0;
 
     clock_t last_send = 0;
@@ -1047,10 +1040,6 @@ namespace {
                 }
             } break;
             case GW::UI::UIMessage::kTradeSessionStart: {
-                // TODO: This only catches the scenario where the trade window is shown straight away (i.e. player initiates trade)
-                // If another player trades you, this ui message will show the trade "prompt" window and won't show inv until you click "view"
-                //
-                // Probably need to hook into CreateFloatingWindow and block it if the inv window is trying to be opened without user interaction
                 need_to_hide_inventory_window_after_trade = GW::UI::GetFrameByLabel(L"Inventory") == nullptr;
             } break;
         }
@@ -1491,10 +1480,6 @@ bool PendingChatMessage::PrintMessage()
     return printed;
 };
 
-/*
- *   GWToolbox chat log end
- */
-
 void GameSettings::Initialize()
 {
     ToolboxModule::Initialize();
@@ -1570,10 +1555,6 @@ void GameSettings::Initialize()
     });
 
     // Sanity check to prevent GW crash trying to despawn an agent that we may have already despawned.
-    /*GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentRemove>(&PartyDefeated_Entry, [](GW::HookStatus* status, GW::Packet::StoC::AgentRemove* packet) {
-        if (false && !GW::Agents::GetAgentByID(packet->agent_id))
-            status->blocked = true;
-        });*/
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayEffect>(&TradeStart_Entry, OnPlayEffect);
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::PartyInviteReceived_Create>(&PartyPlayerAdd_Entry, OnPartyInviteReceived);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyPlayerAdd>(&PartyPlayerAdd_Entry, OnPartyPlayerJoined);
@@ -1654,10 +1635,6 @@ void GameSettings::Initialize()
     set_window_title_delay = TIMER_INIT();
 
     settings.last_online_status = static_cast<uint32_t>(GW::FriendListMgr::GetMyStatus());
-
-    // Log::Log("[GameSettings] Enqueueing CheckRemoveWindowBorder");
-    // GW::GameThread::Enqueue(CheckRemoveWindowBorder);
-    // Log::Log("[GameSettings] Enqueued CheckRemoveWindowBorder");
 
 #ifdef APRIL_FOOLS
     AF::ApplyPatchesIfItsTime();

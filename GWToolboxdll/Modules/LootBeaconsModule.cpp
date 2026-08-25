@@ -338,11 +338,6 @@ namespace {
 
     constexpr float kBeamSolidFraction = 0.25f; // bottom fraction of the beam height that stays fully solid before fading
 
-    // Appends a single quad standing on the ground and facing the camera - `right_x`/`right_y` is the
-    // horizontal axis (from GetCameraRight below) so the quad rotates to face the viewer without ever
-    // being edge-on, unlike two fixed crossed quads. Subdivided into a 3x3 vertex grid (4 quads) so the
-    // beam holds solid near the item before fading upward, and tapers to transparent at its left/right
-    // edges too, instead of a single hard-edged rectangle with a flat top-to-bottom gradient.
     void EmitBeamQuad(std::vector<BeaconVertex>& out, const GW::Vec2f& pos, const float ground_z, const float right_x, const float right_y, const Color base_color, const float base_alpha)
     {
         const float half = kBeamWidth * 0.5f;

@@ -288,9 +288,6 @@ namespace {
                 vertices[i].z = TerrainDrape::HighestZOnPlanes(vertices[i].x, vertices[i].y, candidate_planes);
         }
         else {
-            // Ordered path: drape on the navmesh-walkable plane at each sample, closest to the running height, so it
-            // rides what the path walks (e.g. a monument) instead of the floor beneath. Falls back to an all-planes
-            // query when the navmesh isn't built or no walkable plane covers the sample.
             auto* nav = PathfindingWindow::GetResidentNavMesh();
             GW::GamePos seed_pos = poly.points.empty() ? GW::GamePos{} : poly.points.front();
             float prev = TerrainDrape::QueryAltAt(seed_pos.x, seed_pos.y, seed_pos.zplane);
@@ -412,9 +409,6 @@ void GameWorldRenderer::GenericPolyRenderable::Draw(IDirect3DDevice9* device)
             anchor_x = player->pos.x;
             anchor_y = player->pos.y;
             anchored = true;
-            // Re-anchor the leading line to the player's live position and drape on the navmesh-walkable
-            // plane at each sample, seeded from player->z (reliable even when the reported plane reads 0). This rides
-            // the surface the player actually walks (up a monument/ramp between hops) instead of the ground beneath.
             const float ex = vertices.back().x, ey = vertices.back().y;
             const GW::PathingMapArray* pathing_map = GW::Map::GetPathingMap();
             const uint32_t num_planes = pathing_map ? static_cast<uint32_t>(pathing_map->size()) : 0;
@@ -561,9 +555,6 @@ void GameWorldRenderer::DrawInWorld(IDirect3DDevice9* device)
 
 void GameWorldRenderer::Render(IDirect3DDevice9* device)
 {
-    // On-top (End Scene) path. When under-UI is wanted and the shared compositor is running, it
-    // draws our markers between GW's world and HUD instead (and runs the marker sync itself), so
-    // skip here. Otherwise draw on top - this is also the fallback if the compositor failed.
     if (render_under_ui && GameWorldCompositor::IsActive()) {
         return;
     }

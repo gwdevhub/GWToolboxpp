@@ -73,9 +73,6 @@ public:
     MinimapRenderer& operator=(const MinimapRenderer&) = delete;
     MinimapRenderer& operator=(MinimapRenderer&&) = delete;
 
-    // implement this to draw your data on the minimap
-    // the view matrix is set up to transform game world positions to minimap appropriately, make sure to restore it if you touch it
-    // the world matrix is undefined and can be left in any state
     virtual void RenderMinimap(IDirect3DDevice9* device, const MinimapRenderContext& context) = 0;
 
     GWTOOLBOXDLL_MINIMAP_EXPORT static void RegisterRenderer(MinimapRenderer* renderer);

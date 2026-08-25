@@ -80,18 +80,6 @@ namespace {
 
     const char* GetWikiPrefix()
     {
-        /*uint32_t language = GW::UI::GetPreference(GW::UI::Preference_TextLanguage);
-        char* wiki_prefix = "https://wiki.guildwars.com/wiki/";
-        switch (static_cast<GW::Constants::MapLanguage>(language)) {
-        case GW::Constants::MapLanguage::German: // German wiki
-            wiki_prefix = "https://www.guildwiki.de/wiki/";
-            break;
-        case GW::Constants::MapLanguage::French: // French wiki
-            wiki_prefix = "https://www.gwiki.fr/w/index.php";
-            break;
-
-        }
-        return wiki_prefix;*/
         return "https://wiki.guildwars.com/wiki/";
     }
 

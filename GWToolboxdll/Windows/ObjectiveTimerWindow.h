@@ -9,16 +9,6 @@
 
 #include <uWebsockets/App.h>
 
-/*
-each objective can have a duration (start and end) or a single timestamp
-- e.g. quests in fow vs doors in urgoz
-  (when start of an item is the same as end of previous, we don't need to keep both)
-
-each objective can have sub-objectives. (?)
-
-each list of objectives can be either sequential or independent
-*/
-
 class ObjectiveTimerWindow : public ToolboxWindow {
     ObjectiveTimerWindow() = default;
 

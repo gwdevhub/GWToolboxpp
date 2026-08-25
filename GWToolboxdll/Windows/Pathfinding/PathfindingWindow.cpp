@@ -136,9 +136,6 @@ namespace {
         RouteJobScope& operator=(const RouteJobScope&) = delete;
     };
 
-    // In-flight world-map route/path computations. Each async route worker holds a PathCalcScope; the world map
-    // polls IsCalculatingPath() to show a "calculating" indicator while one is running. Atomic: incremented on
-    // worker threads, read on the game/render thread.
     std::atomic<int> path_calc_in_flight = 0;
     struct PathCalcScope {
         PathCalcScope() { ++path_calc_in_flight; }
@@ -150,10 +147,6 @@ namespace {
     bool draw_map_bounds = false;
     bool draw_graph_edges = false;
     bool draw_portals = false;
-    // Multiplier applied to the straight-line fallback when the pathfinder has VALID data but reports every
-    // candidate portal genuinely Unreachable (disconnected zone). Keeps the hop a finite last resort so the
-    // route still resolves, but deprioritised so any real (up to ~K× longer) detour wins. Data-quality failures
-    // (no MilePath / trapezoid-not-found) keep plain Euclidean — see ClosestPortalTrapezoidDistanceInMap.
     constexpr float portal_unreachable_penalty = 100.f;
     GW::GamePos ToCurrentMapCoords(const GW::GamePos& pos, GW::Constants::MapID src_map); // forward decl (early)
     Pathing::MilePath* LoadMapFromDAT(GW::Constants::MapID map_id, bool allow_load = true); // forward decl (early)
@@ -424,9 +417,6 @@ namespace {
     uint32_t GetMapFileId(GW::Constants::MapID map_id);                                              // forward decl
     GW::GamePos ToCurrentMapCoords(const GW::GamePos& pos, GW::Constants::MapID src_map);            // forward decl
 
-    // Load a map from DAT and create a MilePath for it. Returns the MilePath (may still be processing).
-    // allow_load=false makes this game-thread-safe: it returns a resident MilePath if present, else nullptr,
-    // and never touches the DAT. Only pass true off the game thread (the readFromDat below blocks).
     Pathing::MilePath* LoadMapFromDAT(GW::Constants::MapID map_id, bool allow_load)
     {
         if (IsInterestingMapForCacheTrace(map_id)) {
@@ -489,9 +479,6 @@ namespace {
         }
         auto& map_data = *chosen;
 
-        // file_id was not resident above, so this full key (file_id + pathNodeSize) is new too.
-        // Ctx-fallback data must not be cached under the (stale) fid: it would shadow the real file's mesh
-        // for every other map sharing that fid. Key it by map_id like LoadMapFromContext does.
         auto hash = chosen == &ctx_data ? static_cast<uint64_t>(map_id) : static_cast<uint64_t>(fid);
         hash |= static_cast<uint64_t>(map_data.pathNodeSize) << 32;
 
@@ -526,9 +513,6 @@ namespace {
         return m;
     }
 
-    // Fallback when no file_id is known: build PathingMapData from the live map context
-    // and hand it to the standard MilePath ctor (eager build — it's the player's map).
-    // allow_load=false is game-thread-safe: resident lookup only, never runs the deep-copy parse below.
     Pathing::MilePath* LoadMapFromContext(GW::Constants::MapID map_id, bool allow_load = true)
     {
         const auto mc = GW::GetMapContext();
@@ -997,10 +981,6 @@ namespace {
             if (!file_hash) continue;
             if (seen_file_hashes.contains((uint32_t)file_hash)) continue;
 
-            // Pick the representative for this file_hash, PREFERRING a non-outpost (explorable): the world-map
-            // picker resolves a marker to this node, and for shared-file outpost/explorable pairs (e.g. Lutgardis
-            // Conservatory 129 / Melandru's Hope 201) the explorable is the routing target, not the outpost. Fall
-            // back to the first valid entry (outpost-only file) when there's no explorable.
             GW::Constants::MapID chosen = GW::Constants::MapID::None, first_valid = GW::Constants::MapID::None;
             ImRect chosen_bounds, first_bounds;
             for (const auto& entry : entries) {
@@ -1130,11 +1110,6 @@ namespace {
         return {std::clamp(g.x, mn.x, mx.x), std::clamp(g.y, mn.y, mx.y), g.zplane};
     }
 
-    // Rank every map whose world-map bounds contain `wm_pos`, best-first, so an ambiguous marker over overlapping/nested
-    // bounds resolves to the map most likely to own it. Every world-bounds-containing map is a candidate (the resolver
-    // tries each until one connects); ranking only orders the attempts: maps whose real game bounds contain the point come
-    // first, then those where it lands just past a shared border (closest-fit first, e.g. the 239/241/31 seam). Within a
-    // tier, adjacency to `prefer_adjacent_to` then tighter bounds win (a nested detail map beats the region around it).
     std::vector<GW::Constants::MapID> RankCandidateMapsForWorldPos(const GW::Vec2f& wm_pos, GW::Constants::MapID prefer_adjacent_to = GW::Constants::MapID::None)
     {
         BuildMapGraph();
@@ -1164,9 +1139,6 @@ namespace {
         for (const auto& node : map_graph_nodes) {
             if (node.continent != ctx_continent) continue;
 
-            // Connection-referenced nodes (a map co-located with an on-world-map sibling that shares its file id, so it lost
-            // the graph's file_hash dedup) carry empty bounds — recover their real world bounds so a click can still resolve
-            // to them. Without this they are invisible to the picker and routing falls back to the sibling.
             ImRect wb = node.wm_bounds;
             if (wb.GetWidth() < 1.f || wb.GetHeight() < 1.f) {
                 auto* area = GW::Map::GetMapInfo(node.map_id);
@@ -1194,9 +1166,6 @@ namespace {
             if (a.inside != b.inside) return a.inside;                              // in-bounds maps first
             if (!a.inside && a.outside != b.outside) return a.outside < b.outside;  // then closest to a shared border
             if (a.adjacent != b.adjacent) return a.adjacent;                        // then neighbours of the route's other end
-            // Prefer the explorable over its outpost sibling: they share a file id (identical game bounds), so a marker in
-            // the region resolves to both, but a world-map route should target the explorable unless ONLY the outpost's
-            // (small) icon rect contains the click — in which case the outpost is the sole candidate and still wins.
             if (a.is_outpost != b.is_outpost) return !a.is_outpost;
             return a.area < b.area;                                                 // then tighter bounds
         });
@@ -1279,10 +1248,6 @@ namespace {
 
     bool IsOutpostMap(GW::Constants::MapID map_id); // forward decl
 
-    // NOTE: the old bounds-overlap edge model (GetConnectionCost / GetEdgeCost with HOP_PENALTY /
-    // OUTPOST_BONUS / TRANSIT_MULT) and the ClosestPortal*DistanceInMap / FindAnyPortalPosInMap portal-
-    // distance helpers were removed with the switch to the portal-graph LazySP router (ROUTING_REDESIGN.md).
-
     // True if a (non-disabled) portal connection links these two maps, honouring the connection-spread rule
     // (explorable connections apply to file_hash siblings; outpost connections stay local) and one-way.
     bool HasPortalConnectionBetween(GW::Constants::MapID map_a, GW::Constants::MapID map_b)
@@ -1328,11 +1293,6 @@ namespace {
 
     bool RunAStarOnMap(GW::Constants::MapID map_id, const GW::GamePos& from, const GW::GamePos& to, std::vector<GW::GamePos>& path_out); // fwd decl
 
-    // Real walk distance between two game positions on one map, via the MilePath visgraph Walk A*
-    // (`RunAStarOnMap`). The visgraph is built once per map (lazily, on first query) and cached, so
-    // subsequent queries are cheap — unlike a per-call trapezoid search, which re-exhausted the
-    // whole mesh on every call (~seconds/query, the 20s-route bottleneck). Loads the DAT if the map isn't
-    // resident. Returns the path length; +inf and *out_unreachable set when no walkable path exists.
     float WalkDistanceOnMap(GW::Constants::MapID map_id, const GW::GamePos& from, const GW::GamePos& to,
                             bool* out_unreachable = nullptr, bool* out_data_miss = nullptr)
     {
@@ -1362,12 +1322,6 @@ namespace {
         return len;
     }
 
-    // Intra-map grouping key: maps sharing a DAT file (file_hash) share one physical mesh, so their portal
-    // endpoints are intra-connected and the real walk distance (∞ if the mesh is gated/disconnected, e.g.
-    // Nahpui 216↔265) governs reachability. Grouping by file_hash — NOT by MapID — is what lets a query on
-    // an outpost use connections authored on its explorable sibling (the old connection-spread rule) and
-    // handles shared-file outpost/mission maps. Normal outposts have a distinct file_hash from their
-    // explorable, so they stay separate anyway. file_hash-less (fh==0) maps are each their own mesh.
     uint64_t MeshKeyFor(GW::Constants::MapID map_id)
     {
         const uint32_t fh = GetMapFileId(map_id);
@@ -1531,10 +1485,6 @@ namespace {
         return true;
     }
 
-    // LazySP: Dijkstra on optimistic weights, refine the first unevaluated intra-edge on the returned
-    // path, repeat until the path's intra-edges are all real. Returns the MapID sequence — a new map is
-    // emitted only when the path traverses a portal CROSSING, so same-mesh siblings walked via an intra
-    // edge collapse (while an authored crossing between file_hash siblings, e.g. Nahpui 216↔265, does not).
     std::vector<GW::Constants::MapID> FindMapRoute(GW::Constants::MapID src, GW::Constants::MapID dst, const GW::GamePos* start_pos = nullptr, const GW::GamePos* goal_pos = nullptr)
     {
         if (src == dst) return {src, dst};
@@ -1548,9 +1498,6 @@ namespace {
         BuildPortalGraph(g, src, start_pos, dst, goal_pos, same_continent, route_continent);
         if (g.start_i < 0 || g.goal_i < 0) return {};
 
-        // Connectivity diagnostics: mesh membership + degree tell us whether a failure is an isolated
-        // endpoint (start/goal has no edges — its map lacks authored connections, or the mesh grouping split
-        // it off) versus a genuine no-path between two connected components.
         {
             int goal_indeg = 0;
             for (const auto& al : g.adj)
@@ -1746,11 +1693,6 @@ namespace {
         {
             uint32_t fh_a = GetMapFileId(map_a);
             uint32_t fh_b = GetMapFileId(map_b);
-            // A connection authored on any map sharing `target`'s file id applies to `target` — they are one
-            // physical mesh, so the portal is reachable by walking. This INCLUDES an outpost sibling (e.g. the
-            // 77->210 portal usable from Altrumm Ruins 272, which shares file 0x25e13 with House zu Heltzer 77):
-            // unlike the routing-cost graph, here the per-segment A* verifies actual reachability and reroutes
-            // if the portal turns out to be unreachable, so allowing it can't create a phantom shortcut.
             auto maps_match = [](GW::Constants::MapID mid, GW::Constants::MapID target, uint32_t target_fh) {
                 if (mid == target) return true;
                 return target_fh && GetMapFileId(mid) == target_fh;
@@ -1920,9 +1862,6 @@ namespace {
             return true;
         }
 
-        // Portal endpoints lie on the navmesh, so a failed search means the two points aren't walk-connected on
-        // this mesh (e.g. gated/isolated regions sharing a file id) — an expected ∞ the router uses to route via
-        // the portal instead of walking. Not an error; logged only under PATHING_VERBOSE.
         PATH_LOG_INFO("[AStar] map %d: no path (points not walk-connected)", (int)map_id);
         return false;
     }
@@ -2109,9 +2048,6 @@ namespace {
                     // Transit map without DAT data (underground/instance): if both entry and exit connections exist, walk it as a straight line.
                     bool has_entry = seg == 0 || HasPortalConnectionBetween(route[seg - 1], map_id);
                     bool has_exit = seg + 1 >= route.size() || HasPortalConnectionBetween(map_id, route[seg + 1]);
-                    // Only take the straight-line shortcut for maps that genuinely lack usable pathing data. If the
-                    // map HAS valid data but A* still failed, the chosen portal is physically unreachable (behind a
-                    // wall) — blacklisting + rerouting is correct; drawing a direct line through the wall is the bug.
                     auto map_has_pathing_data = [&](GW::Constants::MapID m) -> bool {
                         Pathing::MilePath* mp = (m == GW::Map::GetMapID()) ? GetMilepathForCurrentMap() : GetMilepathForMap(m);
                         if (!mp || !mp->ready() || mp->build_failed()) return false;
@@ -2155,11 +2091,6 @@ namespace {
 
                 last_seg_end = seg_to;
 
-                // A segment is hidden (drawn only in native/in-world coords) exactly when its map is NOT on the
-                // world map — i.e. its points can't be projected to world-map coords at all (underground dungeon
-                // depths like Beneath Lion's Arch 691 / Bogroot L2 616). Maps that ARE on the world map — including
-                // hubs reached via no_draw asura gates (Boreal Station 675) and dungeon L1 entrances — draw on the
-                // world map. (no_draw still governs the connection LINE elsewhere, not the path segment here.)
                 const bool is_first_seg = (seg == 0);
                 const bool is_last_seg = (seg + 1 == route.size());
                 const auto* seg_area = GW::Map::GetMapInfo(map_id);
@@ -2199,9 +2130,6 @@ namespace {
         return false;
     }
 
-    // Resolve an ambiguous goal world-pos by trying each candidate destination map (ranked best-first) until one yields a
-    // real route. Overlapping bounds mean a single resolve can commit to a map with no path; enumerating recovers the
-    // interpretation that actually connects. Writes the winning map to `out_to_map` if provided.
     bool BuildCrossMapRouteResolvingDst(GW::Constants::MapID from_map, const GW::GamePos& start, const GW::Vec2f& start_wm, const GW::Vec2f& to_world, std::vector<GW::Vec2f>& out_points, std::vector<HiddenPathSegment>& out_hidden, GW::Constants::MapID* out_to_map = nullptr)
     {
         std::vector<GW::Constants::MapID> candidates;
@@ -2226,9 +2154,6 @@ namespace {
             out_points.clear();
             out_hidden.clear();
 
-            // Same physical map as the source: a plain single-map A*, never the portal machinery (FindMapRoute would
-            // short-circuit to a degenerate self-hop). If it's unreachable — e.g. isolate regions that share a file id but
-            // have no walkable path between them — fall through and route this destination through other maps instead.
             if (to_map == from_map) {
                 std::vector<GW::GamePos> leg;
                 if (RunAStarOnMap(from_map, start, goal, leg) && !leg.empty()) {
@@ -2272,9 +2197,6 @@ namespace {
             if (!ok) return;
             Resources::EnqueueMainTask([full_path, cur_map] {
                 ClearPathLines();
-                // Mirror QuestModule: current-map segments draw in game coords (compass + mission map);
-                // off-map segments stay world coords so the renderer projects them across the whole
-                // mission map + world map. Both flavours enable minimap + mission-map drawing.
                 const auto* cur_info = GetCachedMapInfo(cur_map);
                 auto in_bounds = [&](const GW::GamePos& g) {
                     return cur_info && g.x >= cur_info->bounds_min.x && g.x <= cur_info->bounds_max.x &&
@@ -2466,9 +2388,6 @@ namespace {
         return result;
     }
 
-    // Bumped only when a dual-instance map loads (DoA outpost/explorable share id 474): its mesh can change
-    // without the MapID changing, so MapID-keyed overlays must also compare against this. Everywhere else
-    // MapID → mesh caching stays untouched.
     uint32_t map_load_generation = 0;
 
     void OnUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wParam, void*)
@@ -2866,9 +2785,6 @@ bool PathfindingWindow::GetNextPortalToward(GW::Constants::MapID from_map, const
 {
     if (from_map == GW::Constants::MapID::None || to_map == GW::Constants::MapID::None) return false;
     if (from_map == to_map) return false;
-    // Same physical file usually means the same walkable space (outpost ↔ explorable variant) — just walk,
-    // no portal. But when the JSON authors a portal between these two MapIDs (e.g. Nahpui 216↔265, whose
-    // sub-regions are gated and only reachable via the portal), the crossing IS required, so fall through.
     const uint32_t fh_from = GetMapFileId(from_map);
     const uint32_t fh_to = GetMapFileId(to_map);
     if (fh_from && fh_from == fh_to &&
@@ -3042,9 +2958,6 @@ void PathfindingWindow::FindPath()
 {
     UpdateMarkers(path_from, path_to);
 
-    // A world-map destination always goes through the resolver: path_to_map can collapse to the source (a marker on a map
-    // that shares a file id with the current map resolves to the current map), so we can't trust from!=to to decide
-    // cross-map. The resolver picks the real destination from the world position and routes through other maps if needed.
     const bool have_to_world = (path_to_world.x != 0.f || path_to_world.y != 0.f);
     if (path_from_map != GW::Constants::MapID::None && have_to_world) {
         // Fast path: if the goal lands in the current map's bounds, try a direct single-map A* first (draws in game coords).

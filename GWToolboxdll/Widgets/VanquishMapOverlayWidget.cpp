@@ -229,9 +229,6 @@ namespace {
         return !newly_explored_cells.empty();
     }
 
-    // Pure function, safe on a worker thread: build the fog cell index + quads.
-    // Includes both walkable and blocked cells in the fog buffer so blocked
-    // areas can also be "explored" (fog clears, revealing the blocked color).
     void BuildFogVertices(const MapGridData& data, std::vector<int>& out_cell_index, std::vector<D3DVertex>& out_verts)
     {
         out_cell_index.assign(data.size, -1);
@@ -572,10 +569,6 @@ namespace {
 
     bool grid_rebuild_pending = false;
 
-    // Async rebuild: the heavy rasterization and vertex building run on the worker thread; only the BFS snapshot
-    // and the final swap touch the game thread. Used both on map change and for mid-instance changes (gates,
-    // teleports). `force` bypasses the in-flight guard so a map change always rebuilds even if a prior build for
-    // the old map is still running (its stale result is discarded by the map_id guard in the apply step).
     void QueueRebuildMapBorder(bool force = false)
     {
         if (grid_rebuild_pending && !force) return;

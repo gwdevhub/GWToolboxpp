@@ -151,12 +151,6 @@ namespace {
 
         if (!found) { fclose(f); return false; }
 
-        // Parse central directory.
-        // Central dir entry layout after signature (4 bytes):
-        //   ver_made(2), ver_need(2), flags(2), compression(2),
-        //   mod_time(2), mod_date(2), crc(4), comp_sz(4), uncomp_sz(4),
-        //   name_len(2), extra_len(2), comment_len(2),
-        //   disk_start(2), int_attrs(2), ext_attrs(4), local_off(4)
         fseek(f, static_cast<long>(cd_offset), SEEK_SET);
 
         for (uint16_t i = 0; i < n_entries; i++) {

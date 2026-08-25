@@ -379,9 +379,6 @@ namespace Pathing {
         // A convex polygon clipped by four half-planes gains at most one vertex per clip.
         constexpr size_t kMaxClipVerts = 8;
 
-        // Sutherland-Hodgman against one axis-aligned half-plane. `axis` is 0 for x, 1 for y;
-        // `keep_above` keeps the side at or above `limit`. Winding does not matter - inside is a
-        // coordinate test, not a side-of-edge test.
         size_t ClipHalfPlane(GW::Vec2f (&poly)[kMaxClipVerts], size_t count, const int axis, const float limit, const bool keep_above)
         {
             if (!count) return 0;
@@ -424,9 +421,6 @@ namespace Pathing {
         count = ClipHalfPlane(poly, count, 1, box_max.y, false);
         if (count < 3) return false; // they miss, or meet only along an edge or at a corner
 
-        // Signed area and area centroid in one pass; the sign cancels in the centroid divide. The
-        // centroid, rather than any vertex, only so the point sits strictly inside the overlap
-        // instead of on the seam, where a walkability test can go either way.
         float area2 = 0.f;
         GW::Vec2f centroid{0.f, 0.f};
         for (size_t i = 0; i < count; i++) {
@@ -450,9 +444,6 @@ namespace Pathing {
         GW::Constants::MapID reachable_cache_map = static_cast<GW::Constants::MapID>(0);
         GW::Constants::InstanceType reachable_cache_instance = GW::Constants::InstanceType::Loading;
 
-        // The walk visits every adjacency on the map and tests each against every travel portal, so
-        // it is far too expensive to redo per query. Gates opening or closing move whole regions in
-        // and out of reach, so that state - and nothing else - is what rebuilds it.
         const std::unordered_set<const GW::PathingTrapezoid*>& CachedReachableTrapezoids()
         {
             const auto map_id = GW::Map::GetMapID();
@@ -461,9 +452,6 @@ namespace Pathing {
             CopyBlockedPlanes(blocked);
             if (map_id != reachable_cache_map || instance_type != reachable_cache_instance || blocked != reachable_cache_blocked_planes) {
                 auto found = FindReachableTrapezoids();
-                // Empty means it could not find the player to start from, which callers read as
-                // "assume everything is reachable". Keeping that would pin the assumption for the
-                // life of the map; the walk bails immediately in that state, so retrying is free.
                 if (found.empty()) return reachable_cache = {};
                 reachable_cache = std::move(found);
                 reachable_cache_blocked_planes = std::move(blocked);
@@ -512,9 +500,6 @@ namespace Pathing {
     }
 
     namespace {
-        // Both the live and DAT paths carry a real radius now; this only covers a prop whose model
-        // info has not loaded yet. The portal models measure ~400 unscaled, so lean that way
-        // rather than at the old 250, which was under half the true width of every gate measured.
         constexpr float kUnknownPortalHalfWidth = 400.f;
 
         float PortalHalfWidth(const PortalProp& portal)
@@ -526,9 +511,6 @@ namespace Pathing {
         GW::Constants::MapID portal_cache_map = static_cast<GW::Constants::MapID>(0);
         GW::Constants::InstanceType portal_cache_instance = GW::Constants::InstanceType::Loading;
 
-        // The doorway a portal blocks, resolved once. The reachability walk asks about every portal
-        // on every adjacency in the map - hundreds of thousands of times - and deriving the gate
-        // line from the facing there meant a sinf and a cosf on each one.
         struct PortalDoorway {
             GW::Vec2f left{}, right{}; // gate line, when the prop has a facing
             GW::Vec2f pos{};
@@ -665,10 +647,6 @@ namespace Pathing {
                 for (uint32_t i = 0; i < pair->count; i++) {
                     const auto* t = pair->trapezoids[i];
                     if (!t || reachable.contains(t)) continue;
-                    // Same doorway test the adjacency walk uses. Map transitions tend to sit on a
-                    // plane boundary, so the hop across a gate is usually a plane portal rather
-                    // than an adjacency step - leaving it unchecked let the walk through every
-                    // travel portal in the map no matter how wide the doorway was.
                     if (CrossesTravelPortal(from, centre(t))) continue;
                     reachable.insert(t);
                     queue.push_back({t, target_plane});
@@ -1396,17 +1374,6 @@ namespace Pathing {
             const GW::PathingTrapezoid* pt2 = n.t;
             uint8_t pt2_layer = n.layer;
             Edge edge = n.loc; // neighbour location relative to pt1
-
-            // Definitios of portals and points
-            //         \        \        
-        //     _____\a......b\____
-            //     |                 a|___
-            // ____|b                 .
-            //     .                  .
-            //     .                 b.___
-            // ____.a                 |
-            //     |____b..........a__|
-            //          /         /
 
             bool point1_viability = false; // pt1_layer != pt2_layer;
             bool point2_viability = false;
@@ -2171,9 +2138,6 @@ namespace Pathing {
                         f1 = p1.m_pos;
                     }
 
-                    // Expansion cap: bound how many times this portal is expanded (per source) so the step
-                    // budget spreads across the region instead of one dense portal's many funnel paths. Edges
-                    // to this portal's own endpoints were already emitted above; only deep re-exploration is cut.
                     const Portal::id ek = portal.m_other_id;
                     const uint16_t ec = (EG[ek] == exp_cur) ? EC[ek] : 0;
                     if (ec >= PATHING_PORTAL_EXPAND_CAP) continue;
@@ -2274,9 +2238,6 @@ namespace Pathing {
 #endif
             }
 
-            // Symmetrize: 2D visibility is symmetric but the per-source funnel DFS can find A->B without B->A (and
-            // the worker writes only the source row); missing reverse edges break routing (ground-start bridge zigzag).
-            // For every A->B add B->A if absent (same distance/blocked_planes). Single-threaded, before the directional teleport links below.
             {
                 const size_t vg_n = m_visGraph.size();
                 std::vector<uint32_t> orig_sizes(vg_n);
@@ -2641,9 +2602,6 @@ namespace Pathing {
         int32_t* goal_edge_idx = sb.goal_edge_idx;
         sb.reset(n, START_ID);
 
-        // O(1) lookup: per point p, index into goal_edges for p->goal (or -1). Duplicate blocked_planes collapse to
-        // the last — fine, paths are re-checked against current_blocked_planes in the relax step.
-        // Raw pointer — skip MSVC debug bounds checks (reused in the goal-edge relax below).
         const PointVisElement* const GE = sb.goal_edges.data();
         const size_t goal_edge_count = sb.goal_edges.size();
         for (size_t i = 0; i < goal_edge_count; ++i) {

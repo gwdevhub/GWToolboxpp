@@ -33,9 +33,6 @@ namespace {
     [[maybe_unused]] bool crash_dumped = false;
 
 #ifdef _DEBUG
-    // The console is written from its own thread so QuickEdit stays usable: selecting text puts the
-    // console in Select mode, which blocks the write - on the game thread that is a frozen client.
-    // log.txt is still written synchronously, so a crash cannot lose lines that matter.
     std::mutex console_mutex;
     std::condition_variable console_cv;
     std::deque<std::string> console_queue;
@@ -190,9 +187,6 @@ BOOL WINAPI ConsoleCtrlHandler(const DWORD dwCtrlType)
         case CTRL_CLOSE_EVENT:
         case CTRL_LOGOFF_EVENT:
         case CTRL_SHUTDOWN_EVENT:
-            // Returning would make the process exit!
-            // Give GWToolbox WndProc time to handle the close message
-            // If the application is still running after 10 seconds, windows forcefully terminates it
             Sleep(10000);
 
             return TRUE;
@@ -224,9 +218,6 @@ bool Log::InitializeLog()
         CloseHandle(conin);
     }
     console_thread = std::thread(ConsoleWriter);
-    // Debug also writes to log.txt on disk (the harness reads it), keeping the console as the primary
-    // sink. _wfsopen with _SH_DENYWR allows other processes to READ the file while we hold it open --
-    // _wfopen_s opens it exclusively, which would block the harness host from tailing it.
     Resources::EnsureFolderExists(Resources::GetComputerFolderPath());
     logfile2 = _wfsopen(Resources::GetPath(L"log.txt").c_str(), L"w", _SH_DENYWR);
 #else

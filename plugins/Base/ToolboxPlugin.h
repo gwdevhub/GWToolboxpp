@@ -29,9 +29,6 @@ struct ImGuiAllocFns {
     void* user_data = nullptr;
 };
 
-//
-// Dll interface.
-//
 inline HMODULE plugin_handle; // set in dllmain
 class ToolboxPlugin;          // Full declaration below.
 DLLAPI ToolboxPlugin* ToolboxPluginInstance();
@@ -88,14 +85,8 @@ public:
     // Optional. Prefer using ImGui::GetIO() during update or render, if possible.
     virtual bool WndProc(UINT, WPARAM, LPARAM) { return false; }
 
-    // Called by GWToolbox when you need to (re)load any settings; the suitable settings folder is given.
-    // The base implementation loads GetSettingFile() into `settings` and GetLegacySettingFile() into
-    // `legacy_ini` (read-only). Override, call the base first, then read your values with LoadSetting().
     virtual void LoadSettings(const wchar_t* folder);
 
-    // Called by GWToolbox when you need to (re)save any settings; the suitable settings folder is given.
-    // The base implementation writes `settings` to GetSettingFile(). Override, stage your values with
-    // SaveSetting(), then call the base last. The legacy ini file is never written.
     virtual void SaveSettings(const wchar_t* folder);
 
     // Will be drawn in the Settings/Plugins menu. Must use ImGui.
