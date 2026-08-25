@@ -780,13 +780,13 @@ void QuestModule::DrawSettingsInternal()
 {
     ImGui::CheckboxWithHelp(
         "接受新任务时保持当前任务", &settings.keep_current_quest_when_new_quest_added,
-        "默认情况下，激战会将您当前选中的任务更改为您刚从NPC处接受的任务。\n如果您没有意识到任务标记现在将您带往不同的地方，这可能会很烦人！\n勾选此选项可确保在向任务日志添加新任务时不会更改当前任务。"
+        "默认情况下，激战会将您当前选中的任务更改为您刚从NPC处接受的任务。\n如果您没有注意到任务标记现在将您带往新的目的地，这可能会很烦人！\n勾选此选项可确保在向任务日志添加新任务时也不会更改当前任务指引。"
     );
     ImGui::Checkbox("在任务日志窗口中双击任务以传送到最近的前哨站", &settings.double_click_to_travel_to_quest);
     if (QuestPathingAvailable()) {
         ImGui::Text("在以下位置绘制通往任务标记的路径：");
         bool recalc_quest_paths = false;
-        recalc_quest_paths |= ImGui::Checkbox("地形##terrianquestpath", &settings.draw_quest_path_on_terrain);
+        recalc_quest_paths |= ImGui::Checkbox("地面##terrianquestpath", &settings.draw_quest_path_on_terrain);
         recalc_quest_paths |= ImGui::Checkbox("小地图##minimapquestpath", &settings.draw_quest_path_on_minimap);
         recalc_quest_paths |= ImGui::Checkbox("任务地图##missionmapquestpath", &settings.draw_quest_path_on_mission_map);
         ImGui::Checkbox("世界地图##worldmapquestpath", &WorldMapWidget::ShowLinesOnWorldMap());

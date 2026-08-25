@@ -1466,9 +1466,18 @@ void DailyQuests::Draw(IDirect3DDevice9*)
             case 1:
                 ImGui::Text("明天");
                 break;
-            default:
+            // default:
+            //     char mbstr[100];
+            //     std::strftime(mbstr, sizeof(mbstr), "%a %d %b", std::localtime(&unix));
+            //     ImGui::Text(mbstr);
+            //     break;
+            // 修改为中文显示
+            default: 
+                auto tm = *std::localtime(&unix);
+                static const char* weekdays[] = {"星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"};
+                static const char* months[] = {"1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"};
                 char mbstr[100];
-                std::strftime(mbstr, sizeof(mbstr), "%a %d %b", std::localtime(&unix));
+                snprintf(mbstr, sizeof(mbstr), "%s %d日 %s", months[tm.tm_mon], tm.tm_mday, weekdays[tm.tm_wday]);
                 ImGui::Text(mbstr);
                 break;
         }
