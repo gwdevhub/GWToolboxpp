@@ -1109,7 +1109,7 @@ void FriendListWindow::Draw(IDirect3DDevice9*)
         friends_online_sorted.clear();
         friends_online_sorted.reserve(friends.size());
         for (const auto& it : friends) {
-            Friend* lfp = it.second;
+            const auto lfp = it.second;
             if (lfp->type != GW::FriendType::Friend) {
                 continue;
             }
@@ -1127,7 +1127,7 @@ void FriendListWindow::Draw(IDirect3DDevice9*)
         need_to_reorder_friends = false;
     }
     char tmpbuf[32];
-    for (Friend* lfp : friends_online_sorted) {
+    for (const auto lfp : friends_online_sorted) {
         colIdx = 0;
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, settings.hover_background_color.value);
