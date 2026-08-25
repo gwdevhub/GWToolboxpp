@@ -3,10 +3,6 @@
 #include <cstdint>
 #include <span>
 
-// Surface-draping helpers for the in-world overlay modules (danger rings, loot beacons, skill range rings).
-// GW convention: "no altitude data" = 0.f, up is -z (highest surface = min z).
-// Plane 0 is a native heightfield read (any thread); non-zero planes use QueryAltitude, so every multi-plane query here is render-thread only.
-// Multi-plane queries prune non-zero planes by trapezoid coverage before calling QueryAltitude; `drapeverify` measures that against the unpruned answer.
 namespace TerrainDrape {
     // Terrain surface z at (x,y) on plane 0 from the heightfield; 0.f when off-terrain or unloaded (native read, any thread).
     float NativeTerrainZ(float x, float y);

@@ -2,9 +2,6 @@
 
 #include <ToolboxModule.h>
 
-// Draws a beacon (vertical pillar of light + draped base ring) in the 3D world on dropped items
-// worth picking up - by rarity and/or trader value - via the shared GameWorldCompositor, so the
-// beacons composite under the in-game UI and are depth-tested against the scene.
 class LootBeaconsModule : public ToolboxModule {
     LootBeaconsModule() = default;
     ~LootBeaconsModule() override = default;

@@ -134,10 +134,6 @@ namespace {
         if (!mm_ctx || !mm_ctx->h003c) return;
         const GW::Vec2f mm_pos = mm_ctx->h003c->player_mission_map_pos;
 
-        // Use the controlled character's position when not spectating (works on
-        // underground maps where WorldMapToGamePos returns wrong coordinates).
-        // When spectating, mm_pos tracks the observed character so we must convert
-        // it back to game coords to stay consistent with the origin calculation.
         float px, py;
         const auto* player = GW::Agents::GetControlledCharacter();
         const bool spectating = player && GW::Agents::GetObservingId() != player->agent_id;
@@ -258,9 +254,6 @@ namespace {
         return true;
     }
 
-    // --- Walkable terrain overlay -----------------------------------------------
-    // Static rasterization of every pathing-map trapezoid; unlike the Vanquish overlay
-    // there is no reachability/BFS, fog-of-war or enemy tracking, and no shared state.
     constexpr float TERRAIN_CELL_SIZE = GW::Constants::Range::Adjacent / 2.f;
 
     struct TerrainTrapezoidSnapshot {
@@ -556,9 +549,6 @@ namespace {
         ctx.draw_background = false;
         ctx.draw_cardinals = false; // mission map is always north-aligned
         ctx.draw_pmap = settings.draw_pmap;
-        // The pmap shadow offset is applied in the view's output space, which for the mission map's
-        // game->px view is raw pixels; express a small game-unit offset in px so it stays subtle and
-        // scales with the mission-map zoom (the compass keeps the default, applied in its own space).
         constexpr float shadow_gwinches = 180.f;
         ctx.shadow_translation = shadow_gwinches / cached_px_to_game;
         ctx.draw_symbols = settings.draw_symbols;
@@ -596,11 +586,6 @@ namespace {
 
     }
 
-    // Cross-map route tails are stored in world-map coords (the only form that can place other
-    // maps' positions). Draw them in an ImGui overlay via the world->mission-map transform,
-    // clipped to the widget. These cover the whole route (incl. the current map's exit stretch
-    // past the nearest portal, which the game-coord lines don't reach); the overlap with the
-    // game-coord current-map lines is the same path, so it's harmless - matches the world map.
     void DrawWorldCoordRouteLines()
     {
         const auto& lines = Minimap::Instance().custom_renderer.GetLines();

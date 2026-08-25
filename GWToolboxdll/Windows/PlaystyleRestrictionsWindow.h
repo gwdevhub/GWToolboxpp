@@ -2,9 +2,6 @@
 
 #include <ToolboxWindow.h>
 
-// Self-imposed challenge-mode gates ("Copperman" and friends): a shareable profile of
-// restrictions that are enforced client-side wherever the game routes the action through
-// a UI message we can block. See site/src/content/docs/windows/playstyle-restrictions.md
 class PlaystyleRestrictionsWindow : public ToolboxWindow {
     PlaystyleRestrictionsWindow() = default;
     ~PlaystyleRestrictionsWindow() override = default;

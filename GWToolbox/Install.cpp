@@ -85,12 +85,6 @@ bool CopyInstaller()
 
 bool DeleteInstallationDirectory(std::wstring& error)
 {
-    // @Remark:
-    // "SHFileOperationW" expect the path to be double-null terminated.
-    //
-    // Moreover, the path should be a full path otherwise, the folder won't be
-    // moved to the recycle bin regardless of "FOF_ALLOWUNDO".
-
     const auto install_dir = GetInstallationDir();
     if (install_dir.empty())
         return error = L"Failed to GetInstallationDir() in DeleteInstallationDirectory()", false;

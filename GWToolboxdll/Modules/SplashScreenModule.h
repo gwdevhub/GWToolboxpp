@@ -2,13 +2,6 @@
 
 #include <ToolboxModule.h>
 
-// Replaces the artwork on the Guild Wars ("Reforged") startup splash window.
-// The splash background and the "GUILD WARS REFORGED" logo are both built by the
-// DnCtl image-control constructor, which takes the compressed image bytes and a
-// flag identifying which control it is (0 = background, 1 = foreground logo). We
-// hook that constructor and, when the user has configured a replacement, hand it
-// our own file bytes instead. The control scales the decoded image to its target
-// rect, so any size/format the game's decoder accepts works - no re-encoding.
 class SplashScreenModule : public ToolboxModule {
     SplashScreenModule() = default;
     ~SplashScreenModule() override = default;

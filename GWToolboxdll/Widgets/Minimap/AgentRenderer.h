@@ -168,10 +168,6 @@ private:
     Color GetColor(const GW::Agent* agent, const CustomAgent* ca = nullptr) const;
     float GetSize(const GW::Agent* agent, const CustomAgent* ca = nullptr) const;
     Shape_e GetShape(const GW::Agent* agent, const CustomAgent* ca = nullptr) const;
-    // Real players never go through GetCustomAgentsToDraw (see Render()), so the seeded
-    // Neutral/Ally/.../Minion default rows only reach them through this fallback; read the
-    // row's current size instead of the (now write-only) legacy size_* field so editing the
-    // row in the Custom Agents list actually takes effect for players too.
     float GetSeededDefaultSize(GW::Constants::Allegiance allegiance, float fallback) const;
 
     struct RenderPosition {

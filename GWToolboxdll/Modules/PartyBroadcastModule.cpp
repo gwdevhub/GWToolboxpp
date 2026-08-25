@@ -126,9 +126,6 @@ namespace {
 
     void on_websocket_closed()
     {
-        // NOTE: called on the worker thread by ThreadedWebSocket.
-        // Only touch atomics / self-contained state here; anything requiring
-        // the game thread should be enqueued via GW::GameThread::Enqueue.
         last_update_timestamp = 0;
         server_parties.clear();
         need_to_send_party_searches = TIMER_INIT();

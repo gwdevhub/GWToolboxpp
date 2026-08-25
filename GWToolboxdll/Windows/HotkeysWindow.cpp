@@ -466,9 +466,6 @@ if (ImGui::Selectable("Equip Item")) {
             hotkeys_changed = new_hotkey != 0;
         }
 
-        // === each hotkey / group ===
-        // Groups are first-class items in `hotkeys`; HotkeyGroup::Draw handles its children.
-        // All moves at the top level are simple swaps — no rotation needed.
         for (auto hotkey : TBHotkey::top_level_hotkeys) {
             if (hotkey->Draw()) break; // re-render next frame after list mutation
         }
@@ -538,9 +535,6 @@ void HotkeysWindow::SaveSettings(SettingsDoc& doc)
     ToolboxWindow::SaveSettings(doc);
     doc.SetStruct(Name(), settings);
 
-    // Save all hotkeys as flat tagged entries. Every entry gets a sort_order field
-    // that determines display order on load. Children also get a group field
-    // containing their parent group's label.
     std::vector<HotkeyEntry> entries;
     entries.reserve(TBHotkey::all_hotkeys.size());
     ToolboxIni tmp_ini;

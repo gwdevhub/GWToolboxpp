@@ -43,9 +43,6 @@ namespace {
     // (+0x5B4, the grid dims): one bit per 32x32-world-map-unit cell, addressed as below.
     constexpr float kWorldMapUnitsPerCell = 32.f;
 
-    // The fog mesh builder strides rows by (width >> 5) words while the explored-query indexes
-    // bits flat as cy * width + cx; the client uses both interchangeably, so width is always a
-    // multiple of 32 and either form works.
     uint32_t RowWords(const uint32_t width)
     {
         return width >> 5;
@@ -88,14 +85,6 @@ namespace {
     // few ulp; 1/64 is a power of two with plenty of headroom and 1/2048 of a tile.
     constexpr float kCellEps = 1.f / 64.f;
 
-    // The tile the client credits from a standing position. Rows and columns are the same 32-unit
-    // grid the fog bits are on, but they close on opposite edges: a column owns [32c, 32c+32) while
-    // a row owns (32r, 32r+32]. The grid is anchored in game space, and GamePosToWorldMap flips y,
-    // which turns a half-open game-space interval into one closed at the other end. Measured: at
-    // exactly wm.y == 32r - a value straight navmesh edges hand out, so it is easy to stand on -
-    // the client credits the row to the NORTH. Epsilon leans off each axis's closed end, so a value
-    // that arrived through the two conversions and landed a few ulp past a boundary still reads as
-    // the cell that owns it.
     int CreditCellX(const float x)
     {
         return static_cast<int>(floorf((x + kCellEps) / kWorldMapUnitsPerCell));
@@ -116,9 +105,6 @@ namespace {
         return {cx * kWorldMapUnitsPerCell + 16.f, cy * kWorldMapUnitsPerCell + 16.f};
     }
 
-    // Which fog bit is drawn under a point. Credit cells and fog bits are one index space, so this
-    // is CreditCellAt without the epsilon that only round-tripped positions need - a dx/dy between
-    // the two then never carries a correction.
     std::pair<int, int> FogTileAt(const GW::Vec2f& wm)
     {
         return {
@@ -168,9 +154,6 @@ namespace {
     bool using_bec = false;
     bool set_quest_marker = true;
 
-    // Standing in a tile credits it plus the ring around it; a Bird's Eye Compass widens that to
-    // three rings. Chebyshev throughout, on the credit grid above - so where inside the tile you
-    // stand makes no difference on either axis.
     constexpr int kRevealRadius = 1;
     constexpr int kRevealRadiusBec = 3;
 
@@ -189,9 +172,6 @@ namespace {
         int reveals = 0;   // still-foggy cells this spot would credit
     };
 
-    // Probing a map costs a walkability query per sample per tile, and the answer never changes
-    // while you are on that map, so it is swept once and kept for the session. `strict` and
-    // `skipped` are learned the same way - by visiting - so they belong with it.
     struct MapProbe {
         std::map<std::pair<int, int>, StandCell> cells;
         // Slivers a wide-range visit failed to credit. BEC range misses a few tiles that only
@@ -214,9 +194,6 @@ namespace {
     MapProbe* probe = &no_map_probe;
     bool map_on_world_map = false;
 
-    // Gw.exe credits exploration in FUN_00811be0: it writes the (2r+1)^2 tile block around you and
-    // then broadcasts 0x10000090 with no payload. So the message says "something changed" and the
-    // bitmap itself says what - diffing a snapshot narrows the recompute to the tiles that flipped.
     constexpr auto kCartographyUpdated = static_cast<GW::UI::UIMessage>(0x10000090);
     GW::HookEntry carto_ui_entry;
     std::vector<uint32_t> carto_snapshot;
@@ -255,9 +232,6 @@ namespace {
         probe = &probe_cache[map_id];
     }
 
-    // Gates opening or closing move whole regions in and out of reach, so a sweep taken under the
-    // old state is worthless. Comparing the state itself rather than waiting on an event also
-    // covers arriving in an instance whose gates already differ from the last visit.
     void DropProbeIfGatesMoved()
     {
         std::vector<uint32_t> blocked;
@@ -289,9 +263,6 @@ namespace {
         ImRect bounds;
         const auto info = GW::Map::GetMapInfo(map_id);
         if (!(info && GW::Map::GetMapWorldMapBounds(info, &bounds) && bounds.GetWidth() >= 1.f && bounds.GetHeight() >= 1.f)) return false;
-        // Tile indices, so the credit grid's convention - a row closing on its south edge makes
-        // ceil the right exclusive bound on both axes, and the north edge one row further out than
-        // a plain floor whenever the rectangle starts on a boundary.
         map_rect_min = {CreditCellX(bounds.Min.x), CreditCellY(bounds.Min.y)};
         map_rect_max = {
             static_cast<int>(ceilf(bounds.Max.x / kWorldMapUnitsPerCell)),
@@ -302,10 +273,6 @@ namespace {
         return true;
     }
 
-    // The map boundary only ever gates Bird's Eye Compass range. The near ring has no such rule:
-    // measured on a portal jump to a southern end-of-the-world (Turai's Procession -> Command
-    // Post), it credits as far past the edge as the ring reaches, which is why nothing below
-    // clamps it.
     bool InMapBounds(const int cx, const int cy)
     {
         if (!EnsureMapRect()) return true; // no rectangle to clamp against - do not hide everything
@@ -321,10 +288,6 @@ namespace {
         return map_rect_bounds.Contains({wm.x, wm.y});
     }
 
-    // Measured in game: a tile is reachable beyond the near ring only if walkable ground comes
-    // within about one world-map tile of it - the 3x3 block around it, NOT the tile itself, which
-    // is what the old reading of Gw.exe's per-tile byte got wrong and why we under-claimed at BEC
-    // range. `strict` stays as a runtime backstop while the navmesh test is still the loose one.
     bool CellQualifies(const int fx, const int fy)
     {
         if (!InMapBounds(fx, fy)) return false;
@@ -419,12 +382,6 @@ namespace {
 
     bool show_whole_continent = true;
 
-    // The baked standable tiles for the continent we are on, dilated by ONE tile so a lookup answers
-    // "could standing somewhere credit this tile" in one test. One tile regardless of the Bird's Eye
-    // Compass: the bake's standable set is also its navmesh model, so a tile the wide rings could
-    // reach is already a tile something stands next to. Dilating by 3 claimed fog nothing can credit.
-    // Built once per continent; the live probe still covers the map we are actually in, which the
-    // bake does not have for the handful of maps with no file id.
     constexpr int kMaskRadius = 1;
 
     struct ContinentMask {
@@ -490,10 +447,6 @@ namespace {
         }
     }
 
-    // Whether the baked mask's claim on this tile rests on ground outside the map we are standing
-    // in. Inside it the live navmesh is exact and the bake is not - it files whole trapezoid boxes,
-    // so it marks tiles a slanted edge only passes near - so a claim we can check ourselves is one
-    // the bake does not get to make. The mask is dilated by one tile, hence the ring.
     bool BakeClaimsGroundElsewhere(const int cx, const int cy)
     {
         if (!EnsureMapRect()) return continent_mask.Get(cx, cy); // no rectangle to judge ownership by
@@ -509,10 +462,6 @@ namespace {
     // cells out and back in as probing progresses.
     bool FogCellCoverable(const int cx, const int cy)
     {
-        // The bake knows the whole continent; the live probe knows the map we are standing in,
-        // including the few the bake has no file id for. Either is enough. The mask is dilated by
-        // one tile, so anything it claims is within the near ring of somewhere standable - and the
-        // near ring is unclamped, so that is the whole test.
         if (BakeClaimsGroundElsewhere(cx, cy)) return true;
         if (!probe->complete) return true;
         const int r = RevealRadius();
@@ -534,9 +483,6 @@ namespace {
                 static_cast<float>(grid.IsExplored(cx - 1, cy)) + static_cast<float>(grid.IsExplored(cx, cy))) * 0.25f;
     }
 
-    // The client averages the four cells meeting at a corner, then bakes that field into a fog
-    // texture at kFogSubdivisions texels per cell, 4 bits each - which is why the fog on screen
-    // steps at a quarter of a cell and bands rather than ramping smoothly.
     void BakeFogCell(const CartoGrid& grid, FogCell& out)
     {
         const float tl = ExploredAtCorner(grid, out.cx, out.cy);
@@ -559,16 +505,6 @@ namespace {
     // the ring search sorts by - which is the slack that search has to allow before it stops early.
     constexpr float kStandOffsetMax = kWorldMapUnitsPerCell * 0.5f * 1.41421356f;
 
-    // Which cells hold ground, and where in each one to stand. Coastlines ignore the cell grid, so
-    // the question is a geometric one: does this cell's rectangle overlap a walkable trapezoid at
-    // all - a cell that is mostly cliff but clips a walkable ledge is still somewhere you can go.
-    // Answers both halves of it: where we can send the player (reachable - ground behind a closed
-    // gate paths fine but cannot be walked to) and whether the tile carries walkable ground at all,
-    // which is what credit turns on.
-    //
-    // A dense grid over the geometry rather than a map keyed by cell: the build touches every
-    // trapezoid on the map, and a tree node plus a log-n descent per touch is the difference
-    // between a hitch and no hitch.
     struct NavCells {
         int x0 = 0, y0 = 0, width = 0, height = 0;
         std::vector<uint8_t> ground; // walkable at all, gate-independent
@@ -576,9 +512,6 @@ namespace {
         // Credit is per cell, so any reachable spot inside one reveals exactly the same fog as any
         // other - which trapezoid's overlap the footing comes from does not matter.
         std::vector<GW::GamePos> stand;
-        // Where each grid line sits in game coordinates. The transform is axis-aligned, so a cell's
-        // box is just the neighbouring lines - one conversion per line beats two per trapezoid it
-        // touches, and being the same call on the same input it cannot drift from the anchor.
         std::vector<float> line_x, line_y;
         int ground_count = 0, stand_count = 0;
         GW::Constants::MapID map_id = static_cast<GW::Constants::MapID>(0);
@@ -634,10 +567,6 @@ namespace {
     };
     NavCells nav_cells;
 
-    // The overlap between the trapezoid and the cell's rectangle, exactly - not sampled. A lattice
-    // of point probes walks past any sliver narrower than its spacing, and next to fog a sliver is
-    // often the only footing there is, so it reported cells as having no ground that the router
-    // will happily path into. False only when the two genuinely do not overlap.
     bool FootingInCell(const Pathing::TrapezoidRef& ref, const int cx, const int cy, GW::GamePos& out)
     {
         GW::Vec2f box_min{}, box_max{}, footing{};
@@ -691,9 +620,6 @@ namespace {
             GW::Vec2f a{}, b{};
             if (!WorldMapWidget::GamePosToWorldMap(GW::GamePos{std::min(t->XTL, t->XBL), t->YB}, a)) continue;
             if (!WorldMapWidget::GamePosToWorldMap(GW::GamePos{std::max(t->XTR, t->XBR), t->YT}, b)) continue;
-            // FogTileAt, not CreditCell*: this range only has to be a superset of the cells the
-            // overlap test below will accept, and the epsilon CreditCell* leans by rounds away
-            // exactly the boundary-hugging cells that test is here to catch.
             const auto [x0, y0] = FogTileAt({std::min(a.x, b.x), std::min(a.y, b.y)});
             const auto [x1, y1] = FogTileAt({std::max(a.x, b.x), std::max(a.y, b.y)});
             for (int cy = y0; cy <= y1; cy++) {
@@ -734,9 +660,6 @@ namespace {
         return true;
     }
 
-    // False when the navmesh is not up yet - loading, or no pathing context. Callers must not
-    // cache that: "no ground here" is permanent once it lands in the probe, and answering it from
-    // an unbuilt navmesh kills every square swept before the map finished coming up.
     bool ProbeStandCell(const int cx, const int cy, StandCell& out)
     {
         if (!EnsureNavCells()) return false;
@@ -751,11 +674,6 @@ namespace {
 
     bool warned_stand_off_rect = false;
 
-    // A fog point marks fog, and fog is rarely somewhere you can stand. Answers with the closest
-    // spot to `from` that is reachable, routable, AND sits in a tile the game would credit
-    // `fog_wm`'s tile from. False when no such spot exists.
-    // `any_navmesh` separates "this map has no ground near that fog" - another map's to uncover -
-    // from "it has ground, but none of it is reachable from here", which are different answers.
     bool ResolveStandWorldPos(const GW::Vec2f& fog_wm, const GW::Vec2f& from, GW::Vec2f& out, std::pair<int, int>& out_cell, bool& any_navmesh)
     {
         const auto [fx, fy] = FogTileAt(fog_wm);
@@ -815,9 +733,6 @@ namespace {
         return false;
     }
 
-    // Whether a cell is standable never changes within a map, so probe it once and keep it. Fog
-    // only ever shrinks, so once the sweep has covered the map nothing new becomes worth probing
-    // and revisits cost nothing.
     void SweepStandCells(const CartoGrid& grid, GW::AreaInfo* map_info)
     {
         if (probe->complete) return;
@@ -980,9 +895,6 @@ namespace {
         if (ours) QuestModule::ClearCustomQuestMarker();
     }
 
-    // Fog points are the one thing here the player asks for by hand, so they get a quest marker to
-    // walk to - on the tile that credits the fog, not on the fog. Suggestions do not: they are a
-    // standing offer, and hijacking the quest marker for one is not.
     void SyncQuestMarker()
     {
         if (!set_quest_marker || !target.valid || !target.custom) {
@@ -1035,9 +947,6 @@ namespace {
         if (grid.IsExplored(fx, fy)) return GoalKind::Waypoint;
         bool any_navmesh = false;
         if (ResolveStandWorldPos(point_wm, from, goal_wm, goal_cell, any_navmesh)) return GoalKind::Stand;
-        // Elsewhere exists to hand another map's fog to the travel marker. "No ground near it" is not
-        // that: on this map it would mark the fog itself, and the router snaps that to whatever ground
-        // is nearest - which is how you get walked to a square that credits nothing.
         return WorldMapWidget::GetMapIdForLocation(point_wm) == GW::Map::GetMapID() ? GoalKind::None : GoalKind::Elsewhere;
     }
 
@@ -1150,10 +1059,6 @@ namespace {
     }
 
 #ifdef _DEBUG
-    // Bakes, per continent, which 32x32 tiles have ground you can stand on. Everything it needs is
-    // reachable without visiting a map: the file id comes from GetMapFileId, AreaInfo gives the
-    // continent and world-map bounds, and the DAT gives the trapezoids. Stores standable rather
-    // than discoverable so the reveal radius stays a runtime choice.
     struct ContinentBake {
         std::unordered_set<uint64_t> standable; // (cy << 32) | (uint32)cx
         int maps = 0;
@@ -1181,9 +1086,6 @@ namespace {
         return static_cast<uint64_t>(static_cast<uint32_t>(cy)) << 32 | static_cast<uint32_t>(cx);
     }
 
-    // Trapezoids reachable from the map's largest connected component. Planes are all treated as
-    // open - which of them are blocked comes from the server at runtime - so this only drops
-    // genuinely disconnected geometry, which is what "pathable but not accessible" means offline.
     std::unordered_set<const GW::PathingTrapezoid*> LargestComponent(const Pathing::PathingMapData& data)
     {
         std::unordered_map<const GW::PathingTrapezoid*, size_t> plane_of;
@@ -1231,11 +1133,6 @@ namespace {
         return best;
     }
 
-    // Loads through GetMapFileId, which is the known-good path. AreaInfo::file_id is recorded
-    // alongside it but not trusted yet: nothing validates that it names a map file - readFromDat's
-    // second argument is a stream id, not a type - so a wrong id just yields no pathfinding chunk
-    // and looks like a load failure. The counters below are here to settle whether AreaInfo alone
-    // would do, since that is the version that survives a game update without a table in the repo.
     void BakeMap(const GW::Constants::MapID map_id, const GW::AreaInfo* info, const int continent)
     {
         const uint32_t file_id = PathfindingWindow::GetMapFileId(map_id);
@@ -1259,10 +1156,6 @@ namespace {
             for (uint32_t t = 0; t < plane.trapezoid_count; t++) {
                 const auto& trap = plane.trapezoids[t];
                 if (!component.contains(&trap)) continue;
-                // The trapezoid's game-space box, converted through this map's own anchor, as the
-                // candidate range only - a tile is 3072 gwinches, so marking the whole box files
-                // tiles a slanted edge merely passes near, and the widget then dilates those into
-                // fog it claims you can uncover.
                 GW::GamePos lo{}, hi{};
                 lo.x = std::min(trap.XTL, trap.XBL);
                 lo.y = trap.YB;
@@ -1432,9 +1325,6 @@ namespace {
         return best;
     }
 
-    // The fog going away is the whole point of a fog point, so that - not arriving anywhere - is
-    // what retires it: credit can land a second or two after the step that earned it, and it lands
-    // for every point in range, not just the one being walked to.
     void PruneUncoveredPoints(const CartoGrid& grid)
     {
         const size_t before = custom_points.size();
@@ -1524,10 +1414,6 @@ namespace {
                              stand != probe->cells.end() ? static_cast<int>(stand->second.reachable) : 0,
                              stand != probe->cells.end() ? stand->second.reveals : 0,
                              static_cast<int>(FogCellCoverable(cx, cy)), RevealRadius());
-                    // Where the nearest real ground is. This is the primitive AStar snaps its
-                    // endpoints with, so it answers the only question that matters when a marker
-                    // paths somewhere the probe calls dead: is that ground in THIS cell or a
-                    // neighbour's? A marker pathing "there" only proves ground exists nearby.
                     if (converted) {
                         GW::GamePos snapped = gp;
                         GW::Vec2f snapped_wm{};
@@ -1889,9 +1775,6 @@ void CartographerWidget::Update(float)
     std::vector<std::pair<int, int>> changed;
     if (carto_dirty) CollectChangedTiles(grid, changed);
 #ifdef _DEBUG
-    // What the client actually credited, against what we would have predicted. This is the only
-    // measurement of the reveal rule we have: the tile offsets it prints are ground truth for the
-    // radius, the extent clamp and any quantisation difference between our grid and the client's.
     for (const auto& [tx, ty] : changed) {
         const int our_cx = CreditCellX(player_wm.x);
         const int our_cy = CreditCellY(player_wm.y);
@@ -1986,9 +1869,6 @@ void CartographerWidget::Update(float)
                           target.cx, target.cy, demoted, demoted ? "" : ", square skipped for this map");
             }
             else {
-                // Standing inside the ring the client credits unconditionally has to credit. That it
-                // did not says our tile index disagrees with the client's, which is a fact about our
-                // arithmetic and not about this square - so do not write the square off for it.
                 Log::Log("[cartographer] stood in cell (%d, %d) for 15s with no credit - game(%.1f, %.1f) wm(%.4f, %.4f) our_cell(%d, %d): index disagreement, not a dead square\n",
                          target.cx, target.cy, player->pos.x, player->pos.y, player_wm.x, player_wm.y, player_cx, player_cy);
             }
@@ -2116,10 +1996,6 @@ void CartographerWidget::DrawWorldMapOptions()
     ImGui::ShowHelp("Draws the 32x32 tile boundaries. Exploration is credited a whole tile at a time, so this is what tells you which tile you are actually standing in. Hidden when zoomed out far enough that the lines would smear together.");
     if (ImGui::Checkbox("Using a Bird's Eye Compass", &using_bec)) {
         GW::GameThread::Enqueue([] {
-            // Terrain has not moved, so the probed tiles stay; the radius only widens which tiles
-            // are worth probing, so every map's sweep reopens to cover the new fringe. `strict` is
-            // a property of the fog tile, not of the radius - it is merely inert at normal range -
-            // so it survives the toggle rather than being learned again from scratch.
             for (auto& [map_id, cached] : probe_cache) {
                 cached.complete = false;
             }

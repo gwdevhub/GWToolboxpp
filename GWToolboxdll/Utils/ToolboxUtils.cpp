@@ -1028,11 +1028,6 @@ namespace ToolboxUtils {
         if (!player_number) {
             player = GW::PlayerMgr::GetPlayerByID(GW::PlayerMgr::GetPlayerNumber());
             if (!player || !player->name) {
-                // Map not loaded; try to get from character context.
-                // player_name is a fixed-size buffer that may not be populated/null-terminated
-                // yet (e.g. still on the login/char select screen); reading it unbounded via
-                // wcslen can run off into unrelated memory and produce garbled (often CJK-looking)
-                // output. Bail out to an empty string instead so callers retry later.
                 const auto c = GW::GetCharContext();
                 if (!c) {
                     return L"";

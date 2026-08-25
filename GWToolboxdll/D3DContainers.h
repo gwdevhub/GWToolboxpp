@@ -134,11 +134,6 @@ public:
     void SetCenterColor(DWORD c);
     void SetRadius(float r);
 };
-// Saves the device state toolbox renderers touch and restores it on scope exit, so GW's own
-// rendering isn't corrupted. Deliberately NOT CreateStateBlock(D3DSBT_ALL): capturing the whole
-// device state measures ~45us per use per frame (~0.5us for the explicit list below), and holding a
-// state block across a GW device Reset would invalidate it. The lists in D3DContainers.cpp are the
-// union of every state the toolbox writes - extend them when a renderer starts setting something new.
 struct D3DStateGuard {
     explicit D3DStateGuard(IDirect3DDevice9* dev);
     ~D3DStateGuard();

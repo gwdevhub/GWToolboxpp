@@ -474,9 +474,6 @@ namespace Pathing {
             if (filename_index < fn_count) {
                 uint32_t fid = prop_file_ids[filename_index];
                 if (IsPortalModelFileId(fid)) {
-                    // The record's radius is already scaled - it matches scale * the model's
-                    // bounding cylinder to the last decimal, so the model file never has to be
-                    // opened for it.
                     float radius;
                     memcpy(&radius, pi_data + pi_off + 42, 4);
                     out.push_back({{px, pz}, fid, radius});

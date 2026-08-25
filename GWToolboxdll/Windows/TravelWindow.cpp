@@ -238,32 +238,6 @@ namespace {
 
     IDirect3DTexture9** scroll_texture = nullptr;
 
-    /* Not used, but good to keep for reference!
-    enum error_message_ids {
-    error_B29 = 52,
-    error_B30,
-    error_B31,
-    error_B32,
-    error_B33,
-    error_B34,
-    error_B35,
-    error_B36,
-    error_B37,
-    error_B38
-    };
-    enum error_message_trans_codes {
-    error_B29 = 0xB29, // The target party has members who do not meet this mission's level requirements.
-    error_B30, // You may not enter that outpost
-    error_B31, // Your party leader must be a member of this guild. An officer from this guild must also be in the party.
-    error_B32, // You must be the leader of your party to do that.
-    error_B33, // You must be a member of a party to do that.
-    error_B34, // Your party is already waiting to go somewhere else.
-    error_B35, // Your party is already in that guild hall.
-    error_B36, // Your party is already in that district.
-    error_B37, // Your party is already in the active district.
-    error_B38, // The merged party would be too large.
-    };  */
-
     void OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessage message_id, void* wparam, void*)
     {
         switch (message_id) {
@@ -858,9 +832,6 @@ GW::Constants::MapID TravelWindow::GetNearestOutpost(const GW::Constants::MapID 
     if (IsValidOutpost(map_to) && GW::Map::GetIsMapUnlocked(map_to))
         return map_to;
 
-    // BFS over the map adjacency graph to find the nearest unlocked outpost.
-    // When multiple outposts are found at the same BFS depth, use Euclidean
-    // distance on the world map as a tiebreaker.
     using MapID = GW::Constants::MapID;
     std::vector<MapID> queue;
     std::vector<uint32_t> depth(static_cast<size_t>(MapID::Count), UINT32_MAX);

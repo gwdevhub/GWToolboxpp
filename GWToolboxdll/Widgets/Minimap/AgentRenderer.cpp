@@ -311,9 +311,6 @@ void AgentRenderer::LoadCustomAgents()
 
 void AgentRenderer::SeedDefaultCustomAgents()
 {
-    // One-time migration of the categories that map onto a single allegiance; dead/quest-giver
-    // overrides apply across all friendly allegiances so they stay as the untouched GetColor()/GetSize() fallback.
-    // dead_state is left "Either": that fallback already gates color by dead state, and GetSize() doesn't vary by it.
     struct DefaultRow {
         const char* label;
         GW::Constants::Allegiance allegiance;

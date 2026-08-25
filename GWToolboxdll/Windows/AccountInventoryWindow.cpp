@@ -36,9 +36,6 @@
 
 #define memeq(a, b) (memcmp((a), (b), sizeof(*(a))) == 0)
 
-// JSON persistence DTOs (one file per account). These live in a NAMED namespace
-// because glaze's reflection cannot derive names for internal-linkage (anonymous
-// namespace) types. Bags/heroes are keyed by their integer enum value; slots by integer.
 namespace account_inventory_json {
     // Member names stay readable; the glz::meta blocks map them to terse JSON keys
     // (they repeat on every item/section) to keep the files small.
@@ -184,10 +181,6 @@ namespace {
         return GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading && GW::Map::GetIsMapLoaded() && GW::Agents::GetControlledCharacter();
     }
 
-    // Identity of an inventory ini. There is one ini file per account; every
-    // character/hero/chest of that account is stored together in it (disambiguated
-    // by per-item sections), so the id is just the account GUID. The character
-    // arg is kept for call-site convenience but no longer affects the id.
     std::string GetIniID(const GUID& account, const std::string& /*character*/)
     {
         return TextUtils::GuidToString(&account);
@@ -960,9 +953,6 @@ namespace {
         return Resources::GetPath(L"inventories", name);
     }
 
-    // True only for a canonical inventory filename, tmp<account-uuid>.json. The GUID
-    // is parsed and the name rebuilt to reject anything else (stray files, the old
-    // flat "tmp<uuid>.tmp" / "inv####.tmp" files, trailing junk, wrong-case hex).
     bool IsInventoryIniFilename(const std::filesystem::path& path)
     {
         if (path.extension() != L".json") return false;
@@ -1279,9 +1269,6 @@ namespace {
     void SaveToFiles(bool include_foreign)
     {
         if (include_foreign) {
-            // sync every account we know a file for (used by "Delete All": accounts is
-            // empty by then, so all files are removed). Snapshot first - SyncAccountFile
-            // mutates ini_by_path/ini_by_character.
             std::vector<std::pair<std::string, GUID>> targets;
             for (auto& [path, file] : ini_by_path)
                 targets.emplace_back(file->ini_ID, file->account);
@@ -1323,9 +1310,6 @@ namespace {
         }
         if (item->info_string) {
             auto shorthand_description = ToolboxUtils::ShorthandItemDescription(item);
-            // If item info_string starts with "Value:", ShorthandItemDescription doesn't filter the "Value:" part out.
-            // Since "Value:" is typically at the end of the description, there is nothing left that we care about anyway.
-            // Add description only if it does not start with "Value:".
             if (shorthand_description.find(L"\xA3E\x10A\xA8A\x10A\xA59\x1\x10B") != 0) {
                 if (!enc.empty()) {
                     enc += L"\x2\x102\x2";
@@ -1370,9 +1354,6 @@ namespace {
         }
         path.slot = item->slot;
 
-        // This is a workaround because I could not find a way to get a hero_id from an item currently equipped on a hero.
-        // item->bag->bag_array is a separate array for each hero with only the Equipped_Items bag set, but seemingly no reference back to the hero.
-        // The workaround uses the fact that items are added by GW in the order of the respective heroes in the party.
         path.hero_id = GW::Constants::HeroID::NoHero;
         if (item->bag->inventory != GW::Items::GetInventory()) {
             if (initializing) return;
@@ -1828,9 +1809,6 @@ void AccountInventoryWindow::PostMapLoad()
         HandleHeroBag(hero_id);
     }
 
-    // clear empty slots in case inventory was changed without toolbox running.
-    // update item->equipped flags.
-    // track inventory size in order to display number of free slots
     if (gw_inventory) {
         uint32_t max_chest = 0;
         uint32_t max_equipment = 0;

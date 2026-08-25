@@ -14,17 +14,10 @@ namespace Pathing {
         Dummy,          // one-way: arbitrary marker position (yellow)
     };
 
-    // Types whose connections default to one-way when first created (position
-    // markers / NPC teleports have no inherent return path). This only seeds the
-    // one_way flag in the editor — actual directionality is the flag alone (see
-    // IsOneWay), so a Dummy/NPC connection can still be made bidirectional.
     inline bool DefaultsToOneWay(ConnectionType t) {
         return t == ConnectionType::Dummy || t == ConnectionType::NPC;
     }
 
-    // Kind of agent stored in an NPC endpoint. The "NPC" name is kept for the
-    // ConnectionType enum and JSON for backwards compat, but the storage now
-    // supports both AgentLiving (NPCs) and AgentGadget (signposts, statues, etc).
     enum class AgentKind : uint8_t {
         Living = 0,  // AgentLiving — model_id stores player_number
         Gadget = 1,  // AgentGadget — model_id stores gadget_id

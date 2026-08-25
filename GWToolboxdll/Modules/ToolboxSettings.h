@@ -40,9 +40,6 @@ public:
     void DrawSizeAndPositionSettings() override { }
 
     static void DrawSettingsCogButtons();
-    // Run at end-of-frame, after ImGui has finished rendering, to actually
-    // write the queued window screenshot to disk. No-op when no capture is
-    // pending.
     static void FlushPendingScreenshot(IDirect3DDevice9* device);
     // Queue a full-backbuffer capture (same end-of-frame pipeline as the
     // title-bar camera button); captures the next rendered frame.

@@ -2,10 +2,6 @@
 
 #include <ToolboxModule.h>
 
-// Cosmetic lava "rivers" drawn into the 3D world via the shared GameWorldCompositor: a lava-textured
-// ribbon draped along an authored polyline on the floor, composited under the in-game UI and depth-tested
-// against the terrain. Reuses GW's own lava texture from the .dat (configurable file id). Its own settings
-// section; rivers are authored in-game (drop points at the player) and persisted per-map in LavaRivers.json.
 class RiverModule : public ToolboxModule {
     RiverModule() = default;
     ~RiverModule() override = default;

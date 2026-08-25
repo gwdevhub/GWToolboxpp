@@ -19,9 +19,6 @@
 #include "SkillbarWidget.h"
 #include <Modules/ChatCommands.h>
 
-/*
- * Based off of @JuliusPunhal April skill timer - https://github.com/JuliusPunhal/April-old/blob/master/Source/April/SkillbarOverlay.cpp
- */
 namespace {
     GW::UI::FramePosition skillbar_skill_positions[8];
     ImVec2 skill_positions_calculated[8];

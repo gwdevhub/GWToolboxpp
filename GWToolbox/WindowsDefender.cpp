@@ -266,9 +266,6 @@ bool AddDefenderExceptions(const std::filesystem::path& exclusion_path,
     if (cmdlets.empty())
         return true;
 
-    // Controlled Folder Access fixes a process's allowed status at launch, so allowing an
-    // already-running Gw.exe now won't let the injected Toolbox write to Documents until that
-    // client restarts. Note it here so we can tell the user once the change lands.
     bool allowing_running_gw = false;
     if (state.controlled_folder_access == 1) {
         for (const auto& gw : GetGuildWarsExecutablePaths()) {

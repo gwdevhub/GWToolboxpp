@@ -1320,20 +1320,6 @@ void CompletionWindow::Initialize()
     for (size_t i = 0; i < _countof(encoded_weapon_names); i++) {
         hom_weapons.push_back(new WeaponAchievement(i, encoded_weapon_names[i]));
     }
-    /*auto address = GW::Scanner::FindAssertion("\\Code\\Gw\\Const\\constitempvp.cpp", "unlockIndex < ITEM_PVP_UNLOCK_COUNT");
-    if (address) {
-        unlocked_pvp_item_array_buffer = *(PvPItemInfo**)(address + 0x15);
-        unlocked_pvp_item_array_size = *(size_t*)(address - 0xb);
-    }
-    for (size_t i = 0; i < unlocked_pvp_item_array_size; i++) {
-        unlocked_pvp_items.push_back(new UnlockedPvPItem(i));
-    }*/
-
-    /*auto address = GW::Scanner::FindAssertion("\\Code\\Gw\\Const\\constitempvp.cpp", "index < ITEM_PVP_ITEM_COUNT");
-    if (address) {
-        unlocked_pvp_item_array_buffer = *(PvPItemInfo**)(address + 0x15);
-        unlocked_pvp_item_array_size = *(size_t*)(address - 0xb);
-    }*/
 
     const auto& unlocked_pvp_item_upgrade_array = GW::Items::GetPvPItemUpgradesArray();
 
@@ -2269,12 +2255,6 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
         for (auto it = vanquishes.begin(); sorted && it != vanquishes.end(); ++it) {
             sorted = sort(it->second);
         }
-        /*for (auto it = pve_skills.begin(); sorted && it != pve_skills.end(); it++) {
-            sorted = sort(it->second);
-        }
-        for (auto it = elite_skills.begin(); sorted && it != elite_skills.end(); it++) {
-            sorted = sort(it->second);
-        }*/
         for (auto it = heros.begin(); sorted && it != heros.end(); ++it) {
             sorted = sort(it->second);
         }

@@ -163,9 +163,6 @@ TBHotkey::TBHotkey(const ToolboxIni* ini, const char* section) : ui_id(++cur_ui_
         if (*group_label) {
             if (!hotkey_groups.contains(group_label)) {
                 auto* new_group = new HotkeyGroup(group_label);
-                // No HotkeyGroup section in the INI (legacy format). Infer sort order
-                // from the section file index (e.g. "hotkey-0007:SendChat" -> 7) so that
-                // groups are ordered by when their first child appears in the file.
                 const char* num_start = section + 7; // skip "hotkey-"
                 char* num_end = nullptr;
                 const auto sec_idx = strtoul(num_start, &num_end, 10);
@@ -320,9 +317,6 @@ bool TBHotkey::Draw()
     const bool first = pos == range.begin();
     const bool last = std::next(pos) == range.end();
     const auto show_header_buttons = [&] {
-        // If no buttons will be drawn, avoid calling SameLine() — doing so without
-        // drawing anything after leaves ImGui's cursor at the header's Y, causing
-        // subsequent items (next header or expanded content) to render at the wrong position.
         if (!settings.show_run_in_header && first && last && !settings.show_active_in_header) {
             return;
         }

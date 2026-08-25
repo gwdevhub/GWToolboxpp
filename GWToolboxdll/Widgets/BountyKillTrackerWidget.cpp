@@ -38,9 +38,6 @@ namespace {
     std::unordered_map<GW::Constants::SkillID, BountyState> active_bounties;
     std::unordered_map<uint32_t, GW::Constants::SkillID> effect_id_to_skill;
 
-    // EotN bounties award 25/50/75/100 title points per kill for tiers 1-4.
-    // Nightfall and Factions bounties award 1 point per kill by default;
-    // exact values should be verified in-game and updated here.
     uint32_t GetPointsPerKill(const GW::Constants::SkillID skill_id)
     {
         using S = GW::Constants::SkillID;

@@ -17,11 +17,6 @@
 
 #include <DirectXTex.h>
 
-// GwDatModule reads/decodes textures straight from the client's on-disk Gw.dat. It does NOT interface with
-// the game's streaming/download subsystem: whatever is in the dat, we can decode; a file the dat doesn't
-// contain simply won't load (see ReadFile's one-time -image hint). On a Steam streaming install the dat can
-// be incomplete until the user runs Guild Wars with -image to download everything.
-
 namespace {
 
     struct Vec2i {
@@ -362,9 +357,6 @@ bool GwDatModule::ReadDatFile(const wchar_t* file_name, std::vector<uint8_t>* by
 
 void GwDatModule::Terminate()
 {
-    // The cache is shared_ptr-owned: clearing it here only drops our references; any DX-upload task still in
-    // flight holds its own reference and frees its GwImg (releasing the texture) when it finishes. The dat
-    // mapping is left open (written once, read lock-free) and released by the OS on unload.
     {
         std::scoped_lock lock(deferred_mutex);
         deferred_decodes.clear();

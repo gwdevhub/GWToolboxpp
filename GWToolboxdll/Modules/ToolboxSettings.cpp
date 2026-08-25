@@ -454,12 +454,6 @@ void ToolboxSettings::Draw(IDirect3DDevice9*)
 }
 
 namespace {
-    // Deferred screenshot request — populated when the user clicks the
-    // camera button on a window's title bar, consumed at end-of-frame by
-    // ToolboxSettings::FlushPendingScreenshot. capture_at_frame defers
-    // by one frame so the click frame itself isn't drawn into the
-    // capture (and we can suppress the cog/camera overlays on the
-    // captured frame to avoid them appearing in the screenshot).
     struct PendingScreenshot {
         bool active = false;
         ImRect rect;
@@ -534,9 +528,6 @@ void ToolboxSettings::DrawSettingsCogButtons()
         ImDrawList* dl = window->DrawList;
         dl->PushClipRect(tb.Min, tb.Max, false);
 
-        // Slot 0 (rightmost, just left of the close-button gap) is the cog.
-        // Slot 1 (one slot further left) is the camera. Only the buttons
-        // enabled in settings get drawn.
         float right_edge = tb.Max.x - close_offset;
 
         const auto draw_button = [&](const char* glyph, ToolboxUIElement** hovered_out) -> bool {
@@ -570,9 +561,6 @@ void ToolboxSettings::DrawSettingsCogButtons()
             pending_screenshot.active = true;
             pending_screenshot.rect = window->Rect();
             pending_screenshot.path = BuildScreenshotPath(elem->Name());
-            // Defer by one frame so the next frame can re-render the
-            // window without these overlay icons (see early-return above)
-            // before we read back the swap chain.
             pending_screenshot.capture_at_frame = ImGui::GetFrameCount() + 1;
         }
 

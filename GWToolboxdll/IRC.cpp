@@ -654,11 +654,6 @@ void IRC::parse_irc_reply(const char* data)
                 strcpy(cur_nick, params);
             }
         }
-        /* else if (!strcmp(cmd, ""))
-        {
-            #ifdef __IRC_DEBUG__
-            #endif
-        } */
         call_hook(cmd, params, &hostd_tmp);
     }
     else {

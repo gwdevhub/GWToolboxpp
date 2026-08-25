@@ -401,13 +401,6 @@ void ObserverModule::HandleGenericPacket(const uint32_t value_id, const uint32_t
             break;
 
         case GW::Packet::StoC::GenericValueID::skill_activated: {
-            // TODO: do location effecs cause entry here?
-            // if so, Isle of the Dead, Burning Isle, Isle of Meditation,
-            // Frozen Isle, Isle of Weeping Stone, etc... might slow down
-            // our application by coming in here 10,000 times
-            // TODO: verify whether we need to check for NO_AGENT on caster,
-            // or for no living agent...
-
             // swap target and caster for skill_activated
             uint32_t _caster_id;
             uint32_t _target_id;
@@ -474,9 +467,6 @@ void ObserverModule::HandleAgentState(const uint32_t agent_id, const uint32_t st
         return; // Not a death event
     }
 
-    // don't credit kills/deaths on parties that are already defeated
-    // after a party is defeated all their players die, but we don't
-    // count those deaths / kills
     if (match_finished) {
         return;
     }
@@ -527,12 +517,6 @@ void ObserverModule::HandleAgentState(const uint32_t agent_id, const uint32_t st
 }
 
 
-// Returns 530 if unable to determine max HP
-// GWCA doesn't allow us to retrieve MAX Hp for every player, only currently observed player
-// as specified in the Agent.h structure.
-// But every damage / heal done to an agent is sent as a percentage of the player max hp.
-// it's then necessary to capture this information to calculate the dmg / heal value.
-// Get hardcoded max HP for known NPCs based on sanitized name
 uint32_t ObserverModule::GetNPCMaxHP(uint32_t agent_id)
 {
     ObservableAgent* agent = GetObservableAgentById(agent_id);
@@ -552,9 +536,6 @@ uint32_t ObserverModule::GetNPCMaxHP(uint32_t agent_id)
     return 0;
 }
 
-// This means every damage and heal calculations are approximations of the real value,
-// as the player could have switched gear (defensive set for exemple) and have more or less hp than the current max hp value
-// stored in the cache. But I can't find a better way to do it for now.
 uint32_t ObserverModule::GetOrCacheMaxHP(const uint32_t agent_id)
 {
     const GW::Agent* agent = GW::Agents::GetAgentByID(agent_id);
@@ -928,12 +909,6 @@ void ObserverModule::HandleVictory(ObservableParty* winning_party)
     // TODO: handle draws
     // There is no JumboMessage for a draw so we don't get notified of it...
 
-    // Draws mess up:
-    //  - the kills/deaths since everyone dies at the end and we don't know that
-    //    the match is over... so we have to count all those as kills/deaths
-    //  - we can't set match_finished = true
-    //  - we can't get the match duration
-
     match_finished = true;
 
     winning_party_id = winning_party->party_id;
@@ -992,9 +967,6 @@ bool ObserverModule::ReduceAction(ObservableAgent* caster, const ActionStage sta
     }
     else {
         ASSERT(!(stage == ActionStage::Started || stage == ActionStage::Instant));
-        // we are finishing the previous action
-        // we have to keep the current_target_action on the caster in-case we receive an "interrupted" packet next
-        // after a "stopped" package
         action = caster->current_target_action;
     }
 
@@ -1002,9 +974,6 @@ bool ObserverModule::ReduceAction(ObservableAgent* caster, const ActionStage sta
         return action_ownership_transferred;
     }
 
-    // if the action was already "finished" in a previous ReduceAction call, there's nothing else to do
-    // this is important for skills like Dual Shot, Barrage, etc, where one skill leads to
-    // multiple "AttackFinished" packets (via the "AgentProjectileLaunched" packet)
     if (action->was_finished) {
         return action_ownership_transferred;
     }
@@ -1024,11 +993,6 @@ bool ObserverModule::ReduceAction(ObservableAgent* caster, const ActionStage sta
         target_party = GetObservablePartyById(target->party_id);
     }
 
-    // interrupt packet comes after cancelled packet most of the time.
-    //
-    // Can received a "cancelled" packet after a "finished" packet for attack skills where the target
-    // dies during the afterswing of a "finished" attack
-    // we don't count that as "stopped/cancelled"
     if (stage == ActionStage::Interrupted) {
         if (caster) {
             if (action->was_stopped) {
@@ -1122,10 +1086,6 @@ bool ObserverModule::ReduceAction(ObservableAgent* caster, const ActionStage sta
         // Modify the effective `target` and `target_party`, based on the
         // targetting type of the skill to make stats more intuitive.
 
-        // For example if using Heal Burst on yourself, the packet only
-        // includes a caster and no target.
-        // here we effectively set the
-        // target to the caster.
         switch (static_cast<TargetType>(skill->gw_skill.target)) {
             case TargetType::no_target: {
                 // don't provide a target
@@ -1722,10 +1682,6 @@ void ObserverModule::ObservedAction::Reduce(const TargetAction* action, const Ac
             started += 1;
             break;
         case ActionStage::Stopped:
-            // nothing to do if the action was already finished
-            // we can get "cancelled" packet after a "finished" packet if for example; we're using
-            // an attack skill, the attack skill completes, we begin the afterswing, and the target dies
-            // then the afterswing is cancelled, even though the action completed
             if (!action->was_finished) {
                 stopped += 1;
             }
@@ -2171,11 +2127,6 @@ bool ObserverModule::ObservableParty::SynchroniseParty()
         return false;
     }
 
-    // load party members:
-    // 1. players
-    //  1.1 player heroes
-    // 2. henchmen
-
     size_t party_index = 0;
 
     const size_t party_size = party_info->players.size() + party_info->heroes.size() + party_info->henchmen.size();
@@ -2196,9 +2147,6 @@ bool ObserverModule::ObservableParty::SynchroniseParty()
     for (const GW::PlayerPartyMember& party_player : party_info->players) {
         const GW::Player& player = players->at(party_player.login_number);
         if (player.agent_id != 0) {
-            // if agent_id is 0, the agent either hasn't loaded or has disconnected
-            // if the agent has simply disconnected we keep them from agent_ids
-            // by avoiding this code block
             if (agent_ids[party_index] != player.agent_id) {
                 ObservableAgent* observable_player_prev = parent.GetObservableAgentById(agent_ids[party_index]);
                 if (observable_player_prev) {
@@ -2261,10 +2209,6 @@ bool ObserverModule::ObservableParty::SynchroniseParty()
         party_index += 1;
     }
 
-    // infer teams name from first players guild
-    // TODO: retrieve this information from memory instead of inferring it
-    // note: this won't be accurate in HA where the teams name isn't simply
-    // player 0's guild
     guild_id = NO_GUILD;
     name = "";
     display_name = "";

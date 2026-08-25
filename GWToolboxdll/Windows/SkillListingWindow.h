@@ -32,30 +32,6 @@ namespace skilllist_export {
 }
 
 
-/*namespace {
-    enum SkillTypesEncoded {
-        Attack = 0x48f, EliteAttack,
-        AxeAttack, EliteAxeAttack,
-        BowAttack, EliteBowAttack,
-        HammerAttack, EliteHammerAttack,
-        MeleeAttack, EliteMeleeAttack,
-        SwordAttack, EliteSwordAttack,
-        Preparation, ElitePreparation,
-        DualAttack, EliteDualAttack,
-        LeadAttack, EliteLeadAttack,
-        OffHandAttack, EliteOffHandAttack,
-        PartyBonus,
-        NatureRitual, EliteNatureRitual,
-        BindingRitual, EliteBindingRitual,
-        Signet, EliteSignet,
-        Shout, EliteShout,
-        Spell, EliteSpell,
-        HexSpell, EliteHexSpell,
-        EnchantmentSpell, EliteEnchantmentSpell,
-        Glyph, EliteGlyph,
-        Skill, EliteSkill
-    };
-}*/
 class SkillListingWindow : public ToolboxWindow {
 public:
     class Skill {

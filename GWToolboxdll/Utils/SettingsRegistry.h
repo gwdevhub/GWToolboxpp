@@ -69,12 +69,6 @@ namespace SettingsRegistry {
         }
     }
 
-    // Struct path: registers one Entry per supported member (member name == legacy INI key) for
-    // search, chat commands and the INI fallback. Persistence is the module's job: its
-    // LoadSettings/SaveSettings overrides call doc.GetStruct/SetStruct(Name(), settings) so every
-    // module keeps a dedicated debugging point.
-    // Pass in_settings_window = false when the module draws these settings in its own UI rather than in
-    // the Settings window, so settings search doesn't offer results that lead nowhere.
     template <typename T>
     void Register(ToolboxModule* module, T& settings, const bool in_settings_window = true)
     {

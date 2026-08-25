@@ -137,9 +137,6 @@ public:
         const bool is_skill;
         const GW::Constants::SkillID skill_id;
 
-        // if the action was interrupted after it was finished (e.g. an attack skill that gets interrupted
-        // in the aftersting [once the skill has completed activation]) then we don't count as "interrupted"
-        // even if receiving an "interrupted" signal
         bool was_stopped = false;
         bool was_finished = false;
     };
@@ -152,9 +149,6 @@ public:
         size_t finished = 0;
         size_t interrupted = 0;
 
-        // should be zero at all times except when an action is not yet concluded
-        // used to indicate there may be inaccuracies in the stats due to due to
-        // inaccuracies in our modelling of the game engine
         int integrity = 0;
 
         // damage tracking
@@ -388,11 +382,6 @@ public:
         // latest action (attack/skill) the agent was undertaking
         TargetAction* current_target_action = nullptr;
 
-        // last_hit_by tells us who killed the player if they die
-        // MUST be a party_member (e.g. not a footman)
-        // Not literally who is responsible for the kill, but may help
-        // account for degen / npc steals / such.
-        // It's a for fun stat so don't take it too serious
         uint32_t last_hit_by = NO_AGENT;
         
         // Track the skill that last damaged this agent (for death tracking)
@@ -488,9 +477,6 @@ public:
 
         uint32_t party_id;
 
-        // guild_id and name are inferred from the guilds members
-        // TODO: get the actual teams guild/name from memory,
-        // instead of guessing
         uint32_t guild_id = NO_GUILD;
         uint32_t rating = NO_RATING;
         uint32_t rank = NO_RANK;

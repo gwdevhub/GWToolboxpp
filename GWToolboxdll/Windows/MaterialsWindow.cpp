@@ -490,10 +490,6 @@ void MaterialsWindow::Draw(IDirect3DDevice9*)
         constexpr auto stock_start = GW::Constants::Bag::Backpack;
         constexpr auto stock_end = GW::Constants::Bag::Storage_14;
 
-        // note: textures are 64 x 64, but both off-center
-        // and with a bunch of empty space. We want to center the image
-        // while minimizing the rescaling
-
         // === Essence ===
         ImGui::Image(*tex_essence, ImVec2(50, 50),
                      ImVec2(4.0f / 64, 9.0f / 64), ImVec2(47.0f / 64, 52.0f / 64));
@@ -535,15 +531,6 @@ void MaterialsWindow::Draw(IDirect3DDevice9*)
                 }
             }
         }
-
-        /* @Cleanup: Using GW::Items::GetItemFormula and spoofing a GW::Item* with the formula id that matches the cons,
-         we can programatically find out:
-         a) what materials are needed and how many
-         b) cost in gold on top of materials needed
-         c) cost in skill points if applicable
-
-         If we do this, we can rip this module in half by just looping a lambda for the below code.
-         */
 
         ImGui::Separator();
         // === Grail ===

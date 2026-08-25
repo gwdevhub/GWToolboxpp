@@ -2,10 +2,6 @@
 
 #include <ctime>
 
-/*
-clock_t based timers: TIMER_DIFF(t) returns the elapsed time in milliseconds since TIMER_INIT().
-*/
-
 inline clock_t TIMER_INIT()
 {
     return clock();

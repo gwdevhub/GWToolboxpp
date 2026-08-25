@@ -960,9 +960,6 @@ namespace {
     bool IsZaishenMissionOutpost(GW::Constants::MapID current_map, GW::Constants::MapID zaishen_map)
     {
         if (current_map == zaishen_map) return true;
-        // Factions joint missions don't have a single entry outpost. Hardcode the entry outposts
-        // for each one. (AreaInfo has a mission_maps_to field that could in principle replace
-        // this, but it's not used anywhere else in the codebase and is untested.)
         switch (zaishen_map) {
             case MapID::Vizunah_Square_mission:
                 return current_map == MapID::Vizunah_Square_Local_Quarter_outpost
@@ -1991,9 +1988,6 @@ bool DailyQuests::IsNicholasItem(const GW::Item* item) {
 
 const DailyQuests::NicholasIngredientInfo* DailyQuests::GetNicholasIngredientInfo(const wchar_t* ingredient_enc)
 {
-    // Crafting ingredients whose end product Nicholas The Traveller collects.
-    // If an item's enc name isn't known yet, it will be a placeholder that won't match - find it in-game and update EncStrings.h.
-    // TODO: update ingredient_quantity values to reflect actual counts needed to craft a full set of nick items
     static NicholasIngredientInfo ingredients[] = {
         {GW::EncStrings::SkaleFins, GW::EncStrings::BowlofSkalefinSoup, 2},
         {GW::EncStrings::ChunkOfDrakeFlesh, GW::EncStrings::DrakeKabob, 1},
@@ -2115,10 +2109,6 @@ const DailyQuests::ZaishenCoinReward* DailyQuests::GetZaishenCoinReward(GW::Cons
 
 time_t DailyQuests::GetTimestampFromNicholasTheTraveller(NicholasCycleData* data, time_t now)
 {
-    /*
-    This function returns the next start time of the cycle data or the
-    current time if the cycle is ongoing
-    */
     if (!now) now = time(nullptr);
     auto index = -1;
     for (auto i = 0; i < NICHOLAS_POST_COUNT; i++) {

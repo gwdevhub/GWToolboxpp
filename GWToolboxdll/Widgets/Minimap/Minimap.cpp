@@ -90,9 +90,6 @@ namespace {
 
     clock_t last_moved = 0;
 
-    /**
-     * Wrap runtime variables in o MinimapRenderContext - expose them as refs for our internal settings
-     */
     MinimapRenderContext default_minimap_context{
         .background_color = 0,
         .foreground_color = 0xFF999999,
@@ -139,14 +136,6 @@ namespace {
     float cardinal_offset = 0.0f;     // game-unit offset from compass edge; +ve = outward
     float cardinal_font_size = 13.0f; // screen-space font size in pixels
 
-    // Projects a game-world position to an ImGui screen pixel, using the same
-    // transform chain that Minimap::Render / RenderSetupProjection applies.
-    //
-    // View chain (Minimap::Render):
-    //   translate(-me->pos) * rotateZ(-rotation + PI/2) * scale(zoom) * translate(pan)
-    // Projection (RenderSetupProjection):
-    //   ortho: ±5000 game units → ±1 NDC
-    //   viewport: NDC → pixels via base_scale and anchor_point
     ImVec2 WorldToScreen(const GW::Vec2f& world_pos, const MinimapRenderContext& ctx, const GW::Vec2f& me_pos)
     {
         GW::Vec2f v = world_pos - me_pos; // translate so player is at origin
@@ -1926,9 +1915,6 @@ void Minimap::RenderSetupProjection(IDirect3DDevice9* device, const MinimapRende
     const float xscale = context.base_scale / width_f;
     const float yscale = context.base_scale / height_f;
 
-    // anchor_point is where world (0,0) maps to on screen.
-    // After the view transform, the player IS at world (0,0),
-    // so this controls where the player appears on screen.
     const float xtrans = (context.anchor_point.x * 2.0f) / width_f - 1.0f;
     const float ytrans = -(context.anchor_point.y * 2.0f) / height_f + 1.0f;
 

@@ -472,14 +472,6 @@ namespace {
             return true; // Already connected
         }
 #ifdef _DEBUG
-        /*
-            HOW TO TEST WITH 2 DISCORD INSTANCES IN DEBUG MODE:
-            1. Close DiscordCanary.exe, load first GW client and start toolbox
-                Client 1 is now sending statuses to Discord.exe
-            2. Open DiscordCanary.exe, load second GW client and start toolbox
-                Client 2 is now sending statuses to DiscordCanary.exe
-            NOTE: Disconnecting/reconnecting will mess this up so repeat process.
-        */
         ConnectCanary(); // Sets env var to attach to canary if its open.
 #endif
         SetLastError(0);

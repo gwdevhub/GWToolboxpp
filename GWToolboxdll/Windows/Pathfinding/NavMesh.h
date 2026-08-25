@@ -31,12 +31,6 @@ namespace Pathing {
         // fields + each ring edge's wall/connection classification and neighbour poly/plane. Writes to log.txt.
         void DebugDumpNear(const GW::GamePos& center, float radius) const;
 
-        // Terrain height to drape an overlay/path point on, resolved against the navmesh: among the planes that
-        // actually have a walkable polygon at (x,y), return the QueryAltitude surface closest to `prev_z`
-        // (continuity). This keeps a path on the surface it walks — e.g. up onto a monument plane between two
-        // ground hops, instead of sinking to the ground-under-monument that a blind all-planes query returns.
-        // Returns FLT_MAX if the navmesh isn't ready or no walkable plane covers (x,y) — caller should fall back.
-        // Must run on the game/render thread (calls GW::Map::QueryAltitude).
         float DrapeHeightAt(float x, float y, float prev_z) const;
 
     private:

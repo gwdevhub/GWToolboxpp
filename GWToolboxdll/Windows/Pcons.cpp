@@ -467,9 +467,6 @@ void Pcon::UpdateRefill()
         return;
     }
 
-    // Lambda that scans storage for a matching item and moves it to inventory.
-    // If preferred_model_id != 0, only items with that model_id are considered.
-    // Returns true if a move was initiated, false if no matching item was found.
     auto try_move_from_storage = [&](DWORD preferred_model_id) -> bool {
         GW::Item inventoryItem;
         for (auto bagIndex = static_cast<size_t>(GW::Constants::Bag::Storage_1); bagIndex <= static_cast<size_t>(GW::Constants::Bag::Storage_14); ++bagIndex) {

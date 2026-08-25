@@ -546,11 +546,6 @@ namespace Pathing {
         const dtMeshTile* tile = static_cast<const dtNavMesh*>(m_navmesh)->getTile(0);
         if (!tile || !tile->header) return;
 
-        // GW only records adjacency across a trapezoid's LEFT/RIGHT edges (via portals). Where two trapezoids on
-        // DIFFERENT pathing planes meet along a shared TOP/BOTTOM edge (constant game-Y) at the same terrain height
-        // — i.e. continuous flat floor that GW's decomposition split onto separate planes — there is no portal to
-        // record it, so Build finds no neighbour and the edge becomes a phantom "wall". Index every ~horizontal
-        // poly edge by rounded game-Y so we can detect those seams below and reclassify them as walkable.
         constexpr float kHorizEps = 1.0f;     // |Δgame-Y| under which an edge counts as a top/bottom (horizontal) edge
         constexpr float kSeamHeightEps = 50.f; // |Δaltitude| under which the two planes are the same surface, not an over/underpass
         struct HEdge { int plane; int poly; float xmin, xmax; };
@@ -597,9 +592,6 @@ namespace Pathing {
             const auto plane = static_cast<uint32_t>((poly < (int)m_poly_plane.size()) ? m_poly_plane[poly] : 0);
             return TerrainDrape::QueryAltAt(x, ys, plane);
         };
-        // A horizontal boundary stretch of poly_i's edge: wherever another same-plane poly abuts the line at
-        // ~the same height it is walkable floor (trapezoids can have 3+ neighbours per edge, Build links at
-        // most two); only the un-abutted remainder is wall — unless it's a cross-plane seam (push_line).
         auto emit_boundary = [&](int poly_i, float x0, float x1, float y, int plane) {
             if (x1 - x0 <= 2.f) return;
             std::vector<std::pair<float, float>> cov;
@@ -648,11 +640,6 @@ namespace Pathing {
                     continue;
                 }
 
-                // The reverse: Build's two-neighbour top/bottom split hands the whole edge to the two neighbours (a
-                // 3-segment edge would exceed Detour's 6-vert poly cap), swallowing any wall stretch between them —
-                // e.g. a pillar whose base sits on the slab line. Re-emit the uncovered remainder via emit_boundary.
-                // This must run on the dup side too: these edges are asymmetric (different verts per side), so the
-                // gap exists only in the wider poly's segment and the other side can't recover it.
                 if (!wall && horizontal && !(p.neis[j] & DT_EXT_LINK)) {
                     const int ni = (int)p.neis[j] - 1;
                     const GW::PathingTrapezoid* tb = (ni >= 0 && ni < (int)m_poly_trap.size()) ? m_poly_trap[ni] : nullptr;
@@ -680,9 +667,6 @@ namespace Pathing {
     float NavMesh::DrapeHeightAt(float x, float y, float prev_z) const
     {
         if (!m_navmesh || m_poly_trap.empty()) return FLT_MAX;
-        // Among every plane whose walkable trapezoid contains (x,y), return the QueryAltitude surface closest to
-        // prev_z. So over a monument the only containing plane is the monument's -> the path rides it; under a
-        // bridge the floor plane contains it -> the path stays on the floor.
         float best = FLT_MAX, best_d = FLT_MAX;
 
         const auto consider = [&](const uint32_t i) {

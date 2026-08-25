@@ -2,10 +2,6 @@
 
 #include <ToolboxModule.h>
 
-// While a skill is hovered (skillbar, skills window, templates...), drapes its relevant range
-// rings onto the terrain via the shared GameWorldCompositor: cast/use range around the player,
-// AoE radius around the current target (or the player), earshot for shouts/chants, and the
-// constant-effect radius (spirit range) where present.
 class SkillRangeRingsModule : public ToolboxModule {
     SkillRangeRingsModule() = default;
     ~SkillRangeRingsModule() override = default;

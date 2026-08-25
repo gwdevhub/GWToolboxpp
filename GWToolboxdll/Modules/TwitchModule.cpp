@@ -359,10 +359,6 @@ bool TwitchModule::Connect()
     if (settings.irc_password == "oauth:<your_token_here>") {
         return false;
     }
-    /*if(irc_username.empty()) {
-        printf("Invalid username!\n");
-        return false;
-    }*/
     std::ranges::transform(
         settings.irc_server, settings.irc_server.begin(),
         [](const char c) -> char {
@@ -441,12 +437,6 @@ void TwitchModule::DrawSettingsInternal()
 
         const float width = ImGui::GetContentRegionAvail().x / 2;
         ImGui::PushItemWidth(width);
-        /*ImGui::InputText("Twitch Alias", const_cast<char*>(irc_alias.c_str()), 32);
-        ImGui::ShowHelp("Sending a whisper to this name will send the message to Twitch.\nCannot contain spaces.");
-        ImGui::InputText("Twitch Server", const_cast<char*>(irc_server.c_str()), 255);
-        ImGui::ShowHelp("Shouldn't need to change this.\nDefault: irc.chat.twitch.tv");
-        ImGui::InputText("Twitch Username", const_cast<char*>(irc_username.c_str()), 32);
-        ImGui::ShowHelp("Your username that you use for Twitch.");*/
         ImGui::InputText("Twitch Oauth Token", settings.irc_password, 255, show_irc_password ? 0 : ImGuiInputTextFlags_Password);
         ImGui::PopItemWidth();
         ImGui::ShowHelp("Used to connect to Twitch.\ne.g. oauth:3fplxiscsq1550zdkf8z2kh1jk7mqs");

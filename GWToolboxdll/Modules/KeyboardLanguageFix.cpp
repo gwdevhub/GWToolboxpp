@@ -4,28 +4,6 @@
 
 #include "KeyboardLanguageFix.h"
 
-/*
-* Tries to assign the GW keyboard layout address before the game has a chance to.
-* Restores original keyboard layout once the en-us one has been loaded.
-* 
-* THE ISSUE:
-* In Windows versions after Windows 8, LoadKeyboardLayoutA installs the keyboard language before using it.
-* 
-* This is a problem for users because pressing Win + SPACE when you have more than 1 language will de-focus whatever you're doing and show you a stupid little language picker.
-* Players often like to use this shortcut for stuff, but can't do that anymore because GW has installed an extra language, forcing the switcher to do its thing.
-* 
-* Once the en-US keyboard layout has been sneakily installed by Windows, the only way to remove it again is by going into settings, installing the rest of the en-US language pack, then uninstalling the lot!
-* 
-* See: https://superuser.com/questions/1680608/how-to-get-rid-of-us-language-in-windows-11
-* 
-* THE SOLUTION:
-* We don't actually want GW to install a language if its not found - load it if you have it, otherwise keep using the one that the OS is using instead.
-* 
-* SIDE EFFECTS:
-* Labels on the chat tabs will be wrong - GW still thinks we're now using en-US, so SHIFT + " on a en-GB keyboard layout would actually open Guild Chat (SHIFT + @)
-* 
-*/
-
 void KeyboardLanguageFix::Initialize()
 {
     ToolboxModule::Initialize();
