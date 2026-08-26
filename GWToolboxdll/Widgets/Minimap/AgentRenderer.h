@@ -45,6 +45,11 @@ public:
     void LoadDefaultColors();
     void LoadDefaultSizes();
 
+    Color GetProfessionColor(uint32_t profession) const
+    {
+        return profession < _countof(profession_colors) ? profession_colors[profession] : 0;
+    }
+
     bool show_hidden_npcs = false;
     bool show_quest_npcs_on_minimap = false;
     bool enemies_colors_by_profession = true;

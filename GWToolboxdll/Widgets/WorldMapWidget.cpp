@@ -27,6 +27,7 @@
 #include <Widgets/CartographerWidget.h>
 #include <Modules/GwDatModule.h>
 #include <Modules/Resources.h>
+#include <Widgets/Minimap/AgentRenderer.h>
 #include <Widgets/Minimap/Minimap.h>
 #include <Widgets/Minimap/GameWorldRenderer.h>
 
@@ -661,7 +662,6 @@ namespace {
         }
 
         const auto texture = Resources::GetSkillImage(boss.skill_id);
-        // const auto texture = Resources::GetProfessionIcon((GW::Constants::Profession)skill->profession);
 
         if (!(texture && *texture)) return false;
 
@@ -669,6 +669,11 @@ namespace {
 
         const float icon_size = std::lerp(16.f, 32.f, std::clamp(world_map_context->zoom, 0.f, 1.f)); // grow with zoom
         const auto half_size = icon_size / 2.f;
+
+        const auto prof_idx = static_cast<uint32_t>(skill->profession);
+        const auto prof_color = (settings.color_elite_icons_by_profession && prof_idx)
+            ? AgentRenderer::Instance().GetProfessionColor(prof_idx)
+            : 0u;
 
         bool hovered = false;
         float elites_scale = default_scale;
@@ -777,6 +782,9 @@ namespace {
             const ImRect icon_rect = {{viewport_quest_pos.x - half_size, viewport_quest_pos.y - half_size}, {viewport_quest_pos.x + half_size, viewport_quest_pos.y + half_size}};
 
             ImGui::AddImageScaled(draw_list, *texture, icon_rect.Min, skill_texture_size, icon_size, icon_size);
+            if (prof_color) {
+                draw_list->AddRect(icon_rect.Min, icon_rect.Max, prof_color, 0.f, 0, 2.f);
+            }
             hovered |= icon_rect.Contains(ImGui::GetMousePos());
         }
 
@@ -1262,6 +1270,7 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
             const auto& completion = CompletionWindow::Instance().GetCharacterCompletion(GW::PlayerMgr::GetPlayerName(), false);
             if (!completion) ImGui::TextDisabled("Limited to your primary/secondary profession if Completion Window is disabled");
         }
+        ImGui::Checkbox("Color skill icons by profession", &settings.color_elite_icons_by_profession);
         ImGui::Unindent();
     }
     ImGui::End();
@@ -1325,7 +1334,23 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
         }
     }
     if (hovered_boss) {
-        ImGui::SetTooltip("%s", BossInfo(hovered_boss).c_str());
+        ImGui::SetTooltip([&]() {
+            if (settings.color_elite_icons_by_profession) {
+                const auto skill = GW::SkillbarMgr::GetSkillConstantData(hovered_boss->skill_id);
+                const auto prof_idx = skill ? static_cast<uint32_t>(skill->profession) : 0u;
+                if (prof_idx) {
+                    const auto pc = AgentRenderer::Instance().GetProfessionColor(prof_idx);
+                    if (pc) {
+                        const auto prof_name = ToolboxUtils::GetProfessionName(static_cast<GW::Constants::Profession>(prof_idx));
+                        if (prof_name && !prof_name->string().empty()) {
+                            ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(pc), "%s", prof_name->string().c_str());
+                            ImGui::Separator();
+                        }
+                    }
+                }
+            }
+            ImGui::TextUnformatted(BossInfo(hovered_boss).c_str());
+        });
     }
     if (hovered_map_portal) {
         ImGui::SetTooltip([]() {
