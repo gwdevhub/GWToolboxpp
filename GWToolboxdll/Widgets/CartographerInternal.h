@@ -17,8 +17,7 @@
 #include <Widgets/WorldMapWidget.h>
 #include <Windows/Pathfinding/Pathing.h>
 
-// Cartographer internals shared with its debug-only tools (CartographerBake.cpp,
-// CartographerProbeLog.cpp). Not an API - the widget owns all of this.
+// Cartographer internals shared with its debug-only tools. Not an API - the widget owns all of this.
 #ifdef _DEBUG
 #define CARTO_LOG(...) Log::Log(__VA_ARGS__)
 #else
@@ -26,36 +25,29 @@
 #endif
 
 namespace Carto {
-    // Gw.exe's fog mesh builder is handed WorldContext::cartographed_areas (+0x5A4) and h05B4
-    // (+0x5B4, the grid dims): one bit per 32x32-world-map-unit cell.
+    // WorldContext::cartographed_areas (+0x5A4), dims in h05B4 (+0x5B4): one bit per 32x32 wm-unit cell.
     constexpr float kWorldMapUnitsPerCell = 32.f;
-    // Standing in a tile credits it plus the ring around it; a Bird's Eye Compass widens that to
-    // three rings. Chebyshev throughout, so where inside the tile you stand makes no difference.
+    // Chebyshev: a tile credits the ring around it, three rings with a Bird's Eye Compass.
     constexpr int kRevealRadius = 1;
     constexpr int kRevealRadiusBec = 3;
     // One tile regardless of the compass: the bake's standable set is also its navmesh model.
     constexpr int kMaskRadius = 1;
-    // Credit stops one square past the standing map's rectangle, not wherever the ring reaches:
-    // measured on Shenzun Tunnels ground a row past its south edge, which credits that row, not the next.
+    // Measured on Shenzun Tunnels: credit stops one square past the standing map's rectangle.
     constexpr int kBoundarySlack = 1;
     // Texels per cell in the client's fog texture, so visible fog is finer than the bit grid.
     constexpr int kFogSubdivisions = 4;
 
-    // wm.y is a divide plus an add on top of mid.y, itself a divide plus an add, so it carries a
-    // few ulp; 1/64 is a power of two with plenty of headroom and 1/2048 of a tile.
+    // wm.y arrives through two divides, so it carries a few ulp; 1/64 is a power of two and 1/2048 of a tile.
     constexpr float kCellEps = 1.f / 64.f;
 
     extern bool using_bec;
 
     inline int RevealRadius() { return using_bec ? kRevealRadiusBec : kRevealRadius; }
 
-    // The fog mesh builder strides rows by (width >> 5) words while the explored-query indexes
-    // bits flat as cy * width + cx; width is always a multiple of 32, so either form works.
+    // The builder strides rows by width >> 5 words; width is always a multiple of 32, so this is exact.
     inline uint32_t RowWords(const uint32_t width) { return width >> 5; }
 
-    // Columns own [32c, 32c+32) but rows own (32r, 32r+32]: the grid is anchored in game space and
-    // GamePosToWorldMap flips y. Epsilon leans off each closed end so a round-tripped value that
-    // landed a few ulp past a boundary still reads as the cell that owns it.
+    // Columns own [32c, 32c+32), rows own (32r, 32r+32] because GamePosToWorldMap flips y; eps leans off the closed ends.
     inline int CreditCellX(const float x) { return static_cast<int>(floorf((x + kCellEps) / kWorldMapUnitsPerCell)); }
     inline int CreditCellY(const float y) { return static_cast<int>(ceilf((y - kCellEps) / kWorldMapUnitsPerCell)) - 1; }
 
@@ -167,8 +159,7 @@ namespace Carto {
     struct ContinentMask {
         int continent = -1;
         int x0 = 0, y0 = 0, w = 0, h = 0;
-        // Clipped per map at bake time, plus the undilated ground it came from - the only way to ask
-        // whether a claim is about this map or the one next door.
+        // Clipped per map at bake time, plus the raw ground - the only way to tell this map's claim from next door's.
         const CartographyData::Mask* credit = nullptr;
         const CartographyData::Mask* raw = nullptr;
         // Always the permissive pair, so a square can be told apart from one nothing can credit.
@@ -228,8 +219,7 @@ namespace Carto {
                             std::unordered_set<const GW::PathingTrapezoid*>& gated_out,
                             std::unordered_set<const GW::PathingTrapezoid*>& open_out);
 
-    // Converted through `map_id`'s own anchor, not the loaded map's: callers answer for maps they are
-    // not standing in. `fn` takes (cx, cy).
+    // Converted through `map_id`'s own anchor, not the loaded map's. `fn` takes (cx, cy).
     template <typename F>
     void ForEachTileOfTrapezoid(const GW::Constants::MapID map_id, const GW::PathingTrapezoid& trap, F&& fn)
     {

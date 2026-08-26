@@ -21,14 +21,10 @@
 #include <Windows/Pathfinding/PathfindingWindow.h>
 #include <Windows/Pathfinding/PathingMapDataLoader.h>
 
-// Per continent, which 32x32 tiles have standable ground and which tiles that ground can credit,
-// straight out of the DAT. Writes the .bin files tools/bake_cartography/make_header.py turns into
-// CartographyData.h; it runs in-game because it shares GamePosToWorldMap with the runtime, and an
-// offline copy of that formula is what once let the shipped table drift a row north.
+// Per continent, standable tiles and the tiles they credit, as the .bin files make_header.py consumes.
 namespace Carto {
     struct ContinentBake {
-        // (cy << 32) | (uint32)cx, one pair per walk: gates blocking, gates open, and no walk at
-        // all. The last is not a reachability claim - it is only "the file has ground here".
+        // (cy << 32) | (uint32)cx, per walk: gates blocking, gates open, and no walk - ground exists only.
         std::unordered_set<uint64_t> standable, creditable;
         std::unordered_set<uint64_t> standable_glitched, creditable_glitched;
         std::unordered_set<uint64_t> standable_any, creditable_any;
@@ -99,8 +95,7 @@ namespace Carto {
                 });
             }
         }
-        // Dilated here rather than at runtime because credit stops one square past THIS map's
-        // rectangle, and a flat continent bitmap cannot say which map a tile's ground belongs to.
+        // Dilated here because credit stops one square past THIS map's rectangle; a flat bitmap loses whose is whose.
         const auto dilate = [&](const std::unordered_set<uint64_t>& src, std::unordered_set<uint64_t>& dst) {
             for (const auto key : src) {
                 ForEachInRing(TileX(key), TileY(key), kMaskRadius, [&](const int cx, const int cy, int, int) {
@@ -162,6 +157,7 @@ namespace Carto {
         }
     }
 
+    // In-game rather than offline only because it shares GamePosToWorldMap; an offline copy once drifted a row.
     void StartBake()
     {
         bake = {};

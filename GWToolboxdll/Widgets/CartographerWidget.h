@@ -39,22 +39,19 @@ public:
 
     static void SetEnabled(bool on);
     static bool GetEnabled();
-    // The overlay options, drawn nested under the world map's own "Cartographer" checkbox so they
-    // are only in the way when the helper is on.
+    // The overlay options, nested under the world map's own "Cartographer" checkbox.
     static void DrawWorldMapOptions();
     // World-map position of the current suggestion (fog tile or custom point); false if none.
     static bool GetCurrentTargetWorldPos(GW::Vec2f& out);
     static void SkipCurrentTarget(bool forever);
-    // Queues a fog point and makes it the current target, resolving it to a reachable tile that
-    // credits it and (unless turned off) pointing the custom quest marker there.
+    // Queues a fog point, resolves it to a reachable tile that credits it, and points the quest marker there.
     static void AddCustomPoint(const GW::Vec2f& world_map_pos);
     static void RemoveCustomPointNear(const GW::Vec2f& world_map_pos, float max_dist_wm);
     static void ClearCustomPoints();
     static void ClearDeclined();
     static void GetStatus(char* buf, size_t len);
 #ifdef _DEBUG
-    // Test-harness entry points; the tools themselves live in CartographerBake.cpp and
-    // CartographerProbeLog.cpp.
+    // Test-harness entry points; the tools live in CartographerBake.cpp and CartographerProbeLog.cpp.
     static void LogProbeAtCell(int cx, int cy);
     static void StartContinentBake();
     static void SetGateGlitchAllowed(bool allowed);

@@ -85,8 +85,7 @@ namespace Carto {
     bool set_quest_marker = true;
 
     std::map<GW::Constants::MapID, MapProbe> probe_cache;
-    // Which tiles are worth probing depends on where that character's fog is, so a different
-    // character invalidates the sweep even though the terrain has not moved.
+    // A different character's fog makes different tiles worth probing, though the terrain has not moved.
     std::wstring probe_cache_character;
 
     MapProbe no_map_probe;
@@ -137,8 +136,7 @@ namespace Carto {
         if (!Pathing::CopyBlockedPlanes(blocked) || blocked == probe->blocked_planes) return;
         probe->cells.clear();
         probe->strict.clear();
-        // A closed gate is one reason standing somewhere credited nothing, so that verdict expires
-        // with the gate too. Manual declines live in `declined_cells` and are untouched.
+        // A closed gate is one reason a square credited nothing, so that verdict expires with the gate.
         probe->skipped.clear();
         probe->blocked_planes = std::move(blocked);
         probe->complete = false;
@@ -146,8 +144,7 @@ namespace Carto {
         CARTO_LOG("[cartographer] blocked planes changed; re-probing this map");
     }
 
-    // The map we are standing in, as a tile rectangle. Kept off RebuildFog's cached pair because
-    // that one is filled after scoring has already run and reads as the whole world on a revisit.
+    // Kept off RebuildFog's pair, which is filled after scoring and reads as the whole world on a revisit.
     GW::Constants::MapID map_rect_id = static_cast<GW::Constants::MapID>(0);
     std::pair<int, int> map_rect_min{}, map_rect_max{};
     ImRect map_rect_bounds;
@@ -197,8 +194,7 @@ namespace Carto {
             && cy < static_cast<int>(ceilf(bounds.Max.y / kWorldMapUnitsPerCell)) + slack;
     }
 
-    // QuestModule::SetCustomQuestMarker only resolves to a real in-map position while the current
-    // map's world-map rectangle contains it; outside it the marker becomes a travel marker instead.
+    // SetCustomQuestMarker degrades to a travel marker outside the current map's world-map rectangle.
     bool StandRoutable(const GW::Vec2f& wm)
     {
         if (!EnsureMapRect()) return true;
@@ -223,8 +219,7 @@ namespace Carto {
     }
 
     std::set<std::pair<int, int>> declined_cells;
-    // `was_fog` is what lets a point retire itself: one placed on fog is done when that tile is
-    // credited, while one dropped on ground already explored is just a waypoint and never would be.
+    // A point placed on fog retires when that tile is credited; one on explored ground is just a waypoint.
     struct CustomPoint {
         GW::Vec2f wm{};
         bool was_fog = true;
@@ -308,8 +303,7 @@ namespace Carto {
         continent_mask.raw = allow_gate_glitch ? &src->standable_glitched : &src->standable;
         continent_mask.credit = allow_gate_glitch ? &src->creditable_glitched : &src->creditable;
         continent_mask.glitch_only = &src->creditable_glitched;
-        // Ground existing at all, not ground anything can reach: fog beside terrain no gate leads to
-        // has to read as uncoverable rather than as empty space between maps.
+        // Ground existing at all, not ground anything can reach: fog beside it must read as uncoverable.
         continent_mask.raw_any = &src->standable_any;
         continent_mask.any_credit = &src->creditable_any;
         continent_mask.any_raw = &src->standable_any;
@@ -319,8 +313,7 @@ namespace Carto {
         continent_mask.h = continent_mask.credit->height;
     }
 
-    // Squares the client does not credit however you reach them - the undercity stopped counting, so
-    // its ground still dilates into these. Nothing in the DAT records that, so it can only be a list.
+    // The undercity stopped counting, so its ground still dilates into these. Only a list can record that.
     struct DeadTile {
         int continent, cx, cy;
     };
@@ -337,8 +330,7 @@ namespace Carto {
         });
     }
 
-    // Whether any map's ground can credit the square. Deliberately says nothing about the loaded
-    // navmesh: which map you happen to be in must not change whether a square is worth uncovering.
+    // Says nothing about the loaded navmesh: which map you are in must not change a square's worth.
     bool FogCellCoverable(const int cx, const int cy)
     {
         if (TileNeverCredits(cx, cy)) return false;
@@ -355,22 +347,19 @@ namespace Carto {
         });
     }
 
-    // Ground within reach but no credit means the bake clipped it: that ground belongs to a map
-    // this square is too far outside of.
+    // Ground within reach but no credit means the bake clipped it against a map this square is outside.
     FogSkip WhyNotCoverable(const int cx, const int cy)
     {
         if (TileNeverCredits(cx, cy)) return FogSkip::NeverCredits;
         if (continent_mask.NeedsGlitch(cx, cy)) return FogSkip::GlitchOnly;
         const int r = RevealRadius();
-        // Ground a player can stand on first: then the square was dropped by the per-map credit clip
-        // rather than by the terrain being out of reach, and the two want different answers.
+        // Standable ground first: that means the per-map clip dropped it, not the terrain being out of reach.
         if (AnyInRing(cx, cy, r, [](const int nx, const int ny, int, int) { return continent_mask.RawGet(nx, ny); })) return FogSkip::PastMapBoundary;
         if (AnyInRing(cx, cy, r, [](const int nx, const int ny, int, int) { return continent_mask.AnyGroundAt(nx, ny); })) return FogSkip::Unreachable;
         return FogSkip::NoGroundInRange;
     }
 
-    // The bake already clipped each map's dilation to its own rectangle, so only the extra Bird's Eye
-    // rings walk the raw ground. `permissive` asks whether ground exists, not whether it is reachable.
+    // The bake clipped each map's dilation already, so only the extra Bird's Eye rings walk the raw ground.
     bool StandableWithin(const int cx, const int cy, const int radius, const bool permissive = false)
     {
         const auto* credit = permissive ? continent_mask.any_credit : continent_mask.credit;
@@ -450,16 +439,14 @@ namespace Carto {
     }
 
 
-    // A footing sits anywhere in its cell, so it can be a half-diagonal off the cell centre that
-    // the ring search sorts by - which is the slack that search has to allow before it stops early.
+    // A footing sits anywhere in its cell, so it can be a half-diagonal off the centre the search sorts by.
     constexpr float kStandOffsetMax = kWorldMapUnitsPerCell * 0.5f * 1.41421356f;
 
     struct NavCells {
         int x0 = 0, y0 = 0, width = 0, height = 0;
         std::vector<uint8_t> ground; // walkable at all, gate-independent
         std::vector<uint8_t> standable;
-        // Credit is per cell, so any reachable spot inside one reveals exactly the same fog as any
-        // other - which trapezoid's overlap the footing comes from does not matter.
+        // Credit is per cell, so which trapezoid's overlap the footing came from does not matter.
         std::vector<GW::GamePos> stand;
         std::vector<float> line_x, line_y;
         int ground_count = 0, stand_count = 0;
@@ -542,20 +529,17 @@ namespace Carto {
     {
         const auto map_id = GW::Map::GetMapID();
         std::vector<uint32_t> blocked;
-        // Without a pathing context there is no gate state to key on, and rebuilding against an
-        // empty one on every call is how this turned into a per-frame full-map sweep.
+        // Rebuilding against an empty gate state on every call is how this became a per-frame full-map sweep.
         if (!Pathing::CopyBlockedPlanes(blocked)) return false;
         if (nav_cells.built && nav_cells.map_id == map_id && nav_cells.blocked_planes == blocked) return true;
-        // Built before the reachability walk can find the player, every trapezoid reads as reachable
-        // - and these cells are kept for the life of the map, so that assumption would stick.
+        // Before the walk finds the player every trapezoid reads as reachable, and these cells are kept.
         if (!Pathing::IsReachabilityKnown()) return false;
 
         const auto started = clock();
         const auto trapezoids = Pathing::GetTrapezoidsWithReachability();
         if (trapezoids.empty()) return false;
 
-        // The grid covers the geometry rather than the map's world-map rectangle: credit reaches
-        // past that rectangle's edge, and the raw trapezoid extents cost nothing to take.
+        // Geometry extents, not the world-map rectangle: credit reaches past that edge and extents are free.
         float min_x = FLT_MAX, min_y = FLT_MAX, max_x = -FLT_MAX, max_y = -FLT_MAX;
         for (const auto& ref : trapezoids) {
             const auto* t = ref.trapezoid;
@@ -603,8 +587,7 @@ namespace Carto {
             }
         }
         nav_cells.built = true;
-        // The player is by definition standing on the navmesh, so their own cell has to be in here.
-        // If it is not, the trapezoid-to-cell mapping is wrong and every verdict built on it is too.
+        // The player stands on the navmesh, so a missing cell means the trapezoid-to-cell mapping is wrong.
         const auto* self = GW::Agents::GetControlledCharacter();
         GW::Vec2f self_wm{};
         const bool have_self = self && WorldMapWidget::GamePosToWorldMap(self->pos, self_wm);
@@ -652,8 +635,7 @@ namespace Carto {
             bool found = false;
             for (const auto& cell : candidates) {
                 const float centre_d2 = Dist2(CreditCellCenterWorldMap(cell.first, cell.second), from);
-                // A cell's centre only bounds the walk its probed footing actually costs, so ordering
-                // by it is not enough to stop at the first hit - but it is enough to stop early.
+                // A centre only bounds the walk its footing costs, so this cannot stop at the first hit.
                 if (found && sqrtf(centre_d2) - kStandOffsetMax > sqrtf(best_d2)) break;
                 auto it = probe->cells.find(cell);
                 if (it == probe->cells.end()) {
@@ -674,8 +656,7 @@ namespace Carto {
             }
             return found;
         };
-        // Near-range credit is unconditional; BEC range is a guess whose only disproof costs a 15s
-        // dwell, so the wide ring is a fallback rather than a competitor.
+        // Near-range credit is unconditional; BEC range is a guess whose only disproof costs a 15s dwell.
         if (try_ring(-1, kRevealRadius)) return true;
         return RevealRadius() > kRevealRadius && CellQualifies(fx, fy) && try_ring(kRevealRadius, RevealRadius());
     }
@@ -746,8 +727,7 @@ namespace Carto {
         int y1 = static_cast<int>(ceilf(bounds.Max.y / kWorldMapUnitsPerCell));
         map_cell_min = {x0, y0};
         map_cell_max = {x1, y1};
-        // With the baked data we can answer for the whole continent, not just the map we are in -
-        // which is the point of it: the world map then shows everything still worth walking to.
+        // The bake answers for the whole continent, so the world map shows everything worth walking to.
         if (show_whole_continent && !continent_mask.Empty()) {
             x0 = continent_mask.x0;
             y0 = continent_mask.y0;
@@ -759,8 +739,7 @@ namespace Carto {
                 if (!grid.InGrid(cx, cy) || grid.IsExplored(cx, cy)) continue;
                 if (!FogCellCoverable(cx, cy)) {
                     unreachable_fog_cells++;
-                    // Only where ground is actually near: the empty space between maps is most of
-                    // the continent grid and was never fog anyone could clear, so greying it says nothing.
+                    // Only where ground is near: the space between maps was never fog anyone could clear.
                     const auto why = WhyNotCoverable(cx, cy);
                     if (why != FogSkip::NoGroundInRange && uncoverable_cells.size() < kUncoverableListMax) {
                         uncoverable_cells.push_back({cx, cy, why});
@@ -786,8 +765,7 @@ namespace Carto {
     }
 
 
-    // Elsewhere keeps the raw point on purpose: the quest marker turns a position outside this
-    // map's rectangle into a travel marker, which is how the player reaches another map's fog.
+    // Elsewhere keeps the raw point: outside this map's rectangle the marker becomes a travel marker.
     enum class GoalKind { None, Elsewhere, Waypoint, Stand };
 
     struct Target {
@@ -798,8 +776,7 @@ namespace Carto {
         int cy = 0;
         int reveals = 0;
         GW::Vec2f wm{};
-        // The stand cell is carried rather than re-derived from `stand_wm`: the arrival test
-        // compares cells, and re-deriving one is a second chance to disagree with the client.
+        // Carried, not re-derived: the arrival test compares cells, and re-deriving is a chance to disagree.
         GW::Vec2f stand_wm{};
         int stand_cx = 0;
         int stand_cy = 0;
@@ -827,8 +804,7 @@ namespace Carto {
             : nullptr;
     }
 
-    // The custom quest marker is shared with everything else that sets one, so remember the one we
-    // placed and never touch a marker that has since become somebody else's.
+    // The custom quest marker is shared, so never touch one that has since become somebody else's.
     bool marker_placed = false;
     GW::Vec2f marker_point{};
     GW::Vec2f marker_goal{};
@@ -858,8 +834,7 @@ namespace Carto {
             ReleaseQuestMarker();
             return;
         }
-        // Outside the rectangle SetCustomQuestMarker degrades to a travel marker, which is right for
-        // another map's fog and wrong for a square on this one - so leave that square unmarked.
+        // Outside the rectangle the marker degrades to a travel marker, so leave that square unmarked.
         if (target.goal == GoalKind::Stand && !StandRoutable(*goal)) {
             if (!warned_stand_off_rect) {
                 warned_stand_off_rect = true;
@@ -900,8 +875,7 @@ namespace Carto {
         return WorldMapWidget::GetMapIdForLocation(point_wm) == GW::Map::GetMapID() ? GoalKind::None : GoalKind::Elsewhere;
     }
 
-    // Re-resolved every scan rather than kept: the sweep keeps learning what is standable, and a
-    // gate moving can take the answer away again.
+    // Re-resolved every scan: the sweep keeps learning, and a gate moving can take the answer away.
     void RefreshCustomTargetStand(const GW::Vec2f& from)
     {
         if (!target.valid || !target.custom) return;
@@ -962,15 +936,13 @@ namespace Carto {
     {
         CartoGrid grid;
         const auto [fx, fy] = FogTileAt(raw_wm);
-        // Credit is per tile, so where in it you clicked carries no information: snapping means two
-        // clicks in one tile are one point, and every distance downstream is measured tile to tile.
+        // Credit is per tile, so where in it you clicked carries no information - two clicks are one point.
         const GW::Vec2f wm = CreditCellCenterWorldMap(fx, fy);
         const bool foggy = GetCartoGrid(grid) && !grid.IsExplored(fx, fy);
         std::erase_if(custom_points, [&wm](const CustomPoint& p) { return FogTileAt(p.wm) == FogTileAt(wm); });
         custom_points.push_back({wm, foggy});
         SerializePoints();
-        // Taking the target over straight away is what makes the marker point at the fog you just
-        // asked about, instead of at whichever queued point happens to be nearest.
+        // Taking the target over now points the marker at the fog you asked about, not the nearest point.
         target = {};
         target.valid = true;
         target.custom = true;
@@ -1006,8 +978,7 @@ namespace Carto {
                   : " - this map has ground near it, but none reachable from here");
     }
 
-    // Travel portals block here exactly as they block the live reachability walk: the baked table
-    // and the overlay drawn from it have to answer the same question the same way.
+    // Travel portals block here exactly as they block the live reachability walk, so the two agree.
     using PlaneOf = std::unordered_map<const GW::PathingTrapezoid*, size_t>;
 
     PlaneOf PlaneIndex(const Pathing::PathingMapData& data)
@@ -1063,8 +1034,7 @@ namespace Carto {
         return FloodIndexed(data, PlaneIndex(data), seeds, gates, honour_no_pathing);
     }
 
-    // A map file routinely holds more than one walkable island - an outpost and its explorable share
-    // a file and you zone between them rather than walk - so "the largest" is not "the playable one".
+    // An outpost and its explorable share a file and you zone between them, so largest is not playable.
     std::unordered_set<const GW::PathingTrapezoid*> LargestComponent(const Pathing::PathingMapData& data, const PlaneOf& plane_of,
                                                                      const std::vector<Pathing::TravelDoorway>& gates)
     {
@@ -1081,9 +1051,7 @@ namespace Carto {
         return best;
     }
 
-    // Seeded at the gates you could have zoned in on: largest-only deletes every outpost sharing its
-    // explorable's file, every-island readmits terrain no gate leads to. A gate does not block its own
-    // flood (as CachedReachableTrapezoids does). Mirrors entrance_component in ffna.py.
+    // Seeded at the gates you could zone in on; a gate does not block its own flood. Mirrors ffna.py's entrance_component.
     void PlayableTrapezoids(const Pathing::PathingMapData& data,
                             std::unordered_set<const GW::PathingTrapezoid*>& gated_out,
                             std::unordered_set<const GW::PathingTrapezoid*>& open_out)
@@ -1115,8 +1083,7 @@ namespace Carto {
         open_out = FloodIndexed(data, plane_of, seeds, {}, true);
     }
 
-    // GetMapIdForLocation walks every map on the continent, so answers are kept until the
-    // continent changes. Rectangles overlap: this labels where a square is, not whose ground is on it.
+    // GetMapIdForLocation walks the continent, and rectangles overlap: this labels where a square is.
     std::map<std::pair<int, int>, GW::Constants::MapID> tile_rect_map;
 
     GW::Constants::MapID MapForTile(const int cx, const int cy)
@@ -1140,8 +1107,7 @@ namespace Carto {
         bool under_tile = false;
     };
 
-    // Which map file holds the ground that credits a foggy square, resolved from the DAT because
-    // the overlapping world-map rectangles routinely name a map that has no ground there at all.
+    // From the DAT, because the overlapping rectangles routinely name a map with no ground there at all.
     struct OwnerQuery {
         std::pair<int, int> cell{INT_MIN, INT_MIN};
         std::vector<GW::Constants::MapID> queue;
@@ -1187,8 +1153,7 @@ namespace Carto {
             const auto map_id = static_cast<GW::Constants::MapID>(i);
             const auto info = GW::Map::GetMapInfo(map_id);
             if (!(info && info->GetIsOnWorldMap() && info->continent == here->continent)) continue;
-            // A map's ground can sit outside its own rectangle, so the rectangle only bounds what it
-            // may credit - test that, not whether it overlaps the reveal ring.
+            // A map's ground can sit outside its rectangle, so test what it may credit, not the reveal ring.
             if (!InCreditableBoundsOf(map_id, cell.first, cell.second)) {
                 if (InCreditableBoundsOf(map_id, cell.first, cell.second, r + 1)) owner_query.out_of_reach_maps++;
                 continue;
@@ -1254,8 +1219,7 @@ namespace Carto {
         owner_cache[owner_query.cell] = owner_query;
     }
 
-    // `why_lines` only where the square cannot be uncovered: elsewhere "walkable: false" over ground
-    // you can walk on reads as the overlay being wrong.
+    // `why_lines` only where the square cannot be uncovered: elsewhere "walkable: false" reads as a bug.
     std::string OwnerTooltip(const OwnerQuery& q, const bool why_lines)
     {
         std::string out;
@@ -1365,8 +1329,7 @@ namespace Carto {
 
             const float near_dist = px_per_wm_unit > 0.f ? 12.f / px_per_wm_unit : 8.f;
             const int point_here = FindCustomPointNear(click_wm, near_dist);
-            // Clicking the suggestion itself means acting on it - offering to drop a fog point
-            // on the spot already being suggested is nonsense.
+            // Offering a fog point on the spot already being suggested is nonsense.
             const bool on_suggestion = target.valid && !target.custom
                 && CreditCellAt(click_wm) == std::pair{target.cx, target.cy};
             if (target.valid && (on_suggestion || (target.custom && point_here >= 0))) {
@@ -1444,8 +1407,7 @@ namespace Carto {
             project({(cx + 1) * kWorldMapUnitsPerCell, (cy + 1) * kWorldMapUnitsPerCell}, max_out);
     }
 
-    // Returns whether the pointer is over the square, and hands back its rectangle for the callers
-    // that draw from it.
+    // Returns whether the pointer is over the square, and hands back its rectangle for callers that draw from it.
     bool DrawCell(ImDrawList* dl, const ProjectToScreen project, const int cx, const int cy, const ImU32 colour,
                   const int fill_alpha, const int edge_alpha, const float thickness, const ImVec2& mouse,
                   ImRect* rect_out = nullptr)
@@ -1460,8 +1422,7 @@ namespace Carto {
         return rect.Contains(mouse);
     }
 
-    // One quad per fog texel, so ImGui interpolates them as the GPU does when it samples the
-    // client's texture.
+    // One quad per fog texel, so ImGui interpolates them as the GPU does when it samples the texture.
     void DrawFog(ImDrawList* dl, const ProjectToScreen project, const ImVec2& mouse,
                  std::string& tooltip_out, std::string& warning_out)
     {
@@ -1485,8 +1446,7 @@ namespace Carto {
             }
         }
         if (!hovered) return;
-        // Only in the map whose world-map rectangle the square falls in. Anywhere else "not from the
-        // currently loaded map" is trivially true of nearly every square and says nothing.
+        // Only inside the square's own rectangle: elsewhere "not from the loaded map" is trivially true.
         if (InMapBounds(hovered->cx, hovered->cy) && !ThisMapCanCredit(hovered->cx, hovered->cy)) {
             warning_out = "Not uncoverable from the currently loaded map";
         }
@@ -1520,8 +1480,7 @@ namespace Carto {
         const float step_x = corner.x - origin.x;
         const float step_y = corner.y - origin.y;
         if (step_x < 3.f || step_y < 3.f) return; // denser than this is a smear, not a grid
-        // Both projections are affine, so the far edge follows from the step rather than a second
-        // projection that could fail on its own.
+        // Both projections are affine, so the far edge follows from the step rather than a second one.
         const ImRect clip(dl->GetClipRectMin(), dl->GetClipRectMax());
         const float top = std::max(origin.y, clip.Min.y);
         const float bottom = std::min(origin.y + (y1 - y0) * step_y, clip.Max.y);
@@ -1546,15 +1505,13 @@ namespace Carto {
         }
     }
 
-    // Drawn rather than silently omitted: a blank patch of world map reads as "already done". Grey
-    // for never creditable, yellow for the ones only a gate glitch reaches.
+    // Drawn rather than omitted: a blank patch reads as "already done". Yellow means gate-glitch only.
     void DrawUncoverableCells(ImDrawList* dl, const ProjectToScreen project, const ImVec2& mouse, std::string& tooltip_out)
     {
         for (const auto& [cx, cy, why] : uncoverable_cells) {
             const auto colour = why == FogSkip::GlitchOnly ? kGlitchOnlyColor : kUncoverableColor;
             if (!DrawCell(dl, project, cx, cy, colour, 60, 150, 1.f, mouse)) continue;
-            // Which map the ground belongs to is the answer worth having, so run the same DAT
-            // lookup the fog tooltip does rather than describing the rule that excluded it.
+            // Which map the ground belongs to is the answer worth having, so run the same DAT lookup.
             RequestOwnerQuery(cx, cy);
             const auto* resolved = FinishedOwnerQuery(cx, cy);
             if (!resolved) {
@@ -1571,8 +1528,7 @@ namespace Carto {
         }
     }
 
-    // Explored squares the baked table says nothing could have credited: either ground the bake
-    // missed, or ground reached in a way the bake does not model.
+    // Explored squares the bake says nothing could credit: missing ground, or a route it does not model.
     void DrawUnexpectedCells(ImDrawList* dl, const ProjectToScreen project, const ImVec2& mouse, std::string& tooltip_out)
     {
         for (const auto& [cx, cy] : unexpected_cells) {
@@ -1588,8 +1544,7 @@ namespace Carto {
         for (const auto& [cell, sc] : probe->cells) {
             if (!sc.reachable || sc.reveals <= 0) continue;
             if (declined_cells.contains(cell)) continue;
-            // Skipped only while the suggestion is actually drawn on top, else a pending ownership
-            // recheck blanks the square entirely.
+            // Skipped only while the suggestion is drawn on top, else an ownership recheck blanks it.
             if (target.valid && !target.custom && target.cx == cell.first && target.cy == cell.second) continue;
             const int strength = std::min(sc.reveals, 9);
             if (DrawCell(dl, project, cell.first, cell.second, kStandColor, 10 + 6 * strength, 60 + 12 * strength, 1.f, mouse)) {
@@ -1679,8 +1634,7 @@ namespace Carto {
         if (!CartographerWidget::GetEnabled() || !map_on_world_map) return;
         DrawMapOverlay(dl, [](const GW::Vec2f& wm, ImVec2& out) { return MissionMapWidget::WorldMapToScreen(wm, out); }, false);
     }
-    // Registered and drawn from one table: a setting added to one list and forgotten in the other
-    // is the whole failure mode this replaces.
+    // One table for both, so a setting cannot be added to one list and forgotten in the other.
     struct Option {
         const char* setting;
         const char* label;
@@ -1715,8 +1669,7 @@ namespace Carto {
          "Draws every square you have already uncovered that the baked map data says has no standable ground within reveal range - not even ground only a gate glitch reaches - so nothing should have been able to credit it. Either the bake is missing that ground, or it was uncovered from somewhere the bake does not model. The reveal range follows the Bird's Eye Compass setting below."},
         {"using_bec", "Using a Bird's Eye Compass", &using_bec,
          [] {
-             // Terrain has not moved, so the probed tiles stay; the radius only widens which tiles are
-             // worth probing. `strict` is a property of the fog tile, not of the radius, so it survives.
+             // The radius only widens which tiles are worth probing; `strict` is a fog-tile property and survives.
              for (auto& [map_id, cached] : probe_cache) cached.complete = false;
              owner_cache.clear();
              owner_query = {};
@@ -1788,8 +1741,7 @@ void CartographerWidget::Update(float)
         SelectProbe(map_id);
     }
 
-    // Everything here is expressed in world-map coordinates, so a map that does not appear on the
-    // world map has nothing to compute and nothing to draw.
+    // Everything here is in world-map coordinates, so a map off the world map has nothing to compute.
     const auto map_info = GW::Map::GetMapInfo(map_id);
     map_on_world_map = map_info && map_info->GetIsOnWorldMap();
     if (!map_on_world_map) return;
@@ -1856,8 +1808,7 @@ void CartographerWidget::Update(float)
     player_cell_valid = true;
     if (target.valid) {
         if (target.custom) {
-            // Fog points retire when their tile is credited (PruneUncoveredPoints); arriving only
-            // starts the clock on whether standing here is going to credit anything at all.
+            // Fog points retire when their tile is credited; arriving only starts the clock.
             if (target.goal == GoalKind::Waypoint) {
                 // Already-explored ground, so getting to the point itself is all there is to finish it off.
                 if (Dist2(player_wm, target.wm) < 2.f * 2.f) {
@@ -1870,8 +1821,7 @@ void CartographerWidget::Update(float)
                 arrived = false;
                 arrived_at = 0;
             }
-            // Leaving stops the clock: the verdict below is about standing here, so it must not be
-            // reached from somewhere else entirely once the target latches on to the hysteresis.
+            // Leaving stops the clock: the verdict below is about standing here, not about getting here.
             else if (player_cell != std::pair{target.stand_cx, target.stand_cy}) {
                 arrived = false;
                 arrived_at = 0;
@@ -1893,20 +1843,17 @@ void CartographerWidget::Update(float)
         }
     }
 
-    // Credit is not always instant - it can need a step or a click-walk first - so give the square
-    // a fair while before concluding anything.
+    // Credit can need a step or a click-walk first, so give the square a fair while before concluding.
     if (arrived && target.valid && !target.custom && TIMER_DIFF(arrived_at) > 15000) {
         const auto it = probe->cells.find({target.cx, target.cy});
         if (it != probe->cells.end() && it->second.reveals > 0) {
-            // A wide visit that credits nothing usually means the tiles it was reaching for are the
-            // ones only normal range uncovers; demote those rather than writing the square off.
+            // A wide visit crediting nothing usually means it reached for tiles only normal range uncovers.
             const int r = RevealRadius();
             int demoted = 0;
             ForEachInRing(target.cx, target.cy, r, [&](const int nx, const int ny, const int dx, const int dy) {
                 if (abs(dx) <= kRevealRadius && abs(dy) <= kRevealRadius) return;
                 if (!grid.InGrid(nx, ny) || grid.IsExplored(nx, ny)) return;
-                // Blame only what the square was scored on: a tile the score already excluded was
-                // never this visit's to credit.
+                // Blame only what the square was scored on: an excluded tile was never this visit's to credit.
                 if (CellCreditableFrom(dx, dy, nx, ny) && probe->strict.insert({nx, ny}).second) demoted++;
             });
             if (r > kRevealRadius) {
@@ -1922,8 +1869,7 @@ void CartographerWidget::Update(float)
         }
     }
 
-    // Same for a fog point, except the tile that has to credit is the one the player picked: if a
-    // wide-range visit has not credited it, demote it so the next resolve sends them closer in.
+    // Same for a fog point, except the tile that has to credit is the one the player picked.
     if (arrived && target.valid && target.custom && target.goal == GoalKind::Stand && TIMER_DIFF(arrived_at) > 15000) {
         const std::pair cell = FogTileAt(target.wm);
         const int dx = target.stand_cx - cell.first;
@@ -1941,8 +1887,7 @@ void CartographerWidget::Update(float)
     Target cand{};
     float cand_d2 = FLT_MAX;
     blocked_point = false;
-    // A point nothing can credit must not hold the queue hostage - custom points always outrank
-    // suggestions - so selection passes over it and the status line names it instead.
+    // A point nothing can credit must not hold the queue hostage, so selection passes over it.
     std::vector<size_t> by_distance(custom_points.size());
     std::iota(by_distance.begin(), by_distance.end(), size_t{0});
     std::ranges::sort(by_distance, [&player_wm](const size_t a, const size_t b) {
@@ -1967,12 +1912,10 @@ void CartographerWidget::Update(float)
         for (const auto& [cell, sc] : probe->cells) {
             if (!sc.reachable || sc.reveals <= 0) continue;
             if (probe->skipped.contains(cell) || declined_cells.contains(cell)) continue;
-            // Send them to the probed footing, not the cell centre: for the coastline slivers
-            // ProbeStandCell exists to find, the centre is unwalkable water.
+            // The probed footing, not the cell centre: on a coastline sliver the centre is unwalkable water.
             GW::Vec2f stand;
             if (!WorldMapWidget::GamePosToWorldMap(sc.pos, stand)) continue;
-            // Measured to the footing, not the cell centre: the hysteresis below compares this
-            // against the incumbent's `wm`, which is a footing too.
+            // To the footing, because the hysteresis below compares this against the incumbent's `wm`.
             const float d2 = Dist2(stand, player_wm);
             const float dist_cells = sqrtf(d2) / kWorldMapUnitsPerCell;
             const float value = static_cast<float>(sc.reveals) / (dist_cells + 2.f);
@@ -2087,8 +2030,7 @@ void CartographerWidget::DrawSettingsInternal()
     if (ImGui::SmallButton("Clear##points")) ClearCustomPoints();
 
 #ifdef _DEBUG
-    // Before the early-out below: re-baking is a maintenance job, not something you should have to
-    // turn the widget on to reach.
+    // Before the early-out: re-baking should not need the widget turned on.
     Carto::DrawBakeSettings();
 #endif
 

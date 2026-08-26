@@ -16,8 +16,7 @@
 #include <Windows/Pathfinding/PathfindingWindow.h>
 #include <Windows/Pathfinding/PathingMapDataLoader.h>
 
-// The Cartographer's one diagnostic: everything its verdict for a square rests on, in the order the
-// widget consults it. Reached from the map context menu or the harness's `cartoprobe` verb.
+// Everything the Cartographer's verdict for a square rests on; reached from the map menu or `cartoprobe`.
 namespace Carto {
     void LogProbe(const GW::Vec2f& at)
     {
@@ -67,8 +66,7 @@ namespace Carto {
         const auto nav = GetNavGridInfo();
         Log::Log("[carto-bake] (%d,%d) nav_grid origin=(%d,%d) size=%dx%d ground_cells=%d stand_cells=%d built=%d",
                  cx, cy, nav.x0, nav.y0, nav.width, nav.height, nav.ground_count, nav.stand_count, static_cast<int>(nav.built));
-        // The bake on this map's own DAT, for this one cell: ground its walk cannot reach is dropped
-        // from the table even while you stand on it, which is the other way a square reads unexpected.
+        // The bake on this map's own DAT: ground its walk cannot reach is dropped while you stand on it.
         {
             const uint32_t bake_fid = PathfindingWindow::GetMapFileId(GW::Map::GetMapID());
             Pathing::PathingMapData data;
@@ -96,8 +94,7 @@ namespace Carto {
                     }
                 }
                 if (seed && !in_open) {
-                    // Which rule severed it: the 0x04 portal flag, or nothing reachable at all. Planes
-                    // are listed because a layered map joins its levels only by portals.
+                    // Which rule severed it: the 0x04 portal flag, or nothing reachable. Layered maps join by portals.
                     const auto strict = Flood(data, {seed}, {}, true);
                     const auto relaxed = Flood(data, {seed}, {}, false);
                     bool relaxed_reaches_main = false;
@@ -128,8 +125,7 @@ namespace Carto {
                                              : "");
             }
         }
-        // GetMapWorldAnchor takes the loaded map's bounds from the map context and every other map's
-        // from the DAT; bake.py only ever has the DAT. Disagreement here shifts every tile it bakes.
+        // GetMapWorldAnchor uses the map context for the loaded map and the DAT elsewhere; bake.py only has the DAT.
         {
             const auto* map_context = GW::GetMapContext();
             Pathing::Vec2f dat_min{}, dat_max{};
@@ -149,8 +145,7 @@ namespace Carto {
                 }
             }
         }
-        // Live grid over baked grid, which separates the two failures: a constant offset means the
-        // anchors have drifted apart, disagreement in place means the bake is missing geometry.
+        // Live over baked: a constant offset means drifted anchors, disagreement in place means missing geometry.
         if (nav.built && !continent_mask.Empty()) {
             const auto live_at = [&](const int x, const int y) { return NavGroundAt(nav.x0 + x, nav.y0 + y); };
             int best_dx = 0, best_dy = 0, best_hits = -1, in_place = 0;
@@ -180,8 +175,7 @@ namespace Carto {
                 Log::Log("[carto-bake]   y=%3d x=%d %s", nav.y0 + y, nav.x0, row.c_str());
             }
         }
-        // Which baked tile the dilated claim came from. Ground behind a travel portal shows as
-        // glitch-only, which is the difference the setting turns on.
+        // Which baked tile the dilated claim came from; ground behind a travel portal shows as glitch-only.
         ForEachInRing(cx, cy, kMaskRadius, [&](const int bx, const int by, const int dx, const int dy) {
             const bool any = continent_mask.AnyGroundAt(bx, by);
             if (!any && (dx || dy)) return;
