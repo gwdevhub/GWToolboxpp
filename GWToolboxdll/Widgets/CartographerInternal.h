@@ -33,14 +33,12 @@ namespace Carto {
     // three rings. Chebyshev throughout, so where inside the tile you stand makes no difference.
     constexpr int kRevealRadius = 1;
     constexpr int kRevealRadiusBec = 3;
-    // The bake dilates by one tile regardless of the compass: its standable set is also its navmesh
-    // model, so a tile the wide rings reach is already a tile something stands next to.
+    // One tile regardless of the compass: the bake's standable set is also its navmesh model.
     constexpr int kMaskRadius = 1;
     // Credit stops one square past the standing map's rectangle, not wherever the ring reaches:
     // measured on Shenzun Tunnels ground a row past its south edge, which credits that row, not the next.
     constexpr int kBoundarySlack = 1;
-    // The client's fog texture is this many texels per cell, so visible fog is four times finer
-    // than the 32-unit grid the bits live on.
+    // Texels per cell in the client's fog texture, so visible fog is finer than the bit grid.
     constexpr int kFogSubdivisions = 4;
 
     // wm.y is a divide plus an add on top of mid.y, itself a divide plus an add, so it carries a
@@ -55,10 +53,9 @@ namespace Carto {
     // bits flat as cy * width + cx; width is always a multiple of 32, so either form works.
     inline uint32_t RowWords(const uint32_t width) { return width >> 5; }
 
-    // The tile the client credits from a standing position. Columns own [32c, 32c+32) while rows own
-    // (32r, 32r+32]: the grid is anchored in game space and GamePosToWorldMap flips y, which turns a
-    // half-open game-space interval into one closed at the other end. Epsilon leans off each axis's
-    // closed end so a round-tripped value a few ulp past a boundary still reads as the cell that owns it.
+    // Columns own [32c, 32c+32) but rows own (32r, 32r+32]: the grid is anchored in game space and
+    // GamePosToWorldMap flips y. Epsilon leans off each closed end so a round-tripped value that
+    // landed a few ulp past a boundary still reads as the cell that owns it.
     inline int CreditCellX(const float x) { return static_cast<int>(floorf((x + kCellEps) / kWorldMapUnitsPerCell)); }
     inline int CreditCellY(const float y) { return static_cast<int>(ceilf((y - kCellEps) / kWorldMapUnitsPerCell)) - 1; }
 
@@ -69,8 +66,7 @@ namespace Carto {
         return {cx * kWorldMapUnitsPerCell + 16.f, cy * kWorldMapUnitsPerCell + 16.f};
     }
 
-    // Which fog bit is drawn under a point. Credit cells and fog bits are one index space, so this is
-    // CreditCellAt without the epsilon only round-tripped positions need.
+    // CreditCellAt without the epsilon only round-tripped positions need; one index space with it.
     inline std::pair<int, int> FogTileAt(const GW::Vec2f& wm)
     {
         return {
@@ -85,8 +81,7 @@ namespace Carto {
         return dx * dx + dy * dy;
     }
 
-    // The reveal rule is a square block, so every neighbourhood walk in the widget is one of these.
-    // `fn`/`pred` take (cx, cy, dx, dy).
+    // Chebyshev, because the reveal rule is a square block. `fn`/`pred` take (cx, cy, dx, dy).
     template <typename F>
     void ForEachInRing(const int cx, const int cy, const int r, F&& fn)
     {
@@ -117,8 +112,7 @@ namespace Carto {
             return cx >= 0 && cy >= 0 && static_cast<uint32_t>(cx) < width && static_cast<uint32_t>(cy) < height;
         }
 
-        // Anything without a set bit - off-grid, past the synced array - is unexplored, because that
-        // is what the game fogs.
+        // Off-grid and past the synced array read as unexplored, because that is what the game fogs.
         bool IsExplored(const int cx, const int cy) const
         {
             if (!InGrid(cx, cy) || !bits) return false;
@@ -130,17 +124,14 @@ namespace Carto {
     bool GetCartoGrid(CartoGrid& out);
 
     struct StandCell {
-        // Reachable from where the player is: where we may send them. Gate-dependent.
-        bool reachable = false;
-        // Walkable ground exists in this tile at all. A property of the terrain, so it survives a
-        // gate change - and it is read over a fog tile's 3x3 block, never at the tile itself.
+        bool reachable = false; // gate-dependent: where we may actually send the player
+        // Terrain, so it survives a gate change; read over a fog tile's 3x3 block, never at the tile.
         bool navmesh = false;
         GW::GamePos pos{}; // somewhere inside the cell you can actually stand
         int reveals = 0;   // still-foggy cells this spot would credit
     };
 
-    // Probing a map costs a walkability query per cell and the answer never changes while you are on
-    // that map, so it is swept once and kept. `strict` and `skipped` are learned the same way.
+    // Standability never changes within a map, so it is swept once and kept for the session.
     struct MapProbe {
         std::map<std::pair<int, int>, StandCell> cells;
         // Slivers a wide-range visit failed to credit; these stop counting beyond one tile away.
@@ -154,7 +145,6 @@ namespace Carto {
     // Always valid: off the world map it points at an empty probe.
     extern MapProbe* probe;
 
-    // Why a foggy square was dropped, so the overlay can say it rather than just omitting the square.
     enum class FogSkip { PastMapBoundary, NoGroundInRange, GlitchOnly, Unreachable, NeverCredits };
 
     struct UncoverableCell {
@@ -177,9 +167,8 @@ namespace Carto {
     struct ContinentMask {
         int continent = -1;
         int x0 = 0, y0 = 0, w = 0, h = 0;
-        // Which tiles this continent's ground can credit, already clipped per map at bake time, and
-        // the undilated ground it came from - the only way to ask whether a claim is about this map
-        // or the one next door.
+        // Clipped per map at bake time, plus the undilated ground it came from - the only way to ask
+        // whether a claim is about this map or the one next door.
         const CartographyData::Mask* credit = nullptr;
         const CartographyData::Mask* raw = nullptr;
         // Always the permissive pair, so a square can be told apart from one nothing can credit.
@@ -228,22 +217,19 @@ namespace Carto {
     bool FogCellCoverable(int cx, int cy);
     bool ThisMapCanCredit(int cx, int cy);
 
-    // Flood the map file's trapezoids from `seeds`. `gates` block the walk; `honour_no_pathing`
-    // respects the 0x04 portal flag.
+    // `gates` block the walk; `honour_no_pathing` respects the 0x04 portal flag.
     std::unordered_set<const GW::PathingTrapezoid*> Flood(const Pathing::PathingMapData& data,
                                                           const std::vector<const GW::PathingTrapezoid*>& seeds,
                                                           const std::vector<Pathing::TravelDoorway>& gates,
                                                           bool honour_no_pathing = true);
 
-    // Which trapezoids of a file a player can actually be standing on, and the same ground walked as
-    // if travel portals did not stop you.
+    // Where a player can actually be standing, and the same ground walked as if gates did not stop you.
     void PlayableTrapezoids(const Pathing::PathingMapData& data,
                             std::unordered_set<const GW::PathingTrapezoid*>& gated_out,
                             std::unordered_set<const GW::PathingTrapezoid*>& open_out);
 
-    // Every tile `trap` overlaps, converted through `map_id`'s own world-map anchor rather than the
-    // loaded map's - the bake and the tile-owner lookup both answer for maps they are not standing in.
-    // `fn` takes (cx, cy).
+    // Converted through `map_id`'s own anchor, not the loaded map's: callers answer for maps they are
+    // not standing in. `fn` takes (cx, cy).
     template <typename F>
     void ForEachTileOfTrapezoid(const GW::Constants::MapID map_id, const GW::PathingTrapezoid& trap, F&& fn)
     {

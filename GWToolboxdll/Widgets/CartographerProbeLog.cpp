@@ -16,9 +16,8 @@
 #include <Windows/Pathfinding/PathfindingWindow.h>
 #include <Windows/Pathfinding/PathingMapDataLoader.h>
 
-// The Cartographer's one diagnostic: everything its verdict for a square rests on, dumped in the
-// order the widget consults it. Debug builds only, reached from the map context menu or the test
-// harness's `cartoprobe` verb.
+// The Cartographer's one diagnostic: everything its verdict for a square rests on, in the order the
+// widget consults it. Reached from the map context menu or the harness's `cartoprobe` verb.
 namespace Carto {
     void LogProbe(const GW::Vec2f& at)
     {
@@ -28,8 +27,7 @@ namespace Carto {
             Log::FlushFile();
             return;
         }
-        // Both indices, because they agreeing is the invariant this widget rests on:
-        // one being off from the other means the position conversion has drifted again.
+        // Both indices: one being off from the other means the position conversion has drifted again.
         const auto [cx, cy] = FogTileAt(at);
         const auto [ccx, ccy] = CreditCellAt(at);
         GW::GamePos gp{};
@@ -69,9 +67,8 @@ namespace Carto {
         const auto nav = GetNavGridInfo();
         Log::Log("[carto-bake] (%d,%d) nav_grid origin=(%d,%d) size=%dx%d ground_cells=%d stand_cells=%d built=%d",
                  cx, cy, nav.x0, nav.y0, nav.width, nav.height, nav.ground_count, nav.stand_count, static_cast<int>(nav.built));
-        // Reproduce the bake on this map's own DAT, for this one cell. The bake keeps only the
-        // largest connected component, so ground the walk cannot reach is dropped from the table
-        // even though you are standing on it - the other way a square you occupy reads as unexpected.
+        // The bake on this map's own DAT, for this one cell: ground its walk cannot reach is dropped
+        // from the table even while you stand on it, which is the other way a square reads unexpected.
         {
             const uint32_t bake_fid = PathfindingWindow::GetMapFileId(GW::Map::GetMapID());
             Pathing::PathingMapData data;
@@ -99,9 +96,8 @@ namespace Carto {
                     }
                 }
                 if (seed && !in_open) {
-                    // Which rule severed it: the "not used for path finding" portal flag, or nothing
-                    // reachable at all. Planes are listed because a layered map's upper and lower
-                    // levels are separate planes joined only by portals.
+                    // Which rule severed it: the 0x04 portal flag, or nothing reachable at all. Planes
+                    // are listed because a layered map joins its levels only by portals.
                     const auto strict = Flood(data, {seed}, {}, true);
                     const auto relaxed = Flood(data, {seed}, {}, false);
                     bool relaxed_reaches_main = false;
@@ -132,11 +128,8 @@ namespace Carto {
                                              : "");
             }
         }
-        // Both halves of the anchor the bake re-derives. GetMapWorldAnchor takes the loaded map's
-        // bounds from the map context and every other map's from the DAT; bake.py only ever has the
-        // DAT. If those two disagree for this map, every tile it bakes is shifted - which is the
-        // shape "underworld" maps would take, their geometry sitting somewhere the map info does not
-        // describe.
+        // GetMapWorldAnchor takes the loaded map's bounds from the map context and every other map's
+        // from the DAT; bake.py only ever has the DAT. Disagreement here shifts every tile it bakes.
         {
             const auto* map_context = GW::GetMapContext();
             Pathing::Vec2f dat_min{}, dat_max{};
@@ -156,11 +149,8 @@ namespace Carto {
                 }
             }
         }
-        // The whole "unexpected" verdict is the baked table disagreeing with ground that is really
-        // there, and the live navmesh grid is the same trapezoids run through the same overlap test.
-        // Laying the two over each other separates the two ways that can go wrong: a constant offset
-        // means the bake's anchor and GetMapWorldAnchor have drifted apart, disagreement in place
-        // means the bake is missing geometry. Every cell marked L is one that can turn purple.
+        // Live grid over baked grid, which separates the two failures: a constant offset means the
+        // anchors have drifted apart, disagreement in place means the bake is missing geometry.
         if (nav.built && !continent_mask.Empty()) {
             const auto live_at = [&](const int x, const int y) { return NavGroundAt(nav.x0 + x, nav.y0 + y); };
             int best_dx = 0, best_dy = 0, best_hits = -1, in_place = 0;
@@ -199,8 +189,7 @@ namespace Carto {
                      dx, dy, bx, by, static_cast<int>(continent_mask.RawGet(bx, by)), static_cast<int>(any),
                      any && !continent_mask.RawGet(bx, by) ? "  <== only reachable by gate glitching" : "");
         });
-        // The other half, for when the bake defers: every cell the client would credit this tile
-        // from, and what this map's navmesh probe made of it.
+        // For when the bake defers: every cell the client would credit from, and what the probe made of it.
         ForEachInRing(cx, cy, RevealRadius(), [&](const int nx, const int ny, const int dx, const int dy) {
             const bool creditable = CellCreditableFrom(dx, dy, cx, cy);
             const auto it = probe->cells.find({nx, ny});

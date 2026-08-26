@@ -21,11 +21,10 @@
 #include <Windows/Pathfinding/PathfindingWindow.h>
 #include <Windows/Pathfinding/PathingMapDataLoader.h>
 
-// Bakes, per continent, which 32x32 tiles have standable ground and which tiles that ground can
-// credit, straight out of the DAT. Writes the same .bin files tools/bake_cartography/make_header.py
-// turns into CartographyData.h; it exists in-game because it shares GamePosToWorldMap with the
-// runtime, and an offline copy of that formula is what once let the shipped table drift a row north.
-// Debug builds only.
+// Per continent, which 32x32 tiles have standable ground and which tiles that ground can credit,
+// straight out of the DAT. Writes the .bin files tools/bake_cartography/make_header.py turns into
+// CartographyData.h; it runs in-game because it shares GamePosToWorldMap with the runtime, and an
+// offline copy of that formula is what once let the shipped table drift a row north.
 namespace Carto {
     struct ContinentBake {
         // (cy << 32) | (uint32)cx, one pair per walk: gates blocking, gates open, and no walk at

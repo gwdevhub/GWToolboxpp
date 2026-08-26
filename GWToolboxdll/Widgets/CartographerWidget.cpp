@@ -89,8 +89,6 @@ namespace Carto {
     // character invalidates the sweep even though the terrain has not moved.
     std::wstring probe_cache_character;
 
-    // Always valid: off the world map it points at an empty probe, so everything downstream reads
-    // as "nothing here" without a null check on every access.
     MapProbe no_map_probe;
     MapProbe* probe = &no_map_probe;
     bool map_on_world_map = false;
@@ -268,7 +266,6 @@ namespace Carto {
         }
     }
 
-    // Fog nothing on this map can reach; excluded from the overlay so it only shows actionable fog.
     int unreachable_fog_cells = 0;
     constexpr size_t kUncoverableListMax = 4096;
     std::vector<UncoverableCell> uncoverable_cells;
@@ -311,9 +308,8 @@ namespace Carto {
         continent_mask.raw = allow_gate_glitch ? &src->standable_glitched : &src->standable;
         continent_mask.credit = allow_gate_glitch ? &src->creditable_glitched : &src->creditable;
         continent_mask.glitch_only = &src->creditable_glitched;
-        // Ground existing at all, which is a different question from ground anything can reach:
-        // terrain no gate leads to is real terrain nobody can ever walk on, and a foggy square next
-        // to it has to read as uncoverable rather than as empty space between maps.
+        // Ground existing at all, not ground anything can reach: fog beside terrain no gate leads to
+        // has to read as uncoverable rather than as empty space between maps.
         continent_mask.raw_any = &src->standable_any;
         continent_mask.any_credit = &src->creditable_any;
         continent_mask.any_raw = &src->standable_any;
@@ -323,9 +319,8 @@ namespace Carto {
         continent_mask.h = continent_mask.credit->height;
     }
 
-    // Squares the client does not credit however you reach them. The undercity stopped counting, so
-    // its ground is still in the map files and still dilates into these squares, but standing there
-    // will never clear them. Nothing in the DAT records that, so it can only be a list.
+    // Squares the client does not credit however you reach them - the undercity stopped counting, so
+    // its ground still dilates into these. Nothing in the DAT records that, so it can only be a list.
     struct DeadTile {
         int continent, cx, cy;
     };
@@ -350,7 +345,6 @@ namespace Carto {
         return continent_mask.Empty() || continent_mask.Get(cx, cy);
     }
 
-    // Whether the loaded map has ground that credits the square and can be walked to from here.
     bool ThisMapCanCredit(const int cx, const int cy)
     {
         if (!probe->complete) return true;
@@ -361,8 +355,8 @@ namespace Carto {
         });
     }
 
-    // Which of FogCellCoverable's exits dropped the square. Ground within reach but no credit means
-    // the bake clipped it: the ground belongs to a map this square is too far outside of.
+    // Ground within reach but no credit means the bake clipped it: that ground belongs to a map
+    // this square is too far outside of.
     FogSkip WhyNotCoverable(const int cx, const int cy)
     {
         if (TileNeverCredits(cx, cy)) return FogSkip::NeverCredits;
@@ -375,9 +369,8 @@ namespace Carto {
         return FogSkip::NoGroundInRange;
     }
 
-    // Normal range comes straight from the bake, which already clipped each map's dilation to its
-    // own rectangle; only the extra Bird's Eye rings still have to be walked over the raw ground.
-    // `permissive` asks only whether ground exists, ignoring whether anything can walk to it.
+    // The bake already clipped each map's dilation to its own rectangle, so only the extra Bird's Eye
+    // rings walk the raw ground. `permissive` asks whether ground exists, not whether it is reachable.
     bool StandableWithin(const int cx, const int cy, const int radius, const bool permissive = false)
     {
         const auto* credit = permissive ? continent_mask.any_credit : continent_mask.credit;
@@ -687,7 +680,6 @@ namespace Carto {
         return RevealRadius() > kRevealRadius && CellQualifies(fx, fy) && try_ring(kRevealRadius, RevealRadius());
     }
 
-    // Keeps the sweep to the fog's fringe instead of probing every cell on the map.
     bool CellWorthProbing(const CartoGrid& grid, const int cx, const int cy)
     {
         return AnyInRing(cx, cy, RevealRadius(), [&](const int nx, const int ny, int, int) {
@@ -729,8 +721,7 @@ namespace Carto {
         });
     }
 
-    // Rescore only the tiles whose count could have moved: a tile's score counts fog within the
-    // reveal radius, so only stands that near a flipped tile are affected.
+    // A tile's score counts fog within the reveal radius, so only stands that near a flip can move.
     void RescoreAround(const CartoGrid& grid, const std::vector<std::pair<int, int>>& changed)
     {
         for (const auto& [fx, fy] : changed) {
@@ -898,8 +889,6 @@ namespace Carto {
         SyncQuestMarker();
     }
 
-    // A point on explored ground is a waypoint and routes to itself; fog nothing can credit has
-    // nowhere to route at all.
     GoalKind ResolveGoal(const GW::Vec2f& point_wm, const GW::Vec2f& from, GW::Vec2f& goal_wm, std::pair<int, int>& goal_cell)
     {
         CartoGrid grid;
@@ -989,8 +978,7 @@ namespace Carto {
         arrived = false;
         RefreshCustomTargetStand(player_wm_cached);
 #ifdef _DEBUG
-        // One dump of the whole near ring: which square the client would credit from, what the probe
-        // thinks of it, and how far it is. Without this the verdict is a single bit with no reason.
+        // Without the whole near ring the chosen square is a verdict with no reason behind it.
         Log::Log("[carto-ring] fog tile (%d, %d) wm(%.0f, %.0f) player wm(%.0f, %.0f) radius=%d\n",
                  fx, fy, wm.x, wm.y, player_wm_cached.x, player_wm_cached.y, RevealRadius());
         ForEachInRing(fx, fy, kRevealRadius, [&](const int nx, const int ny, const int dx, const int dy) {
@@ -1032,8 +1020,6 @@ namespace Carto {
         return plane_of;
     }
 
-    // The one walk. `gates` block it, `honour_no_pathing` respects the "not used for path finding"
-    // portal flag; callers that already hold a plane index pass it rather than rebuilding one.
     std::unordered_set<const GW::PathingTrapezoid*> FloodIndexed(const Pathing::PathingMapData& data, const PlaneOf& plane_of,
                                                                  const std::vector<const GW::PathingTrapezoid*>& seeds,
                                                                  const std::vector<Pathing::TravelDoorway>& gates,
@@ -1095,11 +1081,9 @@ namespace Carto {
         return best;
     }
 
-    // Which trapezoids of a file a player can actually be standing on. Seeded at the gates you could
-    // have zoned in on: largest-only deletes every outpost that shares its explorable's file, and
-    // every-island-is-playable readmits terrain no gate leads to. A gate does not block its own flood
-    // (as CachedReachableTrapezoids does), and the largest component is unioned in for maps whose
-    // portal props sit off in a side area. Mirrors entrance_component in ffna.py.
+    // Seeded at the gates you could have zoned in on: largest-only deletes every outpost sharing its
+    // explorable's file, every-island readmits terrain no gate leads to. A gate does not block its own
+    // flood (as CachedReachableTrapezoids does). Mirrors entrance_component in ffna.py.
     void PlayableTrapezoids(const Pathing::PathingMapData& data,
                             std::unordered_set<const GW::PathingTrapezoid*>& gated_out,
                             std::unordered_set<const GW::PathingTrapezoid*>& open_out)
@@ -1270,9 +1254,8 @@ namespace Carto {
         owner_cache[owner_query.cell] = owner_query;
     }
 
-    // `why_lines` only where the square cannot be uncovered: there they say which exit dropped it.
-    // On a square you can still clear they answer a question nobody asked, and "walkable: false"
-    // over ground you can walk on reads as the overlay being wrong.
+    // `why_lines` only where the square cannot be uncovered: elsewhere "walkable: false" over ground
+    // you can walk on reads as the overlay being wrong.
     std::string OwnerTooltip(const OwnerQuery& q, const bool why_lines)
     {
         std::string out;
@@ -1382,8 +1365,8 @@ namespace Carto {
 
             const float near_dist = px_per_wm_unit > 0.f ? 12.f / px_per_wm_unit : 8.f;
             const int point_here = FindCustomPointNear(click_wm, near_dist);
-            // Clicking the suggestion itself means acting on it — offering to drop a fog point
-            // on the very spot already being suggested is nonsense.
+            // Clicking the suggestion itself means acting on it - offering to drop a fog point
+            // on the spot already being suggested is nonsense.
             const bool on_suggestion = target.valid && !target.custom
                 && CreditCellAt(click_wm) == std::pair{target.cx, target.cy};
             if (target.valid && (on_suggestion || (target.custom && point_here >= 0))) {
@@ -1461,8 +1444,8 @@ namespace Carto {
             project({(cx + 1) * kWorldMapUnitsPerCell, (cy + 1) * kWorldMapUnitsPerCell}, max_out);
     }
 
-    // Project, clip, fill, outline - the shape every square the overlay draws takes. Returns whether
-    // the pointer is over it, and hands back the rectangle for the callers that need to draw from it.
+    // Returns whether the pointer is over the square, and hands back its rectangle for the callers
+    // that draw from it.
     bool DrawCell(ImDrawList* dl, const ProjectToScreen project, const int cx, const int cy, const ImU32 colour,
                   const int fill_alpha, const int edge_alpha, const float thickness, const ImVec2& mouse,
                   ImRect* rect_out = nullptr)
@@ -1526,8 +1509,7 @@ namespace Carto {
         if (resolved->unreadable) tooltip_out += "\nSome of those map files are not in your Gw.dat yet";
     }
 
-    // The cartography grid itself. Every tile is credited as a unit, so seeing the boundaries is
-    // what makes "stand in that tile" actionable.
+    // Every tile is credited as a unit, so seeing the boundaries is what makes "stand there" actionable.
     void DrawGrid(ImDrawList* dl, const ProjectToScreen project)
     {
         const auto [x0, y0] = map_cell_min;
@@ -1564,9 +1546,8 @@ namespace Carto {
         }
     }
 
-    // Foggy squares no ground can credit, drawn rather than silently omitted: an empty patch of world
-    // map reads as "already done", which is the wrong answer to "is there anything left". Grey for
-    // never, yellow for the ones only a gate glitch reaches.
+    // Drawn rather than silently omitted: a blank patch of world map reads as "already done". Grey
+    // for never creditable, yellow for the ones only a gate glitch reaches.
     void DrawUncoverableCells(ImDrawList* dl, const ProjectToScreen project, const ImVec2& mouse, std::string& tooltip_out)
     {
         for (const auto& [cx, cy, why] : uncoverable_cells) {
@@ -1602,7 +1583,6 @@ namespace Carto {
         }
     }
 
-    // Drawn at true 32x32 size, shaded by how much fog the spot would credit.
     void DrawStandCells(ImDrawList* dl, const ProjectToScreen project, const ImVec2& mouse, const char*& tooltip)
     {
         for (const auto& [cell, sc] : probe->cells) {
@@ -1641,8 +1621,7 @@ namespace Carto {
             DrawStandCells(dl, project, mouse, stand_tooltip);
             if (cell_tooltip) tooltip = stand_tooltip;
         }
-        // Which tile you are standing in is the question the whole thing turns on, and it is not
-        // answerable from the character marker alone - the ranges key off the tile, not the dot.
+        // The ranges key off the tile, not the dot, so the character marker cannot answer this.
         if (player_cell_valid) {
             DrawCell(dl, project, player_cell.first, player_cell.second, kCurrentTileColor, 28, 150, 1.f, mouse);
         }
@@ -2061,8 +2040,7 @@ void CartographerWidget::DrawWorldMapOptions()
 
 void CartographerWidget::Draw(IDirect3DDevice9*)
 {
-    // Toggle on the mission map, so the helper can be turned on mid-run without opening settings
-    // or the world map. Sits beside the vanquish overlay's button rather than under it.
+    // Toggle on the mission map, so the helper can be turned on mid-run without opening settings.
     if (!MissionMapWidget::IsRenderReady()) return;
     const auto top_left = MissionMapWidget::GetTopLeft();
     const auto bottom_right = MissionMapWidget::GetBottomRight();
