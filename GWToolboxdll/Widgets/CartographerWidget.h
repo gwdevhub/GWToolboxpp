@@ -53,7 +53,8 @@ public:
     static void ClearDeclined();
     static void GetStatus(char* buf, size_t len);
 #ifdef _DEBUG
-    static void DrawBakeSettings();
+    // Test-harness entry points; the tools themselves live in CartographerBake.cpp and
+    // CartographerProbeLog.cpp.
     static void LogProbeAtCell(int cx, int cy);
     static void StartContinentBake();
     static void SetGateGlitchAllowed(bool allowed);

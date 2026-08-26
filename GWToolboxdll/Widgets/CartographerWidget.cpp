@@ -1,7 +1,6 @@
 #include "stdafx.h"
 
 #include <bit>
-#include <fstream>
 #include <map>
 #include <numeric>
 
@@ -24,9 +23,10 @@
 #include <Modules/Resources.h>
 #include <Utils/EncString.h>
 #include <Utils/SettingsRegistry.h>
+#include <Utils/TextUtils.h>
 #include <Utils/ToolboxUtils.h>
+#include <Widgets/CartographerInternal.h>
 #include <Widgets/CartographerWidget.h>
-#include <Widgets/CartographyData.h>
 #include <Widgets/MissionMapWidget.h>
 #include <Widgets/WorldMapWidget.h>
 #include <Windows/TravelWindow.h>
@@ -34,44 +34,7 @@
 #include <Windows/Pathfinding/PathfindingWindow.h>
 #include <Windows/Pathfinding/PathingMapDataLoader.h>
 
-#ifdef _DEBUG
-#define CARTO_LOG(...) Log::Log(__VA_ARGS__)
-#else
-#define CARTO_LOG(...) ((void)0)
-#endif
-
-namespace {
-
-    // Gw.exe's fog mesh builder is handed WorldContext::cartographed_areas (+0x5A4) and h05B4
-    // (+0x5B4, the grid dims): one bit per 32x32-world-map-unit cell, addressed as below.
-    constexpr float kWorldMapUnitsPerCell = 32.f;
-
-    uint32_t RowWords(const uint32_t width)
-    {
-        return width >> 5;
-    }
-
-    struct CartoGrid {
-        const uint32_t* bits = nullptr;
-        uint32_t width = 0;
-        uint32_t height = 0;
-        uint32_t dword_count = 0;
-
-        bool InGrid(const int cx, const int cy) const
-        {
-            return cx >= 0 && cy >= 0 && static_cast<uint32_t>(cx) < width && static_cast<uint32_t>(cy) < height;
-        }
-
-        // Anything without a set bit - off-grid, past the synced array - is unexplored, because
-        // that is what the game fogs.
-        bool IsExplored(const int cx, const int cy) const
-        {
-            if (!InGrid(cx, cy)) return false;
-            const uint32_t word = static_cast<uint32_t>(cy) * RowWords(width) + (static_cast<uint32_t>(cx) >> 5);
-            if (!bits || word >= dword_count) return false;
-            return (bits[word] >> (static_cast<uint32_t>(cx) & 31)) & 1;
-        }
-    };
+namespace Carto {
 
     bool GetCartoGrid(CartoGrid& out)
     {
@@ -82,45 +45,6 @@ namespace {
         out.bits = reinterpret_cast<const uint32_t*>(world->cartographed_areas.m_buffer);
         out.dword_count = world->cartographed_areas.size();
         return out.width && out.height;
-    }
-
-    // wm.y is a divide plus an add on top of mid.y, itself a divide plus an add, so it carries a
-    // few ulp; 1/64 is a power of two with plenty of headroom and 1/2048 of a tile.
-    constexpr float kCellEps = 1.f / 64.f;
-
-    int CreditCellX(const float x)
-    {
-        return static_cast<int>(floorf((x + kCellEps) / kWorldMapUnitsPerCell));
-    }
-
-    int CreditCellY(const float y)
-    {
-        return static_cast<int>(ceilf((y - kCellEps) / kWorldMapUnitsPerCell)) - 1;
-    }
-
-    std::pair<int, int> CreditCellAt(const GW::Vec2f& wm)
-    {
-        return {CreditCellX(wm.x), CreditCellY(wm.y)};
-    }
-
-    GW::Vec2f CreditCellCenterWorldMap(const int cx, const int cy)
-    {
-        return {cx * kWorldMapUnitsPerCell + 16.f, cy * kWorldMapUnitsPerCell + 16.f};
-    }
-
-    std::pair<int, int> FogTileAt(const GW::Vec2f& wm)
-    {
-        return {
-            static_cast<int>(floorf(wm.x / kWorldMapUnitsPerCell)),
-            static_cast<int>(ceilf(wm.y / kWorldMapUnitsPerCell)) - 1,
-        };
-    }
-
-    float Dist2(const GW::Vec2f& a, const GW::Vec2f& b)
-    {
-        const float dx = a.x - b.x;
-        const float dy = a.y - b.y;
-        return dx * dx + dy * dy;
     }
 
     constexpr float kGwinchesPerWorldMapUnit = 96.f;
@@ -160,35 +84,6 @@ namespace {
     bool using_bec = false;
     bool set_quest_marker = true;
 
-    constexpr int kRevealRadius = 1;
-    constexpr int kRevealRadiusBec = 3;
-
-    int RevealRadius()
-    {
-        return using_bec ? kRevealRadiusBec : kRevealRadius;
-    }
-
-    struct StandCell {
-        // Reachable from where the player is: where we may send them. Gate-dependent.
-        bool reachable = false;
-        // Walkable ground exists in this tile at all. A property of the terrain, so it survives a
-        // gate change - and it is read over a fog tile's 3x3 block, never at the tile itself.
-        bool navmesh = false;
-        GW::GamePos pos{}; // somewhere inside the cell you can actually stand
-        int reveals = 0;   // still-foggy cells this spot would credit
-    };
-
-    struct MapProbe {
-        std::map<std::pair<int, int>, StandCell> cells;
-        // Slivers a wide-range visit failed to credit. BEC range misses a few tiles that only
-        // normal range uncovers, so these stop counting beyond one tile away.
-        std::set<std::pair<int, int>> strict;
-        std::set<std::pair<int, int>> skipped;
-        // Gate state the sweep was taken under; reachability depends on it, so a mismatch means
-        // the cached answers no longer describe this instance.
-        std::vector<uint32_t> blocked_planes;
-        bool complete = false;
-    };
     std::map<GW::Constants::MapID, MapProbe> probe_cache;
     // Which tiles are worth probing depends on where that character's fog is, so a different
     // character invalidates the sweep even though the terrain has not moved.
@@ -286,10 +181,6 @@ namespace {
             && cy >= map_rect_min.second && cy < map_rect_max.second;
     }
 
-    // Credit stops one square past the standing map's rectangle, not wherever the ring reaches:
-    // measured on Shenzun Tunnels ground a row past its south edge, which credits that row, not the next.
-    constexpr int kBoundarySlack = 1;
-
     bool InCreditableBounds(const int cx, const int cy)
     {
         if (!EnsureMapRect()) return true;
@@ -297,7 +188,7 @@ namespace {
             && cy >= map_rect_min.second - kBoundarySlack && cy < map_rect_max.second + kBoundarySlack;
     }
 
-    bool InCreditableBoundsOf(const GW::Constants::MapID map_id, const int cx, const int cy, const int slack = kBoundarySlack)
+    bool InCreditableBoundsOf(const GW::Constants::MapID map_id, const int cx, const int cy, const int slack)
     {
         const auto info = GW::Map::GetMapInfo(map_id);
         ImRect bounds;
@@ -321,13 +212,10 @@ namespace {
         if (!InMapBounds(fx, fy)) return false;
         if (probe->strict.contains({fx, fy})) return false;
         if (!probe->complete) return true;
-        for (int ny = -1; ny <= 1; ny++) {
-            for (int nx = -1; nx <= 1; nx++) {
-                const auto it = probe->cells.find({fx + nx, fy + ny});
-                if (it != probe->cells.end() && it->second.navmesh) return true;
-            }
-        }
-        return false;
+        return AnyInRing(fx, fy, 1, [](const int nx, const int ny, int, int) {
+            const auto it = probe->cells.find({nx, ny});
+            return it != probe->cells.end() && it->second.navmesh;
+        });
     }
 
     bool CellCreditableFrom(const int dx, const int dy, const int fx, const int fy)
@@ -349,19 +237,15 @@ namespace {
 
     void SerializeDeclined()
     {
-        declined_cells_str.clear();
-        for (const auto& [cx, cy] : declined_cells) {
-            if (!declined_cells_str.empty()) declined_cells_str += ",";
-            declined_cells_str += std::format("{}:{}", cx, cy);
-        }
+        std::vector<std::string> parts;
+        for (const auto& [cx, cy] : declined_cells) parts.push_back(std::format("{}:{}", cx, cy));
+        declined_cells_str = TextUtils::Join(parts, ",");
     }
 
     void ParseDeclined()
     {
         declined_cells.clear();
-        std::istringstream is(declined_cells_str);
-        std::string tok;
-        while (std::getline(is, tok, ',')) {
+        for (const auto& tok : TextUtils::Split(declined_cells_str, ",")) {
             int cx, cy;
             if (sscanf_s(tok.c_str(), "%d:%d", &cx, &cy) == 2) declined_cells.insert({cx, cy});
         }
@@ -369,19 +253,15 @@ namespace {
 
     void SerializePoints()
     {
-        custom_points_str.clear();
-        for (const auto& p : custom_points) {
-            if (!custom_points_str.empty()) custom_points_str += ",";
-            custom_points_str += std::format("{:.1f}:{:.1f}:{}", p.wm.x, p.wm.y, p.was_fog ? 1 : 0);
-        }
+        std::vector<std::string> parts;
+        for (const auto& p : custom_points) parts.push_back(std::format("{:.1f}:{:.1f}:{}", p.wm.x, p.wm.y, p.was_fog ? 1 : 0));
+        custom_points_str = TextUtils::Join(parts, ",");
     }
 
     void ParsePoints()
     {
         custom_points.clear();
-        std::istringstream is(custom_points_str);
-        std::string tok;
-        while (std::getline(is, tok, ',')) {
+        for (const auto& tok : TextUtils::Split(custom_points_str, ",")) {
             float x, y;
             int was_fog = 1; // points written before the flag existed were all placed on fog
             if (sscanf_s(tok.c_str(), "%f:%f:%d", &x, &y, &was_fog) >= 2) custom_points.push_back({{x, y}, was_fog != 0});
@@ -390,14 +270,6 @@ namespace {
 
     // Fog nothing on this map can reach; excluded from the overlay so it only shows actionable fog.
     int unreachable_fog_cells = 0;
-
-    // Why a foggy square was dropped, so the overlay can say it rather than just omitting the square.
-    enum class FogSkip { PastMapBoundary, NoGroundInRange, GlitchOnly, Unreachable, NeverCredits };
-
-    struct UncoverableCell {
-        int cx = 0, cy = 0;
-        FogSkip why = FogSkip::NoGroundInRange;
-    };
     constexpr size_t kUncoverableListMax = 4096;
     std::vector<UncoverableCell> uncoverable_cells;
     // A queued fog point selection had to pass over because nothing reachable credits it.
@@ -414,16 +286,6 @@ namespace {
     int unexpected_tiles = 0;
     constexpr size_t kUnexpectedListMax = 4096;
     std::vector<std::pair<int, int>> unexpected_cells;
-
-    // The client's fog texture is this many texels per cartography cell, so the visible fog is
-    // four times finer than the 32-unit grid the bits live on.
-    constexpr int kFogSubdivisions = 4;
-
-    // Corner alphas are baked on the game thread so the overlay never reads the live bitmap.
-    struct FogCell {
-        int cx = 0, cy = 0;
-        uint8_t corner_alpha[kFogSubdivisions + 1][kFogSubdivisions + 1] = {};
-    };
     std::vector<FogCell> fog_cells;
     int map_fog_cells = -1;
     std::pair<int, int> map_cell_min{}, map_cell_max{};
@@ -431,41 +293,6 @@ namespace {
     bool player_cell_valid = false;
 
     bool show_whole_continent = true;
-
-    constexpr int kMaskRadius = 1;
-
-    struct ContinentMask {
-        int continent = -1;
-        int x0 = 0, y0 = 0, w = 0, h = 0;
-        // Which tiles this continent's ground can credit, already clipped per map at bake time,
-        // and the undilated ground it came from - the only way to ask whether a claim is about
-        // this map or the one next door.
-        const CartographyData::Mask* credit = nullptr;
-        const CartographyData::Mask* raw = nullptr;
-        // Always the permissive pair, so a square can be told apart from one nothing can credit.
-        const CartographyData::Mask* glitch_only = nullptr;
-        const CartographyData::Mask* raw_any = nullptr;
-        // Every trapezoid the map files hold, walkable from an entrance or not.
-        const CartographyData::Mask* any_credit = nullptr;
-        const CartographyData::Mask* any_raw = nullptr;
-
-        static bool Sample(const CartographyData::Mask* m, const int cx, const int cy)
-        {
-            if (!m) return false;
-            const int lx = cx - m->x0, ly = cy - m->y0;
-            if (lx < 0 || ly < 0 || lx >= m->width || ly >= m->height) return false;
-            const size_t bit = static_cast<size_t>(ly) * m->width + lx;
-            if (bit / 8 >= static_cast<size_t>(m->byte_count)) return false;
-            return m->bits[bit >> 3] >> (bit & 7) & 1;
-        }
-
-        bool Get(const int cx, const int cy) const { return Sample(credit, cx, cy); }
-        bool RawGet(const int cx, const int cy) const { return Sample(raw, cx, cy); }
-        bool AnyGroundAt(const int cx, const int cy) const { return Sample(raw_any, cx, cy); }
-        bool Empty() const { return !credit; }
-        // Creditable only if you Shadow-step through a gate to get there.
-        bool NeedsGlitch(const int cx, const int cy) const { return !Get(cx, cy) && Sample(glitch_only, cx, cy); }
-    };
     ContinentMask continent_mask;
 
     bool mask_built_for_glitch = false;
@@ -527,15 +354,11 @@ namespace {
     bool ThisMapCanCredit(const int cx, const int cy)
     {
         if (!probe->complete) return true;
-        const int r = RevealRadius();
-        for (int dy = -r; dy <= r; dy++) {
-            for (int dx = -r; dx <= r; dx++) {
-                if (!CellCreditableFrom(dx, dy, cx, cy)) continue;
-                const auto it = probe->cells.find({cx + dx, cy + dy});
-                if (it != probe->cells.end() && it->second.reachable) return true;
-            }
-        }
-        return false;
+        return AnyInRing(cx, cy, RevealRadius(), [&](const int nx, const int ny, const int dx, const int dy) {
+            if (!CellCreditableFrom(dx, dy, cx, cy)) return false;
+            const auto it = probe->cells.find({nx, ny});
+            return it != probe->cells.end() && it->second.reachable;
+        });
     }
 
     // Which of FogCellCoverable's exits dropped the square. Ground within reach but no credit means
@@ -547,16 +370,8 @@ namespace {
         const int r = RevealRadius();
         // Ground a player can stand on first: then the square was dropped by the per-map credit clip
         // rather than by the terrain being out of reach, and the two want different answers.
-        for (int dy = -r; dy <= r; dy++) {
-            for (int dx = -r; dx <= r; dx++) {
-                if (continent_mask.RawGet(cx + dx, cy + dy)) return FogSkip::PastMapBoundary;
-            }
-        }
-        for (int dy = -r; dy <= r; dy++) {
-            for (int dx = -r; dx <= r; dx++) {
-                if (continent_mask.AnyGroundAt(cx + dx, cy + dy)) return FogSkip::Unreachable;
-            }
-        }
+        if (AnyInRing(cx, cy, r, [](const int nx, const int ny, int, int) { return continent_mask.RawGet(nx, ny); })) return FogSkip::PastMapBoundary;
+        if (AnyInRing(cx, cy, r, [](const int nx, const int ny, int, int) { return continent_mask.AnyGroundAt(nx, ny); })) return FogSkip::Unreachable;
         return FogSkip::NoGroundInRange;
     }
 
@@ -568,13 +383,9 @@ namespace {
         const auto* credit = permissive ? continent_mask.any_credit : continent_mask.credit;
         const auto* ground = permissive ? continent_mask.any_raw : continent_mask.raw;
         if (ContinentMask::Sample(credit, cx, cy)) return true;
-        for (int dy = -radius; dy <= radius; dy++) {
-            for (int dx = -radius; dx <= radius; dx++) {
-                if (std::max(abs(dx), abs(dy)) <= kMaskRadius) continue;
-                if (ContinentMask::Sample(ground, cx + dx, cy + dy)) return true;
-            }
-        }
-        return false;
+        return AnyInRing(cx, cy, radius, [&](const int nx, const int ny, const int dx, const int dy) {
+            return std::max(abs(dx), abs(dy)) > kMaskRadius && ContinentMask::Sample(ground, nx, ny);
+        });
     }
 
     void RecountExploration(const CartoGrid& grid)
@@ -712,6 +523,19 @@ namespace {
     };
     NavCells nav_cells;
 
+    NavGridInfo GetNavGridInfo()
+    {
+        return {nav_cells.x0, nav_cells.y0, nav_cells.width, nav_cells.height,
+                nav_cells.ground_count, nav_cells.stand_count, nav_cells.built};
+    }
+
+    bool NavInGrid(const int cx, const int cy) { return nav_cells.InGrid(cx, cy); }
+
+    bool NavGroundAt(const int cx, const int cy)
+    {
+        return nav_cells.InGrid(cx, cy) && nav_cells.ground[nav_cells.Index(cx, cy)] != 0;
+    }
+
     bool FootingInCell(const Pathing::TrapezoidRef& ref, const int cx, const int cy, GW::GamePos& out)
     {
         GW::Vec2f box_min{}, box_max{}, footing{};
@@ -825,12 +649,9 @@ namespace {
         // `covered` is the ring already tried, so the wide pass only visits what the near one did not.
         const auto try_ring = [&](const int covered, const int r) {
             std::vector<std::pair<int, int>> candidates;
-            for (int dy = -r; dy <= r; dy++) {
-                for (int dx = -r; dx <= r; dx++) {
-                    if (std::max(abs(dx), abs(dy)) <= covered) continue;
-                    candidates.push_back({fx + dx, fy + dy});
-                }
-            }
+            ForEachInRing(fx, fy, r, [&](const int nx, const int ny, const int dx, const int dy) {
+                if (std::max(abs(dx), abs(dy)) > covered) candidates.push_back({nx, ny});
+            });
             std::ranges::sort(candidates, [&from](const auto& a, const auto& b) {
                 return Dist2(CreditCellCenterWorldMap(a.first, a.second), from) < Dist2(CreditCellCenterWorldMap(b.first, b.second), from);
             });
@@ -869,13 +690,9 @@ namespace {
     // Keeps the sweep to the fog's fringe instead of probing every cell on the map.
     bool CellWorthProbing(const CartoGrid& grid, const int cx, const int cy)
     {
-        const int r = RevealRadius();
-        for (int dy = -r; dy <= r; dy++) {
-            for (int dx = -r; dx <= r; dx++) {
-                if (grid.InGrid(cx + dx, cy + dy) && !grid.IsExplored(cx + dx, cy + dy)) return true;
-            }
-        }
-        return false;
+        return AnyInRing(cx, cy, RevealRadius(), [&](const int nx, const int ny, int, int) {
+            return grid.InGrid(nx, ny) && !grid.IsExplored(nx, ny);
+        });
     }
 
     void SweepStandCells(const CartoGrid& grid, GW::AreaInfo* map_info)
@@ -906,30 +723,21 @@ namespace {
     {
         sc.reveals = 0;
         if (!sc.reachable) return;
-        const int r = RevealRadius();
-        for (int dy = -r; dy <= r; dy++) {
-            for (int dx = -r; dx <= r; dx++) {
-                const int fx = cell.first + dx;
-                const int fy = cell.second + dy;
-                if (!grid.InGrid(fx, fy) || grid.IsExplored(fx, fy)) continue;
-                if (!CellCreditableFrom(dx, dy, fx, fy)) continue;
-                sc.reveals++;
-            }
-        }
+        ForEachInRing(cell.first, cell.second, RevealRadius(), [&](const int fx, const int fy, const int dx, const int dy) {
+            if (!grid.InGrid(fx, fy) || grid.IsExplored(fx, fy)) return;
+            if (CellCreditableFrom(dx, dy, fx, fy)) sc.reveals++;
+        });
     }
 
     // Rescore only the tiles whose count could have moved: a tile's score counts fog within the
     // reveal radius, so only stands that near a flipped tile are affected.
     void RescoreAround(const CartoGrid& grid, const std::vector<std::pair<int, int>>& changed)
     {
-        const int r = RevealRadius();
         for (const auto& [fx, fy] : changed) {
-            for (int dy = -r; dy <= r; dy++) {
-                for (int dx = -r; dx <= r; dx++) {
-                    const auto it = probe->cells.find({fx + dx, fy + dy});
-                    if (it != probe->cells.end()) ScoreStandCell(grid, it->first, it->second);
-                }
-            }
+            ForEachInRing(fx, fy, RevealRadius(), [&](const int nx, const int ny, int, int) {
+                const auto it = probe->cells.find({nx, ny});
+                if (it != probe->cells.end()) ScoreStandCell(grid, it->first, it->second);
+            });
         }
     }
 
@@ -986,286 +794,6 @@ namespace {
         RebuildFog(grid, map_info);
     }
 
-    // Flood from one trapezoid under the bake's own rules, optionally relaxed, so a square the bake
-    // dropped can be traced back to the connection its walk failed to make.
-    std::unordered_set<const GW::PathingTrapezoid*> FloodFrom(const Pathing::PathingMapData& data,
-                                                              const GW::PathingTrapezoid* seed,
-                                                              const bool honour_no_pathing_flag)
-    {
-        std::unordered_set<const GW::PathingTrapezoid*> comp;
-        if (!seed) return comp;
-        std::unordered_map<const GW::PathingTrapezoid*, size_t> plane_of;
-        for (size_t p = 0; p < data.planes.size(); p++) {
-            const auto& plane = data.planes[p];
-            for (uint32_t t = 0; t < plane.trapezoid_count; t++) plane_of[&plane.trapezoids[t]] = p;
-        }
-        std::vector<const GW::PathingTrapezoid*> queue{seed};
-        comp.insert(seed);
-        for (size_t head = 0; head < queue.size(); head++) {
-            const auto* trap = queue[head];
-            const auto expand = [&](const GW::PathingTrapezoid* next) {
-                if (next && comp.insert(next).second) queue.push_back(next);
-            };
-            for (const auto* adj : trap->adjacent) expand(adj);
-            const auto it = plane_of.find(trap);
-            if (it == plane_of.end() || it->second >= data.planes.size()) continue;
-            const auto& plane = data.planes[it->second];
-            const auto expand_portal = [&](const uint16_t idx) {
-                if (idx >= plane.portal_count) return;
-                const auto& portal = plane.portals[idx];
-                if (honour_no_pathing_flag && portal.flags & 0x04) return;
-                if (!portal.pair) return;
-                for (uint32_t i = 0; i < portal.pair->count; i++) expand(portal.pair->trapezoids[i]);
-            };
-            expand_portal(trap->portal_left);
-            expand_portal(trap->portal_right);
-        }
-        return comp;
-    }
-
-    // Defined below; LogProbe reproduces the bake with it.
-    std::unordered_set<const GW::PathingTrapezoid*> LargestComponent(const Pathing::PathingMapData& data, bool block_gates = true);
-    std::vector<std::unordered_set<const GW::PathingTrapezoid*>> AllComponents(const Pathing::PathingMapData& data, bool block_gates = true);
-    void PlayableTrapezoids(const Pathing::PathingMapData& data,
-                            std::unordered_set<const GW::PathingTrapezoid*>& gated_out,
-                            std::unordered_set<const GW::PathingTrapezoid*>& open_out);
-
-#ifdef _DEBUG
-    // Everything FogCellCoverable consults, in the order it consults it. The verdict is map-dependent
-    // interpretable next to the map it was taken in.
-    void LogProbe(const GW::Vec2f& at)
-    {
-        CartoGrid g;
-        if (!GetCartoGrid(g)) {
-            Log::Log("[cartographer] probe: no cartography data");
-            Log::FlushFile();
-            return;
-        }
-        // Both indices, because they agreeing is the invariant this widget rests on:
-        // one being off from the other means the position conversion has drifted again.
-        const auto [cx, cy] = FogTileAt(at);
-        const auto [ccx, ccy] = CreditCellAt(at);
-        GW::GamePos gp{};
-        const bool converted = WorldMapWidget::WorldMapToGamePos(at, gp);
-        const auto stand = probe->cells.find({ccx, ccy});
-        Log::Log("[cartographer] probe wm(%.2f,%.2f) fog_tile(%d,%d) credit_cell(%d,%d): explored=%d, grid %ux%u (%u words/row), game(%.0f,%.0f), walkable here=%d, reachable here=%d, probed=%d reachable=%d reveals=%d, coverable=%d, radius=%d",
-                 at.x, at.y, cx, cy, ccx, ccy, static_cast<int>(g.IsExplored(cx, cy)),
-                 g.width, g.height, RowWords(g.width),
-                 gp.x, gp.y, converted && Pathing::IsPositionWalkable(gp), converted && Pathing::IsPositionReachable(gp),
-                 static_cast<int>(stand != probe->cells.end()),
-                 stand != probe->cells.end() ? static_cast<int>(stand->second.reachable) : 0,
-                 stand != probe->cells.end() ? stand->second.reveals : 0,
-                 static_cast<int>(FogCellCoverable(cx, cy)), RevealRadius());
-        if (converted) {
-            GW::GamePos snapped = gp;
-            GW::Vec2f snapped_wm{};
-            const bool found = Pathing::FindClosestPositionOnTrapezoid(snapped) != nullptr;
-            const bool back = found && WorldMapWidget::GamePosToWorldMap(snapped, snapped_wm);
-            const auto snapped_cell = back ? CreditCellAt(snapped_wm) : std::pair{0, 0};
-            Log::Log("[cartographer] probe (%d,%d): nearest ground found=%d game(%.0f,%.0f) wm(%.1f,%.1f) cell(%d,%d) %s dist=%.0f gwinch reachable=%d",
-                     cx, cy, found, snapped.x, snapped.y, snapped_wm.x, snapped_wm.y,
-                     snapped_cell.first, snapped_cell.second,
-                     back && snapped_cell == std::pair{cx, cy} ? "IN THIS CELL" : "in a DIFFERENT cell",
-                     sqrtf((snapped.x - gp.x) * (snapped.x - gp.x) + (snapped.y - gp.y) * (snapped.y - gp.y)),
-                     found && Pathing::IsPositionReachable(snapped));
-        }
-        const bool rect = EnsureMapRect();
-        Log::Log("[carto-bake] (%d,%d) verdict=%d | credit_mask=%d credit_glitched=%d stand_here=%d stand_glitched_here=%d probe_complete=%d",
-                 cx, cy, static_cast<int>(FogCellCoverable(cx, cy)),
-                 static_cast<int>(continent_mask.Get(cx, cy)), static_cast<int>(ContinentMask::Sample(continent_mask.glitch_only, cx, cy)),
-                 static_cast<int>(continent_mask.RawGet(cx, cy)), static_cast<int>(continent_mask.AnyGroundAt(cx, cy)),
-                 static_cast<int>(probe->complete));
-        Log::Log("[carto-bake] (%d,%d) map=%d instance=%d rect_valid=%d rect_cells=[%d,%d)-[%d,%d) continent=%d mask_origin=(%d,%d) mask_size=%dx%d",
-                 cx, cy, static_cast<int>(GW::Map::GetMapID()), static_cast<int>(GW::Map::GetInstanceType()), static_cast<int>(rect),
-                 map_rect_min.first, map_rect_min.second, map_rect_max.first, map_rect_max.second,
-                 continent_mask.continent, continent_mask.x0, continent_mask.y0, continent_mask.w, continent_mask.h);
-        Log::Log("[carto-bake] (%d,%d) nav_grid origin=(%d,%d) size=%dx%d ground_cells=%d stand_cells=%d built=%d",
-                 cx, cy, nav_cells.x0, nav_cells.y0, nav_cells.width, nav_cells.height,
-                 nav_cells.ground_count, nav_cells.stand_count, static_cast<int>(nav_cells.built));
-        // Reproduce the bake on this map's own DAT, for this one cell. The bake keeps only the
-        // largest connected component, so ground the walk cannot reach is dropped from the table
-        // even though you are standing on it - the other way a square you occupy reads as unexpected.
-        {
-            const uint32_t bake_fid = PathfindingWindow::GetMapFileId(GW::Map::GetMapID());
-            Pathing::PathingMapData data;
-            GW::GamePos ca{}, cb{};
-            if (bake_fid && Pathing::LoadPathingMapDataFromDAT(bake_fid, &data)
-                && WorldMapWidget::WorldMapToGamePos({cx * kWorldMapUnitsPerCell, cy * kWorldMapUnitsPerCell}, ca)
-                && WorldMapWidget::WorldMapToGamePos({(cx + 1) * kWorldMapUnitsPerCell, (cy + 1) * kWorldMapUnitsPerCell}, cb)) {
-                std::unordered_set<const GW::PathingTrapezoid*> blocked_comp, open_comp;
-                PlayableTrapezoids(data, blocked_comp, open_comp);
-                const GW::Vec2f box_min{std::min(ca.x, cb.x), std::min(ca.y, cb.y)};
-                const GW::Vec2f box_max{std::max(ca.x, cb.x), std::max(ca.y, cb.y)};
-                int overlap = 0, in_blocked = 0, in_open = 0;
-                const GW::PathingTrapezoid* seed = nullptr;
-                size_t total = 0;
-                for (const auto& plane : data.planes) {
-                    total += plane.trapezoid_count;
-                    for (uint32_t t = 0; t < plane.trapezoid_count; t++) {
-                        const auto* trap = &plane.trapezoids[t];
-                        GW::Vec2f footing{};
-                        if (!Pathing::TrapezoidOverlapsBox(trap, box_min, box_max, footing)) continue;
-                        overlap++;
-                        if (!seed) seed = trap;
-                        if (blocked_comp.contains(trap)) in_blocked++;
-                        if (open_comp.contains(trap)) in_open++;
-                    }
-                }
-                if (seed && !in_open) {
-                    // Which rule severed it: the "not used for path finding" portal flag, or nothing
-                    // reachable at all. Planes are listed because a layered map's upper and lower
-                    // levels are separate planes joined only by portals.
-                    const auto strict = FloodFrom(data, seed, true);
-                    const auto relaxed = FloodFrom(data, seed, false);
-                    bool relaxed_reaches_main = false;
-                    for (const auto* t : relaxed) {
-                        if (open_comp.contains(t)) { relaxed_reaches_main = true; break; }
-                    }
-                    std::string zplanes;
-                    for (size_t pi = 0; pi < data.planes.size(); pi++) {
-                        const auto& plane = data.planes[pi];
-                        bool mine = false;
-                        for (uint32_t t = 0; t < plane.trapezoid_count && !mine; t++) mine = strict.contains(&plane.trapezoids[t]);
-                        if (mine) zplanes += std::format("{}{}", zplanes.empty() ? "" : ",", plane.zplane);
-                    }
-                    Log::Log("[carto-rebake] (%d,%d) your piece: %u trapezoids as the bake walks it, %u with the "
-                             "\"not used for path finding\" portal flag ignored; that relaxed walk %s the main component. "
-                             "Planes it spans (zplane): %s of %u",
-                             cx, cy, static_cast<unsigned>(strict.size()), static_cast<unsigned>(relaxed.size()),
-                             relaxed_reaches_main ? "REACHES  <== the 0x04 portal flag is what severs it" : "still misses",
-                             zplanes.c_str(), static_cast<unsigned>(data.planes.size()));
-                }
-                Log::Log("[carto-rebake] (%d,%d) file=0x%X cell box game (%.0f,%.0f)-(%.0f,%.0f): %d trapezoid(s) overlap it, "
-                         "%d kept for normal play, %d kept as a playable area; %u/%u of %u trapezoids kept%s",
-                         cx, cy, bake_fid, box_min.x, box_min.y, box_max.x, box_max.y, overlap, in_blocked, in_open,
-                         static_cast<unsigned>(blocked_comp.size()), static_cast<unsigned>(open_comp.size()),
-                         static_cast<unsigned>(total),
-                         !overlap ? "  <== NO GEOMETRY HERE: the anchor or the overlap test, not the component filter"
-                                  : !in_open ? "  <== NO PLAYABLE AREA CLAIMS IT: the bake dropped ground you are standing on"
-                                             : "");
-            }
-        }
-        // Both halves of the anchor the bake re-derives. GetMapWorldAnchor takes the loaded map's
-        // bounds from the map context and every other map's from the DAT; bake.py only ever has the
-        // DAT. If those two disagree for this map, every tile it bakes is shifted - which is the
-        // shape "underworld" maps would take, their geometry sitting somewhere the map info does not
-        // describe.
-        {
-            const auto* map_context = GW::GetMapContext();
-            Pathing::Vec2f dat_min{}, dat_max{};
-            const uint32_t file_id = PathfindingWindow::GetMapFileId(GW::Map::GetMapID());
-            const bool have_dat = Pathing::GetMapGameBoundsFromDAT(file_id, dat_min, dat_max);
-            if (map_context) {
-                Log::Log("[carto-anchor] map=%d file=0x%X live bounds (%.1f,%.1f)-(%.1f,%.1f) dat bounds %s(%.1f,%.1f)-(%.1f,%.1f)",
-                         static_cast<int>(GW::Map::GetMapID()), file_id,
-                         map_context->start_pos.x, map_context->start_pos.y, map_context->end_pos.x, map_context->end_pos.y,
-                         have_dat ? "" : "UNREADABLE ", dat_min.x, dat_min.y, dat_max.x, dat_max.y);
-                // The anchor is built from min.x and max.y only, so those are the two that matter.
-                if (have_dat) {
-                    Log::Log("[carto-anchor]   anchor delta live-minus-dat = (%.4f, %.4f) world-map units%s",
-                             (map_context->start_pos.x - dat_min.x) / -96.f, (map_context->end_pos.y - dat_max.y) / 96.f,
-                             map_context->start_pos.x != dat_min.x || map_context->end_pos.y != dat_max.y
-                                 ? "  <== the bake anchored this map somewhere else" : "");
-                }
-            }
-        }
-        // The whole "unexpected" verdict is the baked table disagreeing with ground that is really
-        // there, and the live navmesh grid is the same trapezoids run through the same overlap test.
-        // Laying the two over each other separates the two ways that can go wrong: a constant offset
-        // means the bake's anchor and GetMapWorldAnchor have drifted apart, disagreement in place
-        // means the bake is missing geometry. Every cell marked L is one that can turn purple.
-        if (nav_cells.built && !continent_mask.Empty()) {
-            const auto live_at = [&](const int x, const int y) {
-                return nav_cells.ground[static_cast<size_t>(y) * nav_cells.width + x] != 0;
-            };
-            int best_dx = 0, best_dy = 0, best_hits = -1, in_place = 0;
-            for (int oy = -4; oy <= 4; oy++) {
-                for (int ox = -4; ox <= 4; ox++) {
-                    int hits = 0;
-                    for (int y = 0; y < nav_cells.height; y++) {
-                        for (int x = 0; x < nav_cells.width; x++) {
-                            if (live_at(x, y) && continent_mask.AnyGroundAt(nav_cells.x0 + x + ox, nav_cells.y0 + y + oy)) hits++;
-                        }
-                    }
-                    if (!ox && !oy) in_place = hits;
-                    if (hits > best_hits) { best_hits = hits; best_dx = ox; best_dy = oy; }
-                }
-            }
-            Log::Log("[carto-bake] (%d,%d) live vs bake: %d/%d live ground cells baked in place; best offset (%+d,%+d) matches %d%s",
-                     cx, cy, in_place, nav_cells.ground_count, best_dx, best_dy, best_hits,
-                     best_dx || best_dy ? "  <== ANCHOR DRIFT: the bake and GetMapWorldAnchor disagree" : "");
-            // # both, L live only (the bake is missing it), b baked only, . neither.
-            for (int y = 0; y < nav_cells.height; y++) {
-                std::string row;
-                for (int x = 0; x < nav_cells.width; x++) {
-                    const bool live = live_at(x, y);
-                    const bool baked = continent_mask.AnyGroundAt(nav_cells.x0 + x, nav_cells.y0 + y);
-                    row += live && baked ? '#' : live ? 'L' : baked ? 'b' : '.';
-                }
-                Log::Log("[carto-bake]   y=%3d x=%d %s", nav_cells.y0 + y, nav_cells.x0, row.c_str());
-            }
-        }
-        // Which baked tile the dilated claim came from. Ground behind a travel portal shows as
-        // glitch-only, which is the difference the setting turns on.
-        for (int dy = -kMaskRadius; dy <= kMaskRadius; dy++) {
-            for (int dx = -kMaskRadius; dx <= kMaskRadius; dx++) {
-                const int bx = cx + dx, by = cy + dy;
-                const bool any = continent_mask.AnyGroundAt(bx, by);
-                if (!any && (dx || dy)) continue;
-                Log::Log("[carto-bake]   (%+d,%+d) cell(%d,%d) stand=%d stand_glitched=%d%s",
-                         dx, dy, bx, by, static_cast<int>(continent_mask.RawGet(bx, by)), static_cast<int>(any),
-                         any && !continent_mask.RawGet(bx, by) ? "  <== only reachable by gate glitching" : "");
-            }
-        }
-        // The other half, for when the bake defers: every cell the client would credit this tile
-        // from, and what this map's navmesh probe made of it.
-        const int r = RevealRadius();
-        for (int dy = -r; dy <= r; dy++) {
-            for (int dx = -r; dx <= r; dx++) {
-                const bool creditable = CellCreditableFrom(dx, dy, cx, cy);
-                const auto it = probe->cells.find({cx + dx, cy + dy});
-                const bool probed = it != probe->cells.end();
-                if (!creditable && !probed) continue;
-                Log::Log("[carto-probe]   (%+d,%+d) cell(%d,%d) creditable=%d probed=%d in_nav_grid=%d navmesh=%d reachable=%d reveals=%d%s",
-                         dx, dy, cx + dx, cy + dy, static_cast<int>(creditable), static_cast<int>(probed),
-                         static_cast<int>(nav_cells.InGrid(cx + dx, cy + dy)),
-                         probed ? static_cast<int>(it->second.navmesh) : 0,
-                         probed ? static_cast<int>(it->second.reachable) : 0, probed ? it->second.reveals : 0,
-                         creditable && probed && it->second.reachable ? "  <== would make it coverable" : "");
-            }
-        }
-        const auto listed = std::ranges::find_if(uncoverable_cells, [&](const UncoverableCell& u) { return u.cx == cx && u.cy == cy; });
-        {
-            const auto self = GW::Agents::GetControlledCharacter();
-            const auto doorways = Pathing::GetTravelDoorways();
-            Log::Log("[carto-doorway] map=%d has %u travel doorways; player game(%.0f,%.0f)",
-                     static_cast<int>(GW::Map::GetMapID()), static_cast<unsigned>(doorways.size()),
-                     self ? self->pos.x : 0.f, self ? self->pos.y : 0.f);
-            GW::GamePos target = gp;
-            if (converted && Pathing::FindClosestPositionOnTrapezoid(target)) {
-                for (const auto& d : doorways) {
-                    const float dx = d.pos.x - target.x, dy = d.pos.y - target.y;
-                    const bool blocks = self && Pathing::CrossesTravelPortal({self->pos.x, self->pos.y}, {target.x, target.y});
-                    Log::Log("[carto-doorway]   doorway game(%.0f,%.0f) r=%.0f dist_to_ground=%.0f inside=%d segment_player_to_ground_blocked=%d",
-                             d.pos.x, d.pos.y, sqrtf(d.radius_sq), sqrtf(dx * dx + dy * dy),
-                             static_cast<int>(dx * dx + dy * dy < d.radius_sq), static_cast<int>(blocks));
-                }
-                Log::Log("[carto-doorway]   ground game(%.0f,%.0f) walkable=%d reachable=%d",
-                         target.x, target.y, static_cast<int>(Pathing::IsPositionWalkable(target)),
-                         static_cast<int>(Pathing::IsPositionReachable(target)));
-            }
-        }
-        Log::Log("[carto-bake] (%d,%d) this_map_can_credit=%d (drives the red tooltip note)",
-                 cx, cy, static_cast<int>(ThisMapCanCredit(cx, cy)));
-        Log::Log("[carto-bake] (%d,%d) explored_tiles=%d unexpected_tiles=%d coverable_tiles=%d",
-                 cx, cy, explored_tiles, unexpected_tiles, coverable_tiles);
-        Log::Log("[carto-bake] (%d,%d) fog_cells=%u uncoverable_cells=%u drawn_grey=%d why=%d",
-                 cx, cy, static_cast<unsigned>(fog_cells.size()), static_cast<unsigned>(uncoverable_cells.size()),
-                 static_cast<int>(listed != uncoverable_cells.end()),
-                 listed != uncoverable_cells.end() ? static_cast<int>(listed->why) : -1);
-        Log::FlushFile();
-    }
-#endif
 
     // Elsewhere keeps the raw point on purpose: the quest marker turns a position outside this
     // map's rectangle into a travel marker, which is how the player reaches another map's fog.
@@ -1465,24 +993,22 @@ namespace {
         // thinks of it, and how far it is. Without this the verdict is a single bit with no reason.
         Log::Log("[carto-ring] fog tile (%d, %d) wm(%.0f, %.0f) player wm(%.0f, %.0f) radius=%d\n",
                  fx, fy, wm.x, wm.y, player_wm_cached.x, player_wm_cached.y, RevealRadius());
-        for (int dy = -kRevealRadius; dy <= kRevealRadius; dy++) {
-            for (int dx = -kRevealRadius; dx <= kRevealRadius; dx++) {
-                const std::pair cell{fx + dx, fy + dy};
-                const auto it = probe->cells.find(cell);
-                const auto centre = CreditCellCenterWorldMap(cell.first, cell.second);
-                GW::GamePos gp{};
-                const bool converted = WorldMapWidget::WorldMapToGamePos(centre, gp);
-                Log::Log("[carto-ring]   (%+d,%+d) cell(%d,%d) centre wm(%.0f,%.0f) game(%.0f,%.0f) probed=%d navmesh=%d reachable=%d live_walkable=%d live_reachable=%d dist=%.0f%s\n",
-                         dx, dy, cell.first, cell.second, centre.x, centre.y, gp.x, gp.y,
-                         it != probe->cells.end(),
-                         it != probe->cells.end() && it->second.navmesh,
-                         it != probe->cells.end() && it->second.reachable,
-                         converted && Pathing::IsPositionWalkable(gp),
-                         converted && Pathing::IsPositionReachable(gp),
-                         sqrtf(Dist2(centre, player_wm_cached)),
-                         target.goal == GoalKind::Stand && cell == std::pair{target.stand_cx, target.stand_cy} ? "  <== CHOSEN" : "");
-            }
-        }
+        ForEachInRing(fx, fy, kRevealRadius, [&](const int nx, const int ny, const int dx, const int dy) {
+            const std::pair cell{nx, ny};
+            const auto it = probe->cells.find(cell);
+            const auto centre = CreditCellCenterWorldMap(nx, ny);
+            GW::GamePos gp{};
+            const bool converted = WorldMapWidget::WorldMapToGamePos(centre, gp);
+            Log::Log("[carto-ring]   (%+d,%+d) cell(%d,%d) centre wm(%.0f,%.0f) game(%.0f,%.0f) probed=%d navmesh=%d reachable=%d live_walkable=%d live_reachable=%d dist=%.0f%s\n",
+                     dx, dy, nx, ny, centre.x, centre.y, gp.x, gp.y,
+                     it != probe->cells.end(),
+                     it != probe->cells.end() && it->second.navmesh,
+                     it != probe->cells.end() && it->second.reachable,
+                     converted && Pathing::IsPositionWalkable(gp),
+                     converted && Pathing::IsPositionReachable(gp),
+                     sqrtf(Dist2(centre, player_wm_cached)),
+                     target.goal == GoalKind::Stand && cell == std::pair{target.stand_cx, target.stand_cy} ? "  <== CHOSEN" : "");
+        });
         Log::FlushFile();
 #endif
         CARTO_LOG("[cartographer] custom fog point added at wm(%.0f, %.0f)%s", wm.x, wm.y,
@@ -1494,80 +1020,26 @@ namespace {
 
     // Travel portals block here exactly as they block the live reachability walk: the baked table
     // and the overlay drawn from it have to answer the same question the same way.
-    // Every walkable island in the file, largest first. A map file routinely holds more than one -
-    // an outpost and its explorable share a file and you zone between them rather than walk - so
-    // "the largest" is not the same thing as "the playable one".
-    std::vector<std::unordered_set<const GW::PathingTrapezoid*>> AllComponents(const Pathing::PathingMapData& data, const bool block_gates)
-    {
-        const auto gates = block_gates ? Pathing::MakeTravelDoorways(data.portal_props) : std::vector<Pathing::TravelDoorway>{};
-        std::unordered_map<const GW::PathingTrapezoid*, size_t> plane_of;
-        std::vector<const GW::PathingTrapezoid*> all;
-        for (size_t p = 0; p < data.planes.size(); p++) {
-            const auto& plane = data.planes[p];
-            for (uint32_t t = 0; t < plane.trapezoid_count; t++) {
-                plane_of[&plane.trapezoids[t]] = p;
-                all.push_back(&plane.trapezoids[t]);
-            }
-        }
+    using PlaneOf = std::unordered_map<const GW::PathingTrapezoid*, size_t>;
 
-        std::unordered_set<const GW::PathingTrapezoid*> seen;
-        std::vector<std::unordered_set<const GW::PathingTrapezoid*>> out;
-        for (const auto* root : all) {
-            if (seen.contains(root)) continue;
-            std::unordered_set<const GW::PathingTrapezoid*> component;
-            std::vector<const GW::PathingTrapezoid*> queue{root};
-            component.insert(root);
-            seen.insert(root);
-            for (size_t head = 0; head < queue.size(); head++) {
-                const auto* trap = queue[head];
-                const GW::Vec2f from = Pathing::TrapezoidCentre(trap);
-                const auto expand = [&](const GW::PathingTrapezoid* next) {
-                    if (!next || component.contains(next)) return;
-                    if (Pathing::CrossesTravelDoorway(gates, from, Pathing::TrapezoidCentre(next))) return;
-                    component.insert(next);
-                    seen.insert(next);
-                    queue.push_back(next);
-                };
-                for (const auto* adj : trap->adjacent) expand(adj);
-                const auto it = plane_of.find(trap);
-                if (it == plane_of.end() || it->second >= data.planes.size()) continue;
-                const auto& plane = data.planes[it->second];
-                const auto expand_portal = [&](const uint16_t idx) {
-                    if (idx >= plane.portal_count) return;
-                    const auto& portal = plane.portals[idx];
-                    if (portal.flags & 0x04) return;
-                    const auto* pair = portal.pair;
-                    if (!pair) return;
-                    for (uint32_t i = 0; i < pair->count; i++) expand(pair->trapezoids[i]);
-                };
-                expand_portal(trap->portal_left);
-                expand_portal(trap->portal_right);
-            }
-            out.push_back(std::move(component));
-        }
-        std::ranges::sort(out, [](const auto& a, const auto& b) { return a.size() > b.size(); });
-        return out;
-    }
-
-    std::unordered_set<const GW::PathingTrapezoid*> LargestComponent(const Pathing::PathingMapData& data, const bool block_gates)
+    PlaneOf PlaneIndex(const Pathing::PathingMapData& data)
     {
-        auto all = AllComponents(data, block_gates);
-        return all.empty() ? std::unordered_set<const GW::PathingTrapezoid*>{} : std::move(all.front());
-    }
-
-    // Flood from a set of trapezoids, with the given gates blocking. Shared so entrance seeding and
-    // the component walk cannot drift apart.
-    std::unordered_set<const GW::PathingTrapezoid*> FloodTrapezoids(const Pathing::PathingMapData& data,
-                                                                    const std::vector<const GW::PathingTrapezoid*>& seeds,
-                                                                    const std::vector<Pathing::TravelDoorway>& gates)
-    {
-        std::unordered_set<const GW::PathingTrapezoid*> comp;
-        if (seeds.empty()) return comp;
-        std::unordered_map<const GW::PathingTrapezoid*, size_t> plane_of;
+        PlaneOf plane_of;
         for (size_t p = 0; p < data.planes.size(); p++) {
             const auto& plane = data.planes[p];
             for (uint32_t t = 0; t < plane.trapezoid_count; t++) plane_of[&plane.trapezoids[t]] = p;
         }
+        return plane_of;
+    }
+
+    // The one walk. `gates` block it, `honour_no_pathing` respects the "not used for path finding"
+    // portal flag; callers that already hold a plane index pass it rather than rebuilding one.
+    std::unordered_set<const GW::PathingTrapezoid*> FloodIndexed(const Pathing::PathingMapData& data, const PlaneOf& plane_of,
+                                                                 const std::vector<const GW::PathingTrapezoid*>& seeds,
+                                                                 const std::vector<Pathing::TravelDoorway>& gates,
+                                                                 const bool honour_no_pathing)
+    {
+        std::unordered_set<const GW::PathingTrapezoid*> comp;
         std::vector<const GW::PathingTrapezoid*> queue;
         for (const auto* seed : seeds) {
             if (seed && comp.insert(seed).second) queue.push_back(seed);
@@ -1588,7 +1060,7 @@ namespace {
             const auto expand_portal = [&](const uint16_t idx) {
                 if (idx >= plane.portal_count) return;
                 const auto& portal = plane.portals[idx];
-                if (portal.flags & 0x04 || !portal.pair) return;
+                if ((honour_no_pathing && portal.flags & 0x04) || !portal.pair) return;
                 for (uint32_t i = 0; i < portal.pair->count; i++) expand(portal.pair->trapezoids[i]);
             };
             expand_portal(trap->portal_left);
@@ -1597,21 +1069,42 @@ namespace {
         return comp;
     }
 
-    // Which trapezoids of a file a player can actually be standing on.
-    //
-    // Seeded at the gates you could have zoned in on, not at "the largest island". A map file is not
-    // one connected world - it carries every zone placed on that rectangle, and you zone between them
-    // rather than walk - so largest-only deletes whole playable areas (every outpost that shares its
-    // explorable's file). But every-island-is-playable is the opposite error: it readmits walkable
-    // terrain no gate leads to, which nothing can ever reach and which must stay uncoverable.
-    //
-    // The gate being seeded from does not block its own flood, matching CachedReachableTrapezoids in
-    // Pathing.cpp. Unioned with the largest component because a map whose portal props sit off in a
-    // side area would otherwise lose everything. Mirrors entrance_component in ffna.py.
+    std::unordered_set<const GW::PathingTrapezoid*> Flood(const Pathing::PathingMapData& data,
+                                                          const std::vector<const GW::PathingTrapezoid*>& seeds,
+                                                          const std::vector<Pathing::TravelDoorway>& gates,
+                                                          const bool honour_no_pathing)
+    {
+        return FloodIndexed(data, PlaneIndex(data), seeds, gates, honour_no_pathing);
+    }
+
+    // A map file routinely holds more than one walkable island - an outpost and its explorable share
+    // a file and you zone between them rather than walk - so "the largest" is not "the playable one".
+    std::unordered_set<const GW::PathingTrapezoid*> LargestComponent(const Pathing::PathingMapData& data, const PlaneOf& plane_of,
+                                                                     const std::vector<Pathing::TravelDoorway>& gates)
+    {
+        std::unordered_set<const GW::PathingTrapezoid*> seen, best;
+        for (const auto& plane : data.planes) {
+            for (uint32_t t = 0; t < plane.trapezoid_count; t++) {
+                const auto* root = &plane.trapezoids[t];
+                if (seen.contains(root)) continue;
+                auto comp = FloodIndexed(data, plane_of, {root}, gates, true);
+                seen.insert(comp.begin(), comp.end());
+                if (comp.size() > best.size()) best = std::move(comp);
+            }
+        }
+        return best;
+    }
+
+    // Which trapezoids of a file a player can actually be standing on. Seeded at the gates you could
+    // have zoned in on: largest-only deletes every outpost that shares its explorable's file, and
+    // every-island-is-playable readmits terrain no gate leads to. A gate does not block its own flood
+    // (as CachedReachableTrapezoids does), and the largest component is unioned in for maps whose
+    // portal props sit off in a side area. Mirrors entrance_component in ffna.py.
     void PlayableTrapezoids(const Pathing::PathingMapData& data,
                             std::unordered_set<const GW::PathingTrapezoid*>& gated_out,
                             std::unordered_set<const GW::PathingTrapezoid*>& open_out)
     {
+        const auto plane_of = PlaneIndex(data);
         const auto gates = Pathing::MakeTravelDoorways(data.portal_props);
         for (size_t i = 0; i < gates.size(); i++) {
             std::vector<const GW::PathingTrapezoid*> seeds;
@@ -1628,14 +1121,14 @@ namespace {
             for (size_t j = 0; j < gates.size(); j++) {
                 if (j != i) others.push_back(gates[j]);
             }
-            const auto comp = FloodTrapezoids(data, seeds, others);
+            const auto comp = FloodIndexed(data, plane_of, seeds, others, true);
             gated_out.insert(comp.begin(), comp.end());
         }
-        const auto largest = LargestComponent(data, true);
+        const auto largest = LargestComponent(data, plane_of, gates);
         gated_out.insert(largest.begin(), largest.end());
         // The gate-glitch pair: the same ground walked as if a travel portal did not stop you.
         const std::vector<const GW::PathingTrapezoid*> seeds(gated_out.begin(), gated_out.end());
-        open_out = FloodTrapezoids(data, seeds, {});
+        open_out = FloodIndexed(data, plane_of, seeds, {}, true);
     }
 
     // GetMapIdForLocation walks every map on the continent, so answers are kept until the
@@ -1739,31 +1232,12 @@ namespace {
         for (const auto& plane : data.planes) {
             for (uint32_t t = 0; t < plane.trapezoid_count; t++) {
                 const auto& trap = plane.trapezoids[t];
-                GW::GamePos lo{}, hi{};
-                lo.x = std::min(trap.XTL, trap.XBL);
-                lo.y = trap.YB;
-                hi.x = std::max(trap.XTR, trap.XBR);
-                hi.y = trap.YT;
-                GW::Vec2f a{}, b{};
-                if (!WorldMapWidget::GamePosToWorldMap(lo, a, map_id)) continue;
-                if (!WorldMapWidget::GamePosToWorldMap(hi, b, map_id)) continue;
-                const auto [x0, y0] = FogTileAt({std::min(a.x, b.x), std::min(a.y, b.y)});
-                const auto [x1, y1] = FogTileAt({std::max(a.x, b.x), std::max(a.y, b.y)});
-                for (int cy = std::max(y0, ty - r); cy <= std::min(y1, ty + r); cy++) {
-                    for (int cx = std::max(x0, tx - r); cx <= std::min(x1, tx + r); cx++) {
-                        GW::GamePos ca{}, cb{};
-                        if (!WorldMapWidget::WorldMapToGamePos({cx * kWorldMapUnitsPerCell, cy * kWorldMapUnitsPerCell}, ca, map_id)) continue;
-                        if (!WorldMapWidget::WorldMapToGamePos({(cx + 1) * kWorldMapUnitsPerCell, (cy + 1) * kWorldMapUnitsPerCell}, cb, map_id)) continue;
-                        GW::Vec2f footing{};
-                        if (!Pathing::TrapezoidOverlapsBox(&trap, {std::min(ca.x, cb.x), std::min(ca.y, cb.y)},
-                                                           {std::max(ca.x, cb.x), std::max(ca.y, cb.y)}, footing)) {
-                            continue;
-                        }
-                        any = true;
-                        owner.connected = owner.connected || component.contains(&trap);
-                        owner.under_tile = owner.under_tile || (cx == tx && cy == ty);
-                    }
-                }
+                ForEachTileOfTrapezoid(map_id, trap, [&](const int cx, const int cy) {
+                    if (abs(cx - tx) > r || abs(cy - ty) > r) return;
+                    any = true;
+                    owner.connected = owner.connected || component.contains(&trap);
+                    owner.under_tile = owner.under_tile || (cx == tx && cy == ty);
+                });
             }
         }
         if (!any) return;
@@ -1817,209 +1291,6 @@ namespace {
         return out + std::format("\nUnexplored square ({}, {})", q.cell.first, q.cell.second);
     }
 
-#ifdef _DEBUG
-    struct ContinentBake {
-        // (cy << 32) | (uint32)cx, one pair per walk: gates blocking, gates open, and no walk at
-        // all. The last is not a reachability claim - it is only "the file has ground here".
-        std::unordered_set<uint64_t> standable, creditable;
-        std::unordered_set<uint64_t> standable_glitched, creditable_glitched;
-        std::unordered_set<uint64_t> standable_any, creditable_any;
-        int maps = 0;
-    };
-
-    struct BakeState {
-        bool running = false;
-        size_t next = 0;
-        std::vector<GW::Constants::MapID> queue;
-        std::map<int, ContinentBake> continents;
-        int on_world_map = 0;
-        int no_file_id = 0;
-        int area_fid_agrees = 0;
-        int area_fid_differs = 0;
-        int area_fid_missing = 0;
-        int load_failed = 0;
-        int no_bounds = 0;
-        clock_t started = 0;
-        std::string summary;
-    };
-    BakeState bake;
-
-    uint64_t TileKey(const int cx, const int cy)
-    {
-        return static_cast<uint64_t>(static_cast<uint32_t>(cy)) << 32 | static_cast<uint32_t>(cx);
-    }
-
-    void BakeMap(const GW::Constants::MapID map_id, const GW::AreaInfo* info, const int continent)
-    {
-        const uint32_t file_id = PathfindingWindow::GetMapFileId(map_id);
-        const uint32_t area_file_id = info ? info->file_id : 0;
-        if (!area_file_id) bake.area_fid_missing++;
-        else if (area_file_id == file_id) bake.area_fid_agrees++;
-        else bake.area_fid_differs++;
-        if (!file_id) {
-            bake.no_file_id++;
-            return;
-        }
-        Pathing::PathingMapData data;
-        if (!Pathing::LoadPathingMapDataFromDAT(file_id, &data)) {
-            bake.load_failed++;
-            return;
-        }
-        std::unordered_set<const GW::PathingTrapezoid*> keep_gated, keep_open;
-        PlayableTrapezoids(data, keep_gated, keep_open);
-        auto& out = bake.continents[continent];
-        std::unordered_set<uint64_t> mine, mine_glitched, mine_any;
-        int marked = 0;
-        for (const auto& plane : data.planes) {
-            for (uint32_t t = 0; t < plane.trapezoid_count; t++) {
-                const auto& trap = plane.trapezoids[t];
-                GW::GamePos lo{}, hi{};
-                lo.x = std::min(trap.XTL, trap.XBL);
-                lo.y = trap.YB;
-                hi.x = std::max(trap.XTR, trap.XBR);
-                hi.y = trap.YT;
-                GW::Vec2f a{}, b{};
-                if (!WorldMapWidget::GamePosToWorldMap(lo, a, map_id)) continue;
-                if (!WorldMapWidget::GamePosToWorldMap(hi, b, map_id)) continue;
-                const auto [x0, y0] = FogTileAt({std::min(a.x, b.x), std::min(a.y, b.y)});
-                const auto [x1, y1] = FogTileAt({std::max(a.x, b.x), std::max(a.y, b.y)});
-                for (int cy = y0; cy <= y1; cy++) {
-                    for (int cx = x0; cx <= x1; cx++) {
-                        GW::GamePos ca{}, cb{};
-                        if (!WorldMapWidget::WorldMapToGamePos({cx * kWorldMapUnitsPerCell, cy * kWorldMapUnitsPerCell}, ca, map_id)) continue;
-                        if (!WorldMapWidget::WorldMapToGamePos({(cx + 1) * kWorldMapUnitsPerCell, (cy + 1) * kWorldMapUnitsPerCell}, cb, map_id)) continue;
-                        GW::Vec2f footing{};
-                        if (!Pathing::TrapezoidOverlapsBox(&trap, {std::min(ca.x, cb.x), std::min(ca.y, cb.y)},
-                                                           {std::max(ca.x, cb.x), std::max(ca.y, cb.y)}, footing)) {
-                            continue;
-                        }
-                        const auto key = TileKey(cx, cy);
-                        mine_any.insert(key);
-                        out.standable_any.insert(key);
-                        if (keep_open.contains(&trap)) {
-                            mine_glitched.insert(key);
-                            out.standable_glitched.insert(key);
-                        }
-                        if (keep_gated.contains(&trap)) {
-                            mine.insert(key);
-                            if (out.standable.insert(key).second) marked++;
-                        }
-                    }
-                }
-            }
-        }
-        // Dilated here rather than at runtime because credit stops one square past THIS map's
-        // rectangle, and a flat continent bitmap cannot say which map a tile's ground belongs to.
-        const auto dilate = [&](const std::unordered_set<uint64_t>& src, std::unordered_set<uint64_t>& dst) {
-            for (const auto key : src) {
-                const int sx = static_cast<int>(static_cast<uint32_t>(key & 0xffffffff));
-                const int sy = static_cast<int>(static_cast<uint32_t>(key >> 32));
-                for (int dy = -kMaskRadius; dy <= kMaskRadius; dy++) {
-                    for (int dx = -kMaskRadius; dx <= kMaskRadius; dx++) {
-                        if (InCreditableBoundsOf(map_id, sx + dx, sy + dy)) dst.insert(TileKey(sx + dx, sy + dy));
-                    }
-                }
-            }
-        };
-        dilate(mine, out.creditable);
-        dilate(mine_glitched, out.creditable_glitched);
-        dilate(mine_any, out.creditable_any);
-        out.maps++;
-        CARTO_LOG("[carto-bake] map %d (file 0x%X, continent %d): %d planes, +%d tiles",
-                  static_cast<int>(map_id), file_id, continent, static_cast<int>(data.planes.size()), marked);
-    }
-
-    void WriteTileSet(const std::unordered_set<uint64_t>& tiles, const int continent, const wchar_t* kind, const char* magic)
-    {
-        if (tiles.empty()) return;
-        int x0 = INT_MAX, y0 = INT_MAX, x1 = INT_MIN, y1 = INT_MIN;
-        for (const auto key : tiles) {
-            const int cx = static_cast<int>(static_cast<uint32_t>(key & 0xffffffff));
-            const int cy = static_cast<int>(static_cast<uint32_t>(key >> 32));
-            x0 = std::min(x0, cx);
-            x1 = std::max(x1, cx);
-            y0 = std::min(y0, cy);
-            y1 = std::max(y1, cy);
-        }
-        const int w = x1 - x0 + 1;
-        const int h = y1 - y0 + 1;
-        std::vector<uint8_t> bits((static_cast<size_t>(w) * h + 7) / 8, 0);
-        for (const auto key : tiles) {
-            const int cx = static_cast<int>(static_cast<uint32_t>(key & 0xffffffff)) - x0;
-            const int cy = static_cast<int>(static_cast<uint32_t>(key >> 32)) - y0;
-            const size_t bit = static_cast<size_t>(cy) * w + cx;
-            bits[bit >> 3] |= 1 << (bit & 7);
-        }
-        const int32_t header[5] = {continent, x0, y0, w, h};
-        const auto path = Resources::GetPath(L"cartography", std::format(L"{}_L{}.bin", kind, continent));
-        std::error_code ec;
-        std::filesystem::create_directories(path.parent_path(), ec);
-        std::ofstream file(path, std::ios::binary);
-        if (!file) {
-            CARTO_LOG("[carto-bake] could not write %ls", path.wstring().c_str());
-            return;
-        }
-        file.write(magic, 4);
-        file.write(reinterpret_cast<const char*>(header), sizeof(header));
-        file.write(reinterpret_cast<const char*>(bits.data()), static_cast<std::streamsize>(bits.size()));
-        CARTO_LOG("[carto-bake] continent %d %ls: %u tiles, grid %dx%d at (%d,%d), %u bytes",
-                  continent, kind, static_cast<unsigned>(tiles.size()), w, h, x0, y0,
-                  static_cast<unsigned>(bits.size()));
-    }
-
-    void WriteBakeFiles()
-    {
-        for (const auto& [continent, data] : bake.continents) {
-            WriteTileSet(data.standable, continent, L"standable", "CSM1");
-            WriteTileSet(data.creditable, continent, L"creditable", "CCM1");
-            WriteTileSet(data.standable_glitched, continent, L"standable_glitched", "CSG1");
-            WriteTileSet(data.creditable_glitched, continent, L"creditable_glitched", "CCG1");
-            WriteTileSet(data.standable_any, continent, L"standable_any", "CSA1");
-            WriteTileSet(data.creditable_any, continent, L"creditable_any", "CCA1");
-        }
-    }
-
-    void StartBake()
-    {
-        bake = {};
-        bake.started = TIMER_INIT();
-        for (size_t i = 1; i < static_cast<size_t>(GW::Constants::MapID::Count); i++) {
-            const auto map_id = static_cast<GW::Constants::MapID>(i);
-            const auto info = GW::Map::GetMapInfo(map_id);
-            if (!(info && info->GetIsOnWorldMap())) continue;
-            bake.on_world_map++;
-            ImRect bounds;
-            if (!GW::Map::GetMapWorldMapBounds(info, &bounds)) {
-                bake.no_bounds++;
-                continue;
-            }
-            bake.queue.push_back(map_id);
-        }
-        bake.running = true;
-        bake.summary = std::format("{} maps on the world map, queued", bake.queue.size());
-    }
-
-    // One map per tick: a DAT parse is far too slow to loop over ~450 of them in a frame.
-    void StepBake()
-    {
-        if (!bake.running) return;
-        if (bake.next >= bake.queue.size()) {
-            WriteBakeFiles();
-            bake.running = false;
-            unsigned tiles = 0;
-            for (const auto& [continent, data] : bake.continents) tiles += static_cast<unsigned>(data.standable.size());
-            bake.summary = std::format("done in {:.1f}s: {} continents, {} tiles, {} maps with no file id, {} failed to load, {} without bounds",
-                                       TIMER_DIFF(bake.started) / 1000.f, bake.continents.size(), tiles,
-                                       bake.no_file_id, bake.load_failed, bake.no_bounds);
-            CARTO_LOG("[carto-bake] %s", bake.summary.c_str());
-            return;
-        }
-        const auto map_id = bake.queue[bake.next++];
-        const auto* info = GW::Map::GetMapInfo(map_id);
-        if (info) BakeMap(map_id, info, static_cast<int>(info->continent));
-        bake.summary = std::format("{}/{} maps...", bake.next, bake.queue.size());
-    }
-#endif
 
 
     void OnCartographyUpdated(GW::HookStatus*, GW::UI::UIMessage, void*, void*)
@@ -2190,6 +1461,22 @@ namespace {
             project({(cx + 1) * kWorldMapUnitsPerCell, (cy + 1) * kWorldMapUnitsPerCell}, max_out);
     }
 
+    // Project, clip, fill, outline - the shape every square the overlay draws takes. Returns whether
+    // the pointer is over it, and hands back the rectangle for the callers that need to draw from it.
+    bool DrawCell(ImDrawList* dl, const ProjectToScreen project, const int cx, const int cy, const ImU32 colour,
+                  const int fill_alpha, const int edge_alpha, const float thickness, const ImVec2& mouse,
+                  ImRect* rect_out = nullptr)
+    {
+        ImVec2 cell_min, cell_max;
+        if (!ProjectCell(project, cx, cy, cell_min, cell_max)) return false;
+        const ImRect rect(cell_min, cell_max);
+        if (!ImRect(dl->GetClipRectMin(), dl->GetClipRectMax()).Overlaps(rect)) return false;
+        dl->AddRectFilled(cell_min, cell_max, WithAlpha(colour, fill_alpha));
+        dl->AddRect(cell_min, cell_max, WithAlpha(colour, edge_alpha), 0.f, 0, thickness);
+        if (rect_out) *rect_out = rect;
+        return rect.Contains(mouse);
+    }
+
     // One quad per fog texel, so ImGui interpolates them as the GPU does when it samples the
     // client's texture.
     void DrawFog(ImDrawList* dl, const ProjectToScreen project, const ImVec2& mouse,
@@ -2282,15 +1569,9 @@ namespace {
     // never, yellow for the ones only a gate glitch reaches.
     void DrawUncoverableCells(ImDrawList* dl, const ProjectToScreen project, const ImVec2& mouse, std::string& tooltip_out)
     {
-        const ImRect clip(dl->GetClipRectMin(), dl->GetClipRectMax());
         for (const auto& [cx, cy, why] : uncoverable_cells) {
-            ImVec2 cell_min, cell_max;
-            if (!ProjectCell(project, cx, cy, cell_min, cell_max)) continue;
-            if (!clip.Overlaps(ImRect(cell_min, cell_max))) continue;
             const auto colour = why == FogSkip::GlitchOnly ? kGlitchOnlyColor : kUncoverableColor;
-            dl->AddRectFilled(cell_min, cell_max, WithAlpha(colour, 60));
-            dl->AddRect(cell_min, cell_max, WithAlpha(colour, 150), 0.f, 0, 1.f);
-            if (!ImRect(cell_min, cell_max).Contains(mouse)) continue;
+            if (!DrawCell(dl, project, cx, cy, colour, 60, 150, 1.f, mouse)) continue;
             // Which map the ground belongs to is the answer worth having, so run the same DAT
             // lookup the fog tooltip does rather than describing the rule that excluded it.
             RequestOwnerQuery(cx, cy);
@@ -2313,14 +1594,8 @@ namespace {
     // missed, or ground reached in a way the bake does not model.
     void DrawUnexpectedCells(ImDrawList* dl, const ProjectToScreen project, const ImVec2& mouse, std::string& tooltip_out)
     {
-        const ImRect clip(dl->GetClipRectMin(), dl->GetClipRectMax());
         for (const auto& [cx, cy] : unexpected_cells) {
-            ImVec2 cell_min, cell_max;
-            if (!ProjectCell(project, cx, cy, cell_min, cell_max)) continue;
-            if (!clip.Overlaps(ImRect(cell_min, cell_max))) continue;
-            dl->AddRectFilled(cell_min, cell_max, WithAlpha(kUnexpectedColor, 40));
-            dl->AddRect(cell_min, cell_max, WithAlpha(kUnexpectedColor, 190), 0.f, 0, 1.f);
-            if (!ImRect(cell_min, cell_max).Contains(mouse)) continue;
+            if (!DrawCell(dl, project, cx, cy, kUnexpectedColor, 40, 190, 1.f, mouse)) continue;
             const auto rect_name = MapRectName(cx, cy);
             tooltip_out = std::format("Explored square ({}, {}) with no baked ground within {} squares of it", cx, cy, RevealRadius());
             tooltip_out += "\nThe world map rectangle it falls in belongs to " + rect_name;
@@ -2330,20 +1605,14 @@ namespace {
     // Drawn at true 32x32 size, shaded by how much fog the spot would credit.
     void DrawStandCells(ImDrawList* dl, const ProjectToScreen project, const ImVec2& mouse, const char*& tooltip)
     {
-        const ImRect clip(dl->GetClipRectMin(), dl->GetClipRectMax());
         for (const auto& [cell, sc] : probe->cells) {
             if (!sc.reachable || sc.reveals <= 0) continue;
             if (declined_cells.contains(cell)) continue;
             // Skipped only while the suggestion is actually drawn on top, else a pending ownership
             // recheck blanks the square entirely.
             if (target.valid && !target.custom && target.cx == cell.first && target.cy == cell.second) continue;
-            ImVec2 cell_min, cell_max;
-            if (!ProjectCell(project, cell.first, cell.second, cell_min, cell_max)) continue;
-            if (!clip.Overlaps(ImRect(cell_min, cell_max))) continue;
             const int strength = std::min(sc.reveals, 9);
-            dl->AddRectFilled(cell_min, cell_max, WithAlpha(kStandColor, 10 + 6 * strength));
-            dl->AddRect(cell_min, cell_max, WithAlpha(kStandColor, 60 + 12 * strength), 0.f, 0, 1.f);
-            if (ImRect(cell_min, cell_max).Contains(mouse)) {
+            if (DrawCell(dl, project, cell.first, cell.second, kStandColor, 10 + 6 * strength, 60 + 12 * strength, 1.f, mouse)) {
                 tooltip = "Cartographer: stand here to uncover nearby squares";
             }
         }
@@ -2375,40 +1644,24 @@ namespace {
         // Which tile you are standing in is the question the whole thing turns on, and it is not
         // answerable from the character marker alone - the ranges key off the tile, not the dot.
         if (player_cell_valid) {
-            ImVec2 cell_min, cell_max;
-            if (ProjectCell(project, player_cell.first, player_cell.second, cell_min, cell_max)) {
-                dl->AddRectFilled(cell_min, cell_max, WithAlpha(kCurrentTileColor, 28));
-                dl->AddRect(cell_min, cell_max, WithAlpha(kCurrentTileColor, 150), 0.f, 0, 1.f);
-            }
+            DrawCell(dl, project, player_cell.first, player_cell.second, kCurrentTileColor, 28, 150, 1.f, mouse);
         }
         const bool target_active = target.valid;
-        if (target_active && !target.custom) {
-            ImVec2 cell_min, cell_max;
-            if (ProjectCell(project, target.cx, target.cy, cell_min, cell_max)) {
-                const float pulse = Pulse();
-                dl->AddRectFilled(cell_min, cell_max, WithAlpha(kTargetColor, 16 + static_cast<int>(24.f * pulse)));
-                dl->AddRect(cell_min, cell_max, WithAlpha(kTargetColor, 210), 0.f, 0, 1.5f + pulse);
-                if (cell_tooltip && ImRect(cell_min, cell_max).Contains(mouse)) {
-                    tooltip = "Cartographer: stand in this square to uncover the fog around it\nRight-click the map for options";
-                }
+        const bool point_stand = target_active && target.custom && target.goal == GoalKind::Stand;
+        if (target_active && (!target.custom || point_stand)) {
+            const float pulse = Pulse();
+            const int tcx = target.custom ? target.stand_cx : target.cx;
+            const int tcy = target.custom ? target.stand_cy : target.cy;
+            ImRect rect(FLT_MAX, FLT_MAX, FLT_MAX, FLT_MAX);
+            const bool hovered = DrawCell(dl, project, tcx, tcy, kTargetColor, 16 + static_cast<int>(24.f * pulse), 210, 1.5f + pulse, mouse, &rect);
+            // A leader back to the fog point, so it is obvious the square is not where the fog is.
+            ImVec2 point_at;
+            if (point_stand && rect.Min.x != FLT_MAX && project(target.wm, point_at)) {
+                dl->AddLine(rect.GetCenter(), point_at, WithAlpha(kFogPointColor, 140), 1.f);
             }
-        }
-        // The tile that credits the fog point, drawn with a leader back to the point itself so it
-        // is obvious the square is not where the fog is.
-        if (target_active && target.custom && target.goal == GoalKind::Stand) {
-            const int scx = target.stand_cx;
-            const int scy = target.stand_cy;
-            ImVec2 cell_min, cell_max, point_at;
-            if (ProjectCell(project, scx, scy, cell_min, cell_max)) {
-                const float pulse = Pulse();
-                dl->AddRectFilled(cell_min, cell_max, WithAlpha(kTargetColor, 16 + static_cast<int>(24.f * pulse)));
-                dl->AddRect(cell_min, cell_max, WithAlpha(kTargetColor, 210), 0.f, 0, 1.5f + pulse);
-                if (project(target.wm, point_at)) {
-                    dl->AddLine({(cell_min.x + cell_max.x) * .5f, (cell_min.y + cell_max.y) * .5f}, point_at, WithAlpha(kFogPointColor, 140), 1.f);
-                }
-                if (cell_tooltip && ImRect(cell_min, cell_max).Contains(mouse)) {
-                    tooltip = "Cartographer: stand in this square to uncover your fog point";
-                }
+            if (cell_tooltip && hovered) {
+                tooltip = point_stand ? "Cartographer: stand in this square to uncover your fog point"
+                                      : "Cartographer: stand in this square to uncover the fog around it\nRight-click the map for options";
             }
         }
         for (const auto& p : custom_points) {
@@ -2447,20 +1700,61 @@ namespace {
         if (!CartographerWidget::GetEnabled() || !map_on_world_map) return;
         DrawMapOverlay(dl, [](const GW::Vec2f& wm, ImVec2& out) { return MissionMapWidget::WorldMapToScreen(wm, out); }, false);
     }
-} // namespace
+    // Registered and drawn from one table: a setting added to one list and forgotten in the other
+    // is the whole failure mode this replaces.
+    struct Option {
+        const char* setting;
+        const char* label;
+        bool* flag;
+        void (*on_change)();
+        const char* help;
+    };
+
+    const Option kOptions[] = {
+        {"show_fog", "Show remaining fog", &show_fog, nullptr,
+         "Green: everything still unexplored that some square on this map can credit. Fog nothing here can reach draws nothing."},
+        {"show_stand_cells", "Show squares to stand in", &show_stand_cells, nullptr,
+         "Draws every 32x32 square worth walking into, shaded by how many foggy squares standing there would credit. The current suggestion is outlined and pulses."},
+        {"show_whole_continent", "Show the whole continent", &show_whole_continent, [] { coverage_stale = true; },
+         "Draws every square still worth uncovering anywhere on this continent, not just the map you are in, using data baked from the game's own map files. Turn off to show only the current map."},
+        {"show_grid", "Show the cartography grid", &show_grid, nullptr,
+         "Draws the 32x32 tile boundaries. Exploration is credited a whole tile at a time, so this is what tells you which tile you are actually standing in. Hidden when zoomed out far enough that the lines would smear together."},
+        {"show_uncoverable", "Show squares that cannot be uncovered", &show_uncoverable, [] { coverage_stale = true; },
+         "Draws foggy squares that no ground on this continent can credit, with a note on why: grey where"
+         "\nnothing can ever reach them, yellow where only a gate glitch can. Without them the world map shows"
+         "\na blank patch where fog you can never clear used to be, which reads as already explored."},
+        {"allow_gate_glitch", "Count gate glitching", &allow_gate_glitch,
+         [] {
+             Pathing::SetGateGlitchAllowed(allow_gate_glitch);
+             coverage_stale = true;
+         },
+         "Travel portals normally stop you walking past them, so ground behind one is out of reach and the"
+         "\nsquares it would credit are drawn yellow. Turn this on if you Shadow-step through gates and they"
+         "\ncount as ordinary fog instead. Applies to the baked table and the live overlay alike, so the two"
+         "\nkeep agreeing."},
+        {"show_unexpected", "Show unexpected explored squares", &show_unexpected, nullptr,
+         "Draws every square you have already uncovered that the baked map data says has no standable ground within reveal range - not even ground only a gate glitch reaches - so nothing should have been able to credit it. Either the bake is missing that ground, or it was uncovered from somewhere the bake does not model. The reveal range follows the Bird's Eye Compass setting below."},
+        {"using_bec", "Using a Bird's Eye Compass", &using_bec,
+         [] {
+             // Terrain has not moved, so the probed tiles stay; the radius only widens which tiles are
+             // worth probing. `strict` is a property of the fog tile, not of the radius, so it survives.
+             for (auto& [map_id, cached] : probe_cache) cached.complete = false;
+             owner_cache.clear();
+             owner_query = {};
+             coverage_stale = true;
+         },
+         "Standing in a tile credits it and the 8 tiles around it (Chebyshev distance, so a square block - not a circle, which is why the nearest-looking spot often is not the right one). A Bird's Eye Compass widens that to 3 tiles in each direction. Where inside the tile you stand makes no difference. Rescans the map."},
+        {"set_quest_marker", "Set a quest marker to fog points", &set_quest_marker, [] { SyncQuestMarker(); },
+         "Placing a fog point puts a custom quest marker on the square you need to stand in to uncover it, so the usual quest path walks you there. It clears itself once the point is reached or removed, and clearing the marker by hand leaves it cleared. Suggested squares never touch the marker."},
+    };
+} // namespace Carto
+
+using namespace Carto;
 
 void CartographerWidget::Initialize()
 {
     ToolboxWidget::Initialize();
-    SettingsRegistry::RegisterField(this, "show_fog", &show_fog);
-    SettingsRegistry::RegisterField(this, "show_stand_cells", &show_stand_cells);
-    SettingsRegistry::RegisterField(this, "show_grid", &show_grid);
-    SettingsRegistry::RegisterField(this, "show_unexpected", &show_unexpected);
-    SettingsRegistry::RegisterField(this, "show_uncoverable", &show_uncoverable);
-    SettingsRegistry::RegisterField(this, "allow_gate_glitch", &allow_gate_glitch);
-    SettingsRegistry::RegisterField(this, "show_whole_continent", &show_whole_continent);
-    SettingsRegistry::RegisterField(this, "using_bec", &using_bec);
-    SettingsRegistry::RegisterField(this, "set_quest_marker", &set_quest_marker);
+    for (const auto& opt : kOptions) SettingsRegistry::RegisterField(this, opt.setting, opt.flag);
     SettingsRegistry::RegisterField(this, "declined_cells", &declined_cells_str);
     SettingsRegistry::RegisterField(this, "custom_points", &custom_points_str);
     MissionMapWidget::AddContextMenuCallback(&OnMissionMapContextMenu);
@@ -2629,17 +1923,13 @@ void CartographerWidget::Update(float)
             // ones only normal range uncovers; demote those rather than writing the square off.
             const int r = RevealRadius();
             int demoted = 0;
-            for (int dy = -r; dy <= r; dy++) {
-                for (int dx = -r; dx <= r; dx++) {
-                    if (abs(dx) <= kRevealRadius && abs(dy) <= kRevealRadius) continue;
-                    const std::pair cell{target.cx + dx, target.cy + dy};
-                    if (!grid.InGrid(cell.first, cell.second) || grid.IsExplored(cell.first, cell.second)) continue;
-                    // Blame only what the square was scored on: a tile the score already excluded
-                    // was never this visit's to credit.
-                    if (!CellCreditableFrom(dx, dy, cell.first, cell.second)) continue;
-                    if (probe->strict.insert(cell).second) demoted++;
-                }
-            }
+            ForEachInRing(target.cx, target.cy, r, [&](const int nx, const int ny, const int dx, const int dy) {
+                if (abs(dx) <= kRevealRadius && abs(dy) <= kRevealRadius) return;
+                if (!grid.InGrid(nx, ny) || grid.IsExplored(nx, ny)) return;
+                // Blame only what the square was scored on: a tile the score already excluded was
+                // never this visit's to credit.
+                if (CellCreditableFrom(dx, dy, nx, ny) && probe->strict.insert({nx, ny}).second) demoted++;
+            });
             if (r > kRevealRadius) {
                 if (!demoted) probe->skipped.insert({target.cx, target.cy});
                 CARTO_LOG("[cartographer] cell (%d, %d) credited nothing; %d tiles demoted to normal range%s",
@@ -2761,49 +2051,12 @@ void CartographerWidget::Update(float)
 
 void CartographerWidget::DrawWorldMapOptions()
 {
-    ImGui::Checkbox("Show remaining fog", &show_fog);
-    ImGui::ShowHelp("Green: everything still unexplored that some square on this map can credit. Fog nothing here can reach draws nothing.");
-    ImGui::Checkbox("Show squares to stand in", &show_stand_cells);
-    ImGui::ShowHelp("Draws every 32x32 square worth walking into, shaded by how many foggy squares standing there would credit. The current suggestion is outlined and pulses.");
-    if (ImGui::Checkbox("Show the whole continent", &show_whole_continent)) {
-        GW::GameThread::Enqueue([] { coverage_stale = true; });
+    for (const auto& opt : kOptions) {
+        if (ImGui::Checkbox(opt.label, opt.flag) && opt.on_change) {
+            GW::GameThread::Enqueue([on_change = opt.on_change] { on_change(); });
+        }
+        ImGui::ShowHelp(opt.help);
     }
-    ImGui::ShowHelp("Draws every square still worth uncovering anywhere on this continent, not just the map you are in, using data baked from the game's own map files. Turn off to show only the current map.");
-    ImGui::Checkbox("Show the cartography grid", &show_grid);
-    ImGui::ShowHelp("Draws the 32x32 tile boundaries. Exploration is credited a whole tile at a time, so this is what tells you which tile you are actually standing in. Hidden when zoomed out far enough that the lines would smear together.");
-    if (ImGui::Checkbox("Show squares that cannot be uncovered", &show_uncoverable)) {
-        GW::GameThread::Enqueue([] { coverage_stale = true; });
-    }
-    ImGui::ShowHelp("Draws foggy squares that no ground on this continent can credit, with a note on why: grey where"
-                    "\nnothing can ever reach them, yellow where only a gate glitch can. Without them the world map shows"
-                    "\na blank patch where fog you can never clear used to be, which reads as already explored.");
-    if (ImGui::Checkbox("Count gate glitching", &allow_gate_glitch)) {
-        GW::GameThread::Enqueue([] {
-            Pathing::SetGateGlitchAllowed(allow_gate_glitch);
-            coverage_stale = true;
-        });
-    }
-    ImGui::ShowHelp("Travel portals normally stop you walking past them, so ground behind one is out of reach and the"
-                    "\nsquares it would credit are drawn yellow. Turn this on if you Shadow-step through gates and they"
-                    "\ncount as ordinary fog instead. Applies to the baked table and the live overlay alike, so the two"
-                    "\nkeep agreeing.");
-    ImGui::Checkbox("Show unexpected explored squares", &show_unexpected);
-    ImGui::ShowHelp("Draws every square you have already uncovered that the baked map data says has no standable ground within reveal range - not even ground only a gate glitch reaches - so nothing should have been able to credit it. Either the bake is missing that ground, or it was uncovered from somewhere the bake does not model. The reveal range follows the Bird's Eye Compass setting below.");
-    if (ImGui::Checkbox("Using a Bird's Eye Compass", &using_bec)) {
-        GW::GameThread::Enqueue([] {
-            for (auto& [map_id, cached] : probe_cache) {
-                cached.complete = false;
-            }
-            owner_cache.clear();
-            owner_query = {};
-            coverage_stale = true;
-        });
-    }
-    ImGui::ShowHelp("Standing in a tile credits it and the 8 tiles around it (Chebyshev distance, so a square block - not a circle, which is why the nearest-looking spot often is not the right one). A Bird's Eye Compass widens that to 3 tiles in each direction. Where inside the tile you stand makes no difference. Rescans the map.");
-    if (ImGui::Checkbox("Set a quest marker to fog points", &set_quest_marker)) {
-        GW::GameThread::Enqueue([] { SyncQuestMarker(); });
-    }
-    ImGui::ShowHelp("Placing a fog point puts a custom quest marker on the square you need to stand in to uncover it, so the usual quest path walks you there. It clears itself once the point is reached or removed, and clearing the marker by hand leaves it cleared. Suggested squares never touch the marker.");
 }
 
 void CartographerWidget::Draw(IDirect3DDevice9*)
@@ -2858,7 +2111,7 @@ void CartographerWidget::DrawSettingsInternal()
 #ifdef _DEBUG
     // Before the early-out below: re-baking is a maintenance job, not something you should have to
     // turn the widget on to reach.
-    DrawBakeSettings();
+    Carto::DrawBakeSettings();
 #endif
 
     if (!GetEnabled()) return;
@@ -2907,64 +2160,11 @@ void CartographerWidget::DrawSettingsInternal()
 
 
 #ifdef _DEBUG
-void CartographerWidget::DrawBakeSettings()
-{
-    ImGui::Separator();
-    ImGui::Text("Continent bake (debug)");
-    ImGui::TextDisabled("Reads every world-map map's pathing data out of the DAT and records which\n32x32 squares have standable ground, per continent. One map per frame, so it\nruns for a while; results go to Settings/cartography/standable_L<n>.bin.");
-    ImGui::BeginDisabled(bake.running);
-    if (ImGui::Button("Bake standable squares for all continents")) {
-        GW::GameThread::Enqueue([] { StartBake(); });
-    }
-    ImGui::EndDisabled();
-    if (bake.running) {
-        ImGui::SameLine();
-        if (ImGui::Button("Cancel")) {
-            GW::GameThread::Enqueue([] {
-                bake.running = false;
-                bake.summary = "cancelled";
-            });
-        }
-        ImGui::ProgressBar(bake.queue.empty() ? 0.f : static_cast<float>(bake.next) / bake.queue.size());
-    }
-    if (!bake.summary.empty()) ImGui::TextWrapped("%s", bake.summary.c_str());
-    if (bake.on_world_map) {
-        ImGui::TextDisabled("%d maps on the world map; %d with no file id, %d failed to load, %d had no bounds",
-                            bake.on_world_map, bake.no_file_id, bake.load_failed, bake.no_bounds);
-        ImGui::TextDisabled("AreaInfo::file_id vs GetMapFileId: %d agree, %d differ, %d absent",
-                            bake.area_fid_agrees, bake.area_fid_differs, bake.area_fid_missing);
-    }
-    for (const auto& [continent, data] : bake.continents) {
-        ImGui::TextDisabled("  continent %d: %d maps, %u standable, %u creditable squares", continent, data.maps,
-                            static_cast<unsigned>(data.standable.size()), static_cast<unsigned>(data.creditable.size()));
-    }
-}
-#endif
-
-
-#ifdef _DEBUG
-void CartographerWidget::LogProbeAtCell(const int cx, const int cy)
-{
-    LogProbe(CreditCellCenterWorldMap(cx, cy));
-}
-#endif
-
-#ifdef _DEBUG
 void CartographerWidget::SetGateGlitchAllowed(const bool allowed)
 {
     allow_gate_glitch = allowed;
     Pathing::SetGateGlitchAllowed(allowed);
     coverage_stale = true;
-}
-
-void CartographerWidget::StartContinentBake()
-{
-    StartBake();
-}
-
-bool CartographerWidget::ContinentBakeRunning()
-{
-    return bake.running;
 }
 #endif
 
