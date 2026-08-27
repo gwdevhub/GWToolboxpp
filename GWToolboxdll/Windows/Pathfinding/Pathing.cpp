@@ -653,7 +653,9 @@ namespace Pathing {
         // The gate you are standing in cannot be what separates you from anywhere, and you arrive on
         // top of one every time you zone in through it - testing it would block the very first step.
         std::vector<TravelDoorway> gates;
-        for (const auto& d : gate_glitch_allowed ? std::vector<TravelDoorway>{} : GetTravelDoorways()) {
+        // Not in an outpost: a gate glitch is a Shadow-step, and skills do not fire there.
+        const bool can_glitch_here = gate_glitch_allowed && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost;
+        for (const auto& d : can_glitch_here ? std::vector<TravelDoorway>{} : GetTravelDoorways()) {
             const float dx = player->pos.x - d.pos.x, dy = player->pos.y - d.pos.y;
             if (dx * dx + dy * dy >= d.radius_sq) gates.push_back(d);
         }
