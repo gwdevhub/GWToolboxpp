@@ -605,30 +605,7 @@ namespace {
         return true;
     }
 
-    GW::Vec2f southern_shivers_start = {4570.f, 4230.f};
-    GW::Vec2f post_searing_region = {5705.f, 3590.f};
-    GW::Vec2f maguuma_region = {220.f, 4150.f};
-    GW::Vec2f crystal_desert_region = {6105.f, 6735.f};
-    GW::Vec2f ring_of_fire_region = {1070.f, 7190.f};
-    GW::Vec2f kryta_region = {2150.f, 3800.f};
-
-    GW::Vec2f shing_jea_island = {700.f, 2050.f};
-    GW::Vec2f kaineng_city = {2430.f, 590.f};
-    GW::Vec2f echovald_forest = {3220.f, 2120.f};
-    GW::Vec2f jade_sea = {3790.f, 1925.f};
-
-    GW::Vec2f istan = {625.f, 2660.f};
-    GW::Vec2f kourna = {2760.f, 1645.f};
-    GW::Vec2f vabbi = {3230.f, 360.f};
-    GW::Vec2f desolation = {1860.f, 87.f};
-
-    GW::Vec2f far_shiverpeaks = {4470.f, 810.f};
-    GW::Vec2f charr_homelands = {6640.f, 1300.f};
-    GW::Vec2f tarnished_coast = {1210.f, 5770.f};
-
     ImVec2 skill_texture_size = {};
-
-    float default_scale = 1.37f;
 
     std::unordered_map<GW::Constants::MapID, uint32_t> locations_assigned_to_outposts;
 
@@ -676,116 +653,24 @@ namespace {
             : 0u;
 
         bool hovered = false;
-        float elites_scale = default_scale;
-        for (auto boss_pos : boss.coords) {
-            GW::Vec2f* region_offset = nullptr;
-            switch (map_info->campaign) {
-                case GW::Constants::Campaign::Prophecies: {
-                    switch (boss.region_id) {
-                        case 1: {
-                            region_offset = &crystal_desert_region;
-                        } break;
-                        case 2: {
-                            region_offset = &southern_shivers_start;
-                        } break;
-                        case 3: {
-                            region_offset = &ring_of_fire_region;
-                        } break;
-                        case 4: {
-                            region_offset = &post_searing_region;
-                        } break;
-                        case 5: {
-                            region_offset = &kryta_region;
-                        } break;
-                        case 7: {
-                            region_offset = &maguuma_region;
-                        } break;
-                    }
-                } break;
-                case GW::Constants::Campaign::Factions: {
-                    switch (boss.region_id) {
-                        case 1: {
-                            region_offset = &kaineng_city;
-                        } break;
-                        case 2: {
-                            region_offset = &echovald_forest;
-                        } break;
-                        case 3: {
-                            region_offset = &jade_sea;
-                        } break;
-                        case 4: {
-                            region_offset = &shing_jea_island;
-                        } break;
-                    }
-                } break;
-                case GW::Constants::Campaign::Nightfall: {
-                    switch (boss.region_id) {
-                        case 1: {
-                            region_offset = &istan;
-                        } break;
-                        case 2: {
-                            region_offset = &kourna;
-                        } break;
-                        case 3: {
-                            region_offset = &vabbi;
-                            elites_scale = 1.34f;
-                        } break;
-                        case 4: {
-                            region_offset = &desolation;
-                            elites_scale = 1.34f;
-                        } break;
-                        case 5: {
-                            // Domain of Anguish is where the devs just gave up trying to make the world map useful.
-                            boss_pos = GW::Vec2f((float)map_info->x - icon_size * 2.f, (float)map_info->y);
-                            locations_assigned_to_outposts[boss.map_id]++;
-                            boss_pos.x += icon_size * (locations_assigned_to_outposts[boss.map_id] - 1);
-                            elites_scale = 1.f;
-                        }
-                    }
-                } break;
-                case GW::Constants::Campaign::EyeOfTheNorth: {
-                    elites_scale = 1.315f;
-                    switch (boss.region_id) {
-                        case 1: {
-                            region_offset = &far_shiverpeaks;
-                        } break;
-                        case 2: {
-                            region_offset = &charr_homelands;
-                        } break;
-                        case 3: {
-                            region_offset = &tarnished_coast;
-                            if (boss.map_id == GW::Constants::MapID::Sparkfly_Swamp) {
-                                // MappingOut stitches the tarnished coast together, which means I had to manually place the sparkfly swamp elites myself. No need to offset or scale
-                                region_offset = nullptr;
-                                elites_scale = 1.f;
-                            }
-                        } break;
-                    }
-                } break;
-            }
-            if (boss.region_id == 0xff) {
-                boss_pos = GW::Vec2f((float)map_info->x - icon_size * 2.f, (float)map_info->y);
-                locations_assigned_to_outposts[boss.map_id]++;
-                boss_pos.x += icon_size * (locations_assigned_to_outposts[boss.map_id] - 1);
-                elites_scale = 1.f;
-            }
-
-            boss_pos *= elites_scale;
-            if (region_offset) {
-                boss_pos += *region_offset;
-            }
-
-
-            const auto viewport_quest_pos = CalculateViewportPos(boss_pos, world_map_context->top_left);
-
-
-            const ImRect icon_rect = {{viewport_quest_pos.x - half_size, viewport_quest_pos.y - half_size}, {viewport_quest_pos.x + half_size, viewport_quest_pos.y + half_size}};
-
+        const auto draw_boss_icon = [&](const GW::Vec2f& boss_pos) {
+            const auto viewport_boss_pos = CalculateViewportPos(boss_pos, world_map_context->top_left);
+            const ImRect icon_rect = {{viewport_boss_pos.x - half_size, viewport_boss_pos.y - half_size}, {viewport_boss_pos.x + half_size, viewport_boss_pos.y + half_size}};
             ImGui::AddImageScaled(draw_list, *texture, icon_rect.Min, skill_texture_size, icon_size, icon_size);
             if (prof_color) {
                 draw_list->AddRect(icon_rect.Min, icon_rect.Max, prof_color, 0.f, 0, 2.f);
             }
             hovered |= icon_rect.Contains(ImGui::GetMousePos());
+        };
+        if (boss.coords.empty()) {
+            // Dungeons and the Realm of Torment have no area on the world map, so stack their icons next to the entrance outpost
+            const auto slot = locations_assigned_to_outposts[boss.map_id]++;
+            draw_boss_icon({(float)map_info->x - icon_size * 2.f + icon_size * slot, (float)map_info->y});
+        }
+        else {
+            for (const auto& boss_pos : boss.coords) {
+                draw_boss_icon(boss_pos);
+            }
         }
 
         return hovered;
