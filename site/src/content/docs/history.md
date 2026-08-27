@@ -8,6 +8,11 @@ Previous releases are available on Github as dll files. There is no support for 
 the latest version, go to the [Home Page](./) instead.
 
 ## Version 8.33
+* [New] Cartographer widget: helps you finish the Cartographer titles. It shades the parts of the world map you still have to uncover, and — using the game's own cartography rules — marks the exact squares you need to *stand in* to clear them, rather than just the fog itself. Reachability is derived from real pathing (travel portals count as walls, so it won't suggest a square you can only reach by zoning), the whole continent is shown rather than just your current map, and hovering a fog patch names the map you have to travel to in order to uncover it. Squares you can get close to but still can't uncover are drawn in grey.
+* [New] Armory: 830 additional weapon models, found by scanning `Gw.dat`, are now available to preview.
+* [New] Splash Screen module: replaces the Guild Wars startup splash artwork with an image of your own.
+* [New] Game Settings: separate name colours for Friends, Guild Members and Other Players (In My Party), on top of the existing name colouring.
+* [New] Toolbox is no longer disabled in guild halls. It remains disabled in PvP maps.
 * [Minor] Nicholas item counts are now the total needed for all 5 trades everywhere, instead of Nicholas the Traveler showing the total while Nicholas Sandford showed the amount for a single trade. Sandford item tooltips now read "collects 25 of these" rather than 5, and the Daily Quests window counters for both Nicholases count towards a full set of gifts (and turn green once you have it).
 * [New] Loot Beacons: beacon drops by name. Add your own list of text/colour pairs — any drop whose name contains the text gets a beacon in that colour, whatever its rarity or trader value, so things like scrolls, dyes or a specific green can be picked out at a glance. Name rules are checked before the value and rarity rules, and the first matching rule wins.
 * [Fix] `/dialog` (including `/dialog take` and `/dialog 0`) works again. A Guild Wars update stopped Toolbox from noticing when a conversation window closed, so the command still believed you were talking to the previous NPC: it would no longer start a conversation with your current target, and queued steps — such as taking a quest and then accepting its reward — stalled for a few seconds and were dropped instead of being sent. Conversations that the game ends part-way through a sequence are also reopened again.
@@ -18,6 +23,21 @@ the latest version, go to the [Home Page](./) instead.
 * [Fix] Price Checker: rune and insignia tooltips while in pre-searing now show pre-searing prices, sourced from presearing.com's community price sheet, instead of the unrelated post-searing Kamadan Trading Post price for the same item.
 * [Minor] Bonds: the refrain checkboxes in the bond monitor's settings (Heroic, Burning, Mending, Bladeturn, Hasty and Aggressive Refrain) now have a help tooltip explaining that refrains can only be shown on yourself and your own heroes — Guild Wars doesn't tell your client about refrains you maintain on other players, so they can't be displayed.
 * [Minor] Filters you type by hand now accept a regular expression anywhere: wrap the line in slashes, e.g. `/(wtb|wts).*ecto/`. This works in the chat filter's keyword and author lists, trade and party-search alert keywords, the trade window's search box and the new loot beacon name rules; flags go after the closing slash, and matching is case-insensitive unless you add `I` — the chat filter's dedicated regex list keeps its existing case-sensitive default. Filters written as plain text behave exactly as before.
+* [Fix] Quest paths: the leading segment of the path is now re-anchored to your position every frame, and recalculating a quest or marker path no longer routes you back through a waypoint you already passed.
+* [Fix] In-world overlays (quest paths, rings, beacons) are lifted slightly off the ground, so they no longer flicker against the terrain they are draped on.
+* [Fix] Mission map: "Draw all minimap lines" no longer overrides the individual Toolbox line toggles.
+* [Fix] Mouse fix: a bitmap was leaked on every cursor change, which could eventually degrade or break cursor rendering. A workaround for the symptom has also been added to [Troubleshooting](/docs/troubleshooting/).
+* [Fix] Game Settings: "Remember my online status" is honoured again, and the legacy Enter Mission button is restored when the party leader changes.
+* [Fix] Completion window: map-specific checks now resolve the map info for the map being asked about instead of the map you are standing in, and title progress can be checked against your primary profession only.
+* [Fix] Text to Speech: the API key field is wide enough to see what you pasted, and both the key and user id accept longer values without being truncated.
+* [Fix] Crash handler: C runtime failures are now routed through the crash handler, and dumps triggered by Guild Wars itself record the real exception code instead of a placeholder. Additional safety checks were added around `/rr`, quest removal, the party window and in-game-thread ImGui access, from reported crash dumps.
+* [Perf] Large in-world overlays are substantially cheaper: navmesh point location is indexed instead of scanned, and path re-anchoring is throttled.
+* [Perf] The Objective Timer no longer saves and restores the full Direct3D state every frame while idle, which was a significant framerate cost in dungeons and missions.
+* [Perf] The Friend List, the Settings window's section lists, ImGui's window clamping and a number of hot container lookups no longer redo their work every frame.
+* [Minor] Weather: automatic weather is now off by default (the module is still available and can be enabled), and climate chances are shown as percentages.
+* [Minor] Settings search: only settings the Settings window actually draws are offered, and the pet/hero auto-flag entry's search label matches its checkbox.
+* [Minor] Alcohol widget: recognises Juniberry Gin, Vabbian Wine and Zehtuka's Jug, and no longer counts Battle Isle Iced Tea as alcohol.
+* [Minor] Launcher: the Linux guide URL in the error dialog is clickable, the Defender failure dialog has a "don't ask again" checkbox, and the star request dialog has an "I've already starred" option.
 
 ## Version 8.32
 * [Perf] In-world overlays that drape on the ground — quest paths, Skill Range Rings, Loot Beacons, Danger Rings and Weather — now read the terrain height straight from the game's heightfield instead of asking the game to recalculate it once per vertex every frame. Large overlays that used to drag the framerate down are now a fraction of the cost.

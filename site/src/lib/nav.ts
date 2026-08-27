@@ -41,7 +41,6 @@ export const navGroups: NavGroup[] = [
       { slug: 'armory_window', label: 'Armory' },
       { slug: 'duping_window', label: 'Duping' },
       { slug: 'account_inventory', label: 'Account Inventory' },
-      { slug: 'playstyle_restrictions', label: 'Playstyle Restrictions' },
     ],
   },
   {
