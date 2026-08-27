@@ -20,6 +20,11 @@ and is hidden everywhere else.
 * **Toolbox minimap lines** — any custom lines, circles, or polygons you have
   drawn on the [Minimap](/docs/minimap/) are projected onto the world map so
   you can see your run plans in context.
+* **Show portals** — marks the travel portals of every map you have visited on
+  the current continent. Hover a portal for its details (including the portal
+  it links to on the other side, once you have visited that map too). Portal
+  positions are collected as you enter maps and saved between sessions, so the
+  map fills in the more you play.
 * **Quest markers for all quests** — by default Guild Wars only shows the
   marker for your active quest. With this option every quest in your log gets
   its goal pinned to the world map, decoded and color-coded.

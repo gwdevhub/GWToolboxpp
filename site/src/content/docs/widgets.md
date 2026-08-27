@@ -76,7 +76,7 @@ This widget will not appear unless you are in an vanquishable area and in Hard M
 The [vanquish overlay](/docs/vanquish_overlay/) paints fog of war, enemy markers, and a compass-range circle on top of the in-game mission map to help you finish Hard Mode vanquishes.
 
 ## World Map
-The [world map widget](/docs/world_map/) overlays quest markers, elite capture locations, and toolbox minimap lines on the in-game world map, and adds right-click shortcuts for travel and the wiki.
+The [world map widget](/docs/world_map/) overlays quest markers, elite capture locations, travel portals, and toolbox minimap lines on the in-game world map, and adds right-click shortcuts for travel and the wiki.
 
 ## Alcohol
 When in an explorable area, the alcohol monitor displays a timer of how long before the drunkenness effect wears off.

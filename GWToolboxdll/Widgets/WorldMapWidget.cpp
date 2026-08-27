@@ -797,13 +797,18 @@ namespace {
     bool DrawPortalOnWorldMap(const MapPortal& portal)
     {
         if (!world_map_context) return false;
-        if (!(quest_icon_texture && *quest_icon_texture)) return false;
+        // The dedicated portal icon isn't always in the dat cache yet; fall back to the quest marker.
+        const auto texture = portal_icon_texture && *portal_icon_texture ? portal_icon_texture : quest_icon_texture;
+        if (!(texture && *texture)) return false;
 
         auto& pos = portal.world_pos;
         const auto viewport_pos = CalculateViewportPos(pos, world_map_context->top_left);
         const ImRect icon_rect = {{viewport_pos.x - quest_icon_size_half, viewport_pos.y - quest_icon_size_half}, {viewport_pos.x + quest_icon_size_half, viewport_pos.y + quest_icon_size_half}};
 
-        draw_list->AddImage(*quest_icon_texture, icon_rect.Min, icon_rect.Max);
+        // Cull off-screen portals rather than paying for a quad per portal per frame.
+        if (!icon_rect.Overlaps({draw_list->GetClipRectMin(), draw_list->GetClipRectMax()})) return false;
+
+        draw_list->AddImage(*texture, icon_rect.Min, icon_rect.Max);
 
         return icon_rect.Contains(ImGui::GetMousePos());
     }
@@ -989,6 +994,10 @@ void WorldMapWidget::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
                 uint32_t map_id = 0;
                 uint32_t continent = 0;
                 if (!(ss >> continent >> info.map_file_id >> info.world_pos_start.x >> info.world_pos_start.y >> info.world_pos_end.x >> info.world_pos_end.y >> portal_count >> map_id)) continue;
+                // Older builds wrote this file with a mismatched field order; drop entries that can't be valid
+                // rather than littering the world map with portals at nonsense positions.
+                if (continent > static_cast<uint32_t>(GW::Continent::RealmOfTorment)) continue;
+                if (!map_id || map_id >= static_cast<uint32_t>(GW::Constants::MapID::Count)) continue;
                 info.map_id = static_cast<GW::Constants::MapID>(map_id);
                 info.continent = static_cast<GW::Continent>(continent);
                 info.portals.reserve(portal_count);
@@ -1036,8 +1045,9 @@ void WorldMapWidget::SaveSettings(SettingsDoc& doc)
     std::ofstream out(map_info_by_file_id_file);
     if (!out.is_open()) return;
     for (const auto& [file_id, info] : map_info_by_file_id) {
-        out << "MAP " << static_cast<uint32_t>(info.map_id) << info.map_file_id << " " << info.world_pos_start.x << " " << info.world_pos_start.y << " " << info.world_pos_end.x << " " << info.world_pos_end.y << " " << info.portals.size() << " "
-            << static_cast<uint32_t>(info.map_id) << "\n";
+        // Field order must match the reader in LoadSettings: continent, file id, bounds, portal count, map id.
+        out << "MAP " << static_cast<uint32_t>(info.continent) << " " << info.map_file_id << " " << info.world_pos_start.x << " " << info.world_pos_start.y << " " << info.world_pos_end.x << " " << info.world_pos_end.y << " "
+            << info.portals.size() << " " << static_cast<uint32_t>(info.map_id) << "\n";
         for (const auto& portal : info.portals) {
             out << "PORTAL " << portal.map_file_id << " " << portal.prop_index << " " << portal.world_pos.x << " " << portal.world_pos.y << "\n";
         }
@@ -1098,6 +1108,10 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
             }
         }
         ImGui::Checkbox("Show toolbox minimap lines", &settings.show_lines_on_world_map);
+        ImGui::Checkbox("Show portals", &settings.show_portals_on_world_map);
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("Show map portals for areas you've visited.\nHover a portal for its details, right click for its context menu.");
+        }
         if (ImGui::Checkbox("Show quest markers for all quests", &settings.showing_all_quests)) {
             QuestModule::FetchMissingQuestInfo();
         }
@@ -1166,18 +1180,20 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
         controls_window_rect = window->Rect();
         controls_window_rect.Translate(mouse_offset);
     }
-    hovered_map_portal = 0;
-#if 0
-    DrawAreaOverlays();
-    const auto current_map_info = GW::Map::GetMapInfo();
-    for (auto& [_, map_info] : map_info_by_file_id) {
-        if (!(current_map_info && map_info.continent == current_map_info->continent)) continue;
-        for (auto& portal : map_info.portals) {
-            if (DrawPortalOnWorldMap(portal)) {
-                hovered_map_portal = &portal;
+    hovered_map_portal = nullptr;
+    if (settings.show_portals_on_world_map) {
+        for (auto& [_, map_info] : map_info_by_file_id) {
+            // Only the continent currently shown on the world map, not the one the player is standing on.
+            if (map_info.continent != world_map_context->continent) continue;
+            for (auto& portal : map_info.portals) {
+                if (DrawPortalOnWorldMap(portal)) {
+                    hovered_map_portal = &portal;
+                }
             }
         }
     }
+#if 0
+    DrawAreaOverlays();
     DrawLockedAreaHighlights();
 #endif
 

@@ -35,6 +35,7 @@ public:
         bool showing_all_outposts = false;
         bool highlight_locked_areas = false;
         bool show_lines_on_world_map = false;
+        bool show_portals_on_world_map = false;
         bool showing_all_quests = true;
         bool apply_quest_colors = false;
         Colors::SettingColor locked_area_highlight_color = IM_COL32(255, 160, 0, 96);
