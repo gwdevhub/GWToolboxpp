@@ -1222,16 +1222,12 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
         ImGui::SetTooltip([&]() {
             if (settings.color_elite_icons_by_profession) {
                 const auto skill = GW::SkillbarMgr::GetSkillConstantData(hovered_boss->skill_id);
-                const auto prof_idx = skill ? static_cast<uint32_t>(skill->profession) : 0u;
-                if (prof_idx) {
-                    const auto pc = AgentRenderer::Instance().GetProfessionColor(prof_idx);
-                    if (pc) {
-                        const auto prof_name = ToolboxUtils::GetProfessionName(static_cast<GW::Constants::Profession>(prof_idx));
-                        if (prof_name && !prof_name->string().empty()) {
-                            ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(pc), "%s", prof_name->string().c_str());
-                            ImGui::Separator();
-                        }
-                    }
+                const auto prof_img = skill ? Resources::GetProfessionIcon(static_cast<GW::Constants::Profession>(skill->profession)) : 0;
+
+                const auto sz = ImGui::CalcTextSize("").y * 1.5f;
+                if (prof_img && *prof_img) {
+                    ImGui::Image(*prof_img, {sz, sz});
+                    ImGui::SameLine();
                 }
             }
             ImGui::TextUnformatted(BossInfo(hovered_boss).c_str());
@@ -1241,6 +1237,7 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
         ImGui::SetTooltip([]() {
             if (hovered_map_portal) DrawMapPortalInfo(hovered_map_portal);
         });
+        
     }
 
     if (settings.show_lines_on_world_map) {
