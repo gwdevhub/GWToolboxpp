@@ -38,6 +38,7 @@ the latest version, go to the [Home Page](./) instead.
 * [Minor] Settings search: only settings the Settings window actually draws are offered, and the pet/hero auto-flag entry's search label matches its checkbox.
 * [Minor] Alcohol widget: recognises Juniberry Gin, Vabbian Wine and Zehtuka's Jug, and no longer counts Battle Isle Iced Tea as alcohol.
 * [Minor] Launcher: the Linux guide URL in the error dialog is clickable, the Defender failure dialog has a "don't ask again" checkbox, and the star request dialog has an "I've already starred" option.
+* [Minor] The [Flag Hero hotkey](/docs/hotkeys/#flag-hero) is properly documented: its Degree/Distance/Hero fields, the fact that the angle is measured from the you-to-target line when you have a target (and from your facing direction otherwise), that pressing the hotkey again unflags, and how to build hero formations out of a handful of them.
 
 ## Version 8.32
 * [Perf] In-world overlays that drape on the ground — quest paths, Skill Range Rings, Loot Beacons, Danger Rings and Weather — now read the terrain height straight from the game's heightfield instead of asking the game to recalculate it once per vertex every frame. Large overlays that used to drag the framerate down are now a fraction of the cost.
