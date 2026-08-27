@@ -225,7 +225,7 @@ namespace {
             syntax_err();
             return;
         }
-        if (skill_id >= std::to_underlying(GW::Constants::SkillID::Count)) {
+        if (skill_id >= GW::SkillbarMgr::GetSkillCount()) {
             Log::WarningW(L"%d: is not a valid skill id", skill_id);
             syntax_err();
             return;

@@ -180,7 +180,7 @@ void SkillListingWindow::ExportHiResIconsAsDDS() const
 void SkillListingWindow::Initialize()
 {
     ToolboxWindow::Initialize();
-    skills.resize(static_cast<size_t>(GW::Constants::SkillID::Count), nullptr);
+    skills.resize(GW::SkillbarMgr::GetSkillCount(), nullptr);
     for (size_t i = 0; i < skills.size(); i++) {
         GW::Skill* s = GW::SkillbarMgr::GetSkillConstantData(static_cast<GW::Constants::SkillID>(i));
         if (!s || s->skill_id == static_cast<GW::Constants::SkillID>(0)) {

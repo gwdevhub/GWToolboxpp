@@ -20,6 +20,7 @@
 #include <Windows/Pathfinding/Pathing.h>
 #include <Windows/Pathfinding/PathfindingWindow.h>
 #include <Windows/Pathfinding/PathingMapDataLoader.h>
+#include <Utils/ToolboxUtils.h>
 
 // Per continent, standable tiles and the tiles they credit, as the .bin files make_header.py consumes.
 namespace Carto {

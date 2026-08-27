@@ -273,7 +273,7 @@ namespace {
             return;
         if (skill_names_by_id.empty()) {
             std::map<uint32_t, GuiUtils::EncString*> skill_ids_by_name_id;
-            for (size_t i = 0; i < (size_t)GW::Constants::SkillID::Count; i++) {
+            for (size_t i = 0, cnt = GW::SkillbarMgr::GetSkillCount(); i < cnt; i++) {
                 const auto skill_data = GW::SkillbarMgr::GetSkillConstantData((GW::Constants::SkillID)i);
                 if (!(skill_data && skill_data->name && skill_ids_by_name_id.find(skill_data->name) == skill_ids_by_name_id.end()))
                     continue;

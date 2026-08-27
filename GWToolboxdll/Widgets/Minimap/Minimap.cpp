@@ -882,7 +882,7 @@ void Minimap::OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessage msgid,
         } break;
         case GW::UI::UIMessage::kSkillActivated: {
             const auto packet = static_cast<GW::UI::UIPacket::kAgentSkillPacket*>(wParam);
-            ASSERT(packet && packet->skill_id < GW::Constants::SkillID::Count && packet->agent_id);
+            ASSERT(packet && (uint32_t)packet->skill_id < GW::SkillbarMgr::GetSkillCount() && packet->agent_id);
             if (packet->agent_id == GW::Agents::GetControlledCharacterId()) {
                 if (packet->skill_id == GW::Constants::SkillID::Shadow_of_Haste || packet->skill_id == GW::Constants::SkillID::Shadow_Walk) {
                     shadowstep_location = GW::Agents::GetControlledCharacter()->pos;

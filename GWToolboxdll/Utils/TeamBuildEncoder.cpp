@@ -349,7 +349,7 @@ namespace TeamBuildEncoder {
             return -1;
         };
 
-        for (size_t i = 1; i < static_cast<size_t>(SkillID::Count); i++) {
+        for (size_t i = 1, cnt = GW::SkillbarMgr::GetSkillCount(); i < cnt; i++) {
             const auto skill_id = static_cast<SkillID>(i);
             const auto* skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
             if (!skill || !skill->IsPlayable() || skill->IsPvP()) continue;

@@ -67,7 +67,7 @@ namespace GW {
         GWCA_API Skill* GetSkillConstantData(Constants::SkillID skill_id);
 
         // Number of entries in the client's skill constant data array; can exceed Constants::SkillID::Count when GW adds skills.
-        GWCA_API uint32_t GetSkillConstantDataCount();
+        GWCA_API uint32_t GetSkillCount();
 
         // Name/Description/Profession etc for an attribute by id
         GWCA_API AttributeInfo* GetAttributeConstantData(Constants::Attribute attribute_id);
