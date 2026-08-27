@@ -2654,7 +2654,7 @@ bool InventoryItem::CanOfferToTrade() const
 
 bool InventoryItem::IsSalvagable(bool check_bag, bool check_blocked_from_being_salvaged) const
 {
-    if (item_formula == 0x5da) {
+    if (!GW::Items::GetItemFormula(this)) {
         return false;
     }
     if (IsUsable() || IsGreen()) {
