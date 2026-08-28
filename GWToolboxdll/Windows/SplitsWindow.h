@@ -147,6 +147,8 @@ private:
 
     GW::Constants::MapID  last_map_                 = GW::Constants::MapID::None;
     bool                  last_was_explorable_      = false;
+    // event-driven cache of the controlled character's level, reset to 0 on zone load so a character switch re-seeds
+    int                   player_level_             = 0;
     // Set by the InstanceLoadInfo bus event; consumed once per Update() tick.
     bool                  pending_map_enter_        = false;
     bool                  pending_came_from_explorable_ = false;
@@ -210,6 +212,7 @@ private:
     GW::HookEntry on_quest_update_;
     GW::HookEntry on_quest_details_changed_;
     GW::HookEntry on_quest_remove_;
+    GW::HookEntry on_agent_level_changed_;
 
     void SaveResumeState();
     void DeleteResumeState();

@@ -293,6 +293,8 @@ void SplitsWindow::Initialize()
             last_map_                     = static_cast<GW::Constants::MapID>(p->map_id);
             in_mission_queue_             = false;
             pending_map_enter_            = true;
+            // reset so a character switch re-seeds instead of inheriting the last character's level
+            player_level_                 = 0;
             if (NuzlockeDeathRulesEnabled()) nuzlocke_.OnInstanceLoad();
         });
 
@@ -341,6 +343,17 @@ void SplitsWindow::Initialize()
                     engine_.NotifyEvent(GoalTrigger::Type::MobKill, living->player_number);
             }
             PushDbgEvent("AgentDied", p->agent_id, p->state);
+        });
+
+    // GWCA has no name for this UI message yet — reverse-engineered as AgentLevelChanged (wparam = {uint32_t agent_id, uint32_t level}). Replaces polling GetControlledCharacter()->level every tick for ReachLevel.
+    GW::UI::RegisterUIMessageCallback(
+        &on_agent_level_changed_,
+        GW::UI::UIMessage::kMessage_0x10000014,
+        [this](GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*) {
+            struct AgentLevelChanged { uint32_t agent_id; uint32_t level; };
+            const auto* p = static_cast<AgentLevelChanged*>(wparam);
+            if (p->agent_id == GW::Agents::GetControlledCharacterId())
+                player_level_ = static_cast<int>(p->level);
         });
 
     // kQuestAdded fires on pickup, and again (re-announcing already-current log_state) as part of a full quest-log resync at zone transitions — not a live per-objective push. The IsCompleted() check here is a safety-net fallback (e.g. picked up already-complete); kQuestDetailsChanged below is the actual live "objective just finished" signal.
@@ -412,6 +425,7 @@ void SplitsWindow::Terminate()
     GW::UI::RemoveUIMessageCallback(&on_party_player_add_);
     GW::UI::RemoveUIMessageCallback(&on_party_player_remove_);
     GW::StoC::RemoveCallback<GW::Packet::StoC::AgentState>(&on_agent_state_);
+    GW::UI::RemoveUIMessageCallback(&on_agent_level_changed_);
     GW::UI::RemoveUIMessageCallback(&on_quest_update_);
     GW::UI::RemoveUIMessageCallback(&on_quest_details_changed_);
     GW::UI::RemoveUIMessageCallback(&on_quest_remove_);
@@ -1131,9 +1145,9 @@ void SplitsWindow::Update(float delta)
 
     const GW::Agent* controlled = GW::Agents::GetControlledCharacter();
     const GW::AgentLiving* controlled_living = controlled ? controlled->GetAsAgentLiving() : nullptr;
-    int player_level = 0;
-    if (controlled_living)
-        player_level = static_cast<int>(controlled_living->level);
+    // Falls back to a poll only until on_agent_level_changed_ seeds a real value — 0 never persists once a character exists (min level is 1).
+    if (player_level_ == 0 && controlled_living)
+        player_level_ = static_cast<int>(controlled_living->level);
 
     // Running: clock only ticks in explorable areas (no loading, no town time).
     if (is_running) {
@@ -1188,7 +1202,7 @@ void SplitsWindow::Update(float delta)
     // Synchronous last_was_explorable_, not the live-polled is_explorable above (see GoalEngine::Update's own comment).
     const int fired = engine_.Update(clock_, last_map_, fire_map_enter,
                                      came_from_explorable, last_was_explorable_,
-                                     player_level);
+                                     player_level_);
     // TEMPORARY diagnostic for the MissionComplete-not-firing investigation — see GoalEngine::debug_notes_.
     for (const auto& n : engine_.debug_notes_) PushDbgEvent(n.tag, n.v1, n.v2);
     engine_.debug_notes_.clear();
