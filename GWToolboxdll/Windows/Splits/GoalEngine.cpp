@@ -45,6 +45,7 @@ void GoalEngine::Reset()
     mission_bonus_map_      = GW::Constants::MapID::None;
     vanquish_complete_map_  = GW::Constants::MapID::None;
     pending_bonus_check_map_ = GW::Constants::MapID::None;
+    bonus_check_timer_      = 0.f;
     primary_obj_id_         = 0;
     pending_incomplete_rezone_ = false;
     pending_wrong_map_entered_ = false;
@@ -74,9 +75,12 @@ void GoalEngine::NotifyMissionComplete(GW::Constants::MapID map)
 
 // Reads CompletionWindow's data, not raw WorldContext — reading raw catches false positives right off kMissionComplete.
 // Delegates to CompletionWindow::IsAreaComplete rather than hand-indexing the mission/bonus bitsets: it already knows EotN has no bonus bit at all (has_bonus = campaign != EyeOfTheNorth), which the old inline version didn't account for.
-void GoalEngine::CheckPendingMissionBonus()
+void GoalEngine::CheckPendingMissionBonus(const float delta)
 {
     if (pending_bonus_check_map_ == GW::Constants::MapID::None) return;
+    bonus_check_timer_ += delta;
+    if (bonus_check_timer_ < 1.0f) return;
+    bonus_check_timer_ = 0.f;
     // Must match CompletionWindow's own lookup key (GetCharContext, not PlayerMgr::GetPlayerName) or this grabs the wrong character.
     const auto* char_context = GW::GetCharContext();
     if (!char_context) return;
@@ -115,7 +119,8 @@ int GoalEngine::Update(const GoalClock& clock,
                        bool just_entered_map,
                        bool came_from_explorable,
                        bool is_explorable,
-                       int  player_level)
+                       int  player_level,
+                       float delta)
 {
     if (!list_ || list_->goals.empty()) {
         prev_map_                = current_map;
@@ -196,7 +201,7 @@ int GoalEngine::Update(const GoalClock& clock,
     };
 
     if (started_) {
-        CheckPendingMissionBonus();
+        CheckPendingMissionBonus(delta);
 
         // Standing on the first goal's map before Start means it never gets a real transition edge, so treat this one tick as if it did.
         const bool effective_just_entered = just_entered_map || pending_run_start_;

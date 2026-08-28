@@ -250,7 +250,7 @@ void SplitsGoalListWindow::Draw(SplitsWindow& plugin)
     }
 
     // Manual/Running goals relay-start off the previous one, so this column never differs from it — SC's parallel start_trigger objectives (e.g. Deep rooms) are the only case where it can.
-    SplitsProfile profile = plugin.ActiveProfile();
+    const SplitsProfile& profile = plugin.ActiveProfile();
     const std::vector<double>& pb_real = plugin.CompareSplits();
     const std::vector<double>& pb_game = plugin.CompareSplitsGame();
     const auto nan = std::numeric_limits<double>::quiet_NaN();
