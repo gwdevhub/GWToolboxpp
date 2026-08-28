@@ -49,10 +49,15 @@ void WebSocketModule::EnableServer(const bool enable)
 {
     port_ = std::max(port_, 0);
     if (!enable) {
-        if (app_) {
-            app_->close();
-            delete app_;
-            app_ = nullptr;
+        uWS::App* app = app_.exchange(nullptr);
+        uWS::Loop* loop = loop_.exchange(nullptr);
+        if (app && loop) {
+            // close()/delete must run on the loop's own thread — defer() is uWS's documented
+            // thread-safe handoff. This is what lets run() return so the thread can be joined below.
+            loop->defer([app]() {
+                app->close();
+                delete app;
+            });
         }
         if (server_thread_) {
             ASSERT(server_thread_->joinable());
@@ -67,9 +72,11 @@ void WebSocketModule::EnableServer(const bool enable)
     EnableServer(false);
     const int port = port_;
     server_thread_ = new std::thread([this, port]() {
-        // The app needs to be created in the thread that handles the websocket connections.
-        app_ = new uWS::App();
-        app_->ws<int>(
+        // The app/loop need to be created in the thread that handles the websocket connections.
+        uWS::App* app = new uWS::App();
+        loop_ = uWS::Loop::get();
+        app_  = app;
+        app->ws<int>(
                  "/*",
                  {/* Settings */
                   .compression       = uWS::SHARED_COMPRESSOR,
@@ -94,14 +101,18 @@ void WebSocketModule::EnableServer(const bool enable)
 void WebSocketModule::Send(const std::string_view msg, const std::string_view context)
 {
     if (!context.empty()) last_command_ = std::string(context);
-    if (!app_) return;
-    // @Cleanup: same "should this send from a different thread" question OT's own version has always had — carried over as-is.
-    if (mode_ == Mode::LiveSplitOneJSON) {
-        const std::string command = "{\"command\": \"" + std::string(msg) + "\"}";
-        app_->publish("objective_events", command, uWS::OpCode::TEXT);
-    } else {
-        app_->publish("objective_events", msg, uWS::OpCode::TEXT);
-    }
+    uWS::App* app = app_;
+    uWS::Loop* loop = loop_;
+    if (!app || !loop) return;
+    // publish() isn't safe to call off the loop's own thread — defer() marshals it over rather
+    // than calling app->publish() directly here on the main/game thread (this used to race with
+    // server_thread_; same issue OT's own inline version has always had, now fixed here).
+    std::string payload = mode_ == Mode::LiveSplitOneJSON
+        ? "{\"command\": \"" + std::string(msg) + "\"}"
+        : std::string(msg);
+    loop->defer([app, payload = std::move(payload)]() {
+        app->publish("objective_events", payload, uWS::OpCode::TEXT);
+    });
 }
 
 void WebSocketModule::DrawSettings()

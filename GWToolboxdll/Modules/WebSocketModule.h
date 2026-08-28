@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <string>
 #include <string_view>
 #include <thread>
@@ -45,7 +46,11 @@ private:
     void DrawSettings(); // rendered inside Splits' settings section, see RegisterSettingsContent()
 
     std::thread* server_thread_ = nullptr;
-    uWS::App*    app_           = nullptr;
+    // app_/loop_ are written on server_thread_ at startup and read from the main thread (Send/DrawSettings/EnableServer)
+    // while the server thread is alive, so they're atomic; app_ methods themselves aren't thread-safe, so any actual
+    // call into the app (publish, close) must be marshalled onto loop_ via defer() rather than invoked directly.
+    std::atomic<uWS::App*>  app_  = nullptr;
+    std::atomic<uWS::Loop*> loop_ = nullptr;
     Mode         mode_          = Mode::None;
     int          port_          = 9002;
     std::string  last_command_; // shown in DrawSettings() so live testing can confirm sends are happening
