@@ -23,7 +23,8 @@ public:
                bool just_entered_map,
                bool came_from_explorable,
                bool is_explorable,
-               int  player_level);
+               int  player_level,
+               float delta);
 
     void TriggerManual(const GoalClock& clock);
 
@@ -56,7 +57,8 @@ public:
 
 private:
     void FireGoal(int index, const GoalClock& clock);
-    void CheckPendingMissionBonus();
+    // Throttled to once/second via bonus_check_timer_ — polls CompletionWindow (string/bitset scan), not free to run every tick for however long a bonus stays unearned.
+    void CheckPendingMissionBonus(float delta);
     // Completes any not-yet-completed goals before `index` per its auto_complete_previous.
     void CompletePreviousGoals(int index, const GoalClock& clock);
 
@@ -80,6 +82,7 @@ private:
     GW::Constants::MapID vanquish_complete_map_ = GW::Constants::MapID::None;
     // No timeout — a genuinely-unearned bonus just stays pending harmlessly for the rest of the run.
     GW::Constants::MapID pending_bonus_check_map_ = GW::Constants::MapID::None;
+    float                bonus_check_timer_        = 0.f; // accumulates delta; CheckPendingMissionBonus only polls once this hits 1s
     // Base/primary objective id (no BULLET bit); its ObjectiveDone sets both mission_complete_map_/mission_bonus_map_ via the real server map_id.
     uint32_t             primary_obj_id_        = 0;
     // See ConsumeIncompleteRezone().

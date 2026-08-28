@@ -1046,6 +1046,14 @@ void SplitsWindow::StartRun()
         return;
     }
 
+    if (running_load_paused_ || running_awaiting_movement_) {
+        // Mid-run: clock was auto-paused by leaving the explorable (running_load_paused_), or we're
+        // already armed waiting for movement in the next one (running_awaiting_movement_). Either way
+        // this isn't a fresh start — no-op rather than Attach()/Reset() wiping completed-goal progress.
+        // Update() resumes automatically once movement is detected in an explorable area.
+        return;
+    }
+
     // Fresh start.
     engine_.Attach(&active_list_);
     // Full refresh (not just the PB-only rescan SaveCompletedRun() does) so Average/Sum of Best pick up whatever run just finished, since the run about to start should compare against it.
@@ -1084,11 +1092,7 @@ void SplitsWindow::SwitchProfile(int idx)
 
     // Reset run state without clearing last_map_ — resetting it to None would trigger a spurious just_entered_map next tick, immediately re-loading presets.
     DeleteResumeState();
-    run_complete_       = false;
-    run_failed_         = false;
-    manually_paused_    = false;
-    manual_pause_accum_ = 0.0;
-    total_paused_real_  = 0.0;
+    ResetRunFlags();
     engine_.Detach();
     engine_.Reset();
     clock_.Reset();
@@ -1202,7 +1206,7 @@ void SplitsWindow::Update(float delta)
     // Synchronous last_was_explorable_, not the live-polled is_explorable above (see GoalEngine::Update's own comment).
     const int fired = engine_.Update(clock_, last_map_, fire_map_enter,
                                      came_from_explorable, last_was_explorable_,
-                                     player_level_);
+                                     player_level_, delta);
     // TEMPORARY diagnostic for the MissionComplete-not-firing investigation — see GoalEngine::debug_notes_.
     for (const auto& n : engine_.debug_notes_) PushDbgEvent(n.tag, n.v1, n.v2);
     engine_.debug_notes_.clear();
