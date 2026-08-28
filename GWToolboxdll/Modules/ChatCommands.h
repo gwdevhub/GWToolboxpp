@@ -69,6 +69,7 @@ private:
     static void CHAT_CMD_FUNC(CmdToggle);
     static void CHAT_CMD_FUNC(CmdCamera);
     static void CHAT_CMD_FUNC(CmdSCWiki);
+    static void CHAT_CMD_FUNC(CmdWiki);
     static void CHAT_CMD_FUNC(CmdLoad);
     static void CHAT_CMD_FUNC(CmdPingBuild);
     static void CHAT_CMD_FUNC(CmdResize);
