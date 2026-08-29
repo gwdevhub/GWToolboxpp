@@ -53,4 +53,7 @@ SessionIdentity MakeSessionIdentity(
 bool SamePersistentCharacter(const SessionIdentity& a, const SessionIdentity& b);
 bool SameAccount(const SessionIdentity& a, const SessionIdentity& b);
 
+// accountKey/characterUuid form; displayName is never identity.
+bool IsValidPersistentCharacterKey(std::string_view character_key);
+
 } // namespace QuestProgress

@@ -464,6 +464,42 @@ void QuestProgressService::SyncCharacterIntoAccountStore()
     }
 }
 
+std::optional<StoredCharacter> QuestProgressService::BuildExportCharacterSnapshot() const
+{
+    if (identity_.kind != IdentityKind::Persistent || identity_.character_key.empty()) {
+        return std::nullopt;
+    }
+    if (!IsValidPersistentCharacterKey(identity_.character_key)) {
+        return std::nullopt;
+    }
+
+    StoredCharacter out;
+    if (const auto* stored = FindCharacter(account_store_, identity_.character_key)) {
+        out = *stored;
+    }
+    out.character_key = identity_.character_key;
+    out.quests = character_.quests;
+    if (!character_.last_reduced_at.empty()) {
+        out.last_observed_at = character_.last_reduced_at;
+        if (out.first_observed_at.empty()) {
+            out.first_observed_at = character_.last_reduced_at;
+        }
+    }
+    if (!identity_.display_name.empty()) {
+        out.display_name = identity_.display_name;
+    }
+    else if (out.display_name.empty() && !character_.display_name.empty()) {
+        out.display_name = character_.display_name;
+    }
+    if (!identity_.profession.empty()) {
+        out.profession = identity_.profession;
+    }
+    if (identity_.is_pre_searing.has_value()) {
+        out.is_pre_searing = identity_.is_pre_searing;
+    }
+    return out;
+}
+
 void QuestProgressService::EnsureCharacterRecord()
 {
     if (identity_.kind != IdentityKind::Persistent) {

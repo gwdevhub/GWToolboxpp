@@ -114,4 +114,18 @@ bool SameAccount(const SessionIdentity& a, const SessionIdentity& b)
     return !a.account_key.empty() && a.account_key == b.account_key;
 }
 
+bool IsValidPersistentCharacterKey(std::string_view character_key)
+{
+    const auto slash = character_key.find('/');
+    if (slash == std::string_view::npos || slash == 0 || slash + 1 >= character_key.size()) {
+        return false;
+    }
+    const auto account = character_key.substr(0, slash);
+    const auto character = character_key.substr(slash + 1);
+    if (!IsValidNormalizedAccountKey(account) || !IsValidNormalizedAccountKey(character)) {
+        return false;
+    }
+    return character != "00000000-0000-0000-0000-000000000000";
+}
+
 } // namespace QuestProgress

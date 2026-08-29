@@ -1,15 +1,21 @@
 #include "stdafx.h"
 
 #include <Windows/QuestTrackerWindow.h>
+#include <Defines.h>
+#include <Modules/QuestProgressContractExporter.h>
 #include <Modules/QuestProgressLive.h>
 #include <Modules/Resources.h>
 
 #include <GWCA/Constants/Constants.h>
+#include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/QuestMgr.h>
 
 #include <Utils/FontLoader.h>
+
+#include <chrono>
+#include <fstream>
 
 namespace {
     constexpr ImU32 TEXT_COLOR_COMPLETED = 0xffbbbbbb;
@@ -227,6 +233,13 @@ void QuestTrackerWindow::Draw(IDirect3DDevice9*)
 
     SyncDecodeCache(*snap);
 
+    if (ImGui::Button("Export Contract v1")) {
+        ExportContractV1();
+    }
+    ImGui::SameLine();
+    ImGui::TextDisabled("(Codex import)");
+    ImGui::Separator();
+
     ImGui::TextUnformatted("Quest log");
     ImGui::Separator();
 
@@ -360,4 +373,79 @@ void QuestTrackerWindow::Draw(IDirect3DDevice9*)
     }
 
     ImGui::End();
+}
+
+void QuestTrackerWindow::ExportContractV1()
+{
+    if (progress_.identity().kind != QuestProgress::IdentityKind::Persistent
+        || progress_.identity().character_key.empty()) {
+        WriteChat(GW::Chat::CHANNEL_GLOBAL,
+            L"Quest Tracker: Contract export requires a logged-in character with a persistent identity");
+        return;
+    }
+
+    // Flush dirty progress before reading the in-memory account store.
+    progress_.Flush(false);
+
+    const auto character = progress_.BuildExportCharacterSnapshot();
+    if (!character) {
+        WriteChat(GW::Chat::CHANNEL_GLOBAL, L"Quest Tracker: Contract export failed (invalid character identity)");
+        return;
+    }
+
+    QuestProgress::AccountProgressStore export_store;
+    export_store.account_key = progress_.account_store().account_key;
+    export_store.store_format = QuestProgress::kStoreFormatId;
+    export_store.store_version = {QuestProgress::kStoreFormatMajor, QuestProgress::kStoreFormatMinor};
+    export_store.characters.emplace(character->character_key, *character);
+
+    QuestProgress::ContractExportOptions options;
+    options.exported_at_utc = QuestProgress::FormatCanonicalUtc(std::chrono::system_clock::now());
+    options.producer_version = GWTOOLBOXDLL_VERSION;
+    options.bound_character_key = character->character_key;
+
+    const auto exported = QuestProgress::ExportAccountStoreToContractV1(export_store, options);
+    if (exported.status != QuestProgress::ContractExportStatus::Ok) {
+        WriteChat(GW::Chat::CHANNEL_GLOBAL, L"Quest Tracker: Contract export failed");
+        return;
+    }
+
+    const auto folder = Resources::GetPath(L"QuestProgress");
+    Resources::EnsureFolderExists(folder);
+    const auto file_location = folder / L"quest_progress_contract_v1.json";
+
+    {
+        std::ofstream out(file_location, std::ios::binary | std::ios::trunc);
+        if (!out) {
+            WriteChat(GW::Chat::CHANNEL_GLOBAL, L"Quest Tracker: could not write Contract export file");
+            return;
+        }
+        out << exported.utf8_json;
+    }
+
+    wchar_t file_location_wc[512];
+    size_t msg_len = 0;
+    const auto message = file_location.wstring();
+    constexpr size_t max_len = _countof(file_location_wc) - 1;
+    for (size_t i = 0; i < message.length(); i++) {
+        if (!message[i]) {
+            break;
+        }
+        if (message[i] == L'\\') {
+            file_location_wc[msg_len++] = message[i];
+        }
+        if (msg_len >= max_len) {
+            break;
+        }
+        file_location_wc[msg_len++] = message[i];
+    }
+    file_location_wc[msg_len] = 0;
+    wchar_t chat_message[1024];
+    swprintf(
+        chat_message,
+        _countof(chat_message),
+        L"Quest progress Contract v1 exported to <a=1>\x200C%s</a> (%zu quests)",
+        file_location_wc,
+        exported.diagnostics.quests_exported);
+    WriteChat(GW::Chat::CHANNEL_GLOBAL, chat_message);
 }

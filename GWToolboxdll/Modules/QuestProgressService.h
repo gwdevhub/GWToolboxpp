@@ -143,6 +143,9 @@ public:
 
     bool Flush(bool session_boundary);
 
+    // Snapshot of the currently bound persistent character for Contract export (identity-scoped).
+    std::optional<StoredCharacter> BuildExportCharacterSnapshot() const;
+
     const SessionIdentity& identity() const { return identity_; }
     const CharacterProgress& character_progress() const { return character_; }
     const AccountProgressStore& account_store() const { return account_store_; }
