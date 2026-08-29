@@ -1423,15 +1423,8 @@ namespace {
         if (!pending_salvage_kit.item_id || !pending_salvage_item.item_id) {
             return false;
         }
-        const auto current_kit = pending_salvage_kit.item();
-        if (current_kit && current_kit->GetUses() == pending_salvage_kit.uses) {
-            return true;
-        }
         const auto current_item = pending_salvage_item.item();
-        if (current_item && current_item->quantity == pending_salvage_item.quantity) {
-            return true;
-        }
-        return false;
+        return current_item && current_item->quantity == pending_salvage_item.quantity;
     }
 
     void ContinueSalvage()
@@ -1552,15 +1545,8 @@ namespace {
         if (!pending_identify_kit.item_id || !pending_identify_item.item_id) {
             return false;
         }
-        const auto current_kit = pending_identify_kit.item();
-        if (current_kit && current_kit->GetUses() == pending_identify_kit.uses) {
-            return true;
-        }
         const auto current_item = pending_identify_item.item();
-        if (current_item && !current_item->GetIsIdentified()) {
-            return true;
-        }
-        return false;
+        return current_item && !current_item->GetIsIdentified();
     }
 
 } // namespace
@@ -2753,4 +2739,3 @@ bool PendingTransaction::selling()
 {
     return type == GW::Merchant::TransactionType::MerchantSell || type == GW::Merchant::TransactionType::TraderSell;
 }
-
