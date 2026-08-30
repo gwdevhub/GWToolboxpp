@@ -16,6 +16,7 @@
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 
+#include <GWToolbox.h>
 #include <ImGuiAddons.h>
 #include <Logger.h>
 #include <Timer.h>
@@ -28,6 +29,7 @@
 #include <Widgets/CartographerInternal.h>
 #include <Widgets/CartographerWidget.h>
 #include <Widgets/MissionMapWidget.h>
+#include <Widgets/VanquishMapOverlayWidget.h>
 #include <Widgets/WorldMapWidget.h>
 #include <Windows/TravelWindow.h>
 #include <Windows/Pathfinding/Pathing.h>
@@ -1983,14 +1985,17 @@ void CartographerWidget::DrawWorldMapOptions()
 
 void CartographerWidget::Draw(IDirect3DDevice9*)
 {
-    // Toggle on the mission map, so the helper can be turned on mid-run without opening settings.
     if (!MissionMapWidget::IsRenderReady()) return;
     const auto top_left = MissionMapWidget::GetTopLeft();
     const auto bottom_right = MissionMapWidget::GetBottomRight();
 
     constexpr float padding = 4.f;
     const float button_size = ImGui::GetTextLineHeight() + padding * 2;
-    ImGui::SetNextWindowPos({top_left.x + padding + button_size + padding, bottom_right.y - button_size - padding});
+    auto button_pos = ImVec2{top_left.x + padding + button_size + padding, bottom_right.y - button_size - padding};
+    if (GWToolbox::IsModuleEnabled(&VanquishMapOverlayWidget::Instance())) {
+        button_pos = {top_left.x + padding, bottom_right.y - button_size * 2 - padding * 2};
+    }
+    ImGui::SetNextWindowPos(button_pos);
     ImGui::SetNextWindowSize({0, 0});
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, {2, 2});
     ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, {0, 0});
@@ -2183,4 +2188,3 @@ void CartographerWidget::GetStatus(char* buf, const size_t len)
              static_cast<unsigned>(probe->skipped.size()), static_cast<unsigned>(probe->cells.size()),
              static_cast<unsigned>(declined_cells.size()), static_cast<unsigned>(custom_points.size()), map_fog_cells, marker_placed);
 }
-
