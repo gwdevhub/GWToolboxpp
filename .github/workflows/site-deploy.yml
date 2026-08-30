@@ -27,6 +27,11 @@ concurrency:
 
 jobs:
   build:
+    # The site / GitHub Pages deploy is upstream-only. This fork doesn't publish a
+    # site, and it has no Pages environment, so both jobs are pinned to the
+    # upstream repo and simply skip everywhere else (also turn Settings > Pages >
+    # Source to "None" on the fork).
+    if: github.repository == 'gwdevhub/GWToolboxpp'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -50,6 +55,7 @@ jobs:
 
   deploy:
     needs: build
+    if: github.repository == 'gwdevhub/GWToolboxpp'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
