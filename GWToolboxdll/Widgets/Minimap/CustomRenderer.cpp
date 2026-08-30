@@ -75,7 +75,6 @@ void CustomRenderer::RegisterSettings(ToolboxModule* module)
 
 void CustomRenderer::LoadMarkers()
 {
-    // clear current markers
     lines.clear();
     markers.clear();
     polygons.clear();
@@ -1006,17 +1005,14 @@ void CustomRenderer::DrawCustomMarkers(IDirect3DDevice9* device)
         return;
     }
 
-    // Custom polygons
     for (CustomPolygon& polygon : polygons) {
         polygon.Render(device);
     }
 
-    // Custom markers
     for (CustomMarker& marker : markers) {
         marker.Render(device);
     }
 
-    // Hero flag circles
     hero_circles_.Update(color_hero_flags_, hero_flag_line_thickness_, gwinches_per_pixel_);
     if (GW::HeroFlagArray& flags = GW::GetGameContext()->world->hero_flags; flags.valid()) {
         for (const auto& flag : flags) {
@@ -1046,9 +1042,6 @@ void CustomRenderer::DrawCustomLines(const IDirect3DDevice9*)
         if (doa_outpost && !line->draw_everywhere) continue;
 
         if (line->world_coords) {
-            // Cross-map route tail stored in world-map coords; project into current-map game space
-            // so it renders on the compass (heads off toward the next map). WorldMapToGamePos is
-            // exact for the current map and continent-linear beyond it.
             GW::GamePos g1, g2;
             if (!WorldMapWidget::WorldMapToGamePos({line->p1.x, line->p1.y}, g1) || !WorldMapWidget::WorldMapToGamePos({line->p2.x, line->p2.y}, g2)) continue;
             vertices.push_back({g1.x, g1.y, 0.f, line->color});

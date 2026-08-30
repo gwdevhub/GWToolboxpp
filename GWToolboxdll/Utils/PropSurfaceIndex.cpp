@@ -19,24 +19,6 @@
 #include <Utils/PropSurfaceIndex.h>
 
 namespace {
-    // ---- Live-memory layout of a prop's collision model, decoded from Gw.exe FUN_0073b960 /
-    // FUN_00776b20 / FUN_007835d0 (prop-planes RE report; validated in-game by the harness `propverify`
-    // verb against QueryAltitude ground truth).
-    //
-    // RTL handle (what GWCA declares as RecObject* MapProp::interactive_model):
-    //   +0x00 object pointer (getObject's return), +0x08 accessKey tag; tag 0 passes untagged handles.
-    // 'mdl ' object: +0x08 ModelData*, +0x10..0x18 world translation, +0x1c..0x30 two rotation basis
-    //   vectors (only when flags +0xe4 bit 0x20000), +0x34 uniform scale (applied when != 1).
-    // ModelData: +0xac submodel count, +0xb0 handle array of 'mgrg' collision geometries.
-    // 'mgrg' object: +0x10 Mesh*. Mesh: +0x08 u16* indices, +0x10 index count, +0x18 vertex count,
-    //   +0x1c vertex base (model-space float3 at the start of each element), +0x54 vertex stride.
-    //
-    // NON-walkable props (railings, fences) have NO collision submodels; their only triangles are the
-    // RENDER records at ModelData +0xa0 (descriptor pointer array) / +0xa4 (count), one CPU-resident heap
-    // blob per record (loader FUN_00794020, consumer FUN_00779d00): 0x24-byte header {+0x04 LOD0 index
-    // count, +0x08 LOD1, +0x0c LOD2 (equal counts share the previous buffer), +0x10 vertex count, +0x14
-    // runtime vertex format (bit0 = float3 position at vertex offset 0, mandatory)}, payload at +0x24 =
-    // u16 index lists, then FVF-strided vertices. Stride tables from GrVertexFormatSize FUN_00687d30.
     constexpr uint32_t kTagMdl = 0x6d646c20;  // 'mdl '
     constexpr uint32_t kTagMgrg = 0x6772676d; // 'mgrg'
 

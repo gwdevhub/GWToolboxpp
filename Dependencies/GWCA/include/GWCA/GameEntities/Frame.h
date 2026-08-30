@@ -65,7 +65,8 @@ namespace GW {
         GWCA_API SortHandler_pt GetSortHandler();
         GWCA_API bool ClearItems();
         GWCA_API bool RemoveItem(uint32_t child_offset_id);
-        GWCA_API bool AddItem(uint32_t flags, uint32_t child_offset_id, GW::UI::UIInteractionCallback callback);
+        // Returns the frame_id of the added item's frame, or 0 on failure.
+        GWCA_API uint32_t AddItem(uint32_t flags, uint32_t child_offset_id, GW::UI::UIInteractionCallback callback);
         GWCA_API uint32_t GetItemFrameId(uint32_t child_offset_id);
         GWCA_API bool GetSelectedValue(uint32_t* selected_value);
 
@@ -89,13 +90,7 @@ namespace GW {
         FrameWithValue& operator=(const FrameWithValue&) = default;
         FrameWithValue& operator=(FrameWithValue&&) = default;
 
-        // Pure virtual: every concrete usage of this type is through one
-        // of its overriding subclasses below (ProgressBar, CheckboxFrame,
-        // DropdownFrame, SliderFrame all override both) — there was
-        // previously no definition anywhere in this codebase for a bare
-        // FrameWithValue's own GetValue/SetValue, which GCC's Itanium
-        // ABI (unlike MSVC's) requires in order to know where to emit a
-        // vtable for the class ("key function" rule).
+        // Pure virtual: GCC's Itanium ABI needs a key function to emit the vtable, and every concrete use is via an overriding subclass.
         virtual uint32_t GetValue() = 0;
         virtual bool SetValue(uint32_t value) = 0;
     };

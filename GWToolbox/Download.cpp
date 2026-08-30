@@ -10,6 +10,7 @@
 
 #include "Install.h"
 #include "Settings.h"
+#include "WasmInject.h"
 #include "WindowsDefender.h"
 
 namespace {
@@ -117,6 +118,78 @@ std::string GetDllRelease(const std::filesystem::path& dllpath)
     return {buffer};
 }
 
+// Extracts one STORED (uncompressed) entry from a zip by name; false if missing or compressed - package.py always writes manifest.json stored, so no DEFLATE implementation is needed here.
+static bool ReadStoredZipEntry(const std::filesystem::path& zip_path, const std::string_view entry_name, std::string& out)
+{
+    std::ifstream file(zip_path, std::ios::binary);
+    if (!file) return false;
+    const std::string data((std::istreambuf_iterator(file)), std::istreambuf_iterator<char>());
+    if (data.size() < 22) return false;
+
+    const auto u16 = [&](const size_t off) -> uint16_t {
+        return static_cast<uint16_t>(static_cast<uint8_t>(data[off]) | (static_cast<uint16_t>(static_cast<uint8_t>(data[off + 1])) << 8));
+    };
+    const auto u32 = [&](const size_t off) -> uint32_t {
+        return static_cast<uint32_t>(static_cast<uint8_t>(data[off])) | (static_cast<uint32_t>(static_cast<uint8_t>(data[off + 1])) << 8) | (static_cast<uint32_t>(static_cast<uint8_t>(data[off + 2])) << 16) |
+               (static_cast<uint32_t>(static_cast<uint8_t>(data[off + 3])) << 24);
+    };
+
+    // End-of-central-directory record: scan back from EOF. package.py never writes a zip comment, so this is normally found on the first try.
+    size_t eocd = std::string::npos;
+    for (size_t i = data.size() - 22;; --i) {
+        if (u32(i) == 0x06054b50) {
+            eocd = i;
+            break;
+        }
+        if (i == 0) break;
+    }
+    if (eocd == std::string::npos) return false;
+
+    const uint16_t count = u16(eocd + 10);
+    size_t p = u32(eocd + 16);
+
+    for (uint16_t n = 0; n < count; n++) {
+        if (p + 46 > data.size() || u32(p) != 0x02014b50) return false;
+        const uint16_t method = u16(p + 10);
+        const uint32_t csize = u32(p + 20);
+        const uint16_t name_len = u16(p + 28);
+        const uint16_t extra_len = u16(p + 30);
+        const uint16_t comment_len = u16(p + 32);
+        const uint32_t lho = u32(p + 42);
+        if (p + 46 + name_len > data.size()) return false;
+
+        if (std::string_view(data.data() + p + 46, name_len) == entry_name) {
+            if (method != 0) return false; // compressed - see comment above
+            if (static_cast<size_t>(lho) + 30 > data.size()) return false;
+            const uint16_t l_name_len = u16(lho + 26);
+            const uint16_t l_extra_len = u16(lho + 28);
+            const size_t start = static_cast<size_t>(lho) + 30 + l_name_len + l_extra_len;
+            if (start + csize > data.size()) return false;
+            out.assign(data, start, csize);
+            return true;
+        }
+
+        p += 46 + name_len + extra_len + comment_len;
+    }
+    return false;
+}
+
+// See Download.h.
+struct GwmodManifestJson {
+    std::optional<std::string> version;
+};
+
+std::string GetGwmodVersion(const std::filesystem::path& gwmod_path)
+{
+    if (!std::filesystem::exists(gwmod_path)) return {};
+    std::string manifest_json;
+    if (!ReadStoredZipEntry(gwmod_path, "manifest.json", manifest_json)) return {};
+    GwmodManifestJson parsed;
+    constexpr glz::opts opts{.error_on_unknown_keys = false};
+    if (glz::read<opts>(parsed, manifest_json) != glz::error_code::none) return {};
+    return parsed.version.value_or("");
+}
+
 // Lowercase hex sha256 of a file, streamed so we don't hold the whole file in memory; empty on failure.
 static std::string Sha256Hex(const std::filesystem::path& path)
 {
@@ -210,6 +283,51 @@ static DllUpdateInfo FindDllUpdate(const std::vector<Release>& releases)
     return info;
 }
 
+// Compares the installed gwtoolbox.gwmod against the latest release (no download); asset_found stays false until a release ships a WASM_GWMOD_FILENAME_A asset.
+static GwmodUpdateInfo FindGwmodUpdate(const std::vector<Release>& releases)
+{
+    GwmodUpdateInfo info;
+
+    info.gwmod_path = GetInstallationDir();
+    if (info.gwmod_path.empty()) return info;
+    info.gwmod_path = info.gwmod_path.parent_path() / WASM_GWMOD_FILENAME;
+
+    const Release* release = nullptr;
+    const Asset* release_asset = nullptr;
+    for (const auto& candidate : releases) {
+        for (const auto& asset : candidate.assets) {
+            if (asset.name == WASM_GWMOD_FILENAME_A) {
+                release = &candidate;
+                release_asset = &asset;
+                break;
+            }
+        }
+        if (release_asset) break;
+    }
+    if (!release_asset) return info;
+    info.asset_found = true;
+
+    if (std::filesystem::exists(info.gwmod_path)) {
+        std::error_code ec;
+        const auto current_filesize = std::filesystem::file_size(info.gwmod_path, ec);
+        if (!ec && FileMatchesAsset(info.gwmod_path, *release_asset, current_filesize)) {
+            info.up_to_date = true;
+            return info;
+        }
+        const auto current_version = GetGwmodVersion(info.gwmod_path);
+        const auto available_version = std::regex_replace(release->tag_name, std::regex(R"([^0-9.])"), "");
+        if (!current_version.empty() && current_version.starts_with(available_version)) {
+            // NB: mirrors FindDllUpdate - keeps a locally-built beta from being overwritten by the release.
+            info.up_to_date = true;
+            return info;
+        }
+    }
+
+    info.asset = release_asset;
+    info.tag_name = release->tag_name;
+    return info;
+}
+
 // Scans releases newest-first for the most recent one shipping a GWToolbox.exe, then compares both the installed copy and the currently-running exe (if different) against it; doesn't download.
 static ExeUpdateInfo FindExeUpdate(const std::vector<Release>& releases)
 {
@@ -296,21 +414,25 @@ static bool ReplaceExeFile(const std::filesystem::path& exe_path, const std::str
     return true;
 }
 
-// Bodies of whichever releases are being applied, newest/most-relevant first, deduped when exe and dll share a tag.
-static std::string BuildChangelog(const std::vector<Release>& releases, const ExeUpdateInfo& exe_info, const DllUpdateInfo& dll_info)
+// Bodies of whichever releases are being applied, newest/most-relevant first, deduped when exe/dll/gwmod share a tag.
+static std::string BuildChangelog(const std::vector<Release>& releases, const ExeUpdateInfo& exe_info, const DllUpdateInfo& dll_info, const GwmodUpdateInfo& gwmod_info)
 {
     std::string changelog;
+    std::vector<std::string> appended;
     const auto append_body = [&](const std::string& tag_name) {
+        if (std::ranges::contains(appended, tag_name)) return;
         for (const auto& release : releases) {
             if (release.tag_name != tag_name) continue;
             if (!changelog.empty()) changelog += "\n\n----------\n\n";
             changelog += release.body.value_or("");
+            appended.push_back(tag_name);
             return;
         }
     };
 
     if (exe_info.asset) append_body(exe_info.tag_name);
-    if (dll_info.asset && !dll_info.up_to_date && dll_info.tag_name != exe_info.tag_name) append_body(dll_info.tag_name);
+    if (dll_info.asset && !dll_info.up_to_date) append_body(dll_info.tag_name);
+    if (gwmod_info.asset && !gwmod_info.up_to_date) append_body(gwmod_info.tag_name);
     return changelog;
 }
 
@@ -351,7 +473,7 @@ bool DownloadWindow::DownloadDll(const std::vector<Release>& releases, std::wstr
     DownloadWindow window;
     window.Create();
 
-    const std::string changelog = BuildChangelog(releases, {}, info);
+    const std::string changelog = BuildChangelog(releases, {}, info, {});
     window.SetChangelog(changelog.c_str(), changelog.size());
 
     std::string data;
@@ -366,16 +488,17 @@ bool DownloadWindow::DownloadDll(const std::vector<Release>& releases, std::wstr
     return true;
 }
 
-bool DownloadWindow::ApplyUpdates(const std::vector<Release>& releases, const ExeUpdateInfo& exe_info, const DllUpdateInfo& dll_info, std::wstring& error)
+bool DownloadWindow::ApplyUpdates(const std::vector<Release>& releases, const ExeUpdateInfo& exe_info, const DllUpdateInfo& dll_info, const GwmodUpdateInfo& gwmod_info, std::wstring& error)
 {
     const bool exe_available = exe_info.asset != nullptr;
     const bool dll_available = dll_info.asset != nullptr && !dll_info.up_to_date;
-    if (!exe_available && !dll_available) return true;
+    const bool gwmod_available = gwmod_info.asset != nullptr && !gwmod_info.up_to_date;
+    if (!exe_available && !dll_available && !gwmod_available) return true;
 
     DownloadWindow window;
     window.Create();
 
-    const std::string changelog = BuildChangelog(releases, exe_info, dll_info);
+    const std::string changelog = BuildChangelog(releases, exe_info, dll_info, gwmod_info);
     window.SetChangelog(changelog.c_str(), changelog.size());
 
     bool ok = true;
@@ -395,6 +518,17 @@ bool DownloadWindow::ApplyUpdates(const std::vector<Release>& releases, const Ex
         ok = DownloadAssetWithProgress(window, dll_info.asset->browser_download_url, dll_info.asset->size, data, error);
         if (ok && !WriteEntireFile(dll_info.dll_path.wstring().c_str(), data.c_str(), data.size())) {
             error = std::format(L"WriteEntireFile failed on '{}' with {} bytes", dll_info.dll_path.wstring(), data.size());
+            ok = false;
+        }
+    }
+
+    if (ok && gwmod_available) {
+        SetWindowTextW(window.m_hStatusLabel, L"Downloading gwtoolbox.gwmod...");
+        SendMessageW(window.m_hProgressBar, PBM_SETPOS, 0, 0);
+        std::string data;
+        ok = DownloadAssetWithProgress(window, gwmod_info.asset->browser_download_url, gwmod_info.asset->size, data, error);
+        if (ok && !WriteEntireFile(gwmod_info.gwmod_path.wstring().c_str(), data.c_str(), data.size())) {
+            error = std::format(L"WriteEntireFile failed on '{}' with {} bytes", gwmod_info.gwmod_path.wstring(), data.size());
             ok = false;
         }
     }
@@ -433,7 +567,10 @@ bool UpdateChecker::Poll()
     m_Completed = true;
     if (m_ReleasesFetch.IsSuccessful() && ParseReleases(m_ReleasesFetch.GetContent(), m_Releases)) {
         if (m_CheckExe) m_ExeInfo = FindExeUpdate(m_Releases);
-        if (m_CheckDll) m_DllInfo = FindDllUpdate(m_Releases);
+        if (m_CheckDll) {
+            m_DllInfo = FindDllUpdate(m_Releases);
+            m_GwmodInfo = FindGwmodUpdate(m_Releases); // no release ships one yet - see GwmodUpdateInfo
+        }
     }
     else {
         fprintf(stderr, "UpdateChecker: failed to fetch/parse releases\n");
@@ -456,10 +593,11 @@ bool UpdateChecker::ApplyUpdates(std::wstring& error)
         }
     }
 
-    if (!DownloadWindow::ApplyUpdates(m_Releases, m_ExeInfo, m_DllInfo, error)) return false;
+    if (!DownloadWindow::ApplyUpdates(m_Releases, m_ExeInfo, m_DllInfo, m_GwmodInfo, error)) return false;
 
     m_ExeInfo = {};
     m_DllInfo = {};
+    m_GwmodInfo = {};
     return true;
 }
 

@@ -120,6 +120,7 @@ namespace {
 
         using GetActionLabel_pt = wchar_t*(__cdecl*)(GW::UI::ControlAction action);
         const auto GetActionLabel_Func = reinterpret_cast<GetActionLabel_pt>(GW::Scanner::Find("\x83\xfe\x5b\x74\x27\x83\xfe\x5c\x74\x22\x83\xfe\x5d\x74\x1d", "xxxxxxxxxxxxxxx", -0x7));
+        DEBUG_ASSERT(GetActionLabel_Func);
         GWCA_INFO("[SCAN] GetActionLabel_Func = %p\n", reinterpret_cast<void*>(GetActionLabel_Func));
         if (!GetActionLabel_Func) {
             return;
@@ -136,8 +137,8 @@ namespace {
     bool IsFrameCreated(GW::UI::Frame* frame) {
         return frame && frame->IsCreated();
     }
-    
-    
+
+
     bool IsPlayerEquipmentReady()
     {
         const auto player = GW::Agents::GetControlledCharacter();
@@ -148,8 +149,8 @@ namespace {
     }
     bool IsMapReady()
     {
-        return GW::Map::GetIsMapLoaded() 
-            && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading 
+        return GW::Map::GetIsMapLoaded()
+            && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading
             && !GW::Map::GetIsObserving() && IsPlayerEquipmentReady()
             && IsFrameCreated(GW::UI::GetFrameByLabel(L"Skillbar"));
     }
@@ -166,7 +167,6 @@ namespace {
         }
     }
 
-    // Repopulates applicable_hotkeys based on current character/map context.
     // Used because its not necessary to check these vars on every keystroke, only when they change
     bool CheckSetValidHotkeys()
     {
@@ -207,7 +207,6 @@ namespace {
             return false;
         }
         bool is_in_controller_mode = GW::UI::IsInControllerMode();
-        // Check if the hotkey or any ancestor group has the trigger flag set.
         auto inherited_trigger = [&mt](const TBHotkey* hk) -> bool {
             for (const TBHotkey* cur = hk; cur; cur = cur->group) {
                 if (cur->trigger_on_explorable && mt == GW::Constants::InstanceType::Explorable) return true;
@@ -262,7 +261,6 @@ namespace {
         keysHeld.reset(); // Clear previous key states
         BYTE keyState[256];
 
-        // Get the current keyboard state
         if (GetKeyboardState(keyState)) {
             for (uint32_t vkey = 0; vkey < 256; ++vkey) {
                 // Check if the high-order bit is set (key is pressed)
@@ -298,7 +296,6 @@ namespace {
             hotkey_popup_first_draw = false;
         }
 
-        // Record any new key presses
         keys_selected |= wndproc_keys_held;
 
         std::string keys_held_buf = ModKeyName(keys_selected);
@@ -469,9 +466,6 @@ if (ImGui::Selectable("Equip Item")) {
             hotkeys_changed = new_hotkey != 0;
         }
 
-        // === each hotkey / group ===
-        // Groups are first-class items in `hotkeys`; HotkeyGroup::Draw handles its children.
-        // All moves at the top level are simple swaps — no rotation needed.
         for (auto hotkey : TBHotkey::top_level_hotkeys) {
             if (hotkey->Draw()) break; // re-render next frame after list mutation
         }
@@ -541,9 +535,6 @@ void HotkeysWindow::SaveSettings(SettingsDoc& doc)
     ToolboxWindow::SaveSettings(doc);
     doc.SetStruct(Name(), settings);
 
-    // Save all hotkeys as flat tagged entries. Every entry gets a sort_order field
-    // that determines display order on load. Children also get a group field
-    // containing their parent group's label.
     std::vector<HotkeyEntry> entries;
     entries.reserve(TBHotkey::all_hotkeys.size());
     ToolboxIni tmp_ini;
@@ -590,7 +581,8 @@ bool HotkeysWindow::WndProc(const UINT Message, const WPARAM wParam, LPARAM)
     size_t hotkeys_triggered = 0;
 
     auto check_triggers = [check_trigger, &hotkeys_triggered](bool is_key_up, uint32_t keyData) {
-        std::vector<TBHotkey*> matching_hotkeys;
+        static std::vector<TBHotkey*> matching_hotkeys;
+        matching_hotkeys.clear();
         size_t max_modifier_count = 0;
 
         bool is_in_controller_mode = GW::UI::IsInControllerMode();
@@ -599,17 +591,10 @@ bool HotkeysWindow::WndProc(const UINT Message, const WPARAM wParam, LPARAM)
         for (TBHotkey* hk : valid_hotkeys) {
             if (is_key_up) hk->pressed = false;
 
-            // A hotkey is considered "matching" if:
-            // - It hasn't already been triggered (`hk->pressed == false`)
-            // - It should trigger on key-up (if we're processing a key-up event)
-            // - All its required keys are currently held (`hk->key_combo & wndproc_keys_held == hk->key_combo`)
-            // - The key that was just pressed/released is part of this hotkey (`hk->key_combo.test(keyData)`)
             if (check_trigger(hk, is_key_up, keyData, is_in_controller_mode)) {
-                // Count how many keys (modifiers + main key) are required for this hotkey
                 size_t modifier_count = hk->key_combo.count();
                 matching_hotkeys.push_back(hk);
 
-                // Track the highest number of required keys (most specific hotkey)
                 max_modifier_count = std::max(max_modifier_count, modifier_count);
             }
         }
@@ -621,7 +606,6 @@ bool HotkeysWindow::WndProc(const UINT Message, const WPARAM wParam, LPARAM)
             if (hk->key_combo.count() == max_modifier_count) {
                 PushPendingHotkey(hk);
 
-                // If this hotkey is set to block Guild Wars input, mark it as triggered
                 if (!is_key_up && hk->block_gw) {
                     triggered = true;
                 }
@@ -677,7 +661,11 @@ void HotkeysWindow::Update(const float)
         return;
     }
     if (!map_change_triggered) {
-        map_change_triggered = OnMapChanged();
+        static clock_t last_map_check = 0;
+        if (!last_map_check || TIMER_DIFF(last_map_check) > 500) {
+            last_map_check = TIMER_INIT();
+            map_change_triggered = OnMapChanged();
+        }
     }
     for (auto hotkey : TBHotkey::all_hotkeys) {
         if (hotkey->ongoing) hotkey->Execute();

@@ -49,10 +49,6 @@ namespace weather_module {
     constexpr int kDecalAuto = -1;     // not set: derive from type (rain -> splash, snow -> settle)
     constexpr float kDriftAuto = -1.f; // drift not set: derive from type (snow floats sideways, rain does not)
 
-    // Optional cloud-cover layer on a condition: soft puffs filling a height band ABOVE THE PLAYER (player-relative,
-    // so it follows you and is occluded by terrain via the depth test), drifting horizontally. Active when top > base.
-    // This is what makes overhead rain clouds, ground fog, a low blowing sandstorm, etc. - composable with the
-    // falling particles above (e.g. a blizzard is heavy snow + a fog band).
     struct CloudCover {
         float base = 0.f;                // bottom of the band, gwinch above the player
         float top = 0.f;                 // top of the band; the layer is active only when top > base
@@ -103,9 +99,6 @@ namespace weather_module {
         None
     };
 
-    // Automatic weather, defined separately from the conditions themselves: within a climate, a reference to one
-    // condition (by name) and how likely it is to be chosen. The leftover probability across a climate's entries
-    // is "clear" (no weather). Both are plain aggregates so glaze reflects them as the conditions list does.
     struct ClimateWeather {
         std::string condition; // name of a WeatherCondition
         float weight = 0.3f;   // 0..1 probability this condition is picked for the climate on each weather roll
@@ -218,19 +211,16 @@ namespace {
     }
     std::vector<WeatherCondition> conditions = DefaultConditions();
 
-    // Default climate->weather table, referencing the default condition names above. Leftover probability per
-    // climate is clear weather. Arid and Desertous are omitted on purpose: dry by default, but offered in the
-    // picker to edit.
     std::vector<ClimateProfile> DefaultClimateProfiles()
     {
         const auto p = [](const Climate c, std::vector<ClimateWeather> e) { return ClimateProfile{c, std::move(e)}; };
         return {
-            p(Climate::Temperate, {{"Light Rain", 0.1f}, {"Heavy Rain", 0.05f}, {"Fog", 0.02f}}),
-            p(Climate::Tropical, {{"Heavy Rain", 0.2f}, {"Light Rain", 0.1f}, {"Fog", 0.05f}}),
-            p(Climate::Arid, {{"Light Rain", 0.1f}}),
-            p(Climate::Desertous, {{"Light Rain", 0.05f}, {"Sandstorm", 0.15f}}),
-            p(Climate::Mountainous, {{"Snow", 0.4f}, {"Blizzard", 0.15f}}),
-            p(Climate::Volcanic, {{"Ashfall", 0.4f}, {"Fog", 0.05f}}),
+            p(Climate::Temperate, {{"Light Rain", 0.01f}, {"Heavy Rain", 0.005f}, {"Fog", 0.002f}}),
+            p(Climate::Tropical, {{"Heavy Rain", 0.02f}, {"Light Rain", 0.01f}, {"Fog", 0.005f}}),
+            p(Climate::Arid, {{"Light Rain", 0.01f}}),
+            p(Climate::Desertous, {{"Light Rain", 0.005f}, {"Sandstorm", 0.015f}}),
+            p(Climate::Mountainous, {{"Snow", 0.04f}, {"Blizzard", 0.015f}}),
+            p(Climate::Volcanic, {{"Ashfall", 0.04f}, {"Fog", 0.005f}}),
         };
     }
     std::vector<ClimateProfile> climate_profiles = DefaultClimateProfiles();
@@ -243,7 +233,7 @@ namespace {
     float ambient_strength = 0.f;             // eased aggregate dimming of active conditions (runtime, not saved)
     float weather_intensity = 0.f;            // eased 0..1 cross-fade of the shown condition (runtime): 1 = full, 0 = faded out
 
-    bool auto_weather = true;    // drive which conditions are active from the climate->weather table
+    bool auto_weather = false;    // drive which conditions are active from the climate->weather table
     float auto_change_min = 2.f; // minutes between automatic weather rolls (random in [min, max])
     float auto_change_max = 5.f;
     Climate auto_climate = Climate::Temperate; // climate the current automatic weather was last rolled for (runtime)
@@ -274,7 +264,6 @@ namespace {
         return false;
     }
 
-    // Climate for a specific map.
     Climate ClimateForMap(const GW::Constants::MapID map_id)
     {
         // @Enhancement: We could handle edge case maps by inspecting textures used by the DAT file matching the map and counting stuff like sand, snow etc, but thats overkill atm.
@@ -346,9 +335,6 @@ namespace {
         std::vector<CloudPuff> clouds; // cloud-cover layer puffs (separate from the falling particles)
         float sound_timer = -1.f;      // seconds until the next sound; <0 = not yet scheduled
     };
-    // Only one condition runs at a time (enforced at every toggle point), so a single live particle set suffices
-    // instead of one per condition - a large memory saving at high drop counts. active_condition is the index
-    // currently driving it, -1 = clear.
     Particles active_particles;
     int active_condition = -1;
     float active_wind_dir = 0.f; // wind heading (degrees) rolled across the full circle when the condition activated
@@ -356,9 +342,6 @@ namespace {
                                  // slow-falling condition (which rarely reseeds its top) still tracks the player's height
     bool reset_requested = false;     // set by WeatherModule::Reset(); consumed on the next update
 
-    // GPU-instanced record: one per drop - just the world centre + an alpha, expanded to a quad by
-    // weather_instanced_vs. The billboard axes and the tint are per-draw shader constants (only one condition is
-    // active at a time, so a draw's particles share them); the per-instance alpha varies (1 for flakes, fade for settle).
     struct WeatherInstance {
         float cx, cy, cz;
         float alpha; // per-instance alpha multiplier on the tint constant
@@ -429,9 +412,6 @@ namespace {
         }
     }
 
-    // Unit fall direction: straight down (world up is -z, so +z) tilted tilt_deg from vertical toward the dir_deg
-    // heading. Velocity is this scaled by fall_speed, so wind only sets direction. dir_deg is the per-activation
-    // roll within the condition's [wind_dir_min, wind_dir_max] range.
     void WindDir(const float dir_deg, const float tilt_deg, float out[3])
     {
         constexpr float kDeg2Rad = 0.01745329f;
@@ -512,9 +492,6 @@ namespace {
         p.sound_timer = frand(c.sound_min_interval, c.sound_max_interval);
     }
 
-    // Pick one condition (or clear) for the region from its profile, weighted by each entry's probability, and
-    // set exactly that condition active. Probability left over beyond the entries' sum is clear weather; if the
-    // entries sum past 1 they are normalised among themselves (no clear).
     void RerollAutoWeather(const Climate climate)
     {
         const ClimateProfile* prof = nullptr;
@@ -567,10 +544,6 @@ namespace {
         return std::max(1, static_cast<int>(std::ceil(std::sqrt(static_cast<float>(std::max(1, count))))));
     }
 
-    // The terrain a drop will land on: project its fall from (x, y, top) along the wind to where it reaches the
-    // ground, so the recycle floor matches the actual landing point DOWNWIND rather than the spawn column. With
-    // wind tilt a drop drifts sideways as it falls, so on a slope the spawn ground is the wrong height to land at.
-    // Near-horizontal weather (vz ~ 0) barely descends and just streams, so it uses the local ground.
     float LandingGroundZ(const WeatherCondition& c, const float x, const float y, const float top, const float vx, const float vy, const float vz, const float cz)
     {
         const float fallback = cz + recycle_below;
@@ -582,10 +555,6 @@ namespace {
         return GroundZAt(x + hx, y + hy, fallback);
     }
 
-    // Initial fill of the column. Stratified placement: each drop owns one grid cell, jittered within it, so the
-    // volume is evenly spread over the player-centred area instead of clumping. The column stays centred on the
-    // player; wind only drifts drops through it (UpdateCondition wraps them at the bubble edge), so the origin
-    // does not shift with the wind direction.
     void seed_drop(Raindrop& d, const WeatherCondition& c, const float cx, const float cy, const float cz, const int index, const int grid, const float vx, const float vy, const float vz)
     {
         const float top_z = cz - ColumnHeight(c); // top of the fall column (capped so it doesn't start absurdly high)
@@ -647,24 +616,11 @@ namespace {
             }
             d.x += (vx + sway_x) * dt;
             d.y += (vy + sway_y) * dt;
-            // Keep the volume centred on the player: a drop blown past one edge of the bubble wraps to the opposite
-            // edge, so the wind only sets which way drops stream through a fixed, player-centred column. Only x/y
-            // move here - the recycle floor was fixed when the drop was seeded, so a wrap can't fake a landing.
             if (const float rx = d.x - cx; rx > c.spread_radius) d.x -= diameter; else if (rx < -c.spread_radius) d.x += diameter;
             if (const float ry = d.y - cy; ry > c.spread_radius) d.y -= diameter; else if (ry < -c.spread_radius) d.y += diameter;
             if (d.z >= d.ground_z) {
-                // Run complete (drop reached its projected landing): leave a decal, then restart this drop at the
-                // column TOP and project its next floor. Restarting at the top (rather than a spread height, as a
-                // full re-seed does) is what keeps drops from re-landing the same frame and re-seeding every tick -
-                // the per-frame cost that scaled with count. GroundZAt is memoised per cell, so the floor recompute
-                // here is a cheap cache hit, and the wrap above only moves x/y, so no spurious landings.
                 if (splash && frand(0.f, 1.f) < c.splash_chance && static_cast<int>(p.splashes.size()) < max_splashes) p.splashes.push_back({d.x, d.y, GroundZAt(d.x, d.y, d.ground_z), 0.f});
                 if (settle && frand(0.f, 1.f) < c.splash_chance && static_cast<int>(p.settled.size()) < max_settled) p.settled.push_back({d.x, d.y, GroundZAt(d.x, d.y, d.ground_z), 0.f});
-                // Restart at a fresh RANDOM x/y in the bubble - keeping x/y across recycles preserves the stratified
-                // seed pattern (drift moves it as one block; the sway only wobbles it), so every drop traces a
-                // regularly-spaced diagonal path that reads as parallel "layers" along the wind, worst at high
-                // density. Random placement breaks that. z restarts near the top with a sub-step jitter (so no
-                // z-levels and no instant re-land/thrash). Floor is reprojected for the new column.
                 d.x = cx - c.spread_radius + frand(0.f, 2.f * c.spread_radius);
                 d.y = cy - c.spread_radius + frand(0.f, 2.f * c.spread_radius);
                 d.z = top_z + frand(0.f, std::max(1.f, vz * dt));
@@ -708,19 +664,11 @@ namespace {
         out.insert(out.end(), {c00, c10, c11, c01});
     }
 
-    // A drop is worth building geometry for only if its centre is in front of the near plane. Off-screen drops
-    // are clipped by the GPU anyway, but skipping the behind-camera ones here saves the CPU build + upload (a big
-    // share of a dense, all-round volume like the sandstorm). Sides-of-FOV are left to the GPU; tightening this to
-    // a full view-cone would save more but risks thinning the storm at screen edges, so keep it conservative.
     bool InFront(const Raindrop& d, const float eye[3], const float fwd[3])
     {
         return (d.x - eye[0]) * fwd[0] + (d.y - eye[1]) * fwd[1] + (d.z - eye[2]) * fwd[2] >= kZNear;
     }
 
-    // A ground mark (splash/settle) is worth building only if it falls within the camera's view cone. Unlike the
-    // falling particles - which we only cull behind the near plane, so edge drops can still drift into view - these
-    // are static, so a tighter cull is safe. The cone circumscribes the screen rect (+10% margin), so it never
-    // culls a mark that's actually visible; the GPU clips whatever slips through the corners.
     bool InView(const float px, const float py, const float pz, const float eye[3], const float fwd[3], const float cone_tan_sq)
     {
         const float dx = px - eye[0], dy = py - eye[1], dz = pz - eye[2];
@@ -730,9 +678,6 @@ namespace {
         return lat_sq <= depth * depth * cone_tan_sq;
     }
 
-    // Snow/ash/sand: camera-aligned square billboards, instanced like rain (the GPU expands each 16-byte record to a
-    // quad). The square's axes are the camera right/up, constant per draw, so they go to the VS constants (snow_axes)
-    // rather than into every record; only the centre is per-instance (flakes don't fade, so alpha = 1).
     void AppendSnowInstances(std::vector<WeatherInstance>& out, const WeatherCondition& c, const std::vector<Raindrop>& drops, const float right[3], const float up[3], const float eye[3], const float fwd[3])
     {
         const float h = c.drop_size * 0.5f;
@@ -742,9 +687,6 @@ namespace {
             if (InFront(d, eye, fwd)) out.push_back({d.x, d.y, d.z, 1.f});
     }
 
-    // Cloud-cover layer: drift the puffs horizontally (direction = the condition's wind heading, speed = cloud.speed)
-    // and wrap them in the player-centred bubble. Height within the band is fixed per puff; world z is derived from
-    // the live player altitude at draw time, so the whole layer tracks the player without any terrain queries.
     void UpdateCloudCover(const WeatherCondition& c, Particles& p, const float dt, const float cx, const float cy, const float wind_dir)
     {
         const int count = CloudCount(c);
@@ -766,9 +708,6 @@ namespace {
         }
     }
 
-    // Cloud-cover puffs: large soft camera-facing billboards at (x, y, cz - h), i.e. a band above the player. Per-puff
-    // alpha feathers the top and bottom of the band so the layer has soft edges; overall opacity is the cloud tint's
-    // alpha. Terrain occlusion is handled by the depth test (a puff inside a hill is hidden).
     void AppendCloudCoverInstances(std::vector<WeatherInstance>& out, const WeatherCondition& c, const std::vector<CloudPuff>& puffs, const float right[3], const float up[3], const float eye[3], const float fwd[3], const float cz)
     {
         const float hs = c.cloud.size * 0.5f;
@@ -785,9 +724,6 @@ namespace {
         }
     }
 
-    // Rain: one 16-byte record per drop (centre + alpha). The streak axes (long axis along the downward velocity,
-    // width axis facing the camera) are constant per draw, so they go to the VS constants (rain_axes). The instanced
-    // VS applies the V-flip so the texture stays upright.
     void AppendRainInstances(std::vector<WeatherInstance>& out, const WeatherCondition& c, const std::vector<Raindrop>& drops, const float right[3], const float fwd[3], const float wind_dir, const float eye[3])
     {
         const float h = c.drop_size * 0.5f;
@@ -830,9 +766,6 @@ namespace {
     }
 
 
-    // Flat quad lying on the ground (world XY plane), drawn with the snowflake texture. Its axes are world X/Y (not
-    // camera-aligned like the flakes), so it's a separate sub-draw of the snow buffer with its own constants
-    // (settle_axes). Holds at full tint, then fades out over the tail of its life via the per-instance alpha.
     void AppendSettledInstances(std::vector<WeatherInstance>& out, const std::vector<Settle>& s, const float eye[3], const float fwd[3], const float cone_tan_sq)
     {
         const float hs = snow_settle_size * 0.5f;
@@ -939,10 +872,6 @@ namespace {
         if (!weather_vs && device->CreateVertexShader(reinterpret_cast<const DWORD*>(&weather_billboard_vs), &weather_vs) != D3D_OK) return false;
         if (!weather_ps && device->CreatePixelShader(reinterpret_cast<const DWORD*>(&weather_billboard_ps), &weather_ps) != D3D_OK) return false;
 
-        // Instanced pipeline: stream 0 = unit quad (POSITION = corner sign, TEXCOORD0 = uv); stream 1 =
-        // per-drop instance record (TEXCOORD1 = centre, TEXCOORD2/3 = the two half-extent axes, TEXCOORD4 = alpha).
-        // Stream 1 (per instance) is now just the world centre + alpha; the billboard axes moved to VS constants
-        // c10/c11 (constant per draw), so each record is 16 bytes instead of 40.
         constexpr D3DVERTEXELEMENT9 inst_decl[] = {{0, 0, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 0}, {0, 8, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 0},
                                                    {1, 0, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 1}, {1, 12, D3DDECLTYPE_FLOAT1, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 2}, D3DDECL_END()};
         if (!weather_inst_decl && device->CreateVertexDeclaration(inst_decl, &weather_inst_decl) != D3D_OK) return false;
@@ -958,7 +887,6 @@ namespace {
         return true;
     }
 
-    // Advance every active condition and accumulate its geometry, then upload once per frame.
     // Build a soft round puff texture at runtime (no .dat asset): white RGB with a smooth radial alpha falloff,
     // so overlapping cloud billboards blend into a continuous fog bank instead of showing hard quad edges.
     bool BuildCloudTexture(IDirect3DDevice9* device)
@@ -1159,8 +1087,7 @@ namespace {
         };
         const ColVtx q[6] = {corner(-1, -1), corner(1, -1), corner(1, 1), corner(-1, -1), corner(1, 1), corner(-1, 1)};
 
-        IDirect3DStateBlock9* sb = nullptr;
-        if (device->CreateStateBlock(D3DSBT_ALL, &sb) != D3D_OK) return;
+        const D3DStateGuard state_guard(device);
         if (GameWorldCompositor::SetupPipeline(device, false, kZFar, 0.f)) {
             device->SetRenderState(D3DRS_ZENABLE, FALSE);
             device->SetRenderState(D3DRS_ZWRITEENABLE, FALSE); // must not touch the depth buffer or it culls the scene/particles
@@ -1169,8 +1096,6 @@ namespace {
             device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ZERO);
             device->DrawPrimitiveUP(D3DPT_TRIANGLELIST, 2, q, sizeof(ColVtx));
         }
-        sb->Apply();
-        sb->Release();
     }
 
     // Turn on automatic weather, following the current map's climate (clears any forced climate). Shared by
@@ -1213,9 +1138,6 @@ namespace {
             Log::Info("Usage: /weather <condition> [on|off|toggle] | /weather [auto|off|clear]");
             return;
         }
-        // A lone 'auto'/'off'/'clear' controls automatic weather as a whole (same as /climate), or clears the current
-        // condition; anything else is a condition name. ('off' as a bare arg can't be a condition state here - there's
-        // no condition to apply it to.)
         if (argc == 2) {
             const std::string only = TextUtils::ToLower(TextUtils::WStringToString(argv[1]));
             if (only == "auto") return EnableAutoWeatherFollowMap();
@@ -1327,8 +1249,7 @@ void WeatherModule::DrawInWorld(IDirect3DDevice9* device)
 #endif
     if (!have_any || !EnsureShaders(device)) return;
 
-    IDirect3DStateBlock9* state_block = nullptr; // restored on exit so GW's own rendering isn't corrupted
-    if (device->CreateStateBlock(D3DSBT_ALL, &state_block) != D3D_OK) return;
+    const D3DStateGuard state_guard(device); // restored on exit so GW's own rendering isn't corrupted
     if (device->SetPixelShader(weather_ps) == D3D_OK && GameWorldCompositor::SetWorldViewProj(device)) {
         GameWorldCompositor::SetWorldRenderStates(device, GameWorldRenderer::GetOccludeBehindTerrain());
         GameWorldCompositor::SetDistanceFog(device, render_max_distance, fog_factor);
@@ -1346,9 +1267,6 @@ void WeatherModule::DrawInWorld(IDirect3DDevice9* device)
             device->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, static_cast<UINT>(splash_vertices.size()), 0, static_cast<UINT>(splash_vertices.size() / 2));
         }
 
-        // Instanced pass: rain, snow/ash+settle, and the cloud-cover layer. Each record is expanded into a quad on
-        // the GPU (stream 0 = unit quad, stream 1 = per-drop data). Rain flips the texture V (streak runs along
-        // velocity); snow and clouds don't. The tint is a per-draw constant, so the cloud layer can carry its own.
         if (ib_ok && (have_rain || have_snow || have_cloud) && device->SetVertexShader(weather_inst_vs) == D3D_OK && device->SetVertexDeclaration(weather_inst_decl) == D3D_OK && device->SetStreamSource(0, quad_geom_vb, 0, sizeof(GeomVert)) == D3D_OK &&
             device->SetStreamSourceFreq(1, D3DSTREAMSOURCE_INSTANCEDATA | 1u) == D3D_OK) {
             // first = starting instance (lets the snow buffer be drawn as two sub-ranges: camera-aligned flakes then
@@ -1393,8 +1311,6 @@ void WeatherModule::DrawInWorld(IDirect3DDevice9* device)
         }
 #endif
     }
-    state_block->Apply();
-    state_block->Release();
 }
 
 void WeatherModule::RegisterSettings(ToolboxModule* module)
@@ -1651,7 +1567,11 @@ void WeatherModule::DrawSettings()
                 }
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth(110.f);
-                ImGui::DragFloat("##weight", &cp.entries[e].weight, 0.01f, 0.f, 1.f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+                // Shown as a 0-100% chance, but stored as the 0..1 fraction it has always been (existing configs load unchanged).
+                float weight_pct = cp.entries[e].weight * 100.f;
+                if (ImGui::DragFloat("##weight", &weight_pct, 0.1f, 0.f, 100.f, "%.1f%%", ImGuiSliderFlags_AlwaysClamp))
+                    cp.entries[e].weight = std::clamp(weight_pct / 100.f, 0.f, 1.f);
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip("Chance this condition is picked for the climate on each weather roll.");
                 ImGui::SameLine();
                 if (ImGui::SmallButton("Remove##ent")) ent_remove = e;
                 ImGui::PopID();
@@ -1660,7 +1580,7 @@ void WeatherModule::DrawSettings()
             if (ImGui::SmallButton("Add condition##ent")) cp.entries.push_back({conditions.empty() ? "" : conditions.front().name, 0.3f});
             float sum = 0.f;
             for (const auto& e : cp.entries) sum += std::max(0.f, e.weight);
-            ImGui::Text("Clear weather: %.0f%%", std::max(0.f, 1.f - sum) * 100.f);
+            ImGui::Text("Clear weather: %.1f%%", std::max(0.f, 1.f - sum) * 100.f);
             if (ImGui::Button("Remove climate")) climate_remove = i;
         }
         ImGui::PopID();

@@ -32,15 +32,12 @@ namespace {
         }
         const std::wstring arg2 = PluginUtils::ToLower(argv[2]);
         if (arg2 == L"hide") {
-            // /tb PluginName hide
             *instance->GetVisiblePtr() = false;
         }
         else if (arg2 == L"show") {
-            // /tb PluginName hide
             *instance->GetVisiblePtr() = true;
         }
         else if (arg2 == L"toggle") {
-            // /tb PluginName hide
             *instance->GetVisiblePtr() = !*instance->GetVisiblePtr();
         }
         if (arg1 != pluginname) {

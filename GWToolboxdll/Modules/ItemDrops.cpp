@@ -1,5 +1,7 @@
 #include "stdafx.h"
+#include <atomic>
 #include <chrono>
+#include <mutex>
 
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Context/MapContext.h>
@@ -21,6 +23,7 @@
 #include <Modules/Resources.h>
 #include <Timer.h>
 #include <Utils/TextUtils.h>
+#include <Utils/TextUtils_Time.h>
 
 #define MAP_ENTRY(var) \
     {                  \
@@ -41,6 +44,10 @@ namespace {
         uint8_t requirement_value = 0;
     };
     clock_t last_drops_written = 0;
+    clock_t csv_retry_timer = 0;
+    std::mutex csv_mutex;
+    std::vector<std::wstring> csv_lines;
+    std::atomic_bool csv_write_pending = false;
 
 
     using ItemModelID = decltype(GW::Item::model_id);
@@ -209,11 +216,9 @@ namespace {
     };
 
     std::filesystem::path GetItemDropCSVFilename() {
-        // Generate filename with current date
         const auto now = std::chrono::system_clock::now();
         const auto time = std::chrono::system_clock::to_time_t(now);
-        std::tm tm;
-        localtime_s(&tm, &time);
+        std::tm tm = TextUtils::Time::SafeLocaltime(time);
 
         wchar_t date_buffer[32];
         std::wcsftime(date_buffer, sizeof(date_buffer) / sizeof(wchar_t), L"%Y-%m-%d", &tm);
@@ -300,8 +305,61 @@ namespace {
     {
         pending_write_to_csv.push_back(item);
     }
+    void FlushCsvLinesOnWorker()
+    {
+        for (;;) {
+            auto lines = std::make_shared<std::vector<std::wstring>>();
+            {
+                std::scoped_lock lock(csv_mutex);
+                lines->swap(csv_lines);
+                if (lines->empty()) {
+                    csv_write_pending = false;
+                    return;
+                }
+            }
+            const auto drops_filename = GetItemDropCSVFilename();
+            std::error_code ec;
+            std::filesystem::create_directories(drops_filename.parent_path(), ec);
+            const bool file_exists = std::filesystem::exists(drops_filename, ec);
+            std::wofstream my_file;
+            if (!ec) {
+                my_file.exceptions(std::ios::goodbit);
+                my_file.open(drops_filename.c_str(), std::ios::app);
+            }
+            if (ec) {
+                Log::WarningW(L"std::filesystem::exists for %s failed", drops_filename.wstring().c_str());
+            }
+            else if (!my_file.is_open() || my_file.fail()) {
+                Log::WarningW(L"std::wofstream for %s failed", drops_filename.wstring().c_str());
+            }
+            else {
+                if (!file_exists) {
+                    my_file << ItemDrops::PendingDrop::GetCSVHeader() << L"\n";
+                }
+                for (const auto& line : *lines) {
+                    my_file << line << L"\n";
+                }
+                my_file.flush();
+                my_file.close();
+                continue;
+            }
+            std::scoped_lock lock(csv_mutex);
+            csv_lines.insert(csv_lines.begin(), std::make_move_iterator(lines->begin()), std::make_move_iterator(lines->end()));
+            csv_retry_timer = TIMER_INIT();
+            csv_write_pending = false;
+            return;
+        }
+    }
+    void FlushCsvLines()
+    {
+        if (TIMER_DIFF(csv_retry_timer) < 5000)
+            return;
+        if (csv_write_pending.exchange(true))
+            return;
+        Resources::EnqueueWorkerTask(FlushCsvLinesOnWorker);
+    }
     void WritePendingDropsToFile(bool force = false) {
-        if (pending_write_to_csv.empty() || (!force && TIMER_DIFF(last_drops_written) < 5000)) 
+        if (pending_write_to_csv.empty() || (!force && TIMER_DIFF(last_drops_written) < 5000))
             return;
         // Early validation - avoid exceptions from GetItemName
         bool all_decoded = true;
@@ -317,46 +375,15 @@ namespace {
         }
 
         last_drops_written = TIMER_INIT();
-        auto drops_filename = GetItemDropCSVFilename();
-        std::error_code ec;
-        const bool file_exists = std::filesystem::exists(drops_filename, ec);
-        if (ec) {
-            Log::WarningW(L"std::filesystem::exists for %s failed", drops_filename.wstring().c_str());
-            return;
-        }
-        std::filesystem::create_directories(drops_filename.parent_path(),ec);
-
-        // Open file with nothrow
-        std::wofstream my_file;
-        my_file.exceptions(std::ios::goodbit); // Disable exceptions
-        my_file.open(drops_filename.c_str(), std::ios::app);
-
-        if (!my_file.is_open() || my_file.fail()) {
-            Log::WarningW(L"std::wofstream for %s failed", drops_filename.wstring().c_str());
-            return;
-        }
-
-        // Write header if new file
-        if (!file_exists) {
-            my_file << ItemDrops::PendingDrop::GetCSVHeader() << L"\n";
-            if (my_file.fail()) {
-                my_file.close();
-                return;
+        {
+            std::scoped_lock lock(csv_mutex);
+            csv_lines.reserve(csv_lines.size() + pending_write_to_csv.size());
+            for (const auto& pending : pending_write_to_csv) {
+                csv_lines.push_back(pending->toCSV());
             }
         }
-
-        // Write data
-        for (const auto& pending : pending_write_to_csv) {
-            my_file << pending->toCSV() << L"\n";
-            if (my_file.fail()) {
-                my_file.close();
-                return;
-            }
-        }
-
         pending_write_to_csv.clear();
-        my_file.flush();
-        my_file.close();
+        FlushCsvLines();
     }
 
     std::map<uint32_t, bool> already_seen_items;
@@ -449,9 +476,6 @@ namespace {
     {
         for (const auto& packet : suppressed_packets) {
             GW::GameThread::Enqueue([cpy = packet]() mutable {
-                // since a user can log out and exit the game with suppressed items still in memory,
-                // only spawn if there is still a valid map context.
-                // note: there is still an ItemContext at this point, so don't rely on that.
                 if (GW::GetMapContext() != nullptr) {
                     GW::StoC::EmulatePacket(reinterpret_cast<GW::Packet::StoC::PacketBase*>(&cpy));
                 }
@@ -479,33 +503,42 @@ void ItemDrops::Initialize()
 }
 
 void ItemDrops::Update(float) {
-    WritePendingDropsToFile();    
-    if (!pending_full_exports.empty()) {
-        for (auto pending : drop_history) {
-            if (GetItemName(pending->item_name_enc)->IsDecoding()) {
-                return;
-            }
+    WritePendingDropsToFile();
+    FlushCsvLines();
+    if (pending_full_exports.empty()) {
+        return;
+    }
+    for (auto pending : drop_history) {
+        auto item_name = GetItemName(pending->item_name_enc);
+        if (!item_name || item_name->IsDecoding()) {
+            return;
         }
-        
-        for (auto it = pending_full_exports.begin(); it != pending_full_exports.end(); ) {
-            const auto filename = Resources::GetPath(*it);
-            auto path = Resources::GetPath(filename);
-            const bool file_exists = std::filesystem::exists(path);
+    }
+
+    auto rows = std::make_shared<std::wstring>();
+    for (auto pending : drop_history) {
+        *rows += pending->toCSV();
+        *rows += L"\n";
+    }
+    for (const auto& pending_export : pending_full_exports) {
+        const auto filename = Resources::GetPath(pending_export);
+        Resources::EnqueueWorkerTask([filename, rows] {
+            std::error_code ec;
+            const bool file_exists = std::filesystem::exists(filename, ec);
             std::wofstream my_file(filename, std::ios::app);
             if (!my_file.is_open()) {
+                Log::WarningW(L"std::wofstream for %s failed", filename.wstring().c_str());
                 return;
             }
             if (!file_exists) {
                 my_file << ItemDrops::PendingDrop::GetCSVHeader() << L"\n";
             }
-            for (auto pending : drop_history) {
-                my_file << pending->toCSV() << L"\n";
-            }
+            my_file << *rows;
             my_file.flush();
             my_file.close();
-            it = pending_full_exports.erase(it);
-        }
+        });
     }
+    pending_full_exports.clear();
 }
 
 void ItemDrops::SignalTerminate()
@@ -772,7 +805,7 @@ int ItemDrops::GetTotalGoldValue()
         if (drop->type == GW::Constants::ItemType::Gold_Coin) {
             value += drop->value;
         }else {
-            value += drop->value * drop->quantity;  
+            value += drop->value * drop->quantity;
         }
     }
     return value;
@@ -786,6 +819,10 @@ std::vector<ItemDrops::PendingDrop*>& ItemDrops::GetDropHistory()
 void ItemDrops::ClearDropHistory()
 {
     pending_write_to_csv.clear();
+    {
+        std::scoped_lock lock(csv_mutex);
+        csv_lines.clear();
+    }
     for (auto drop : drop_history) {
         delete drop;
     }

@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <queue>
+#include <unordered_map>
 #include <vector>
 
 #include <GWCA/Constants/Constants.h>
@@ -97,9 +98,18 @@ private:
 
     // Encode a teambuild into a Daybreak party loadout base64 string (header=15, type=1, version=1).
     static std::string EncodeTeambuildToDaybreak(const TeamBuild& tbuild);
-    // Decode a Daybreak party loadout base64 string into a teambuild.
     static bool DecodeTeambuildFromDaybreak(const std::string& code, TeamBuild& out);
 
     bool builds_changed = false;
+
+    struct GroupingCache {
+        size_t signature = 0;
+        bool valid = false;
+        std::vector<TeamBuild*> filtered{};
+        std::unordered_map<std::string, std::vector<TeamBuild*>> by_group{};
+        std::vector<std::string> group_order{};
+    };
+    GroupingCache grouping_cache{};
+
     std::vector<TeamBuild> teambuilds{};
 };

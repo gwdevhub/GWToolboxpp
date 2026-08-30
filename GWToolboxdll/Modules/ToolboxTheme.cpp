@@ -16,10 +16,6 @@ constexpr auto LayoutJsonFilename = L"Layout.json";
 constexpr auto IniSection = "Theme";
 
 namespace {
-    // Returns the stable save identifier for a window name.
-    // For "Display Name###ID" returns "ID" (the part after ###).
-    // For "Label##ID" returns "ID" (the part after ##).
-    // For plain names returns the full name.
     const char* GetWindowSaveId(const char* name)
     {
         const char* triple = strstr(name, "###");
@@ -273,9 +269,7 @@ void ToolboxTheme::LoadUILayout()
     if (!ImGui::GetCurrentContext()) {
         return;
     }
-    // Copy theme over
     ImGui::GetStyle() = ini_style;
-    // Copy window positions over
     ImGui::GetStyle().FontScaleMain = font_scale_main;
 
     layout.clear();

@@ -21,7 +21,7 @@ void PrintUsage(const bool terminate)
             "    /noupdate                  Won't try to update\n"
             "    /noexecheck                Won't check Github for a newer GWToolbox.exe\n"
             "    /noinstall                 Won't try to install if missing\n"
-            "    /localdll                  Check launcher directory for toolbox dll, won't try to install or update\n\n"
+            "    /localdll                  Check launcher directory for toolbox dll (or gwtoolbox.gwmod for a wasm client), won't try to install or update\n\n"
 
             "    /pid <process id>          Process id of the target in which to inject\n"
     );
@@ -128,7 +128,6 @@ void ParseCommandLine()
 
 bool IsRunningAsAdmin()
 {
-    // Allocate and initialize a SID of the administrators group.
     PSID AdministratorsGroup = nullptr;
     SID_IDENTIFIER_AUTHORITY NtAuthority = SECURITY_NT_AUTHORITY;
     if (!AllocateAndInitializeSid(
@@ -142,8 +141,6 @@ bool IsRunningAsAdmin()
         return false;
     }
 
-    // Determine whether the SID of administrators group is enabled in
-    // the primary access token of the process.
     BOOL IsRunAsAdmin = FALSE;
     if (!CheckTokenMembership(nullptr, AdministratorsGroup, &IsRunAsAdmin)) {
         FreeSid(AdministratorsGroup);

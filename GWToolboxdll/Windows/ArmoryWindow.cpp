@@ -1072,12 +1072,10 @@ namespace GWArmory {
                 state = SnapshotState::WaitingForDecode;
             } break;
             case SnapshotState::WaitingForDecode: {
-                // Check if all strings are decoded
                 for (auto& it : pending_decodes) {
                     if (it.second->IsDecoding()) return;
                 }
 
-                // Build JSON output
                 std::vector<armory_snapshot::WeaponEntry> output;
                 output.reserve(pending_decodes.size());
                 for (auto& it : pending_decodes) {
@@ -1091,7 +1089,6 @@ namespace GWArmory {
                     });
                 }
 
-                // Write to file
                 const auto filename = Resources::GetPath("weapon_snapshot.json");
                 std::ofstream file(filename);
                 if (file.is_open()) {
@@ -1103,7 +1100,6 @@ namespace GWArmory {
                     Log::Error("Failed to write weapon snapshot to %s", filename.string().c_str());
                 }
 
-                // Cleanup
                 pending_decodes.clear();
                 pending_items.clear();
                 state = SnapshotState::Idle;
@@ -1224,7 +1220,7 @@ namespace GWArmory {
         if (!equip) return false;
         if (!equip->items[slot].model_file_id) return true;
         gwarmory_setitem = true;
-        equip->vtable->RemoveItem(equip, 0, slot);
+        equip->UndrawEquipmentSlot(slot);
         equip->items[slot] = {0};
         gwarmory_setitem = false;
         return true;
@@ -1240,20 +1236,20 @@ namespace GWArmory {
             if (!IsCostumeFileId(drawn_pieces[slot].model_file_id)) 
                 continue;
             if (equip->items[slot].model_file_id && !IsCostumeFileId(equip->items[slot].model_file_id)) {
-                equip->vtable->EquipItem(equip, 0, slot);
+                equip->RedrawEquipmentSlot(slot);
                 continue;
             }
             if (!equip->item_ids[slot]) {
                 if (equip->items[slot].model_file_id) {
-                    equip->vtable->RemoveItem(equip, 0, slot);
+                    equip->UndrawEquipmentSlot(slot);
                     equip->items[slot] = {0};
-                } 
+                }
                 continue;
             }
             const auto item = GW::Items::GetItemById(equip->item_ids[slot]);
             if (item && item->model_file_id && !IsCostumeFileId(item->model_file_id)) {
                 GwItemToItemData(item, &equip->items[slot]);
-                equip->vtable->EquipItem(equip, 0, slot);
+                equip->RedrawEquipmentSlot(slot);
             }
         }
         gwarmory_setitem = false;
@@ -1300,14 +1296,14 @@ namespace GWArmory {
         ClearArmorItem(slot);
         gwarmory_setitem = true;
         equip->items[slot] = cpy;
-        equip->vtable->EquipItem(equip, 0, slot);
-        
+        equip->RedrawEquipmentSlot(slot);
+
         if (slot == ItemSlot::CostumeHead) {
             // If we're a festival hat, set the correct model file id for this character's profession
             if (const auto hat_found = GetFileIdForFestivalHat(cpy.model_file_id, current_profession)) {
                 equip->items[ItemSlot::Headpiece] = cpy;
                 equip->items[ItemSlot::Headpiece].model_file_id = *hat_found;
-                equip->vtable->EquipItem(equip, 0, ItemSlot::Headpiece);
+                equip->RedrawEquipmentSlot(ItemSlot::Headpiece);
             }
         }
         if (slot == ItemSlot::CostumeBody) {
@@ -1315,16 +1311,16 @@ namespace GWArmory {
                 // If we're a costume, set all of the other armor piece model file ids for this character's profession
                 equip->items[ItemSlot::Boots] = cpy;
                 equip->items[ItemSlot::Boots].model_file_id = costume_found[0];
-                equip->vtable->EquipItem(equip, 0, ItemSlot::Boots);
+                equip->RedrawEquipmentSlot(ItemSlot::Boots);
                 equip->items[ItemSlot::Leggings] = cpy;
                 equip->items[ItemSlot::Leggings].model_file_id = costume_found[1];
-                equip->vtable->EquipItem(equip, 0, ItemSlot::Leggings);
+                equip->RedrawEquipmentSlot(ItemSlot::Leggings);
                 equip->items[ItemSlot::Gloves] = cpy;
                 equip->items[ItemSlot::Gloves].model_file_id = costume_found[2];
-                equip->vtable->EquipItem(equip, 0, ItemSlot::Gloves);
+                equip->RedrawEquipmentSlot(ItemSlot::Gloves);
                 equip->items[ItemSlot::Chestpiece] = cpy;
                 equip->items[ItemSlot::Chestpiece].model_file_id = costume_found[3];
-                equip->vtable->EquipItem(equip, 0, ItemSlot::Chestpiece);
+                equip->RedrawEquipmentSlot(ItemSlot::Chestpiece);
             }
         }
         gwarmory_setitem = false;

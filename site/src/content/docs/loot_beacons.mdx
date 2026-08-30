@@ -15,6 +15,9 @@ The Loot Beacons module marks dropped items worth picking up with a beacon — a
 ## What gets a beacon
 
 - **Beacon on valuable items** — beacon any drop whose Kamadan trader price meets the **Value threshold (gold)**, regardless of rarity. This catches white-rarity valuables like ectos, gemstones and dyes.
+- **Beacon by item name** — your own list of text/colour pairs. Any drop whose name contains the text gets a beacon in that colour, whatever its rarity or value — e.g. `scroll`, `dye`, `glob of ectoplasm`. Matching ignores case and uses the item name as shown in-game. Each rule has its own on/off checkbox, and rules can be removed with the **x** button. Name rules are checked before value and rarity, and the first matching rule in the list wins, so order the list by priority.
+
+  Wrap the text in slashes to match with a regular expression instead, e.g. `/^Superb Charr Carving$/` or `/(gold|silver) dye/`. Flags go after the closing slash, same as the [chat filter](./chatfilter/) — regex rules ignore case unless you add the `I` flag. A rule whose pattern doesn't parse is flagged **Invalid regex** in the settings panel and is ignored.
 - **Beacon by rarity** — turn beacons on per rarity (White, Blue, Purple, Gold, Green), each with its own colour.
 - **Show beacons on items reserved for other party members** — also beacon drops assigned to other players (drawn dimmed). Off shows only unreserved drops and drops assigned to you.
 

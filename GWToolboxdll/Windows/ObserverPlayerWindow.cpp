@@ -1,7 +1,5 @@
 #include "stdafx.h"
 
-#include <set>
-
 #include <GWCA/GameEntities/Agent.h>
 
 #include <GWCA/Managers/AgentMgr.h>
@@ -32,7 +30,6 @@ void ObserverPlayerWindow::SaveSettings(SettingsDoc& doc)
 }
 
 
-// Get the agent we're currently tracking
 uint32_t ObserverPlayerWindow::GetTracking()
 {
     if (!ObserverModule::Instance().IsActive()) {
@@ -55,7 +52,6 @@ uint32_t ObserverPlayerWindow::GetTracking()
     return living->agent_id;
 }
 
-// Get the agent we're comparing to
 uint32_t ObserverPlayerWindow::GetComparison()
 {
     if (!ObserverModule::Instance().IsActive()) {
@@ -78,92 +74,78 @@ uint32_t ObserverPlayerWindow::GetComparison()
     return living->agent_id;
 }
 
-// Draw the headers for player skills
 void ObserverPlayerWindow::DrawHeaders() const
 {
     float offset = 0;
     ImGui::Text("Name");
     float offset_d = text_long;
-    // attempted
     if (settings.show_attempts) {
         ImGui::SameLine(offset += offset_d);
         ImGui::Text(ObserverLabel::Attempts);
         offset_d = text_tiny;
     }
-    // cancelled
     if (settings.show_cancels) {
         ImGui::SameLine(offset += offset_d);
         ImGui::Text(ObserverLabel::Cancels);
         offset_d = text_tiny;
     }
-    // interrupted
     if (settings.show_interrupts) {
         ImGui::SameLine(offset += offset_d);
         ImGui::Text(ObserverLabel::Interrupts);
         offset_d = text_tiny;
     }
-    // finished
     if (settings.show_finishes) {
         ImGui::SameLine(offset += offset_d);
         ImGui::Text(ObserverLabel::Finishes);
         offset_d = text_tiny;
     }
-    // integrity
     if (settings.show_integrity) {
         ImGui::SameLine(offset += offset_d);
         ImGui::Text(ObserverLabel::Integrity);
         offset_d = text_tiny;
     }
-    // damage
     if (settings.show_damage) {
         ImGui::SameLine(offset += offset_d);
         ImGui::Text("Damage");
     }
 }
 
-void ObserverPlayerWindow::DrawAction(const std::string& name, const ObserverModule::ObservedAction* action) const
+void ObserverPlayerWindow::DrawAction(const char* name, const ObserverModule::ObservedAction* action) const
 {
     float offset = 0;
-    ImGui::Text(name.c_str());
+    ImGui::TextUnformatted(name);
     float offset_d = text_long;
-    // attempted
     if (settings.show_attempts) {
         ImGui::SameLine(offset += offset_d);
-        ImGui::Text(std::to_string(action->started).c_str());
+        ImGui::Text("%zu", action->started);
         offset_d = text_tiny;
     }
-    // cancelled
     if (settings.show_cancels) {
         ImGui::SameLine(offset += offset_d);
-        ImGui::Text(std::to_string(action->stopped).c_str());
+        ImGui::Text("%zu", action->stopped);
         offset_d = text_tiny;
     }
-    // interrupted
     if (settings.show_interrupts) {
         ImGui::SameLine(offset += offset_d);
-        ImGui::Text(std::to_string(action->interrupted).c_str());
+        ImGui::Text("%zu", action->interrupted);
         offset_d = text_tiny;
     }
-    // finished
     if (settings.show_finishes) {
         ImGui::SameLine(offset += offset_d);
-        ImGui::Text(std::to_string(action->finished).c_str());
+        ImGui::Text("%zu", action->finished);
         offset_d = text_tiny;
     }
-    // integrity
     if (settings.show_integrity) {
         ImGui::SameLine(offset += offset_d);
-        ImGui::Text(std::to_string(action->integrity).c_str());
+        ImGui::Text("%d", action->integrity);
         offset_d = text_tiny;
     }
-    // damage
     if (settings.show_damage) {
         ImGui::SameLine(offset += offset_d);
-        ImGui::Text(std::to_string(action->total_damage).c_str());
+        ImGui::Text("%u", action->total_damage);
     }
 }
 
-// Draw the skills of a player
 void ObserverPlayerWindow::DrawSkills(const std::unordered_map<GW::Constants::SkillID, ObserverModule::ObservedSkill*>& skills,
                                       const std::vector<GW::Constants::SkillID>& skill_ids) const
 {
@@ -178,12 +160,13 @@ void ObserverPlayerWindow::DrawSkills(const std::unordered_map<GW::Constants::Sk
         if (it_usages == skills.end()) {
             continue;
         }
-        DrawAction(("# " + std::to_string(i) + ". " + skill->Name()).c_str(), it_usages->second);
+        static char label[256];
+        snprintf(label, _countof(label), "# %u. %s", i, skill->Name().c_str());
+        DrawAction(label, it_usages->second);
     }
 }
 
 
-// Draw the window
 void ObserverPlayerWindow::Draw(IDirect3DDevice9*)
 {
     if (!visible) {
@@ -207,25 +190,23 @@ void ObserverPlayerWindow::Draw(IDirect3DDevice9*)
     if (tracking) {
         ImGui::Text(tracking->DisplayName().c_str());
 
-        // Display health and energy information if available
         const GW::Agent* agent = GW::Agents::GetAgentByID(tracking_agent_id);
         if (agent) {
             const GW::AgentLiving* living = agent->GetAsAgentLiving();
             if (living) {
-                // Get max HP (from cache or direct if observed)
                 uint32_t max_hp = om.GetCachedMaxHP(tracking_agent_id);
-                
+
                 // Calculate current HP from percentage
                 uint32_t cur_hp = static_cast<uint32_t>(living->hp * max_hp);
-                
-                ImGui::Text(("HP: "s + std::to_string(cur_hp) + " / " + std::to_string(max_hp)).c_str());
-                
+
+                ImGui::Text("HP: %u / %u", cur_hp, max_hp);
+
                 // Get energy from cache (will be 0 if never observed)
                 uint32_t cur_energy = om.GetCachedEnergy(tracking_agent_id);
                 uint32_t max_energy = om.GetCachedMaxEnergy(tracking_agent_id);
-                
+
                 if (max_energy > 0) {
-                    ImGui::Text(("Energy: "s + std::to_string(cur_energy) + " / " + std::to_string(max_energy)).c_str());
+                    ImGui::Text("Energy: %u / %u", cur_energy, max_energy);
                 }
             }
         }
@@ -236,60 +217,57 @@ void ObserverPlayerWindow::Draw(IDirect3DDevice9*)
         text_short = 80.0f * global;
         text_tiny = 40.0f * global;
 
-        // Display total damage dealt and received
         if (settings.show_damage_details) {
             ImGui::Separator();
             ImGui::Text("Damage & Healing Summary:");
-            ImGui::Text(("Total Damage Dealt: "s + std::to_string(tracking->stats.total_damage_dealt)).c_str());
-            ImGui::Text(("Total Damage Received: "s + std::to_string(tracking->stats.total_damage_received)).c_str());
-            ImGui::Text(("Total Healing Dealt: "s + std::to_string(tracking->stats.total_healing_dealt)).c_str());
-            ImGui::Text(("Total Healing Received: "s + std::to_string(tracking->stats.total_healing_received)).c_str());
-            
-            // Create separate tables for allies and opponents
-            if (!tracking->stats.damage_dealt_to_agents.empty() || 
+            ImGui::Text("Total Damage Dealt: %u", tracking->stats.total_damage_dealt);
+            ImGui::Text("Total Damage Received: %u", tracking->stats.total_damage_received);
+            ImGui::Text("Total Healing Dealt: %u", tracking->stats.total_healing_dealt);
+            ImGui::Text("Total Healing Received: %u", tracking->stats.total_healing_received);
+
+            if (!tracking->stats.damage_dealt_to_agents.empty() ||
                 !tracking->stats.damage_received_from_agents.empty() ||
                 !tracking->stats.healing_dealt_to_agents.empty() ||
                 !tracking->stats.healing_received_from_agents.empty()) {
-                
-                // Collect and separate agents into allies and opponents
-                std::set<uint32_t> ally_agent_ids;
-                std::set<uint32_t> opponent_agent_ids;
-                
-                // Get tracking agent's party
+
+                static std::vector<uint32_t> all_agent_ids;
+                static std::vector<uint32_t> ally_agent_ids;
+                static std::vector<uint32_t> opponent_agent_ids;
+                all_agent_ids.clear();
+                ally_agent_ids.clear();
+                opponent_agent_ids.clear();
+
                 uint32_t tracking_party_id = tracking->party_id;
-                
-                // Collect all unique agent IDs and categorize them
-                std::set<uint32_t> all_agent_ids;
-                for (const auto& [agent_id, _] : tracking->stats.damage_dealt_to_agents) {
-                    all_agent_ids.insert(agent_id);
-                }
-                for (const auto& [agent_id, _] : tracking->stats.damage_received_from_agents) {
-                    all_agent_ids.insert(agent_id);
-                }
-                for (const auto& [agent_id, _] : tracking->stats.healing_dealt_to_agents) {
-                    all_agent_ids.insert(agent_id);
-                }
-                for (const auto& [agent_id, _] : tracking->stats.healing_received_from_agents) {
-                    all_agent_ids.insert(agent_id);
-                }
-                
-                // Categorize agents
+
+                auto collect_unique = [](std::vector<uint32_t>& ids, const std::unordered_map<uint32_t, uint32_t>& from) {
+                    for (const auto& [agent_id, _] : from) {
+                        if (std::ranges::find(ids, agent_id) == ids.end()) {
+                            ids.push_back(agent_id);
+                        }
+                    }
+                };
+                collect_unique(all_agent_ids, tracking->stats.damage_dealt_to_agents);
+                collect_unique(all_agent_ids, tracking->stats.damage_received_from_agents);
+                collect_unique(all_agent_ids, tracking->stats.healing_dealt_to_agents);
+                collect_unique(all_agent_ids, tracking->stats.healing_received_from_agents);
+
                 for (const auto& agent_id : all_agent_ids) {
                     ObserverModule::ObservableAgent* categorized_agent = om.GetObservableAgentById(agent_id);
                     if (!categorized_agent) continue;
-                    
+
                     if (categorized_agent->party_id == tracking_party_id) {
-                        ally_agent_ids.insert(agent_id);
+                        ally_agent_ids.push_back(agent_id);
                     } else {
-                        opponent_agent_ids.insert(agent_id);
+                        opponent_agent_ids.push_back(agent_id);
                     }
                 }
-                
-                // Draw Allies table (healing only)
+                std::ranges::sort(ally_agent_ids);
+                std::ranges::sort(opponent_agent_ids);
+
                 if (!ally_agent_ids.empty()) {
                     ImGui::Text("");
                     ImGui::Text("Allies:");
-                    
+
                     float offset = 0;
                     ImGui::Text("Player");
                     ImGui::SameLine(offset += text_long);
@@ -297,39 +275,36 @@ void ObserverPlayerWindow::Draw(IDirect3DDevice9*)
                     ImGui::SameLine(offset += text_short);
                     ImGui::Text("Heal-");
                     ImGui::Separator();
-                    
+
                     for (const auto& agent_id : ally_agent_ids) {
                         ObserverModule::ObservableAgent* ally_agent = om.GetObservableAgentById(agent_id);
                         if (!ally_agent) continue;
-                        
+
                         offset = 0;
                         ImGui::Text(ally_agent->DisplayName().c_str());
                         ImGui::SameLine(offset += text_long);
-                        
-                        // Healing dealt
+
                         const auto it_heal_dealt = tracking->stats.healing_dealt_to_agents.find(agent_id);
                         if (it_heal_dealt != tracking->stats.healing_dealt_to_agents.end()) {
-                            ImGui::Text(std::to_string(it_heal_dealt->second).c_str());
+                            ImGui::Text("%u", it_heal_dealt->second);
                         } else {
                             ImGui::Text("0");
                         }
                         ImGui::SameLine(offset += text_short);
-                        
-                        // Healing received
+
                         const auto it_heal_recv = tracking->stats.healing_received_from_agents.find(agent_id);
                         if (it_heal_recv != tracking->stats.healing_received_from_agents.end()) {
-                            ImGui::Text(std::to_string(it_heal_recv->second).c_str());
+                            ImGui::Text("%u", it_heal_recv->second);
                         } else {
                             ImGui::Text("0");
                         }
                     }
                 }
-                
-                // Draw Opponents table (damage only)
+
                 if (!opponent_agent_ids.empty()) {
                     ImGui::Text("");
                     ImGui::Text("Opponents:");
-                    
+
                     float offset = 0;
                     ImGui::Text("Player");
                     ImGui::SameLine(offset += text_long);
@@ -337,28 +312,26 @@ void ObserverPlayerWindow::Draw(IDirect3DDevice9*)
                     ImGui::SameLine(offset += text_short);
                     ImGui::Text("Dmg-");
                     ImGui::Separator();
-                    
+
                     for (const auto& agent_id : opponent_agent_ids) {
                         ObserverModule::ObservableAgent* opponent_agent = om.GetObservableAgentById(agent_id);
                         if (!opponent_agent) continue;
-                        
+
                         offset = 0;
                         ImGui::Text(opponent_agent->DisplayName().c_str());
                         ImGui::SameLine(offset += text_long);
-                        
-                        // Damage dealt
+
                         const auto it_dmg_dealt = tracking->stats.damage_dealt_to_agents.find(agent_id);
                         if (it_dmg_dealt != tracking->stats.damage_dealt_to_agents.end()) {
-                            ImGui::Text(std::to_string(it_dmg_dealt->second).c_str());
+                            ImGui::Text("%u", it_dmg_dealt->second);
                         } else {
                             ImGui::Text("0");
                         }
                         ImGui::SameLine(offset += text_short);
-                        
-                        // Damage received
+
                         const auto it_dmg_recv = tracking->stats.damage_received_from_agents.find(agent_id);
                         if (it_dmg_recv != tracking->stats.damage_received_from_agents.end()) {
-                            ImGui::Text(std::to_string(it_dmg_recv->second).c_str());
+                            ImGui::Text("%u", it_dmg_recv->second);
                         } else {
                             ImGui::Text("0");
                         }
@@ -368,7 +341,6 @@ void ObserverPlayerWindow::Draw(IDirect3DDevice9*)
         }
 
         if (settings.show_tracking) {
-            // skills
             ImGui::Separator();
             ImGui::Text("Skills:");
             DrawHeaders();
@@ -377,9 +349,10 @@ void ObserverPlayerWindow::Draw(IDirect3DDevice9*)
         }
 
         if (settings.show_comparison && compared && !(!settings.show_skills_used_on_self && tracking && compared->agent_id == tracking->agent_id)) {
-            // skills
             ImGui::Text(""); // new line
-            ImGui::Text(("Skills used on: "s + compared->DisplayName()).c_str());
+            static char buf[128];
+            snprintf(buf, _countof(buf), "Skills used on: %s", compared->DisplayName().c_str());
+            ImGui::TextUnformatted(buf);
             DrawHeaders();
             ImGui::Separator();
             const auto it_used_on_agent_skills = tracking->stats.skills_used_on_agents.find(compared->agent_id);
@@ -389,14 +362,14 @@ void ObserverPlayerWindow::Draw(IDirect3DDevice9*)
                 DrawSkills(it_used_on_agent_skills->second, it_used_on_agent_skill_ids->second);
             }
 
-            // Display damage and healing for this specific player
             if (settings.show_damage_details) {
                 ImGui::Text("");
-                ImGui::Text(("Stats with "s + compared->DisplayName()).c_str());
-                ImGui::Text(("  Damage dealt: " + std::to_string(tracking->stats.LazyGetDamageDealedAgainst(compared->agent_id))).c_str());
-                ImGui::Text(("  Damage received: " + std::to_string(tracking->stats.LazyGetDamageReceivedFrom(compared->agent_id))).c_str());
-                ImGui::Text(("  Healing dealt: " + std::to_string(tracking->stats.LazyGetHealingDealedTo(compared->agent_id))).c_str());
-                ImGui::Text(("  Healing received: " + std::to_string(tracking->stats.LazyGetHealingReceivedFrom(compared->agent_id))).c_str());
+                snprintf(buf, _countof(buf), "Stats with %s", compared->DisplayName().c_str());
+                ImGui::TextUnformatted(buf);
+                ImGui::Text("  Damage dealt: %u", tracking->stats.LazyGetDamageDealedAgainst(compared->agent_id));
+                ImGui::Text("  Damage received: %u", tracking->stats.LazyGetDamageReceivedFrom(compared->agent_id));
+                ImGui::Text("  Healing dealt: %u", tracking->stats.LazyGetHealingDealedTo(compared->agent_id));
+                ImGui::Text("  Healing received: %u", tracking->stats.LazyGetHealingReceivedFrom(compared->agent_id));
             }
         }
     }
@@ -404,7 +377,6 @@ void ObserverPlayerWindow::Draw(IDirect3DDevice9*)
     ImGui::End();
 }
 
-// Draw settings
 void ObserverPlayerWindow::DrawSettingsInternal()
 {
     ImGui::Text("Make sure the Observer Module is enabled.");

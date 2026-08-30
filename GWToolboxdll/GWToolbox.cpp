@@ -224,9 +224,7 @@ namespace {
 
     // All modules including widgets and windows
     std::vector<ToolboxModule*> modules_enabled{};
-    // Widgets
     std::vector<ToolboxWidget*> widgets_enabled{};
-    // Windows
     std::vector<ToolboxWindow*> windows_enabled{};
     // Modules that aren't widgets or windows
     std::vector<ToolboxModule*> other_modules_enabled{};
@@ -236,6 +234,8 @@ namespace {
     std::vector<ToolboxModule*> modules_terminating{};
 
     bool minimap_enabled = false;
+
+    bool can_render_toolbox = false;
 
     bool is_right_clicking = false;
     bool mouse_moved_whilst_right_clicking = false;
@@ -311,9 +311,6 @@ namespace {
         typedef void(__cdecl * GWFnVoid)();
         const auto disable_hooks = (GWFnVoid)GetProcAddress(existing_gwca, "?DisableHooks@GW@@YAXXZ");
         const auto terminate = (GWFnVoid)GetProcAddress(existing_gwca, "?Terminate@GW@@YAXXZ");
-        // The old gwca.dll's hooks may point into a previously-unloaded toolbox dll;
-        // calling DisableHooks/Terminate can therefore crash. Swallow it via SEH
-        // and continue to FreeLibrary.
         if (disable_hooks) {
             Log::Log("[LoadGWCADll] Calling DisableHooks on old gwca.dll");
             __try {
@@ -421,7 +418,6 @@ namespace {
     {
         const auto found = std::ranges::find(vec, &m);
         if (found != vec.end()) {
-            // Module found
             if (enable) {
                 return true;
             }
@@ -432,7 +428,6 @@ namespace {
             ReorderModules(vec);
             return false;
         }
-        // Module not found
         if (!enable) {
             return false;
         }
@@ -497,7 +492,7 @@ namespace {
             return CallWindowProc(OldWndProc, hWnd, Message, wParam, lParam);
         }
 
-        if (!(CanRenderToolbox() && GWToolbox::IsInitialized())) {
+        if (!(can_render_toolbox && GWToolbox::IsInitialized())) {
             return CallWindowProc(OldWndProc, hWnd, Message, wParam, lParam);
         }
 
@@ -531,13 +526,6 @@ namespace {
 
         // === Send events to toolbox ===
 
-        /* GW Deliberately makes a WM_MOUSEMOVE event right after right button is pressed.
-            Does this to "hide" the cursor when looking around.
-
-            To easily send a "rmb clicked" event to toolbox modules, figure the logic out ourselves and send a custom message WM_GW_RBUTTONCLICK
-         */
-
-
         switch (Message) {
             case WM_MOUSELEAVE:
             case WM_NCMOUSELEAVE:
@@ -562,11 +550,6 @@ namespace {
                 }
             } break;
 
-            // Other mouse events:
-            // - If right mouse down, leave it to gw
-            // - ImGui first (above), if WantCaptureMouse that's it
-            // - Toolbox module second (e.g.: minimap), if captured, that's it
-            // - otherwise pass to gw
             case WM_RBUTTONDOWN:
             case WM_LBUTTONUP:
             case WM_RBUTTONUP:
@@ -593,7 +576,6 @@ namespace {
             //}
             break;
 
-            // keyboard messages
             case WM_KEYUP:
             case WM_SYSKEYUP:
                 if (io.WantCaptureKeyboard || io.WantTextInput) {
@@ -619,7 +601,6 @@ namespace {
                     return true;
                 }
             case WM_ACTIVATE:
-                // send to toolbox modules and plugins
                 {
                     bool captured = false;
                     for (const auto m : tb.GetAllModules()) {
@@ -631,10 +612,6 @@ namespace {
                         return true;
                     }
                 }
-                // note: capturing those events would prevent typing if you have a hotkey assigned to normal letters.
-                // We may want to not send events to toolbox if the player is typing in-game
-                // Otherwise, we may want to capture events.
-                // For that, we may want to only capture *successfull* hotkey activations.
                 break;
 
             case WM_SIZE:
@@ -779,7 +756,7 @@ bool GWToolbox::IsProfilingEnabled()
 bool GWToolbox::ShouldDisableToolbox(GW::Constants::MapID map_id)
 {
     const auto m = GW::Map::GetMapInfo(map_id);
-    return m && (m->GetIsPvP() || m->GetIsGuildHall());
+    return m && m->GetIsPvP();
 }
 
 bool GWToolbox::IsInitialized()
@@ -809,13 +786,6 @@ DWORD __stdcall GWToolbox::MainLoop(LPVOID module) noexcept
         while (gwtoolbox_state != GWToolboxState::Terminated) {
             // wait until destruction
             Sleep(100);
-
-            // Feel free to uncomment to get this behavior for testing, but don't commit.
-            // #ifdef _DEBUG
-            //        if (GetAsyncKeyState(VK_END) & 1) {
-            //            GWToolbox::Instance().StartSelfDestruct();
-            //        }
-            // #endif
         }
 
         // @Remark:
@@ -825,9 +795,6 @@ DWORD __stdcall GWToolbox::MainLoop(LPVOID module) noexcept
             Sleep(16);
         }
 
-        // @Remark:
-        // We can't guarantee that the code in Guild Wars thread isn't still in the trampoline, but
-        // practically a short sleep is fine.
         Sleep(16);
 
         Log::Log("Destroying API\n");
@@ -867,9 +834,11 @@ void GWToolbox::Initialize(LPVOID module)
     AttachRenderCallback();
     GW::EnableHooks();
 
-    UpdateInitialising(.0f);
-    AttachGameLoopCallback();
+    // Module init registers GWCA packet/UI callbacks, which push_back into vectors the game thread
+    // is already iterating with a cached begin(). Let the game-loop callback drive Initialising
+    // instead, so every registration is serialised against packet dispatch.
     pending_detach_dll = false;
+    AttachGameLoopCallback();
 }
 
 std::filesystem::path GWToolbox::LoadSettings()
@@ -1084,7 +1053,6 @@ void GWToolbox::Update(GW::HookStatus*)
     // (minimized, device lost) and a map change during that window can't serve a stale index.
     PropSurface::BeginFrame();
 
-    // Update loop
     for (const auto m : modules_enabled) {
         if (profiling_enabled) {
             LARGE_INTEGER t0, t1;
@@ -1144,6 +1112,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
         imgui_inifile_changed = false;
     }
     if (gwtoolbox_disabled) {
+        can_render_toolbox = false;
         if (!ShouldDisableToolbox()) {
             Enable();
         }
@@ -1154,10 +1123,10 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
         return;
     }
 
-    // Draw loop
     Resources::DxUpdate(device);
 
-    if (!CanRenderToolbox()) return;
+    can_render_toolbox = CanRenderToolbox();
+    if (!can_render_toolbox) return;
 
     // Once-per-frame tick for the shared in-world compositor (installs its hook lazily, resets the
     // per-frame draw guard) so any module that registered an under-UI draw runs this frame.
@@ -1229,9 +1198,6 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
         }
 
 #ifdef _DEBUG
-        // Feel free to uncomment to play with ImGui's features
-        // ImGui::ShowDemoWindow();
-        // ImGui::ShowStyleEditor(); // Warning, this WILL change your theme. Back up theme.ini first!
 #endif
         ToolboxSettings::DrawSettingsCogButtons();
         ImGui::DrawContextMenu();
@@ -1242,12 +1208,8 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
     ImGui::Render();
     ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
 
-    // The Toolbox windows are now drawn into the back buffer; if the user
-    // clicked a title-bar camera button last frame, this is where we
-    // actually read the pixels out and save them to disk.
     ToolboxSettings::FlushPendingScreenshot(device);
 
-    // Update and Render additional Platform Windows
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
         ImGui::UpdatePlatformWindows();
         ImGui::RenderPlatformWindowsDefault();

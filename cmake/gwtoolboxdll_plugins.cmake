@@ -53,7 +53,10 @@ macro(add_tb_plugin PLUGIN)
     set_target_properties(${PLUGIN} PROPERTIES FOLDER "plugins/")
 endmacro()
 
-add_tb_plugin(ExamplePlugin)
+option(GWTOOLBOX_BUILD_EXAMPLE_PLUGIN "Build the ExamplePlugin sample (plugin-author reference; skipped in CI to save build time and keep it out of release artifacts)" ON)
+if(GWTOOLBOX_BUILD_EXAMPLE_PLUGIN)
+    add_tb_plugin(ExamplePlugin)
+endif()
 
 add_tb_plugin(SCTracker)
 # Core (PathGetDocumentsPath/PathGetComputerName) so the plugin writes into the same

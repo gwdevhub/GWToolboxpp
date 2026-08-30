@@ -15,6 +15,8 @@
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 
+#include <Defines.h>
+
 #include <Logger.h>
 #include <Utils/GuiUtils.h>
 
@@ -23,6 +25,7 @@
 
 #include <GWToolbox.h>
 #include <Utils/TextUtils.h>
+#include <Utils/TextUtils_Time.h>
 #include <Utils/ToolboxUtils.h>
 
 namespace packetlogger_export {
@@ -183,6 +186,7 @@ namespace {
     StoCHandlerArray* GetStoCHandlerArray() {
 
         uintptr_t address = GW::Scanner::Find("\x75\x04\x33\xC0\x5D\xC3\x8B\x41\x08\xA8\x01\x75", "xxxxxxxxxxxx", -6);
+        DEBUG_ASSERT(address);
         const uintptr_t StoCHandler_Addr = *(uintptr_t*)address;
 
         struct GameServer {
@@ -595,13 +599,12 @@ std::string PacketLoggerWindow::PrefixTimestamp(std::string message) const
 
     switch (settings.timestamp_type) {
         case TimestampType_Local: {
-            SYSTEMTIME time;
-            GetLocalTime(&time);
+            const auto time = TextUtils::Time::GetCurrentSystemTime();
             bool prependColon = false;
             char t[4];
             std::string time_s = "[";
             if (settings.timestamp_show_hours) {
-                snprintf(t, 4, "%02d", time.wHour);
+                snprintf(t, 4, "%02d", time.hour);
                 time_s.append(t);
                 prependColon = true;
             }
@@ -609,7 +612,7 @@ std::string PacketLoggerWindow::PrefixTimestamp(std::string message) const
                 if (prependColon) {
                     time_s.append(":");
                 }
-                snprintf(t, 4, "%02d", time.wMinute);
+                snprintf(t, 4, "%02d", time.minute);
                 time_s.append(t);
                 prependColon = true;
             }
@@ -617,7 +620,7 @@ std::string PacketLoggerWindow::PrefixTimestamp(std::string message) const
                 if (prependColon) {
                     time_s.append(":");
                 }
-                snprintf(t, 4, "%02d", time.wSecond);
+                snprintf(t, 4, "%02d", time.second);
                 time_s.append(t);
                 prependColon = true;
             }
@@ -625,7 +628,7 @@ std::string PacketLoggerWindow::PrefixTimestamp(std::string message) const
                 if (prependColon) {
                     time_s.append(".");
                 }
-                snprintf(t, 4, "%03d", time.wMilliseconds);
+                snprintf(t, 4, "%03d", time.millisecond);
                 time_s.append(t);
             }
             return time_s + "] " + message;
@@ -689,7 +692,6 @@ void PacketLoggerWindow::SaveMessageLog() const
     const auto filename = Resources::GetPath(L"message_log.csv");
     std::wofstream my_file(filename);
 
-    // Send column names to the stream
     for (const auto& it : message_log) {
         if (!it.second || !it.second->length()) {
             continue;
@@ -699,7 +701,6 @@ void PacketLoggerWindow::SaveMessageLog() const
         my_file << it.second->c_str();
         my_file << "\n";
     }
-    // Close the file
     my_file.close();
 }
 
@@ -737,16 +738,6 @@ void PacketLoggerWindow::Draw(IDirect3DDevice9*)
     ImGui::Checkbox("Log Packet Content", &log_packet_content);
     ImGui::SameLine();
     ImGui::CheckboxWithHelp("Auto ignore incoming packets", &auto_ignore_packets, "While ticked, any StoC packets received will be added to the ignore list.");
-    /*if ( ImGui::Button("Export Map Info")) {
-        if (maps.empty()) {
-            FetchMapInfo();
-        }
-        else {
-            ExportMapInfo();
-        }
-    }
-    ImGui::ShowHelp("Export current map info to disk");
-    */
     ImGui::CheckboxWithHelp("Log NPC Dialogs", &log_npc_dialogs, "Log encoded strings and their translated output to debug console");
     if (ImGui::CollapsingHeader("Ignored Packets")) {
         if (ImGui::Button("Select All")) {

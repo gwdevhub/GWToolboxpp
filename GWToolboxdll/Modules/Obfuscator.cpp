@@ -33,13 +33,9 @@
 
 
 namespace {
-    /*IWbemServices* pSvc = 0;
-    IWbemLocator* pLoc = 0;
-    HRESULT CoInitializeEx_result = -1;*/
     Obfuscator::Settings settings;
     char own_player_name[20]{};
     std::wstring own_player_name_w{};
-    MSG msg;
     std::default_random_engine dre = std::default_random_engine(static_cast<uint32_t>(time(nullptr)));
     GW::HookEntry stoc_hook;
     GW::HookEntry ctos_hook;
@@ -256,14 +252,11 @@ namespace {
     std::wstring speech_message_temp_message;
 
 
-    // List of obfuscated names, keyed by obfuscated
     std::map<std::wstring, std::wstring> obfuscated_by_obfuscation;
-    // List of obfuscated names, keyed by original
     std::map<std::wstring, std::wstring> obfuscated_by_original;
     // Current position in the list of obfuscated names
     size_t pool_index = 0;
 
-    // Current state
     enum class ObfuscatorState : uint8_t {
         Disabled,
         Enabled
@@ -524,7 +517,7 @@ namespace {
         guild_roster_obfuscated = obfuscate;
         return true;
     }
-    
+
     void CHAT_CMD_FUNC(CmdObfuscate)
     {
         Obfuscator::Obfuscate(pending_state != ObfuscatorState::Enabled);
@@ -574,7 +567,6 @@ namespace {
             }
             break;
             case GW::UI::UIMessage::kDialogBody: {
-                // Dialog body
                 const auto packet_actual = static_cast<GW::UI::DialogBodyInfo*>(wParam);
                 if (packet_actual->message_enc && ObfuscateMessage(packet_actual->message_enc, ui_message_temp_message)) {
                     packet_actual->message_enc = ui_message_temp_message.data();
@@ -848,9 +840,11 @@ void Obfuscator::Initialize()
     Reset();
 
     const auto GetCharacterSummary_Assertion = GW::Scanner::FindAssertion(R"(p:\code\gw\ui\char\uichinfo.cpp)", "!StrCmp(m_characterName, characterInfo.characterName)",0,0);
+    DEBUG_ASSERT(GetCharacterSummary_Assertion);
     if (GetCharacterSummary_Assertion) {
         // Hook to override character names on login screen
         GetCharacterSummary_Func = reinterpret_cast<GetCharacterSummary_pt>(GW::Scanner::ToFunctionStart(GetCharacterSummary_Assertion));
+        DEBUG_ASSERT(GetCharacterSummary_Func);
         GW::Hook::CreateHook((void**)&GetCharacterSummary_Func, OnGetCharacterSummary, reinterpret_cast<void**>(&RetGetCharacterSummary));
         GW::Hook::EnableHooks(GetCharacterSummary_Func);
         // Patch to allow missing character summary
@@ -859,6 +853,7 @@ void Obfuscator::Initialize()
     }
 
     GetAccountData_Func = (GetAccountData_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion(R"(p:\code\gw\ui\game\vendor\vnacctnameset.cpp)", "charName", 0, 0));
+    DEBUG_ASSERT(GetAccountData_Func);
     if (GetAccountData_Func) {
         GW::Hook::CreateHook((void**)&GetAccountData_Func, OnGetAccountInfo, reinterpret_cast<void**>(&GetAccountData_Ret));
         GW::Hook::EnableHooks(GetAccountData_Func);
@@ -940,10 +935,6 @@ bool Obfuscator::CanTerminate()
 
 void Obfuscator::Update(float)
 {
-    if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
-        TranslateMessage(&msg);
-        DispatchMessage(&msg);
-    }
     if (pending_guild_obfuscate && GW::Map::GetIsMapLoaded()) {
         ObfuscateGuildRoster(IsObfuscatorEnabled());
         pending_guild_obfuscate = false;

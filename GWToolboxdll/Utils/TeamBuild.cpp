@@ -285,18 +285,26 @@ Build::~Build() {
         pending_reroll_build = 0;
 }
 
-std::string Build::GetFallbackBuildName()
+const std::string& Build::GetFallbackBuildName()
 {
-    if (code.empty()) return {};
-    const auto decoded = Decode();
-    if (!decoded) return {};
-    for (const auto skill_id : decoded->skills) {
-        if (skill_id == GW::Constants::SkillID::No_Skill) continue;
-        const auto* skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
-        if (!skill || !skill->IsElite()) continue;
-        return Resources::GetSkillName(skill_id)->string();
+    if (fallback_src_code_ != code
+        || (fallback_elite_skill_ != GW::Constants::SkillID::No_Skill
+            && Resources::GetSkillName(fallback_elite_skill_)->string() != fallback_name_)) {
+        fallback_src_code_ = code;
+        fallback_name_.clear();
+        fallback_elite_skill_ = GW::Constants::SkillID::No_Skill;
+        if (const auto decoded = Decode()) {
+            for (const auto skill_id : decoded->skills) {
+                if (skill_id == GW::Constants::SkillID::No_Skill) continue;
+                const auto* skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
+                if (!skill || !skill->IsElite()) continue;
+                fallback_elite_skill_ = skill_id;
+                fallback_name_ = Resources::GetSkillName(skill_id)->string();
+                break;
+            }
+        }
     }
-    return {};
+    return fallback_name_;
 }
 
 GW::SkillbarMgr::SkillTemplate* Build::Decode()
@@ -337,19 +345,32 @@ void Build::View() const
         GW::UI::SendUIMessage(GW::UI::UIMessage::kOpenTemplate, &t);
     });
 }
-std::string Build::DisplayName()
+const std::string& Build::DisplayName()
 {
-    auto gen_name = name;
-    if (gen_name.empty()) {
-        gen_name = GetFallbackBuildName();
+    bool dirty = display_name_src_name_ != name
+        || display_name_src_hero_id_ != hero_id;
+    if (!dirty && hero_id != GW::Constants::HeroID::NoHero)
+        dirty = Resources::GetHeroName(hero_id)->string() != display_name_src_hero_name_;
+    if (!dirty && name.empty())
+        dirty = GetFallbackBuildName() != display_name_src_fallback_;
+    if (dirty) {
+        display_name_src_name_ = name;
+        display_name_src_hero_id_ = hero_id;
+        auto gen_name = name;
+        if (gen_name.empty()) {
+            gen_name = GetFallbackBuildName();
+            display_name_src_fallback_ = gen_name;
+        }
+        if (hero_id != GW::Constants::HeroID::NoHero) {
+            display_name_src_hero_name_ = Resources::GetHeroName(hero_id)->string();
+            if (gen_name.empty())
+                gen_name = display_name_src_hero_name_;
+            else
+                gen_name = std::format("{} ({})", name, display_name_src_hero_name_);
+        }
+        display_name_ = std::move(gen_name);
     }
-    if (hero_id != GW::Constants::HeroID::NoHero) {
-        if (gen_name.empty())
-            gen_name = Resources::GetHeroName(hero_id)->string();
-        else
-            gen_name = std::format("{} ({})", name, Resources::GetHeroName(hero_id)->string());
-    }
-    return gen_name;
+    return display_name_;
 }
 
 std::string Build::GetChatBuildCode() {
@@ -461,12 +482,30 @@ void Build::Update()
 
 uint32_t TeamBuild::s_cur_ui_id = 0;
 
-TeamBuild::TeamBuild(std::string_view n, std::string_view id) : name(n), ui_id(id.empty() ? std::to_string(++s_cur_ui_id) : std::string(id)) {}
+void TeamBuild::RefreshTitles()
+{
+    edit_winname_src_ = name;
+    edit_winname_ = std::format("{}###teambuild_{}", name, ui_id);
+    detached_winname_src_ = name;
+    detached_winname_ = std::format("{}###detached_{}", name, ui_id);
+}
+
+TeamBuild::TeamBuild()
+{
+    RefreshTitles();
+}
+
+TeamBuild::TeamBuild(std::string_view n, std::string_view id) : name(n), ui_id(id.empty() ? std::to_string(++s_cur_ui_id) : std::string(id))
+{
+    RefreshTitles();
+}
 
 TeamBuild::TeamBuild(const TeamBuild& other)
     : edit_open(other.edit_open), focus_next_frame(other.focus_next_frame), mode(other.mode), show_numbers(other.show_numbers), has_hero_slots(other.has_hero_slots), name(other.name), group(other.group), ui_id(std::to_string(++s_cur_ui_id)),
       builds(other.builds)
-{}
+{
+    RefreshTitles();
+}
 
 TeamBuild& TeamBuild::operator=(const TeamBuild& other)
 {
@@ -481,6 +520,7 @@ TeamBuild& TeamBuild::operator=(const TeamBuild& other)
         ui_id = std::to_string(++s_cur_ui_id);
         builds = other.builds;
     }
+    RefreshTitles();
     return *this;
 }
 
@@ -652,7 +692,6 @@ void TeamBuild::DrawPlayerBuildsContent(bool& builds_modified, bool editable)
             }
         }
         else {
-            // Static display — click to show skillbar tooltip
             ImGui::PushItemWidth(name_width);
             const auto& disp = !build.name.empty() ? build.name : build.GetFallbackBuildName();
             ImGui::TextUnformatted(disp.c_str());
@@ -1007,7 +1046,6 @@ void TeamBuild::DrawHeroBuildsContent(bool& builds_modified, bool editable)
         // ---- Expanded edit section ----
         if (editing) {
             if (!is_player) {
-                // Hero selector
                 const auto& sorted_heroes = SortedHeroIDs();
                 const auto hero_it = std::ranges::find(sorted_heroes, build.hero_id);
                 int combo_idx = hero_it != sorted_heroes.end() ? static_cast<int>(std::distance(sorted_heroes.begin(), hero_it)) : -1;
@@ -1027,7 +1065,6 @@ void TeamBuild::DrawHeroBuildsContent(bool& builds_modified, bool editable)
                 }
                 ImGui::PopItemWidth();
 
-                // Show panel toggle
                 ImGui::SameLine(0, spacing);
                 const auto* panel_icon = reinterpret_cast<const char*>(build.show_panel ? ICON_FA_EYE : ICON_FA_EYE_SLASH);
                 if (ImGui::Button(panel_icon, icon_btn_size)) {
@@ -1035,7 +1072,6 @@ void TeamBuild::DrawHeroBuildsContent(bool& builds_modified, bool editable)
                 }
                 if (ImGui::IsItemHovered()) ImGui::SetTooltip(build.show_panel ? "Hero panel: Show" : "Hero panel: Hide");
 
-                // Behavior toggle
                 ImGui::SameLine(0, spacing);
                 const char* behavior_icon = reinterpret_cast<const char*>(ICON_FA_SHIELD_ALT);
                 const char* behavior_tooltip = "Hero behaviour: Guard";
@@ -1054,7 +1090,6 @@ void TeamBuild::DrawHeroBuildsContent(bool& builds_modified, bool editable)
                 }
                 if (ImGui::IsItemHovered()) ImGui::SetTooltip(behavior_tooltip);
 
-                // Disabled skills
                 ImGui::SameLine(0, spacing);
                 int enabled_count = 8;
                 for (int k = 0; k < 8; k++)
@@ -1098,7 +1133,6 @@ void TeamBuild::DrawHeroBuildsContent(bool& builds_modified, bool editable)
                 }
             }
 
-            // Pcons (player slot only)
             if (is_player) {
                 ImGui::TextUnformatted("Pcons:");
                 ImGui::ShowHelp("Enable or disable pcons when this build is loaded");
@@ -1162,7 +1196,11 @@ void TeamBuild::DrawHeroBuildsContent(bool& builds_modified, bool editable)
 
 bool TeamBuild::DrawEditWindow(size_t index, std::vector<TeamBuild>& all_builds, bool& builds_modified)
 {
-    const auto winname = std::format("{}###teambuild_{}", name, ui_id);
+    if (edit_winname_src_ != name) {
+        edit_winname_src_ = name;
+        edit_winname_ = std::format("{}###teambuild_{}", name, ui_id);
+    }
+    const auto& winname = edit_winname_;
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(500, 0), ImGuiCond_FirstUseEver);
     if (focus_next_frame) {
@@ -1193,7 +1231,6 @@ bool TeamBuild::DrawEditWindow(size_t index, std::vector<TeamBuild>& all_builds,
 
     ImGui::Spacing();
 
-    // Teambuild reordering and deletion
     if (ImGui::Button("Up") && index > 0) {
         std::swap(all_builds[index - 1], all_builds[index]);
         builds_modified = true;
@@ -1287,7 +1324,11 @@ bool TeamBuild::DrawEditWindow(size_t index, std::vector<TeamBuild>& all_builds,
 void TeamBuild::DrawDetachedWindow(std::vector<TeamBuild>& hero_builds, bool& builds_modified)
 {
     if (!edit_open) return;
-    const auto winname = std::format("{}###detached_{}", name, ui_id);
+    if (detached_winname_src_ != name) {
+        detached_winname_src_ = name;
+        detached_winname_ = std::format("{}###detached_{}", name, ui_id);
+    }
+    const auto& winname = detached_winname_;
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(420, 0), ImGuiCond_FirstUseEver);
     if (focus_next_frame) {

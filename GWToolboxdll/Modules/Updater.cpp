@@ -59,7 +59,6 @@ namespace {
 
     GWToolboxRelease* GetLatestRelease(GWToolboxRelease* release)
     {
-        // Get list of releases
         std::string response;
         unsigned int tries = 0;
         const auto url = "https://api.github.com/repos/gwdevhub/GWToolboxpp/releases";
@@ -112,13 +111,11 @@ namespace {
     {
         int written = 0;
         if (latest_release.version == current_release.version && latest_release.size != current_release.size) {
-            // Version matches, but file size is different
             written = snprintf(update_available_text, sizeof(update_available_text) - 1, "GWToolbox++ version %s (%.2f kb) is available! You have %s (%.2f kb)",
                                latest_release.version.c_str(), latest_release.size > 0 ? latest_release.size / 1024.f : 0.f,
                                current_release.version.c_str(), current_release.size > 0 ? current_release.size / 1024.f : 0.f);
         }
         else {
-            // Version mismatch
             written = snprintf(update_available_text, sizeof(update_available_text) - 1, "GWToolbox++ version %s is available! You have %s", latest_release.version.c_str(), current_release.version.c_str());
         }
         ASSERT(written > 0);
@@ -146,7 +143,6 @@ namespace {
         }
         Log::Log("dll file name is %s\n", dllfile);
 
-        // Get name of dll from path
         const std::wstring dll_path(dllfile);
         std::wstring dll_name;
         wchar_t sep = '/';
@@ -186,10 +182,6 @@ namespace {
             });
     }
 
-    // Shown once, the first time a freshly-updated build runs. A heartfelt, human
-    // ask — Toolbox gets flagged as a false positive because it injects into Gw.exe,
-    // and a lively, well-starred GitHub project reads as more trustworthy to AV
-    // vendors over time, which means fewer false detections for everyone.
     void DrawStarRequest()
     {
         if (!show_star_request) {
@@ -226,6 +218,10 @@ namespace {
             ImGui::Spacing();
             ImGui::Separator();
             ImGui::Spacing();
+            if (ImGui::Checkbox("I've already starred###gwtoolbox_has_starred", &settings.has_starred)) {
+                show_star_request = false;
+            }
+            ImGui::Spacing();
             if (ImGui::Button("Star us on GitHub###gwtoolbox_open_star", ImVec2(200.0f * ImGui::FontScale(), 0))) {
                 ShellExecute(nullptr, "open", "https://github.com/gwdevhub/GWToolboxpp", nullptr, nullptr, SW_SHOWNORMAL);
                 show_star_request = false;
@@ -249,7 +245,6 @@ const std::string& Updater::GetServerVersion()
 
 const GWToolboxRelease* Updater::GetCurrentVersionInfo(GWToolboxRelease* out)
 {
-    // server and client versions match
     wchar_t path[MAX_PATH];
     if (GetModuleFileNameW(GWToolbox::GetDLLModule(), path, _countof(path)) == 0) {
         return nullptr;
@@ -281,11 +276,8 @@ void Updater::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
     settings.update_mode = Mode::DontCheckForUpdates;
     settings.update_release_type = ReleaseType::Beta;
 #else
-    // If the version we ran last differs from this one, Toolbox was just updated
-    // (in-app or by hand) — show the star request once. SaveSettings rewrites
-    // dllversion below, so it won't fire again until the next update.
     std::string previous_version;
-    if (doc.Get(Name(), "dllversion", previous_version) && !previous_version.empty() && previous_version != GWTOOLBOXDLL_VERSION) {
+    if (doc.Get(Name(), "dllversion", previous_version) && !previous_version.empty() && previous_version != GWTOOLBOXDLL_VERSION && !settings.has_starred) {
         show_star_request = true;
     }
 #endif
@@ -342,7 +334,6 @@ void Updater::CheckForUpdate(const bool forced)
 
         if (latest_release.version == current_release.version
             && latest_release.size == current_release.size) {
-            // Version and size match
             step = Done;
             is_latest_version = true;
             if (forced) {
@@ -389,7 +380,6 @@ void Updater::Draw(IDirect3DDevice9*)
             step = Done;
             break;
         case CheckAndAsk: {
-            // check and ask
             if (!visible) {
                 visible = true;
             }

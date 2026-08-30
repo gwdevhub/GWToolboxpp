@@ -92,7 +92,6 @@ private:
         int asset_manifest_file() { return data[1]; }
         int exe_file() { return data[2]; }
     };
-    // Keep a copy of main manifest in memory.
     FStoC_MainManifest main_manifest;
 
     // Note: Multiple file hashs can be appended to this packet, but a minimum of two is always required.

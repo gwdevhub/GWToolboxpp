@@ -12,6 +12,7 @@
 #include <Modules/Resources.h>
 
 #include "Utils/TextUtils.h"
+#include "Utils/TextUtils_Time.h"
 
 
 namespace {
@@ -75,8 +76,7 @@ namespace {
             ImGui::TableHeadersRow();
 
             for (auto drop : drops) {
-                std::tm tm_buf{};
-                localtime_s(&tm_buf, &drop->system_time);
+                std::tm tm_buf = TextUtils::Time::SafeLocaltime(drop->system_time);
                 char time_str[32];
                 std::strftime(time_str, sizeof(time_str), "%H:%M:%S", &tm_buf);
 
@@ -126,7 +126,6 @@ namespace {
                 // Use the index as the ID, not the string content
                 ImGui::PushID(group_idx++);
 
-                // Use TreeNodeEx with a simple label
                 bool open = ImGui::TreeNodeEx("##tree", ImGuiTreeNodeFlags_SpanAvailWidth, "%s", key.empty() ? "(Unknown)" : key.c_str());
 
                 ImGui::TableNextColumn();
@@ -139,8 +138,7 @@ namespace {
                     for (auto drop : items) {
                         ImGui::PushID(item_idx++); // Unique ID for each sub-item
 
-                        std::tm tm_buf{};
-                        localtime_s(&tm_buf, &drop->system_time);
+                        std::tm tm_buf = TextUtils::Time::SafeLocaltime(drop->system_time);
                         char time_str[32];
                         std::strftime(time_str, sizeof(time_str), "%H:%M:%S", &tm_buf);
 
@@ -240,15 +238,13 @@ namespace {
                     for (auto drop : items) {
                         ImGui::PushID(item_idx++);
 
-                        std::tm tm_buf{};
-                        localtime_s(&tm_buf, &drop->system_time);
+                        std::tm tm_buf = TextUtils::Time::SafeLocaltime(drop->system_time);
                         char time_str[32];
                         std::strftime(time_str, sizeof(time_str), "%H:%M:%S", &tm_buf);
 
                         ImGui::TableNextRow();
                         ImGui::TableNextColumn();
 
-                        // Show item details with weapon stats
                         ImGui::TextColored(GW::Items::GetRarityColor(drop->rarity), "%s", drop->GetItemName()->string().c_str());
                         ImGui::TableNextColumn();
                         ImGui::Text("%d", drop->quantity);

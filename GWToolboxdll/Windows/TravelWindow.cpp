@@ -21,6 +21,7 @@
 #include <GWCA/Managers/UIMgr.h>
 
 #include <Utils/GuiUtils.h>
+#include <Widgets/CartographerWidget.h>
 #include <Modules/Resources.h>
 #include <Windows/DailyQuestsWindow.h>
 #include <Windows/TravelWindow.h>
@@ -87,7 +88,6 @@ namespace {
             }
             if (enc_name->IsDecoding())
                 return nullptr;
-            // Sanitise for searching my removing punctuation etc
             const auto sanitised = SanitiseForSearch(enc_name->wstring());
             name = new char[sanitised.length() + 1];
             strcpy(name, sanitised.c_str());
@@ -238,32 +238,6 @@ namespace {
 
     IDirect3DTexture9** scroll_texture = nullptr;
 
-    /* Not used, but good to keep for reference!
-    enum error_message_ids {
-    error_B29 = 52,
-    error_B30,
-    error_B31,
-    error_B32,
-    error_B33,
-    error_B34,
-    error_B35,
-    error_B36,
-    error_B37,
-    error_B38
-    };
-    enum error_message_trans_codes {
-    error_B29 = 0xB29, // The target party has members who do not meet this mission's level requirements.
-    error_B30, // You may not enter that outpost
-    error_B31, // Your party leader must be a member of this guild. An officer from this guild must also be in the party.
-    error_B32, // You must be the leader of your party to do that.
-    error_B33, // You must be a member of a party to do that.
-    error_B34, // Your party is already waiting to go somewhere else.
-    error_B35, // Your party is already in that guild hall.
-    error_B36, // Your party is already in that district.
-    error_B37, // Your party is already in the active district.
-    error_B38, // The merged party would be too large.
-    };  */
-
     void OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessage message_id, void* wparam, void*)
     {
         switch (message_id) {
@@ -335,7 +309,6 @@ namespace {
             }
         }
 
-        // Helper function
         auto FindMatchingMap = [](const char* compare, const char* const* map_names, const GW::Constants::MapID* map_ids, const size_t map_count) -> GW::Constants::MapID {
             const char* bestMatchMapName = nullptr;
             auto bestMatchMapID = GW::Constants::MapID::None;
@@ -362,7 +335,6 @@ namespace {
             }
             return bestMatchMapID;
         };
-        // Helper function
         auto FindMatchingMapVec = [](const char* compare, std::vector<SearchableArea*>& maps) -> GW::Constants::MapID {
             const char* bestMatchMapName = nullptr;
             auto bestMatchMapID = GW::Constants::MapID::None;
@@ -429,7 +401,6 @@ namespace {
 
     void CHAT_CMD_FUNC(CmdTP)
     {
-        // zero argument error
         if (argc == 1) {
             Log::Error("[Error] Please provide an argument");
             return;
@@ -444,7 +415,6 @@ namespace {
             pending_map_travel.map_id = GW::Constants::MapID::None;
             return;
         }
-        // Guild hall
         if (argOutpost == L"gh") {
             if (IsInGH()) {
                 GW::GuildMgr::LeaveGH();
@@ -483,6 +453,15 @@ namespace {
             if (quest && quest->map_to != GW::Constants::MapID::None) {
                 instance.TravelNearest(quest->map_to);
             }
+            return;
+        }
+        if (argOutpost == L"carto") {
+            GW::Vec2f target_wm;
+            if (!CartographerWidget::GetCurrentTargetWorldPos(target_wm)) {
+                Log::Error("[Error] The cartographer helper has no current target");
+                return;
+            }
+            instance.TravelNearest(WorldMapWidget::GetMapIdForLocation(target_wm));
             return;
         }
         if (argOutpost.size() > 2 && argOutpost.compare(0, 3, L"fav", 3) == 0) {
@@ -853,9 +832,6 @@ GW::Constants::MapID TravelWindow::GetNearestOutpost(const GW::Constants::MapID 
     if (IsValidOutpost(map_to) && GW::Map::GetIsMapUnlocked(map_to))
         return map_to;
 
-    // BFS over the map adjacency graph to find the nearest unlocked outpost.
-    // When multiple outposts are found at the same BFS depth, use Euclidean
-    // distance on the world map as a tiebreaker.
     using MapID = GW::Constants::MapID;
     std::vector<MapID> queue;
     std::vector<uint32_t> depth(static_cast<size_t>(MapID::Count), UINT32_MAX);
@@ -1181,13 +1157,11 @@ void TravelWindow::DrawSettingsInternal()
 
             ImGui::TableNextRow();
 
-            // Alias key
             ImGui::TableSetColumnIndex(0);
             ImGui::SetNextItemWidth(-1);
             if (ImGui::InputText("##alias", entry.alias, 32))
                 aliases_changed = true;
 
-            // Map combo
             ImGui::TableSetColumnIndex(1);
             ImGui::SetNextItemWidth(-1);
             auto map_idx = OutpostIDToIndex(entry.map_id);
@@ -1196,7 +1170,6 @@ void TravelWindow::DrawSettingsInternal()
                 aliases_changed = true;
             }
 
-            // District combo
             ImGui::TableSetColumnIndex(2);
             ImGui::SetNextItemWidth(-1);
             auto dist_idx = DistrictToAliasIndex(entry.district);
@@ -1205,7 +1178,6 @@ void TravelWindow::DrawSettingsInternal()
                 aliases_changed = true;
             }
 
-            // District number
             ImGui::TableSetColumnIndex(3);
             ImGui::SetNextItemWidth(-1);
             auto dist_num = static_cast<int>(entry.district_number);
@@ -1214,7 +1186,6 @@ void TravelWindow::DrawSettingsInternal()
                 aliases_changed = true;
             }
 
-            // Delete button
             ImGui::TableSetColumnIndex(4);
             if (ImGui::ButtonWithHint(ICON_FA_TRASH, "Delete alias", ImVec2(btn_w, 0))) {
                 user_aliases.erase(user_aliases.begin() + i);

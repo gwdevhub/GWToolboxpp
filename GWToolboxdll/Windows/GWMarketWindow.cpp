@@ -55,7 +55,6 @@ namespace {
     constexpr uint32_t COST_PER_CONNECTION_MS = 30 * 1000;
     constexpr uint32_t COST_PER_CONNECTION_MAX_MS = 60 * 1000;
 
-    // Enums for type-safe representations
     enum class Currency : uint32_t { Platinum = 0, Ecto = 1, Zkeys = 2, Arms = 3, Count = 4, All = 0xf };
 
     enum class OrderType : uint8_t { Sell = 0, Buy = 1 };
@@ -193,7 +192,6 @@ namespace {
         return Attribute::None;
     }
 
-    // Data structures
     struct Price {
         Currency type = Currency::Platinum;
         float quantity = 1.f;
@@ -335,7 +333,6 @@ namespace {
     bool show_edit_item_window = false;
     size_t editing_item_index = 0;
 
-    // Edit window - matching item orders
     std::vector<MarketItem> edit_window_matching_orders;
     std::string edit_window_matching_item_name;
     bool edit_window_orders_needs_sort = true;
@@ -447,13 +444,10 @@ namespace {
         int buyOrders = 0;
     };
 
-    // Settings
     GWMarketWindow::Settings settings;
 
-    // WebSocket
     ThreadedWebSocket market_ws;
 
-    // Data
     std::vector<AvailableItem> available_items;
     std::vector<MarketItem> last_items;
     std::vector<MarketItem> current_item_orders;
@@ -461,13 +455,11 @@ namespace {
     std::string pending_search_item;
     std::map<std::string, AvailableItem> favorite_items;
 
-    // UI
     char search_buffer[256] = "";
     enum FilterMode { SHOW_ALL, SHOW_SELL_ONLY, SHOW_BUY_ONLY };
     FilterMode filter_mode = SHOW_ALL;
     float refresh_timer = 0.0f;
 
-    // Socket.IO
     bool socket_io_ready = false;
     clock_t last_ping_time = 0;
     int ping_interval = 25000;
@@ -477,7 +469,6 @@ namespace {
     bool available_items_needs_sort = true;
     bool current_orders_needs_sort = true;
 
-    // Forward declarations
     void SendSocketStarted();
     void SendGetAvailableOrders();
     void SendGetLastItemsByFamily(const std::string& family);
@@ -660,13 +651,11 @@ namespace {
         if (!_orders.empty()) {
             const auto& item_name = _orders[0].name;
 
-            // Update current viewing orders
             if (item_name == current_viewing_item) {
                 current_item_orders = _orders;
                 current_orders_needs_sort = true;
             }
 
-            // Update edit window matching orders
             if (item_name == edit_window_matching_item_name) {
                 edit_window_matching_orders = _orders;
                 edit_window_orders_needs_sort = true;
@@ -739,7 +728,6 @@ namespace {
         SendSocketStarted();
         Refresh();
 
-        // Process any pending search request
         if (!pending_search_item.empty()) {
             SendGetItemOrders(pending_search_item);
             pending_search_item.clear();
@@ -934,7 +922,6 @@ namespace {
     {
         ImGui::Text("Available Listings (%zu)", available_items.size());
         ImGui::Separator();
-        // Sort only when data changes
         if (available_items_needs_sort) {
             std::sort(available_items.begin(), available_items.end(), [](const AvailableItem& a, const AvailableItem& b) {
                 return *a.name < *b.name;
@@ -944,11 +931,9 @@ namespace {
         }
 
         for (const auto& item : available_items) {
-            // Apply filter mode
             if (filter_mode == SHOW_SELL_ONLY && item.sellOrders == 0) continue;
             if (filter_mode == SHOW_BUY_ONLY && item.buyOrders == 0) continue;
 
-            // Apply search filter
             if (search_buffer[0] != '\0') {
                 std::string search_lower = search_buffer;
                 std::string name_lower = *item.name;
@@ -1035,7 +1020,6 @@ namespace {
 
         ImGui::Text("Item: %s", current_viewing_item.c_str());
 
-        // Sort mode dropdown
         ImGui::SameLine();
         ImGui::SetNextItemWidth(150.0f);
         if (ImGui::BeginCombo("##sort_mode", order_sort_mode == OrderSortMode::MostRecent ? "Most Recent" : "Currency")) {
@@ -1066,7 +1050,6 @@ namespace {
 
         ImGui::Separator();
 
-        // Add favorite/unfavorite button
         if (!current_viewing_item.empty()) {
             bool is_favorite = favorite_items.contains(current_viewing_item);
             std::string fav_label = std::format("{} {}", ICON_FA_STAR, is_favorite ? "Unfavorite" : "Favorite");
@@ -1097,10 +1080,8 @@ namespace {
             return;
         }
 
-        // Sort orders only when data changes or sort mode changes
         if (current_orders_needs_sort) {
             if (order_sort_mode == OrderSortMode::Currency) {
-                // Sort by price (cheapest first)
                 std::sort(current_item_orders.begin(), current_item_orders.end(), [](const MarketItem& a, const MarketItem& b) {
                     if (a.prices.empty() || b.prices.empty()) return false;
                     if (a.currency() != b.currency()) return a.currency() < b.currency();
@@ -1108,7 +1089,6 @@ namespace {
                 });
             }
             else {
-                // Sort by most recent
                 std::sort(current_item_orders.begin(), current_item_orders.end(), [](const MarketItem& a, const MarketItem& b) {
                     return a.lastRefresh > b.lastRefresh;
                 });
@@ -1122,7 +1102,9 @@ namespace {
             const auto& price = order.prices[0];
             if (order_view_currency != Currency::All && order_view_currency != price.type) return;
 
-            ImGui::PushID(order.description.c_str());
+            // Use the order's address for a unique ID; descriptions are often empty and would collide,
+            // making the per-row "Whisper" buttons share an ImGui ID.
+            ImGui::PushID(&order);
             const auto top = ImGui::GetCursorPosY();
             ImGui::TextUnformatted(order.player.c_str());
             const auto timetext = TextUtils::RelativeTime(order.lastRefresh);
@@ -1225,9 +1207,7 @@ namespace {
             return;
         }
 
-        // Sort orders only when data changes
         if (edit_window_orders_needs_sort) {
-            // Sort by price (cheapest first)
             std::sort(edit_window_matching_orders.begin(), edit_window_matching_orders.end(), [](const MarketItem& a, const MarketItem& b) {
                 if (a.prices.empty() || b.prices.empty()) return false;
                 if (a.currency() != b.currency()) return a.currency() < b.currency();
@@ -1242,26 +1222,23 @@ namespace {
 
             const auto& price = order.prices[0];
 
-            ImGui::PushID(order.description.c_str());
+            // Use the order's address for a unique ID; descriptions are often empty and would collide.
+            ImGui::PushID(&order);
             // const auto top = ImGui::GetCursorPosY();
 
-            // Player name and time
             ImGui::TextUnformatted(order.player.c_str());
             const auto timetext = TextUtils::RelativeTime(order.lastRefresh);
             ImGui::SameLine();
             ImGui::TextDisabled("%s", timetext.c_str());
 
-            // Weapon details
             if (order.has_weapon_details()) {
                 ImGui::TextUnformatted(order.weaponDetails.toString().c_str());
             }
 
-            // Description
             if (!order.description.empty()) {
                 ImGui::TextUnformatted(order.description.c_str());
             }
 
-            // Price info
             ImGui::Text("Wants to %s %d for ", order.orderType == OrderType::Sell ? "sell" : "buy", order.quantity);
 
             ImGui::SameLine(0, 0);
@@ -1277,7 +1254,6 @@ namespace {
                 ImGui::Text("%.2f %s", price.price, GetPriceTypeString(price.type));
             }
 
-            // Price per item
             ImGui::SameLine();
             const auto price_per = order.price_per();
             ImGui::TextDisabled(price_per == static_cast<int>(price_per) ? "(%.0f %s each)" : "(%.1f %s each)", price_per, GetPriceTypeString(price.type));
@@ -1286,7 +1262,6 @@ namespace {
             ImGui::PopID();
         };
 
-        // Show sell orders first
         bool has_sell_orders = false;
         for (const auto& order : edit_window_matching_orders) {
             if (order.orderType == OrderType::Sell && order.valid()) {
@@ -1299,7 +1274,6 @@ namespace {
             }
         }
 
-        // Show buy orders
         bool has_buy_orders = false;
         for (const auto& order : edit_window_matching_orders) {
             if (order.orderType == OrderType::Buy && order.valid()) {
@@ -1326,7 +1300,6 @@ namespace {
 
 
 
-    // Temporary values for editing shop items
     struct EditingShopItem {
         char name_buffer[256] = {0};
         char description_buffer[512] = {0};
@@ -1364,14 +1337,11 @@ namespace {
     {
         ImGui::PushID(static_cast<int>(index));
 
-        // Item name
         ImGui::TextUnformatted(item.name.c_str());
 
-        // Quantity
         ImGui::SameLine(250);
         ImGui::Text("x%d", item.quantity);
 
-        // Price
         ImGui::SameLine(350);
         if (!item.prices.empty()) {
             const auto& price = item.prices[0];
@@ -1382,7 +1352,6 @@ namespace {
             ImGui::Text("%.0f %s", price.price, GetPriceTypeString(price.type));
         }
 
-        // Edit button
         ImGui::SameLine(ImGui::GetContentRegionAvail().x - 50);
         if (ImGui::SmallButton("Edit")) {
             editing_item_index = index;
@@ -1399,7 +1368,6 @@ namespace {
 
         ImGui::SetNextWindowSize(ImVec2(600, 400), ImGuiCond_FirstUseEver);
         if (ImGui::Begin("My Shop", &show_my_shop_window, ImGuiWindowFlags_NoCollapse)) {
-            // Shop status
             if (!my_shop.uuid.empty() && my_shop.is_certified(GetCurrentPlayerName())) {
                 ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "Shop Status: Verified");
             }
@@ -1413,14 +1381,12 @@ namespace {
 
             ImGui::Separator();
 
-            // Shop items list
             if (my_shop.items.empty()) {
                 ImGui::TextDisabled("No items in shop");
             }
             else {
                 ImGui::BeginChild("ShopItems", ImVec2(0, -30), true);
 
-                // Header
                 ImGui::Text("Item Name");
                 ImGui::SameLine(250);
                 ImGui::Text("Quantity");
@@ -1428,7 +1394,6 @@ namespace {
                 ImGui::Text("Price");
                 ImGui::Separator();
 
-                // Items
                 for (size_t i = 0; i < my_shop.items.size(); i++) {
                     DrawShopItem(my_shop.items[i], i);
                 }
@@ -1436,7 +1401,6 @@ namespace {
                 ImGui::EndChild();
             }
 
-            // Footer
             ImGui::Separator();
             if (ImGui::Button("Add Item", ImVec2(120, 0))) {
                 editing_item.Reset();
@@ -1460,56 +1424,44 @@ namespace {
 
         ImGui::SetNextWindowSize(ImVec2(900, 500), ImGuiCond_FirstUseEver);
         if (ImGui::Begin(window_title, &show_edit_item_window, ImGuiWindowFlags_NoCollapse)) {
-            // Check if item name changed and search for matching items
             static char last_search_name[256] = {0};
             if (strcmp(editing_item.name_buffer, last_search_name) != 0 && strlen(editing_item.name_buffer) > 0) {
-                // Item name changed, search for matching item
                 strncpy(last_search_name, editing_item.name_buffer, sizeof(last_search_name) - 1);
 
-                // Find matching item in available_items
                 const auto found = std::ranges::find_if(available_items.begin(), available_items.end(), [](const AvailableItem& item) {
                     return *item.name == last_search_name;
                 });
 
                 if (found != available_items.end()) {
-                    // Found a match, request order info
                     edit_window_matching_item_name = *found->name;
                     edit_window_matching_orders.clear();
                     edit_window_orders_needs_sort = true;
                     SendGetItemOrders(edit_window_matching_item_name);
                 }
                 else {
-                    // No match found
                     edit_window_matching_item_name.clear();
                     edit_window_matching_orders.clear();
                 }
             }
 
-            // Calculate column widths
             const float available_width = ImGui::GetContentRegionAvail().x;
             const float available_height = ImGui::GetContentRegionAvail().y - 40.f; // Leave space for buttons
             const float left_column_width = available_width * 0.5f - ImGui::GetStyle().ItemSpacing.x * 0.5f;
             const float right_column_width = available_width * 0.5f - ImGui::GetStyle().ItemSpacing.x * 0.5f;
 
-            // Left column - Edit form
             ImGui::BeginChild("EditForm", ImVec2(left_column_width, available_height), true);
 
-            // Item name
             ImGui::InputText("Item Name", editing_item.name_buffer, sizeof(editing_item.name_buffer));
 
-            // Description
             ImGui::InputTextMultiline("Description", editing_item.description_buffer, sizeof(editing_item.description_buffer), ImVec2(-1, 80));
 
 
-            // Quantity
             ImGui::InputFloat("Quantity", &editing_item.price.quantity, 1.f, 10.f, "%.0f");
             if (editing_item.price.quantity < 0.f) editing_item.price.quantity = 0.f;
 
-            // Price type
             const char* price_types[] = {"Platinum", "Ecto", "Zkeys", "Arms"};
             ImGui::Combo("Currency", (int*)&editing_item.price.type, price_types, IM_ARRAYSIZE(price_types));
 
-            // Price amount
             ImGui::InputFloat("Price Per", &editing_item.price.price, 1.f, 5.f, "%.0f");
             if (editing_item.price.price < 0) editing_item.price.price = 0;
 
@@ -1523,30 +1475,24 @@ namespace {
 
             ImGui::Separator();
 
-            // Action buttons
             if (ImGui::Button("Save", ImVec2(120, 0))) {
                 if (editing_item_index < my_shop.items.size()) {
-                    // Editing existing item
                     auto& item = my_shop.items[editing_item_index];
 
                     item = editing_item.item;
                     item.prices = {editing_item.price};
 
-                    // Update item
                     item.name = editing_item.name_buffer;
                     if (*editing_item.description_buffer) {
                         item.description = editing_item.description_buffer;
                     }
 
-                    // Update price
                 }
                 else {
-                    // Adding new item
                     auto item = editing_item.item;
                     item = editing_item.item;
                     item.prices = {editing_item.price};
 
-                    // Update item
                     item.name = editing_item.name_buffer;
                     if (*editing_item.description_buffer) {
                         item.description = editing_item.description_buffer;
@@ -1559,7 +1505,6 @@ namespace {
                     my_shop.items.push_back(item);
                 }
 
-                // Send update to server
                 SaveShop(my_shop, true);
 
                 editing_item.Reset();
@@ -1578,7 +1523,6 @@ namespace {
                 show_edit_item_window = false;
             }
 
-            // Only show Remove button when editing existing items
             if (!is_new_item) {
                 ImGui::SameLine();
                 if (ImGui::Button("Remove Item", ImVec2(120, 0))) {
@@ -1889,7 +1833,6 @@ void GWMarketWindow::DrawSettingsInternal()
 
 void GWMarketWindow::Draw(IDirect3DDevice9*)
 {
-// Draw shop windows
 #if (GWMARKET_SELLING_ENABLED)
     DrawMyShopWindow();
     DrawEditItemWindow();
@@ -1935,24 +1878,20 @@ void GWMarketWindow::Draw(IDirect3DDevice9*)
         ImGui::InputText("Search", search_buffer, sizeof(search_buffer));
         ImGui::Separator();
 
-        // Calculate available width and height for the two-column layout
         const float available_width = ImGui::GetContentRegionAvail().x;
         const float available_height = ImGui::GetContentRegionAvail().y - 32.f;
         const float left_column_width = available_width * 0.5f - ImGui::GetStyle().ItemSpacing.x * 0.5f;
         const float right_column_width = available_width * 0.5f - ImGui::GetStyle().ItemSpacing.x * 0.5f;
 
-        // Left column split: 65% for item list, 35% for favorites
         const float item_list_height = available_height * 0.7f - ImGui::GetStyle().ItemSpacing.y * 0.5f;
         const float favorites_height = available_height * 0.3f - ImGui::GetStyle().ItemSpacing.y * 0.5f;
 
-        // Left column - Item List (top 65%)
         ImGui::BeginChild("ItemList", ImVec2(left_column_width, item_list_height), true);
         DrawItemList();
         ImGui::EndChild();
 
         const auto favourites_cursor_pos = ImGui::GetCursorPos();
 
-        // Right column - Item Details (full height)
         ImGui::SameLine();
         ImGui::BeginChild("ItemDetails", ImVec2(right_column_width, available_height), true);
         DrawItemDetails();
@@ -1960,7 +1899,6 @@ void GWMarketWindow::Draw(IDirect3DDevice9*)
 
         ImGui::SetCursorPos(favourites_cursor_pos);
 
-        // Left column - Favorites List (bottom 35%)
         ImGui::BeginChild("FavoritesList", ImVec2(left_column_width, favorites_height), true);
         ImGui::Text("Favorites");
         ImGui::Separator();

@@ -3,6 +3,7 @@
 #include <CircurlarBuffer.h>
 #include <ToolboxWindow.h>
 #include <Utils/RateLimiter.h>
+#include <Utils/TextUtils.h>
 
 class PartySearchWindow : public ToolboxWindow {
 public:
@@ -93,7 +94,7 @@ private:
     // set when the alert_buf was modified
     bool alertfile_dirty = false;
     char search_buffer[256] = {0};
-    std::vector<std::string> alert_words{};
+    std::vector<TextUtils::SearchPattern<char>> alert_words{};
     std::vector<std::string> searched_words{};
     // tasks to be done async by the worker thread
     std::queue<std::function<void()>> thread_jobs{};
@@ -121,7 +122,6 @@ private:
     void AsyncWindowConnect(bool force = false);
     void fetch();
     static bool parse_json_message(const std::string& data, Message* msg);
-    static void ParseBuffer(const char* text, std::vector<std::string>& words);
     static void DeleteWebSocket(easywsclient::WebSocket* ws);
     bool IsLfpAlert(std::string& message) const;
     static void OnRegionPartyUpdated(GW::HookStatus*, GW::Packet::StoC::PacketBase* packet);

@@ -79,6 +79,7 @@ namespace {
     bool friends_changed = false;
     bool friend_list_ready = false; // Allow processing when this is true.
     bool need_to_reorder_friends = true;
+    std::vector<FriendListWindow::Friend*> friends_online_sorted{};
 
     constexpr const char* alias_types[] = {
         "None",
@@ -92,10 +93,8 @@ namespace {
 
     uint8_t poll_interval_seconds = 10;
 
-    // Mapping of Name > UUID
     std::unordered_map<std::wstring, FriendListWindow::Friend*> uuid_by_name{};
 
-    // Main store of Friend info
     std::unordered_map<std::string, FriendListWindow::Friend*> friends{};
 
     bool show_location = true;
@@ -251,11 +250,9 @@ namespace {
         // This is a player that TB has added to friend list to find out who they're actually playing on.
 
         if (lf->IsOffline()) {
-            // If they're still not online, then show the "Player is not online" error
             ASSERT(WriteError(MessageType::PLAYER_X_NOT_ONLINE, pending_whisper.charname.c_str()));
         }
         else {
-            // If they're online, send the original message...
             ASSERT(lf->current_char);
             is_redirecting_whisper = true;
             GW::Chat::SendChat(lf->current_char->getNameW().c_str(), pending_whisper.message.c_str());
@@ -263,7 +260,6 @@ namespace {
         }
         pending_whisper.reset();
 
-        // ... then remove from GW.
         ASSERT(lf->RemoveGWFriend());
         ASSERT(FriendListWindow::RemoveFriend(lf));
     }
@@ -277,7 +273,6 @@ namespace {
         }
     }
 
-    // Remove from pending whispers when whisper has been sent
     void OnOutgoingWhisperSuccess(GW::HookStatus*, wchar_t*)
     {
         pending_whisper.reset();
@@ -287,7 +282,6 @@ namespace {
     {
         const auto player_name = TextUtils::GetPlayerNameFromEncodedString(message);
         if (const auto friend_ = FriendListWindow::GetFriend(player_name.c_str())) {
-            // If this player is already in my friend list, send the message directly.
             if (!friend_->IsOffline() && friend_->current_char->getNameW() != player_name) {
                 is_redirecting_whisper = true;
                 GW::Chat::SendChat(friend_->current_char->getNameW().c_str(), pending_whisper.message.c_str());
@@ -467,7 +461,6 @@ namespace {
             const auto packet = (GW::UI::UIPacket::kSendChatMessage*)wparam;
             const auto message = packet->message;
             const auto channel = GW::Chat::GetChannel(*message);
-            // If this outgoing whisper was created due to a redirect, or its not a whisper, drop out here.
             if (is_redirecting_whisper || channel != GW::Chat::CHANNEL_WHISPER) {
                 return;
             }
@@ -521,7 +514,6 @@ namespace {
         if (!is_valid_uuid) {
             return nullptr;
         }
-        // Try to get the existing Friend entry via uuid or charname
         FriendListWindow::Friend* lf = FriendListWindow::GetFriend(uuid);
         if (!lf && charname) {
             lf = FriendListWindow::GetFriend(charname);
@@ -552,12 +544,10 @@ namespace {
             uuid_by_name.emplace(lf->GetAliasW(), lf);
         }
         if (lf->current_map_id != map_id) {
-            // Map changed
             lf->current_map_id = map_id;
             lf->current_map_name = Resources::GetMapName(static_cast<GW::Constants::MapID>(map_id));
         }
 
-        // Check and copy charnames, only if player is NOT offline
         if (!charname || status == GW::FriendStatus::Offline) {
             lf->current_char = nullptr;
         }
@@ -700,7 +690,6 @@ bool FriendListWindow::GetIsPlayerIgnored(const std::wstring& player_name)
 
 
 /*  FriendListWindow::Friend    */
-// Get the Guild Wars friend object for this friend (if it exists)
 GW::Friend* FriendListWindow::Friend::GetFriend()
 {
     return GW::FriendListMgr::GetFriend((uint8_t*)&uuid_bytes);
@@ -727,7 +716,6 @@ FriendListWindow::Character* FriendListWindow::Friend::GetCharacter(const wchar_
     return &it->second;
 }
 
-// Get the character belonging to this friend (e.g. to find profession etc)
 FriendListWindow::Character* FriendListWindow::Friend::SetCharacter(const wchar_t* char_name, const uint8_t profession)
 {
     Character* existing = GetCharacter(char_name);
@@ -845,6 +833,9 @@ bool FriendListWindow::RemoveFriend(const Friend* f)
         uuid_by_name.erase(char_key);
     }
     uuid_by_name.erase(f->GetAliasW());
+    // Cached view may hold the pointer we're about to free.
+    friends_online_sorted.clear();
+    need_to_reorder_friends = true;
     delete f;
     return true;
 }
@@ -911,7 +902,6 @@ void FriendListWindow::Terminate()
     ToolboxWindow::Terminate();
     // Try to remove callbacks AGAIN here.
     SignalTerminate();
-    // Free memory for Friends list.
     while (friends.begin() != friends.end()) {
         RemoveFriend(friends.begin()->second);
     }
@@ -999,11 +989,9 @@ void FriendListWindow::Poll()
     while (it != friends.end()) {
         Friend* lf = it->second;
         if (lf->GetFriend()) {
-            // Friend exists in friend list, don't need to mess
             ++it;
             continue;
         }
-        // Removed from in-game friend list, delete from tb friend list.
         ASSERT(RemoveFriend(lf));
         it = friends.begin();
     }
@@ -1117,26 +1105,29 @@ void FriendListWindow::Draw(IDirect3DDevice9*)
             GW::FriendListMgr::SetFriendListStatus(static_cast<GW::FriendStatus>(status));
         }
     }
-    std::vector<Friend*> friends_online;
-    for (const auto& it : friends) {
-        Friend* lfp = it.second;
-        if (lfp->type != GW::FriendType::Friend) {
-            continue;
+    if (need_to_reorder_friends) {
+        friends_online_sorted.clear();
+        friends_online_sorted.reserve(friends.size());
+        for (const auto& it : friends) {
+            const auto lfp = it.second;
+            if (lfp->type != GW::FriendType::Friend) {
+                continue;
+            }
+            if (lfp->IsOffline()) {
+                continue;
+            }
+            if (lfp->GetAliasW().empty()) {
+                continue;
+            }
+            friends_online_sorted.push_back(lfp);
         }
-        // Get actual object instead of pointer just in case it becomes invalid half way through the draw.
-        if (lfp->IsOffline()) {
-            continue;
-        }
-        if (lfp->GetAliasW().empty()) {
-            continue;
-        }
-        friends_online.push_back(lfp);
+        std::ranges::sort(friends_online_sorted, [](const Friend* lhs, const Friend* rhs) {
+            return lhs->GetAliasW().compare(rhs->GetAliasW()) < 0;
+        });
+        need_to_reorder_friends = false;
     }
-    std::ranges::sort(friends_online, [](const Friend* lhs, const Friend* rhs) {
-        return lhs->GetAliasW().compare(rhs->GetAliasW()) < 0;
-    });
     char tmpbuf[32];
-    for (Friend* lfp : friends_online) {
+    for (const auto lfp : friends_online_sorted) {
         colIdx = 0;
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, settings.hover_background_color.value);
@@ -1338,7 +1329,6 @@ void FriendListWindow::LoadFromFile()
         settings_thread.join();
     }
     settings_thread = std::thread([this] {
-        // clear builds from toolbox
         uuid_by_name.clear();
         while (friends.begin() != friends.end()) {
             RemoveFriend(friends.begin()->second);
@@ -1357,7 +1347,6 @@ void FriendListWindow::LoadFromFile()
                 continue; // Error, alias or uuid empty.
             }
 
-            // Grab char names
             for (const auto& [name, profession] : record.charnames) {
                 lf->SetCharacter(TextUtils::StringToWString(name).c_str(), profession);
             }
@@ -1370,6 +1359,7 @@ void FriendListWindow::LoadFromFile()
                 uuid_by_name[it.first] = lf;
             }
             uuid_by_name[lf->GetAliasW()] = lf;
+            need_to_reorder_friends = true;
         }
         Log::Log("%s: Loaded friends from disk\n", Name());
         friends_list_checked = false;
@@ -1390,7 +1380,6 @@ void FriendListWindow::SaveToFile()
         if (friends.empty()) {
             return; // Error, should have at least 1 friend
         }
-        // Load the existing records in, and amend the info
         auto records = LoadRecords();
         for (auto it = friends.begin(); it != friends.end(); ++it) {
             Friend& lf = *it->second;

@@ -3,9 +3,6 @@
 #include <Defines.h>
 #include <ToolboxUIElement.h>
 
-/*
-A ToolboxWindow is a module which also has an interface
-*/
 class ToolboxWindow : public ToolboxUIElement {
 public:
     [[nodiscard]] bool IsWindow() const override { return true; }

@@ -4,6 +4,7 @@
 #include "Download.h"
 #include "Inject.h"
 #include "Install.h"
+#include "WasmInject.h"
 #include "WindowsDefender.h"
 
 namespace fs = std::filesystem;
@@ -84,12 +85,6 @@ bool CopyInstaller()
 
 bool DeleteInstallationDirectory(std::wstring& error)
 {
-    // @Remark:
-    // "SHFileOperationW" expect the path to be double-null terminated.
-    //
-    // Moreover, the path should be a full path otherwise, the folder won't be
-    // moved to the recycle bin regardless of "FOF_ALLOWUNDO".
-
     const auto install_dir = GetInstallationDir();
     if (install_dir.empty())
         return error = L"Failed to GetInstallationDir() in DeleteInstallationDirectory()", false;
@@ -109,6 +104,21 @@ bool DeleteInstallationDirectory(std::wstring& error)
     if (FileOp.fAnyOperationsAborted)
         return error = std::format(L"SHFileOperationW failed: fAnyOperationsAborted"), false;
     return true;
+}
+
+// Optional: copies gwtoolbox.gwmod alongside the installed dll if one sits next to the launcher (no release asset exists yet); its absence is the ordinary case and must never fail Install().
+static void InstallLocalWasmGwmodIfPresent(const fs::path& install_path)
+{
+    fs::path source_dir;
+    if (!PathGetProgramDirectory(source_dir)) return;
+    const fs::path source = source_dir / WASM_GWMOD_FILENAME;
+    if (!fs::exists(source)) return;
+
+    const fs::path dest = install_path.parent_path() / WASM_GWMOD_FILENAME;
+    if (source == dest) return;
+    if (!PathSafeCopy(source, dest, true)) {
+        fprintf(stderr, "Found %S but failed to copy it to %S\n", source.c_str(), dest.c_str());
+    }
 }
 
 bool Install(const bool quiet, std::wstring& error)
@@ -149,6 +159,9 @@ bool Install(const bool quiet, std::wstring& error)
                    dll_path.parent_path().wstring()
                ), false;
     }
+
+    InstallLocalWasmGwmodIfPresent(install_path);
+
     if (!quiet) {
         ShowMessageBoxW(nullptr, L"Installation successful", L"Installation", 0);
     }
@@ -172,7 +185,6 @@ bool Uninstall(const bool quiet, std::wstring& error)
     }
 
     if (DeleteAllFiles) {
-        // Delete all files
         DeleteInstallationDirectory(error);
     }
 

@@ -54,15 +54,6 @@ namespace {
         GW::Hook::LeaveHook();
     }
 
-    // Fix for a vanilla GW freeze: dying in first-person and then resurrecting can leave
-    // the camera's pitch_to_go as NaN (the death-orbit -> follow-cam transition clamps
-    // pitch against the wrong limits and pushes it out of its valid [-1,1] range). That
-    // NaN eases into pitch and then into the eye position; the game's terrain
-    // line-of-sight ray-march (Gw.exe @0x0070eb40) only exits on an *ordered* float
-    // compare, so a NaN coordinate makes it loop forever and the render thread hangs
-    // (recoverable only by dying again). We hook the per-frame "get camera eye" routine
-    // (Gw.exe @0x004f7b80, which asserts "*fov != 0.0f") and clamp pitch/pitch_to_go back
-    // into [-1,1] (mapping NaN -> 0) before the renderer and ray-march read the camera.
     typedef void(__fastcall* GetCameraEye_pt)(void* cam, void* edx, uint32_t flag, void* out_pos, void* out_look, void* out_fov);
     GetCameraEye_pt GetCameraEye_Func = nullptr, GetCameraEye_Ret = nullptr;
 
@@ -312,7 +303,8 @@ void CameraUnlockModule::Update(float delta) {
     if (delta == 0.f) {
         return;
     }
-    if (GW::CameraMgr::GetCameraUnlock() && !GW::Chat::GetIsTyping() && !ImGui::GetIO().WantTextInput) {
+    // Update runs on the game thread, which outlives the ImGui context; no context means no text input
+    if (GW::CameraMgr::GetCameraUnlock() && !GW::Chat::GetIsTyping() && !(ImGui::GetCurrentContext() && ImGui::GetIO().WantTextInput)) {
         static bool keep_forward;
 
         float forward = 0;

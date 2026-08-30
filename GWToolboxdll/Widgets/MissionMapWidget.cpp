@@ -29,6 +29,7 @@ namespace {
 
     std::vector<MissionMapWidget::DrawCallback> draw_callbacks;
     std::vector<MissionMapWidget::ContextMenuCallback> context_menu_callbacks;
+    std::vector<MissionMapWidget::OverlayCallback> overlay_callbacks;
 
     // Pixel-to-game-unit scale — converts pixel thickness to game units
     float cached_px_to_game = 1.f;
@@ -133,10 +134,6 @@ namespace {
         if (!mm_ctx || !mm_ctx->h003c) return;
         const GW::Vec2f mm_pos = mm_ctx->h003c->player_mission_map_pos;
 
-        // Use the controlled character's position when not spectating (works on
-        // underground maps where WorldMapToGamePos returns wrong coordinates).
-        // When spectating, mm_pos tracks the observed character so we must convert
-        // it back to game coords to stay consistent with the origin calculation.
         float px, py;
         const auto* player = GW::Agents::GetControlledCharacter();
         const bool spectating = player && GW::Agents::GetObservingId() != player->agent_id;
@@ -257,11 +254,6 @@ namespace {
         return true;
     }
 
-    // --- Walkable terrain overlay -----------------------------------------------
-    // Shades non-walkable parts of the map grey and outlines walkable terrain.
-    // Unlike the Vanquish overlay's map grid, this has no reachability/BFS, no
-    // fog-of-war and no enemy tracking — it's a static rasterization of every
-    // trapezoid in the pathing map, independent of the Vanquish widget entirely.
     constexpr float TERRAIN_CELL_SIZE = GW::Constants::Range::Adjacent / 2.f;
 
     struct TerrainTrapezoidSnapshot {
@@ -526,7 +518,7 @@ namespace {
         }
 
         // When the overlay is off (default), draw the lines directly — a single DrawPrimitive with the
-        // state already set above. Only the opt-in overlay pays for Minimap::Render (D3DSBT_ALL capture).
+        // state already set above. Only the opt-in overlay pays for Minimap::Render's own state guard.
         if (settings.draw_minimap && Minimap::IsEnabled()) {
             RenderMinimapLayers(dx_device, gameToScreen, ortho);
         }
@@ -557,9 +549,6 @@ namespace {
         ctx.draw_background = false;
         ctx.draw_cardinals = false; // mission map is always north-aligned
         ctx.draw_pmap = settings.draw_pmap;
-        // The pmap shadow offset is applied in the view's output space, which for the mission map's
-        // game->px view is raw pixels; express a small game-unit offset in px so it stays subtle and
-        // scales with the mission-map zoom (the compass keeps the default, applied in its own space).
         constexpr float shadow_gwinches = 180.f;
         ctx.shadow_translation = shadow_gwinches / cached_px_to_game;
         ctx.draw_symbols = settings.draw_symbols;
@@ -584,7 +573,8 @@ namespace {
         for (const auto& line : lines) {
             if (!line->visible) continue;
             if (line->world_coords) continue; // world coords, not game coords; drawn by DrawWorldCoordRouteLines
-            if (!line->draw_on_mission_map && !(settings.draw_all_minimap_lines && line->draw_on_minimap) && !(settings.draw_all_terrain_lines && line->draw_on_terrain)) continue;
+            const bool draw_all_override = !line->created_by_toolbox && ((settings.draw_all_minimap_lines && line->draw_on_minimap) || (settings.draw_all_terrain_lines && line->draw_on_terrain));
+            if (!line->draw_on_mission_map && !draw_all_override) continue;
             if (line->map != map_id) continue;
             if (line->from_player_pos && player_pos) {
                 minimap_lines.push_back(D3DLine(*player_pos, line->p2, LINE_HALF_THICKNESS, static_cast<DWORD>(line->color)));
@@ -596,11 +586,6 @@ namespace {
 
     }
 
-    // Cross-map route tails are stored in world-map coords (the only form that can place other
-    // maps' positions). Draw them in an ImGui overlay via the world->mission-map transform,
-    // clipped to the widget. These cover the whole route (incl. the current map's exit stretch
-    // past the nearest portal, which the game-coord lines don't reach); the overlap with the
-    // game-coord current-map lines is the same path, so it's harmless - matches the world map.
     void DrawWorldCoordRouteLines()
     {
         const auto& lines = Minimap::Instance().custom_renderer.GetLines();
@@ -645,6 +630,15 @@ void MissionMapWidget::Draw(IDirect3DDevice9* dx_device)
     SubmitVertexBuffers(dx_device);
 
     DrawWorldCoordRouteLines();
+
+    if (!overlay_callbacks.empty()) {
+        auto* draw_list = ImGui::GetBackgroundDrawList();
+        draw_list->PushClipRect({mission_map_top_left.x, mission_map_top_left.y}, {mission_map_bottom_right.x, mission_map_bottom_right.y}, true);
+        for (const auto cb : overlay_callbacks) {
+            cb(draw_list);
+        }
+        draw_list->PopClipRect();
+    }
 
     // POC: mission map icons, desaturated. Res shrine icon (maybe others) are wrong colour by default so we desaturate, but this impacts other icons!
     #if 0
@@ -820,3 +814,20 @@ void MissionMapWidget::RemoveDrawCallback(DrawCallback cb) { std::erase(draw_cal
 void MissionMapWidget::AddContextMenuCallback(ContextMenuCallback cb) { context_menu_callbacks.push_back(cb); }
 void MissionMapWidget::RemoveContextMenuCallback(ContextMenuCallback cb) { std::erase(context_menu_callbacks, cb); }
 GW::Vec2f MissionMapWidget::GetContextMenuWorldMapPos() { return world_map_click_pos; }
+
+void MissionMapWidget::AddOverlayCallback(OverlayCallback cb) { overlay_callbacks.push_back(cb); }
+void MissionMapWidget::RemoveOverlayCallback(OverlayCallback cb) { std::erase(overlay_callbacks, cb); }
+
+bool MissionMapWidget::WorldMapToScreen(const GW::Vec2f& world_map_pos, ImVec2& out)
+{
+    if (!mission_map_ready) return false;
+    GW::Vec2f screen_pos;
+    if (!WorldMapCoordsToMissionMapScreenPos(world_map_pos, screen_pos)) return false;
+    out = {screen_pos.x, screen_pos.y};
+    return true;
+}
+
+float MissionMapWidget::GetPxPerWorldMapUnit()
+{
+    return mission_map_ready ? mission_map_zoom * mission_map_scale.x : 0.f;
+}

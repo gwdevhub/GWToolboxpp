@@ -5,12 +5,6 @@
 
 using CalculatedCallback = std::function<void (std::vector<GW::GamePos>& waypoints, void* args)>;
 
-/*
-    Pathing manager (a module, NOT a window): builds/queries the visgraph, drives the optional navmesh overlay,
-    and exposes the cross-map route API used by QuestModule/WorldMapWidget. It has no window of its own — its
-    only UI is its settings page. Per-frame work runs in Draw() (called for every enabled module).
-    (The class is still named PathfindingWindow because it's referenced as a static API in several places.)
-*/
 class PathfindingWindow : public ToolboxModule {
     PathfindingWindow() = default;
     ~PathfindingWindow() = default;
@@ -66,7 +60,6 @@ public:
     // True while one or more cross-map/world-map route computations are running on a worker thread. Lock-free;
     // safe to poll every frame (the world map shows a "calculating" indicator while true).
     static bool IsCalculatingPath();
-    // False if still calculating current map
     static clock_t CalculatePath(const GW::GamePos& from, const GW::GamePos& to, CalculatedCallback callback, void* args = nullptr);
 
     static void SetFrom(const GW::GamePos& pos);
@@ -77,27 +70,13 @@ public:
     static void SetToWorldMap(const GW::Vec2f& world_map_pos);
     static void FindPath();
 
-    // Compute and draw the full cross-map route from `from` (in the current map)
-    // to goal_world_pos (world-map coords) as lines on the world map + minimap.
-    // Convenience wrapper around SetFrom + SetToWorldMap + FindPath.
     static void ShowRouteToWorldMap(const GW::GamePos& from, const GW::Vec2f& goal_world_pos);
     // Remove any route previously drawn by ShowRouteToWorldMap / FindPath.
     static void ClearWorldMapRoute();
 
     // ---- Compute-only route API (no drawing). QuestModule owns + renders the points. ----
 
-    // Blocking (worker). Full cross-map route between two world-map positions into `out`,
-    // in WORLD coords (IsRouteBreak sentinel between maps) to avoid foreign-map projection
-    // overflow. False if no route.
     static bool CalculateRoute(const GW::Vec2f& from_world, const GW::Vec2f& to_world, std::vector<GW::Vec2f>* out);
-    // Blocking (worker). A* across `map_id` (0 = current) from `from` to `to` (that map's
-    // game coords) into `out` as WORLD coords. Pass the leg's map explicitly so a deferred
-    // recompute isn't tied to where the player has since wandered. Holds no shared state —
-    // the caller splices the untouched remainder of its route on. False if no path.
-    // out_game (optional): the raw CURRENT-map A* leg in that map's game coords, with each waypoint's
-    // pathfinder zplane preserved. `out` flattens to world coords (losing the plane); out_game keeps it so
-    // the caller can drape the rendered line on the surface the path traverses. Only meaningful when map_id
-    // resolves to the current map (the only case callers request it).
     static bool RecalculateSegment(GW::Constants::MapID map_id, const GW::GamePos& from, const GW::GamePos& to, std::vector<GW::Vec2f>* out, std::vector<GW::GamePos>* out_game = nullptr);
     // True if `world_pos` falls within `map_id`'s game bounds (0 = current map).
     static bool IsWorldPosOnMap(const GW::Vec2f& world_pos, GW::Constants::MapID map_id = (GW::Constants::MapID)0);
@@ -108,10 +87,6 @@ public:
     // GW::Map::GetMapInfo() alone returns 0 for outposts and many maps.
     static uint32_t GetMapFileId(GW::Constants::MapID map_id);
 
-    // Resolve the next portal in `from_map` along the multi-map route to a
-    // point on `to_map`. Out-param is in `from_map` game coords. Returns false
-    // if no route exists or if from_map shares a file_hash with to_map (same
-    // map, no portal needed). Blocks on visgraph builds — call from a worker.
     static bool GetNextPortalToward(
         GW::Constants::MapID from_map,
         const GW::GamePos& from_pos,

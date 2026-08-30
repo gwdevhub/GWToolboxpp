@@ -19,14 +19,10 @@
 #include "SkillbarWidget.h"
 #include <Modules/ChatCommands.h>
 
-/*
- * Based off of @JuliusPunhal April skill timer - https://github.com/JuliusPunhal/April-old/blob/master/Source/April/SkillbarOverlay.cpp
- */
 namespace {
     GW::UI::FramePosition skillbar_skill_positions[8];
     ImVec2 skill_positions_calculated[8];
 
-    // Overall settings
     enum class Layout {
         Row,
         Rows,
@@ -106,7 +102,6 @@ namespace {
             }
         }
 
-        // Calculate columns/rows
         if (skillbar_skill_positions[0].screen_top == skillbar_skill_positions[7].screen_top) {
             layout = Layout::Row;
         }
@@ -129,7 +124,7 @@ namespace {
     {
         skillbar_frame = nullptr;
         skillbar_position_dirty = true;
-        
+
     }
 
     ToolboxUIElement& Instance()
@@ -154,61 +149,6 @@ void SkillbarWidget::skill_cooldown_to_string(char arr[16], uint32_t cd) const
     }
 }
 
-std::vector<SkillbarWidget::Effect> SkillbarWidget::get_effects(const GW::Constants::SkillID skillId)
-{
-    std::vector<Effect> ret;
-    auto* effects = GW::Effects::GetPlayerEffects();
-    if (!effects) {
-        return ret;
-    }
-    const auto& skill_data = GW::SkillbarMgr::GetSkillConstantData(skillId);
-    if (skill_data && skill_data->type == GW::Constants::SkillType::Hex) {
-        return ret;
-    }
-    for (const GW::Effect& effect : *effects) {
-        if (effect.skill_id == skillId) {
-            Effect e;
-            e.remaining = effect.GetTimeRemaining();
-            if (effect.duration) {
-                e.progress = e.remaining / 1000.0f / effect.duration;
-            }
-            else {
-                e.progress = 1.f;
-            }
-            ret.emplace_back(e);
-        }
-    }
-    return ret;
-}
-
-SkillbarWidget::Effect SkillbarWidget::get_longest_effect(const GW::Constants::SkillID skillId)
-{
-    Effect ret;
-    auto* effects = GW::Effects::GetPlayerEffects();
-    if (!effects) {
-        return ret;
-    }
-    const auto& skill_data = GW::SkillbarMgr::GetSkillConstantData(skillId);
-    if (skill_data && skill_data->type == GW::Constants::SkillType::Hex) {
-        return ret;
-    }
-    for (const GW::Effect& effect : *effects) {
-        if (effect.skill_id == skillId) {
-            const auto remaining = effect.GetTimeRemaining();
-            if (ret.remaining < remaining) {
-                ret.remaining = remaining;
-                if (effect.duration) {
-                    ret.progress = ret.remaining / 1000.0f / effect.duration;
-                }
-                else {
-                    ret.progress = 1.f;
-                }
-            }
-        }
-    }
-    return ret;
-}
-
 void SkillbarWidget::Update(float)
 {
     if (!visible) {
@@ -228,22 +168,55 @@ void SkillbarWidget::Update(float)
         has_sf = skillbar->skills[i].skill_id == GW::Constants::SkillID::Shadow_Form;
     }
 
+    const bool want_effects = settings.display_skill_overlay || settings.display_effect_monitor;
+
+    std::array<const GW::Skill*, 8> skill_data{};
+    std::array<Effect, 8> longest{};
+    std::array<std::vector<Effect>, 8> stacked;
+
+    if (want_effects) {
+        for (auto i = 0; i < _countof(skillbar->skills); i++) {
+            skill_data[i] = GW::SkillbarMgr::GetSkillConstantData(skillbar->skills[i].skill_id);
+        }
+    }
+    if (const auto* effects = want_effects ? GW::Effects::GetPlayerEffects() : nullptr) {
+        for (const GW::Effect& effect : *effects) {
+            for (auto i = 0; i < _countof(skillbar->skills); i++) {
+                if (effect.skill_id != skillbar->skills[i].skill_id)
+                    continue;
+                const auto* sd = skill_data[i];
+                if (sd && sd->type == GW::Constants::SkillType::Hex)
+                    continue;
+                const auto remaining = effect.GetTimeRemaining();
+                Effect& slot_longest = longest[i];
+                if (slot_longest.remaining < remaining) {
+                    slot_longest.remaining = remaining;
+                    slot_longest.progress = effect.duration ? slot_longest.remaining / 1000.0f / effect.duration : 1.f;
+                }
+                if (settings.display_multiple_effects && has_sf && sd
+                    && sd->profession == GW::Constants::ProfessionByte::Assassin && sd->type == GW::Constants::SkillType::Enchantment) {
+                    Effect e;
+                    e.remaining = remaining;
+                    e.progress = effect.duration ? remaining / 1000.0f / effect.duration : 1.f;
+                    stacked[i].push_back(e);
+                }
+            }
+        }
+    }
+
     for (auto i = 0; i < _countof(skillbar->skills); i++) {
         skill_cooldown_to_string(m_skills[i].cooldown, skillbar->skills[i].GetRecharge());
-        if (!settings.display_skill_overlay && !settings.display_effect_monitor) {
+        if (!want_effects) {
             continue;
         }
-        const GW::Constants::SkillID& skill_id = skillbar->skills[i].skill_id;
-        const Effect& effect = get_longest_effect(skill_id);
+        const Effect& effect = longest[i];
         m_skills[i].color = UptimeToColor(effect.remaining);
         if (settings.display_effect_monitor) {
-            const auto* skill_data = GW::SkillbarMgr::GetSkillConstantData(skill_id);
-            if (!skill_data) {
-                continue;
-            }
             m_skills[i].effects.clear();
-            if (settings.display_multiple_effects && has_sf && skill_data->profession == GW::Constants::ProfessionByte::Assassin && skill_data->type == GW::Constants::SkillType::Enchantment) {
-                m_skills[i].effects = get_effects(skill_id);
+            const auto* sd = skill_data[i];
+            if (sd && settings.display_multiple_effects && has_sf
+                && sd->profession == GW::Constants::ProfessionByte::Assassin && sd->type == GW::Constants::SkillType::Enchantment) {
+                m_skills[i].effects = std::move(stacked[i]);
                 std::ranges::sort(m_skills[i].effects, [](const Effect& a, const Effect& b) { return a.remaining > b.remaining; });
             }
             else if (effect.remaining > 0) {
@@ -271,7 +244,7 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
     }
 
     const auto font_size = ImMin(settings.font_recharge, m_skill_width);
-    
+
     DummyWindow();
 
     const auto draw_list = ImGui::GetBackgroundDrawList();
@@ -281,13 +254,11 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
         const ImVec2& top_left = skill_positions_calculated[i];
         const ImVec2 bottom_right = {skill_positions_calculated[i].x + m_skill_width, skill_positions_calculated[i].y + m_skill_height};
 
-        // draw overlay
         if (settings.display_skill_overlay) {
             draw_list->AddRectFilled(top_left, bottom_right, skill.color);
         }
         draw_list->AddRect(top_left, bottom_right, settings.color_border);
 
-        // label
         if (*skill.cooldown) {
             ImGui::PushFont(NULL, draw_list, font_size);
             const ImVec2 label_size = ImGui::CalcTextSize(skill.cooldown);

@@ -19,9 +19,6 @@
 #include "Widgets/Minimap/Shaders/game_world_renderer_dotted_ps.h"
 
 namespace {
-    // === FrCache compositor: draw registered overlays between GW's world and UI passes ===
-    // GW's deferred command buffer holds FRCACHE_GPU_RENDER (3D world) then frame entries (HUD);
-    // split at the boundary, flush the world, run the callbacks, then let GW render the HUD on top.
     enum FrCacheEntryType : uint32_t {
         FRCACHE_GPU_RENDER = 0,
         FRCACHE_FRAME_CALLBACK = 1,
@@ -33,11 +30,19 @@ namespace {
         uint32_t index;
         uint32_t param;
     };
+
+    struct FrameRenderContext {
+        GW::Array<GW::UI::Frame*> render_frame_list;
+        GW::Array<GW::UI::Frame*> frame_array;
+        GW::Array<void*> cached_resource_ids;
+        GW::Array<FrCacheBufferEntry> render_buffer;
+    };
+    static_assert(sizeof(FrameRenderContext) == 0x40);
+
     using FrCacheRenderFn = void(__cdecl*)(uint32_t, uint32_t);
     FrCacheRenderFn FrCacheRenderAll_Func = nullptr;
     FrCacheRenderFn FrCacheRenderAll_Ret = nullptr;
-    GW::Array<FrCacheBufferEntry>* render_buffer = nullptr;
-    GW::Array<GW::UI::Frame*>* frame_array = nullptr;
+    FrameRenderContext* frame_render_context = nullptr;
     bool compositor_scanned = false;
     bool compositor_failed = false;
     bool compositor_hooked = false;
@@ -75,40 +80,7 @@ namespace {
 
     bool ScanCompositor()
     {
-        if (compositor_scanned) return !compositor_failed;
-        compositor_scanned = true;
 
-        // FrCache_RenderAll asserts "frame" in FrCache.cpp at line 0x9e.
-        const auto render_all = GW::Scanner::ToFunctionStart(
-            GW::Scanner::FindAssertion("FrCache.cpp", "frame", 0x9e, 0), 0x200);
-        if (!render_all) {
-            compositor_failed = true;
-            return false;
-        }
-        // FrCache_Render is the only caller of FrCache_RenderAll: scan back for the CALL.
-        uintptr_t render_addr = 0;
-        for (auto a = render_all - 5; a > render_all - 0x100; a--) {
-            if (*reinterpret_cast<uint8_t*>(a) == 0xE8 && GW::Scanner::FunctionFromNearCall(a) == render_all) {
-                render_addr = GW::Scanner::ToFunctionStart(a);
-                break;
-            }
-        }
-        if (!render_addr) {
-            compositor_failed = true;
-            return false;
-        }
-        // FrCache_Render opens with CMP [RenderFrameList.m_size], 0: the 4 bytes at +5 are &RenderFrameList.m_size; Array<T> globals are consecutive 16-byte structs, m_size at +8.
-        const auto frame_list_size_addr = *reinterpret_cast<uintptr_t*>(render_addr + 5);
-        const auto frame_list_base = frame_list_size_addr - 8;
-        // Consecutive 16-byte Array<T> globals: RenderFrameList, FrameArray(+0x10), ..., RenderBuffer(+0x30).
-        frame_array = reinterpret_cast<GW::Array<GW::UI::Frame*>*>(frame_list_base + 0x10);
-        render_buffer = reinterpret_cast<GW::Array<FrCacheBufferEntry>*>(frame_list_base + 0x30);
-        FrCacheRenderAll_Func = reinterpret_cast<FrCacheRenderFn>(render_all);
-        if (!render_buffer || !FrCacheRenderAll_Func) {
-            compositor_failed = true;
-            return false;
-        }
-        return true;
     }
 
     void __cdecl OnFrCacheRenderAll(uint32_t param_1, uint32_t param_2)
@@ -117,13 +89,14 @@ namespace {
         IDirect3DDevice9* device = GW::Render::GetDevice();
 
 #ifdef _DEBUG
-        if (dump_calls_remaining > 0 && render_buffer) {
+        if (dump_calls_remaining > 0 && frame_render_context) {
             dump_calls_remaining--;
-            auto& buf = *render_buffer;
+            auto& buf = frame_render_context->render_buffer;
             Log::Log("[frcache] call size=%u drawn_this_frame=%d", buf.size(), drawn_this_frame ? 1 : 0);
             for (uint32_t i = 0; i < buf.size(); i++) {
                 const auto& e = buf[i];
-                const GW::UI::Frame* f = (e.type != FRCACHE_GPU_RENDER && frame_array && e.index < frame_array->size()) ? (*frame_array)[e.index] : nullptr;
+                auto& frames = frame_render_context->frame_array;
+                const GW::UI::Frame* f = (e.type != FRCACHE_GPU_RENDER && e.index < frames.size()) ? frames[e.index] : nullptr;
                 Log::Log("[frcache]   i=%u type=%u index=%u param=0x%x frame_id=%d visible=%d",
                          i, (uint32_t)e.type, e.index, e.param, f ? (int)f->frame_id : -1, f && f->IsVisible() ? 1 : 0);
             }
@@ -131,25 +104,14 @@ namespace {
 #endif
 
         // Nothing to do (no overlays, unusable buffer/device) -> run the original untouched.
-        if (callbacks.empty() || !render_buffer || !device) {
+        if (callbacks.empty() || !frame_render_context || !device) {
             FrCacheRenderAll_Ret(param_1, param_2);
             GW::Hook::LeaveHook();
             return;
         }
 
-        auto& buffer = *render_buffer;
+        auto& buffer = frame_render_context->render_buffer;
 
-        // The main 3D scene starts with the FIRST GPU_RENDER entry; the HUD follows, possibly interleaved
-        // with further GPU entries (e.g. Domain of Anguish's frame keeps GPU slices to the very end). GPU
-        // entries are (index, count) slices of ONE contiguous GR command stream - FlushCommandQueue at the
-        // boundary materialises the whole queued world regardless of where the slices sit, so splitting
-        // right after the first GPU entry is safe. A GPU entry whose index does NOT continue the stream
-        // (index != previous index + count) is a SECOND world-render dispatch (e.g. a 3D bust in the
-        // hero/character panel): running that in a split-off second call re-runs the per-object cloth/hair
-        // physics off a fixed 1/30s accumulator not designed to advance twice in one real frame, desyncing
-        // constraint indices from the double-buffered positions (garbage spring-solver index / GrBound.cpp
-        // assert in wild dumps). UI-only/sub-render passes have no GPU entry, so boundary stays 0 and is
-        // skipped below.
         uint32_t boundary = 0;
         bool stream_restart = false;
         uint32_t stream_expect = 0;
@@ -208,25 +170,38 @@ namespace {
 
         GW::Hook::LeaveHook();
     }
-
-    void EnsureHook()
+    bool hook_attempted = false;
+    bool EnsureHook()
     {
-        if (compositor_hooked || compositor_failed) return;
-        if (!ScanCompositor()) return;
-        if (GW::Hook::CreateHook(reinterpret_cast<void**>(&FrCacheRenderAll_Func), OnFrCacheRenderAll,
-                                 reinterpret_cast<void**>(&FrCacheRenderAll_Ret)) != 0) {
-            compositor_failed = true;
-            return;
+        if (hook_attempted)
+            return FrCacheRenderAll_Func != 0;
+        hook_attempted = true;
+
+        // FrCache_RenderAll asserts "frame" in FrCache.cpp at line 0x9e.
+        auto address = GW::Scanner::ToFunctionStart(GW::Scanner::FindUseOfString("FrCache: ignored invalid client viewport rect (%0.6f,%0.6f,%0.6f,%0.6f)"), 0xfff);
+        if (address)
+            FrCacheRenderAll_Func = (FrCacheRenderFn)address;
+        address = address ? GW::Scanner::FindInRange("\xa1????\x83", "x????x", 1, address, address + 0x10) : 0;
+        if (address && GW::Scanner::IsValidPtr(*(uintptr_t*)address))
+            frame_render_context = reinterpret_cast<FrameRenderContext*>((*(uintptr_t*)address) - offsetof(FrameRenderContext, render_buffer.m_size));
+
+        if (!frame_render_context)
+            FrCacheRenderAll_Func = 0;
+
+        if (!FrCacheRenderAll_Func)
+            return false;
+        if (GW::Hook::CreateHook(reinterpret_cast<void**>(&FrCacheRenderAll_Func), OnFrCacheRenderAll, reinterpret_cast<void**>(&FrCacheRenderAll_Ret)) != 0) {
+            FrCacheRenderAll_Func = 0;
+            return false;
         }
         GW::Hook::EnableHooks(FrCacheRenderAll_Func);
-        compositor_hooked = true;
+        return true;
     }
 
     void RemoveHook()
     {
-        if (compositor_hooked && FrCacheRenderAll_Func) {
+        if (FrCacheRenderAll_Func) {
             GW::Hook::RemoveHook(FrCacheRenderAll_Func);
-            compositor_hooked = false;
         }
     }
 

@@ -18,8 +18,6 @@ namespace MathUtil {
     // point q lies on line segment 'pr'
     bool onSegment(const GW::Vec2f &p, const GW::Vec2f &q, const GW::Vec2f &r);
 
-    // The main function that returns true if line segment 'p1q1'
-    // and 'p2q2' intersect.
     bool Intersect(const GW::Vec2f &p1, const GW::Vec2f &q1, const GW::Vec2f &p2, const GW::Vec2f &q2);
 
     bool between(float x, float min, float max);

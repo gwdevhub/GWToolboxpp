@@ -217,12 +217,10 @@ enum class ChunkType : uint32_t {
         uint32_t unk;
         uint32_t num_filenames;
         FileName filenames[];
-        // FileName array follows...
     };
     struct FileNamesChunkWithoutLength : Chunk {
         FileName filenames[];
         size_t num_filenames() { return chunk_size / sizeof(FileName); };
-        // FileName array follows...
     };
     struct ChunkFA1 : Chunk {
         ChunkFA1Sub1 sub_1;
@@ -252,14 +250,12 @@ enum class ChunkType : uint32_t {
 
     struct ArenaNetFile : GameAssetFile {
 
-        // Copy parent constructors
         ArenaNetFile() : GameAssetFile() {}
         ArenaNetFile(std::vector<uint8_t>& _data) : ArenaNetFile() { parse(_data); }
 
         const uint8_t getFFNAType() const;
 
         const bool isValid() override;
-        // Get chunk by type
         const Chunk* FindChunk(ChunkType chunk_type);
     };
 

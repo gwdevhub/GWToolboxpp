@@ -47,7 +47,8 @@
 #include <random>
 #include <vector>
 
-// windows headers
+// windows headers -- none of this exists under Emscripten; mirrors the GWCA_WASM split GWCA/stdafx.h already makes for its own Win32Shim.h.
+#ifndef __EMSCRIPTEN__
 #include <Windows.h>
 #include <Psapi.h>
 
@@ -65,28 +66,48 @@
 
 #include <d3d9.h>
 #include <DirectXMath.h>
+#endif
 
 // libraries
 #include <Logger.h>
+#ifndef __EMSCRIPTEN__
 #include <discord-game-sdk/discord_game_sdk.h>
+#endif
 #include <ToolboxIni.h>
 
+#ifndef __EMSCRIPTEN__
+// glaze/ctre are portable but vcpkg-managed, and vcpkg isn't part of an `emcmake` configure; deferred until a kept-for-wasm file needs one (pull in via FetchContent then, matching cmake/imgui.cmake).
 #include <glaze/glaze.hpp>
+// winhttp-backed and Windows-only mp3 playback both need a browser-native replacement (JS WebSocket, Web Audio) before any wasm-compiled file can use them.
 #include <easywsclient.hpp>
 #include <mp3.h>
+#endif
+#ifndef __EMSCRIPTEN__
+// IconsFontAwesome5.h: upstream declares its data `static` against an `extern` decl, which clang/emcc rejects; mapbox_earcut.h is vcpkg-provided. Neither needed by the wasm source list yet.
 #include <IconsFontAwesome5.h>
 #include <mapbox_earcut.h>
+#endif
 
+#ifndef __EMSCRIPTEN__
 #define __forceinline
 #include <ctre.hpp>
 #undef __forceinline
+#endif
 
 #include <imgui.h>
 #include <imgui_internal.h>
+#ifndef __EMSCRIPTEN__
 #include "imgui_impl_win32.h"
 #include "imgui_impl_dx9.h"
+#else
+// gw_in_browser's loader wires up a real GLES3 binding (harness/gllib.js) - this is the standard Dear ImGui backend, not a stub.
+#include "imgui_impl_opengl3.h"
+#endif
 
+#ifndef __EMSCRIPTEN__
+// Pulls in glaze (see above) transitively; not needed by the wasm source list either.
 #include <Utils/SettingsRegistry.h>
+#endif
 
 #pragma warning(pop)
 

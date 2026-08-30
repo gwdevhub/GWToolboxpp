@@ -48,9 +48,12 @@
 //---- Use void* as ImTextureID so we can pass IDirect3DTexture9* directly without casts.
 #define ImTextureID void*
 
+// BGRA8 + the extra `z` field are D3D9 fixed-function conventions, wrong for imgui_impl_opengl3.cpp's GLES3 backend (wants stock RGBA8/ImDrawVert) - native keeps its layout unchanged.
+#ifndef __EMSCRIPTEN__
 //---- Pack colors to BGRA8 instead of RGBA8 (to avoid converting from one to another)
 #define IMGUI_USE_BGRA_PACKED_COLOR
 #define IMGUI_OVERRIDE_DRAWVERT_STRUCT_LAYOUT struct ImDrawVert { ImVec2 pos; float z = 0.0f; ImU32 col; ImVec2 uv; }
+#endif
 
 //---- Use 32-bit for ImWchar (default is 16-bit) to support full unicode code points.
 //#define IMGUI_USE_WCHAR32
@@ -69,8 +72,9 @@
 //---- Define constructor and implicit cast operators to convert back<>forth between your math types and ImVec2/ImVec4.
 // This will be inlined as part of ImVec2 and ImVec4 class declarations.
 
-#include <GWCA/Include/GWCA/stdafx.h>
-#include <GWCA/Include/GWCA/GameContainers/GamePos.h>
+// Lowercase to match the actual vendored path (Dependencies/GWCA/include/) - tolerated on Windows' case-insensitive filesystem, but Linux/Emscripten's case-sensitive one needs it exact.
+#include <GWCA/include/GWCA/stdafx.h>
+#include <GWCA/include/GWCA/GameContainers/GamePos.h>
 
 #define IM_VEC2_CLASS_EXTRA                                                 \
         ImVec2(const GW::Vec2f& f) { x = f.x; y = f.y; }                    \

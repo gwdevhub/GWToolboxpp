@@ -1,6 +1,7 @@
 #include "stdafx.h"
 
 #include <Utils/GuiUtils.h>
+#include <Utils/TextUtils_Time.h>
 
 #include <Widgets/ClockWidget.h>
 #include <Modules/ToolboxSettings.h>
@@ -18,8 +19,7 @@ void ClockWidget::Draw(IDirect3DDevice9*)
         return;
     }
 
-    SYSTEMTIME time;
-    GetLocalTime(&time);
+    const auto time = TextUtils::Time::GetCurrentSystemTime();
 
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
     ImGui::SetNextWindowSize(ImVec2(250.0f, 90.0f), ImGuiCond_FirstUseEver);
@@ -27,22 +27,22 @@ void ClockWidget::Draw(IDirect3DDevice9*)
         static char timer[32];
         if (settings.use_24h_clock) {
             if (settings.show_seconds) {
-                snprintf(timer, 32, "%02d:%02d:%02d", time.wHour, time.wMinute, time.wSecond);
+                snprintf(timer, 32, "%02d:%02d:%02d", time.hour, time.minute, time.second);
             }
             else {
-                snprintf(timer, 32, "%02d:%02d", time.wHour, time.wMinute);
+                snprintf(timer, 32, "%02d:%02d", time.hour, time.minute);
             }
         }
         else {
-            int hour = time.wHour % 12;
+            int hour = time.hour % 12;
             if (hour == 0) {
                 hour = 12;
             }
             if (settings.show_seconds) {
-                snprintf(timer, 32, "%d:%02d:%02d %s", hour, time.wMinute, time.wSecond, time.wHour >= 12 ? "p.m." : "a.m.");
+                snprintf(timer, 32, "%d:%02d:%02d %s", hour, time.minute, time.second, time.hour >= 12 ? "p.m." : "a.m.");
             }
             else {
-                snprintf(timer, 32, "%d:%02d %s", hour, time.wMinute, time.wHour >= 12 ? "p.m." : "a.m.");
+                snprintf(timer, 32, "%d:%02d %s", hour, time.minute, time.hour >= 12 ? "p.m." : "a.m.");
             }
         }
         ImGui::PushFont(FontLoader::GetFont(), settings.font_size);

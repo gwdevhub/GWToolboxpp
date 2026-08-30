@@ -8,8 +8,7 @@ namespace GW {
         void       (*init_module)();
         void       (*exit_module)();
 
-        // Call those from game thread to be safe
-        // Do not free trampoline
+        // Call these from the game thread to be safe, and do not free the trampoline.
         void       (*enable_hooks)();
         void       (*disable_hooks)();
     };

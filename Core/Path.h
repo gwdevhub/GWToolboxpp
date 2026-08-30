@@ -10,9 +10,7 @@ bool PathDirectoryIteratorSafe(const std::filesystem::path& path, std::filesyste
 // exists without catch; returns false on failure
 bool PathExistsSafe(const std::filesystem::path& path, bool* out);
 
-// Get absolute path of current running executable
 bool PathGetExeFullPath(std::filesystem::path& out);
-// Get basename of current running executable
 bool PathGetExeFileName(std::wstring& out);
 
 bool PathGetProgramDirectory(std::filesystem::path& out);

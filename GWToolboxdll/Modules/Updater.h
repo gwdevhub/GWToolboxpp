@@ -21,7 +21,8 @@ public:
     }
 
     [[nodiscard]] const char* Name() const override { return "Updater"; }
-    // DrawSettingInternal() called via ToolboxSettings; don't draw it again
+    // DrawSettingInternal() called via ToolboxSettings; don't draw it again, and point settings search there
+    [[nodiscard]] const char* SettingsName() const override { return "Toolbox Settings"; }
     bool HasSettings() override { return false; }
 
     enum class ReleaseType : int {
@@ -39,6 +40,7 @@ public:
     struct Settings {
         Mode update_mode = Mode::CheckAndAsk;
         ReleaseType update_release_type = ReleaseType::Stable;
+        bool has_starred = false;
     };
 
     void RegisterSettingsContent() override
