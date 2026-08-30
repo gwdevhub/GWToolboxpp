@@ -1,5 +1,6 @@
 #include "SCTracker.h"
 #include "PluginVersion.generated.h" // kPluginVersion - see cmake/gwtoolboxdll_plugins.cmake
+// CI: rebuild to exercise the GCS plugin-publish path now that GCP_SA_KEY / GCP_PLUGIN_BUCKET are set.
 
 #include <Path.h> // Core: PathGetDocumentsPath / PathGetComputerName
 
