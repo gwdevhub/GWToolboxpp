@@ -139,14 +139,15 @@ jobs:
           ${{runner.workspace}}/GWToolboxpp/bin/RelWithDebInfo/*
           !${{runner.workspace}}/GWToolboxpp/bin/RelWithDebInfo/GWToolboxdll.pdb
 
-    # --- fork-only: third-party plugin bundle ---------------------------------
-    # Collects every built plugin DLL plus its sidecar metadata (e.g.
-    # SCTracker.version.json, written by cmake/gwtoolboxdll_plugins.cmake's
-    # POST_BUILD) into plugins/ and zips it. The plugin list is read straight
-    # from the cmake file so a new add_tb_plugin() is picked up automatically.
-    # ExamplePlugin is excluded (sample; also -DGWTOOLBOX_BUILD_EXAMPLE_PLUGIN=OFF
-    # in CI). Guarded off upstream, which ships no third-party plugins.
-    - name: Stage plugin bundle
+    # --- fork-only: third-party plugin artifacts --------------------------------
+    # Every file the plugin build drops into bin/ for a plugin target (DLL, PDB,
+    # and the SCTracker.version.json sidecar from cmake/gwtoolboxdll_plugins.cmake's
+    # POST_BUILD) is staged for the release uncompressed - one loose, top-level
+    # asset each. Plugin names come straight from add_tb_plugin() so a new plugin
+    # is picked up automatically; ExamplePlugin is excluded (sample; also
+    # -DGWTOOLBOX_BUILD_EXAMPLE_PLUGIN=OFF in CI). Guarded off upstream, which
+    # ships no third-party plugins.
+    - name: Stage plugin artifacts
       if: github.ref == 'refs/heads/master' && github.repository != 'gwdevhub/GWToolboxpp'
       shell: pwsh
       working-directory: ${{ github.workspace }}
@@ -158,13 +159,13 @@ jobs:
         $plugins = Select-String -Path cmake/gwtoolboxdll_plugins.cmake -Pattern 'add_tb_plugin\(([A-Za-z0-9_]+)\)' -AllMatches |
           ForEach-Object { $_.Matches.Groups[1].Value } |
           Where-Object { $_ -ne 'ExamplePlugin' } | Select-Object -Unique
-        if (-not $plugins) { Write-Host 'no plugins to bundle'; exit 0 }
+        if (-not $plugins) { Write-Host 'no plugins to stage'; exit 0 }
         foreach ($p in $plugins) {
-          Copy-Item "$bin/$p.dll" $staging
-          if (Test-Path "$bin/$p.version.json") { Copy-Item "$bin/$p.version.json" $staging }
+          $files = Get-ChildItem "$bin/$p.*" -File -ErrorAction SilentlyContinue
+          if (-not $files) { Write-Warning "no build output for plugin $p"; continue }
+          $files | Copy-Item -Destination $staging
         }
-        Compress-Archive -Path $staging -DestinationPath (Join-Path $env:GITHUB_WORKSPACE 'plugins.zip') -Force
-        Get-ChildItem $staging | Format-Table -AutoSize
+        Get-ChildItem $staging | Format-Table Name, Length -AutoSize
 
     - name: Determine release version
       id: version
@@ -264,10 +265,12 @@ jobs:
         git tag "$TAG_NAME"
         git push origin "$TAG_NAME"
 
-        # plugins.zip is only staged on the fork (see "Stage plugin bundle"); it's
-        # absent upstream, so attach it only when present.
+        # Plugin artifacts are staged only on the fork (see "Stage plugin
+        # artifacts") - attach each as a loose, top-level asset when present.
         EXTRA=()
-        [ -f plugins.zip ] && EXTRA+=(plugins.zip)
+        if [ -d staging/plugins ]; then
+          for f in staging/plugins/*; do [ -e "$f" ] && EXTRA+=("$f"); done
+        fi
 
         gh release create "$TAG_NAME" \
           --title "$TAG_NAME" \
@@ -277,10 +280,11 @@ jobs:
     # --- fork-only: rolling plugins-latest release --------------------------------
     # Plugins link against GWToolboxdll, so every master build produces a fresh
     # compatible set. This keeps a single "plugins-latest" pre-release whose assets
-    # are overwritten in place on every master build - independent of the versioned
-    # GWToolbox release above, which only fires on a CMakeLists.txt version bump.
+    # (the loose plugin build artifacts) are overwritten in place on every master
+    # build - independent of the versioned GWToolbox release above, which only
+    # fires on a CMakeLists.txt version bump.
     - name: Publish rolling plugins-latest release
-      if: github.ref == 'refs/heads/master' && github.repository != 'gwdevhub/GWToolboxpp' && hashFiles('plugins.zip') != ''
+      if: github.ref == 'refs/heads/master' && github.repository != 'gwdevhub/GWToolboxpp' && hashFiles('staging/plugins/**') != ''
       shell: bash
       working-directory: ${{ github.workspace }}
       env:
@@ -290,8 +294,10 @@ jobs:
           gh release create plugins-latest \
             --prerelease \
             --title "Plugins (latest master)" \
-            --notes "Third-party plugin DLLs + metadata, rebuilt on every master push. Rolling: assets are overwritten in place, not versioned."
+            --notes "Third-party plugin build artifacts, refreshed on every master push. Rolling: assets are overwritten in place, not versioned."
         fi
-        assets=(plugins.zip)
-        for f in staging/plugins/*.version.json; do [ -e "$f" ] && assets+=("$f"); done
+        # One-time cleanup: drop the zipped asset an earlier version of this workflow uploaded.
+        gh release delete-asset plugins-latest plugins.zip -y 2>/dev/null || true
+        assets=()
+        for f in staging/plugins/*; do [ -e "$f" ] && assets+=("$f"); done
         gh release upload plugins-latest --clobber "${assets[@]}"
