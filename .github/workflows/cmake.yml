@@ -156,7 +156,7 @@ jobs:
         $staging = Join-Path $env:GITHUB_WORKSPACE 'staging/plugins'
         Remove-Item -Recurse -Force (Join-Path $env:GITHUB_WORKSPACE 'staging') -ErrorAction SilentlyContinue
         New-Item -ItemType Directory -Force -Path $staging | Out-Null
-        $plugins = Select-String -Path cmake/gwtoolboxdll_plugins.cmake -Pattern 'add_tb_plugin\(([A-Za-z0-9_]+)\)' -AllMatches |
+        $plugins = Select-String -Path cmake/gwtoolboxdll_plugins.cmake -Pattern 'add_tb_plugin\(([A-Za-z0-9_]+)' -AllMatches |
           ForEach-Object { $_.Matches.Groups[1].Value } |
           Where-Object { $_ -ne 'ExamplePlugin' } | Select-Object -Unique
         if (-not $plugins) { Write-Host 'no plugins to stage'; exit 0 }
