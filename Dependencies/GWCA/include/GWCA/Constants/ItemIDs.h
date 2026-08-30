@@ -186,6 +186,7 @@ namespace GW {
 
             // Minis
             constexpr int MiniDhuum = 32822;
+            constexpr int MiniSmiteCrawler = 32556;
 
             // Bundles
             constexpr int UnholyText = 2619;

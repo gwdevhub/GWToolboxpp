@@ -54,3 +54,36 @@ macro(add_tb_plugin PLUGIN)
 endmacro()
 
 add_tb_plugin(ExamplePlugin)
+
+add_tb_plugin(SCTracker)
+# Core (PathGetDocumentsPath/PathGetComputerName) so the plugin writes into the same
+# Documents\GWToolboxpp\<computer>\runs folder GWToolboxdll uses, without linking GWToolboxdll internals.
+# RestClient (AsyncRestClient, WinHTTP-backed) for publishing runs to a backend endpoint.
+target_link_libraries(SCTracker PRIVATE Core RestClient)
+
+# Bump this by hand whenever a new SCTracker build should be treated as required by the backend's
+# minimum-version check (X-Plugin-Version header, GET /plugin-version) - everything downstream of
+# this one variable (the compiled-in kPluginVersion constant and the SCTracker.version.json shipped
+# alongside the built dll, both below) stays in sync automatically, so there's nothing else to edit
+# by hand.
+set(SCTRACKER_PLUGIN_VERSION 10 CACHE STRING "SCTracker plugin protocol version (see PluginVersion.generated.h.in)" FORCE)
+
+configure_file(
+    "${PROJECT_SOURCE_DIR}/plugins/SCTracker/PluginVersion.generated.h.in"
+    "${CMAKE_BINARY_DIR}/generated/SCTracker/PluginVersion.generated.h"
+    @ONLY)
+target_include_directories(SCTracker PRIVATE "${CMAKE_BINARY_DIR}/generated/SCTracker")
+
+# SCTracker.version.json needs a fresh compiled_at on every actual build, not just when the version
+# number changes - a POST_BUILD custom command (which reruns on every build) rather than
+# configure_file (which only reruns when CMakeLists/*.cmake themselves change) is what gets that.
+# Pure CMake script mode (cmake -P), not a shell/PowerShell script, so this needs no host-OS
+# branching to work cross-platform.
+add_custom_command(TARGET SCTracker POST_BUILD
+    COMMAND ${CMAKE_COMMAND}
+            -DVERSION=${SCTRACKER_PLUGIN_VERSION}
+            -DOUTPUT_PATH=$<TARGET_FILE_DIR:SCTracker>/SCTracker.version.json
+            -P "${PROJECT_SOURCE_DIR}/plugins/SCTracker/write-version-metadata.cmake"
+    COMMENT "Writing SCTracker.version.json"
+    VERBATIM
+)

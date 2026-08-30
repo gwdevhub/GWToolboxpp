@@ -155,12 +155,15 @@ namespace PluginUtils {
         bool decoded = false;
         bool sanitised = false;
         virtual void sanitise();
-        GW::Constants::Language language_id = static_cast<GW::Constants::Language>(-1);
+        // 0xff is GW::UI::AsyncDecodeStr's own "use default language" sentinel (matches GuiUtils::EncString
+        // internally). -1 is NOT recognized by the engine's TextCache and gets used as a raw index into its
+        // per-language file array, crashing with "Assertion: language < arrsize(m_fileArray)".
+        GW::Constants::Language language_id = static_cast<GW::Constants::Language>(0xff);
         static void OnStringDecoded(void* param, const wchar_t* decoded);
 
     public:
         // Set the language for decoding this encoded string. If the language has changed, resets the decoded result. Returns this for chaining.
-        EncString* language(GW::Constants::Language l = static_cast<GW::Constants::Language>(-1));
+        EncString* language(GW::Constants::Language l = static_cast<GW::Constants::Language>(0xff));
         bool IsDecoding() const { return decoding && decoded_ws.empty(); };
         // Recycle this EncString by passing a new encoded string id to decode.
         // Set sanitise to true to automatically remove guild tags etc from the string
