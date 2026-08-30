@@ -234,6 +234,23 @@ jobs:
         $dlls = Get-ChildItem "$bin/*.dll" | Where-Object { $_.Name -ne 'GWToolboxdll.dll' } | ForEach-Object { $_.FullName }
         if ($dlls) { ./.github/scripts/sign-certum.ps1 -Files $dlls }
 
+    # Signing rewrites the dll after the build, so each plugin manifest's sha256
+    # (written by plugins/Base/write-plugin-manifest.cmake at POST_BUILD time) is
+    # now stale. Recompute just that field in place, leaving name/version/compiled_at.
+    - name: Refresh plugin manifests after signing
+      if: steps.version.outputs.should_release == 'true' && env.CERTUM_OTP_URI != '' && github.repository != 'gwdevhub/GWToolboxpp'
+      shell: pwsh
+      run: |
+        $bin = "${{runner.workspace}}/GWToolboxpp/bin/RelWithDebInfo"
+        Get-ChildItem "$bin/*.version.json" | ForEach-Object {
+          $name = $_.Name -replace '\.version\.json$', ''
+          $dll = Join-Path $bin "$name.dll"
+          if (-not (Test-Path $dll)) { return }
+          $m = Get-Content $_.FullName -Raw | ConvertFrom-Json
+          $m.sha256 = (Get-FileHash $dll -Algorithm SHA256).Hash.ToLower()
+          ($m | ConvertTo-Json) + "`n" | Set-Content -NoNewline -Encoding utf8 $_.FullName
+        }
+
     - name: Create release
       if: steps.version.outputs.should_release == 'true'
       shell: bash

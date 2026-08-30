@@ -51,6 +51,25 @@ macro(add_tb_plugin PLUGIN)
     target_link_options(${PLUGIN} PRIVATE $<$<CONFIG:Debug>:/IGNORE:4098 /OPT:NOREF /OPT:NOICF>)
     target_link_options(${PLUGIN} PRIVATE $<$<CONFIG:RelWithDebInfo>:/OPT:NOICF>)
     set_target_properties(${PLUGIN} PROPERTIES FOLDER "plugins/")
+
+    # Standard build manifest next to every plugin dll: name, UTC compile time and
+    # the dll's SHA-256 always; version only when the caller passes one as the
+    # second argument (add_tb_plugin(<Name> <Version>)). POST_BUILD, not
+    # configure_file, so compiled_at / sha256 refresh on every build. See
+    # plugins/Base/write-plugin-manifest.cmake for the schema.
+    set(_tb_plugin_version "")
+    if(${ARGC} GREATER 1)
+        set(_tb_plugin_version "${ARGV1}")
+    endif()
+    add_custom_command(TARGET ${PLUGIN} POST_BUILD
+        COMMAND ${CMAKE_COMMAND}
+                -DNAME=${PLUGIN}
+                -DDLL=$<TARGET_FILE:${PLUGIN}>
+                -DOUTPUT=$<TARGET_FILE_DIR:${PLUGIN}>/${PLUGIN}.version.json
+                -DVERSION=${_tb_plugin_version}
+                -P "${PROJECT_SOURCE_DIR}/plugins/Base/write-plugin-manifest.cmake"
+        COMMENT "Writing ${PLUGIN}.version.json"
+        VERBATIM)
 endmacro()
 
 option(GWTOOLBOX_BUILD_EXAMPLE_PLUGIN "Build the ExamplePlugin sample (plugin-author reference; skipped in CI to save build time and keep it out of release artifacts)" ON)
@@ -58,35 +77,23 @@ if(GWTOOLBOX_BUILD_EXAMPLE_PLUGIN)
     add_tb_plugin(ExamplePlugin)
 endif()
 
-add_tb_plugin(SCTracker)
+# Bump this by hand whenever a new SCTracker build should be treated as required by the backend's
+# minimum-version check (X-Plugin-Version header, GET /plugin-version) - everything downstream of
+# this one variable (the compiled-in kPluginVersion constant and the version field of the
+# SCTracker.version.json manifest emitted next to the dll) stays in sync automatically, so there's
+# nothing else to edit by hand.
+set(SCTRACKER_PLUGIN_VERSION 10 CACHE STRING "SCTracker plugin protocol version (see PluginVersion.generated.h.in)" FORCE)
+
+# Passing the version as the 2nd arg makes add_tb_plugin() put it in SCTracker.version.json;
+# the name / compiled_at / sha256 fields are written for every plugin regardless.
+add_tb_plugin(SCTracker ${SCTRACKER_PLUGIN_VERSION})
 # Core (PathGetDocumentsPath/PathGetComputerName) so the plugin writes into the same
 # Documents\GWToolboxpp\<computer>\runs folder GWToolboxdll uses, without linking GWToolboxdll internals.
 # RestClient (AsyncRestClient, WinHTTP-backed) for publishing runs to a backend endpoint.
 target_link_libraries(SCTracker PRIVATE Core RestClient)
-
-# Bump this by hand whenever a new SCTracker build should be treated as required by the backend's
-# minimum-version check (X-Plugin-Version header, GET /plugin-version) - everything downstream of
-# this one variable (the compiled-in kPluginVersion constant and the SCTracker.version.json shipped
-# alongside the built dll, both below) stays in sync automatically, so there's nothing else to edit
-# by hand.
-set(SCTRACKER_PLUGIN_VERSION 10 CACHE STRING "SCTracker plugin protocol version (see PluginVersion.generated.h.in)" FORCE)
 
 configure_file(
     "${PROJECT_SOURCE_DIR}/plugins/SCTracker/PluginVersion.generated.h.in"
     "${CMAKE_BINARY_DIR}/generated/SCTracker/PluginVersion.generated.h"
     @ONLY)
 target_include_directories(SCTracker PRIVATE "${CMAKE_BINARY_DIR}/generated/SCTracker")
-
-# SCTracker.version.json needs a fresh compiled_at on every actual build, not just when the version
-# number changes - a POST_BUILD custom command (which reruns on every build) rather than
-# configure_file (which only reruns when CMakeLists/*.cmake themselves change) is what gets that.
-# Pure CMake script mode (cmake -P), not a shell/PowerShell script, so this needs no host-OS
-# branching to work cross-platform.
-add_custom_command(TARGET SCTracker POST_BUILD
-    COMMAND ${CMAKE_COMMAND}
-            -DVERSION=${SCTRACKER_PLUGIN_VERSION}
-            -DOUTPUT_PATH=$<TARGET_FILE_DIR:SCTracker>/SCTracker.version.json
-            -P "${PROJECT_SOURCE_DIR}/plugins/SCTracker/write-version-metadata.cmake"
-    COMMENT "Writing SCTracker.version.json"
-    VERBATIM
-)
