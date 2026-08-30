@@ -51,6 +51,8 @@ jobs:
       CERTUM_OTP_URI: ${{ secrets.CERTUM_OTP_URI }}
       CERTUM_USERID: ${{ secrets.CERTUM_USERID }}
       CERTUM_CERT_SHA1: ${{ secrets.CERTUM_CERT_SHA1 }}
+      # Same trick for the GCS plugin-publish steps below - gate on env.GCP_SA_KEY.
+      GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
 
     steps:
 #    - name: Setup Windows 10 SDK Action
@@ -250,6 +252,43 @@ jobs:
           $m.sha256 = (Get-FileHash $dll -Algorithm SHA256).Hash.ToLower()
           ($m | ConvertTo-Json) + "`n" | Set-Content -NoNewline -Encoding utf8 $_.FullName
         }
+
+    # --- fork-only: publish SCTracker to the backend's private GCS bucket -------
+    # The backend fetches SCTracker.dll + SCTracker.version.json from this bucket
+    # at runtime (1h cache) instead of bundling them in its image, so a plugin-only
+    # update needs no backend redeploy. Runs on every master build (mirrors
+    # "Publish rolling plugins-latest"), after the manifest sha256 has been
+    # corrected for any signing above. Needs the GCP_SA_KEY secret + the
+    # GCP_PLUGIN_BUCKET repo variable; a no-op on forks without them.
+    - name: Authenticate to Google Cloud (plugin bucket)
+      if: github.ref == 'refs/heads/master' && github.repository != 'gwdevhub/GWToolboxpp' && env.GCP_SA_KEY != ''
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+    - name: Set up Cloud SDK
+      if: github.ref == 'refs/heads/master' && github.repository != 'gwdevhub/GWToolboxpp' && env.GCP_SA_KEY != ''
+      uses: google-github-actions/setup-gcloud@v2
+
+    - name: Publish SCTracker plugin to GCS
+      if: github.ref == 'refs/heads/master' && github.repository != 'gwdevhub/GWToolboxpp' && env.GCP_SA_KEY != ''
+      shell: bash
+      working-directory: ${{ github.workspace }}
+      run: |
+        if [ ! -f staging/plugins/SCTracker.dll ]; then
+          echo "no SCTracker build staged; nothing to publish"; exit 0
+        fi
+        BUCKET="${{ vars.GCP_PLUGIN_BUCKET }}"
+        if [ -z "$BUCKET" ]; then
+          echo "GCP_PLUGIN_BUCKET repo variable is not set; skipping"; exit 0
+        fi
+        # DLL first, manifest second: a backend refresh racing the two uploads then
+        # never sees a manifest sha256 pointing ahead of the bytes. --cache-control
+        # keeps any GCS/CDN layer from stacking staleness on the backend's own TTL.
+        gcloud storage cp staging/plugins/SCTracker.dll \
+          "gs://$BUCKET/sctracker/SCTracker.dll" --cache-control=no-cache
+        gcloud storage cp staging/plugins/SCTracker.version.json \
+          "gs://$BUCKET/sctracker/SCTracker.version.json" --cache-control=no-cache
 
     - name: Create release
       if: steps.version.outputs.should_release == 'true'
