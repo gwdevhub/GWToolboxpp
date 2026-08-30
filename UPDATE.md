@@ -10,7 +10,8 @@ GitHub release whenever a push lands on `master`, reading the version from `CMak
    `site/src/content/docs/history.md`.
 4. Commit to `dev`, then merge `dev` into `master` and push.
 
-On the `master` push the workflow builds, code-signs the binaries (Certum, if the `CERTUM_*`
-secrets are set), tags `x.x_Release` (or `x.x_<beta>`), and creates the release with
-`GWToolbox.exe`, `GWToolboxdll.dll` and `GWToolboxdll.pdb.gz` attached. No manual tagging or
-release creation is needed; if the tag already exists the release step is skipped.
+On the `master` push the workflow builds, tags `x.x_Release` (or `x.x_<beta>`), and creates
+the release with `GWToolbox.exe`, `GWToolboxdll.dll` and `GWToolboxdll.pdb.gz` attached
+(plus the third-party plugin artifacts). Binaries are shipped unsigned - this fork has no
+code-signing secrets. No manual tagging or release creation is needed; if the tag already
+exists the release step is skipped.

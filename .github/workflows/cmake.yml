@@ -2,9 +2,8 @@ name: CMake
 
 on:
   # push covers dev (post-merge validation) and master (release builds, gated
-  # below on should_release). pull_request covers PRs against dev - including
-  # from forks, where CERTUM_OTP_URI is unset and signing/release is skipped -
-  # so branches only build once a PR is open instead of on every push.
+  # below on should_release). pull_request covers PRs against dev so branches
+  # only build once a PR is open instead of on every push.
   push:
     branches:
       - dev
@@ -45,13 +44,12 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: write
-    # Exposed at job level so the release steps can gate on `env.CERTUM_OTP_URI`
-    # (secrets can't be referenced directly in an `if:` expression).
+    # Exposed at job level so the GCS plugin-publish steps below can gate on
+    # `env.GCP_SA_KEY` (secrets can't be referenced directly in an `if:`).
+    # NOTE: upstream (gwdevhub/GWToolboxpp) also signs the binaries here with a
+    # Certum cert. This fork has no signing secrets and never will, so that whole
+    # block is dropped - expect a conflict on this section when merging upstream.
     env:
-      CERTUM_OTP_URI: ${{ secrets.CERTUM_OTP_URI }}
-      CERTUM_USERID: ${{ secrets.CERTUM_USERID }}
-      CERTUM_CERT_SHA1: ${{ secrets.CERTUM_CERT_SHA1 }}
-      # Same trick for the GCS plugin-publish steps below - gate on env.GCP_SA_KEY.
       GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
 
     steps:
@@ -202,63 +200,16 @@ jobs:
           echo "should_release=true" >> "$GITHUB_OUTPUT"
         fi
 
-    # Certum SimplySign code signing. The binaries are signed in place in
-    # bin/RelWithDebInfo before the release upload. Each signing step is gated on
-    # the CERTUM_OTP_URI secret being present, so forks and un-provisioned
-    # environments still publish a release (unsigned) instead of failing.
-    - name: Set up Certum SimplySign
-      if: steps.version.outputs.should_release == 'true' && env.CERTUM_OTP_URI != ''
-      shell: bash
-      run: |
-        chmod +x ./.github/scripts/install-simplysign.sh
-        ./.github/scripts/install-simplysign.sh
-        powershell -ExecutionPolicy Bypass -File "./.github/scripts/configure-simplysign.ps1"
-
-    - name: Authenticate Certum SimplySign
-      if: steps.version.outputs.should_release == 'true' && env.CERTUM_OTP_URI != ''
-      shell: bash
-      run: powershell -ExecutionPolicy Bypass -File "./.github/scripts/connect-simplysign.ps1"
-
-    - name: Sign release binaries
-      if: steps.version.outputs.should_release == 'true' && env.CERTUM_OTP_URI != ''
-      shell: pwsh
-      run: |
-        $bin = "${{runner.workspace}}/GWToolboxpp/bin/RelWithDebInfo"
-        ./.github/scripts/sign-certum.ps1 -Files @("$bin/GWToolbox.exe", "$bin/GWToolboxdll.dll")
-
-    # fork-only: sign the bundled plugin DLLs with the same cert. No-op on the
-    # fork itself until CERTUM_* secrets are provisioned (skipped, ships unsigned).
-    - name: Sign plugin binaries
-      if: steps.version.outputs.should_release == 'true' && env.CERTUM_OTP_URI != '' && github.repository != 'gwdevhub/GWToolboxpp'
-      shell: pwsh
-      run: |
-        $bin = "${{runner.workspace}}/GWToolboxpp/bin/RelWithDebInfo"
-        $dlls = Get-ChildItem "$bin/*.dll" | Where-Object { $_.Name -ne 'GWToolboxdll.dll' } | ForEach-Object { $_.FullName }
-        if ($dlls) { ./.github/scripts/sign-certum.ps1 -Files $dlls }
-
-    # Signing rewrites the dll after the build, so each plugin manifest's sha256
-    # (written by plugins/Base/write-plugin-manifest.cmake at POST_BUILD time) is
-    # now stale. Recompute just that field in place, leaving name/version/compiled_at.
-    - name: Refresh plugin manifests after signing
-      if: steps.version.outputs.should_release == 'true' && env.CERTUM_OTP_URI != '' && github.repository != 'gwdevhub/GWToolboxpp'
-      shell: pwsh
-      run: |
-        $bin = "${{runner.workspace}}/GWToolboxpp/bin/RelWithDebInfo"
-        Get-ChildItem "$bin/*.version.json" | ForEach-Object {
-          $name = $_.Name -replace '\.version\.json$', ''
-          $dll = Join-Path $bin "$name.dll"
-          if (-not (Test-Path $dll)) { return }
-          $m = Get-Content $_.FullName -Raw | ConvertFrom-Json
-          $m.sha256 = (Get-FileHash $dll -Algorithm SHA256).Hash.ToLower()
-          ($m | ConvertTo-Json) + "`n" | Set-Content -NoNewline -Encoding utf8 $_.FullName
-        }
+    # Upstream signs GWToolbox.exe / GWToolboxdll.dll / the plugin DLLs in place
+    # here with a Certum SimplySign cert, then regenerates each plugin manifest's
+    # sha256 post-sign. This fork has no signing secrets, so it ships everything
+    # unsigned and those steps are omitted entirely.
 
     # --- fork-only: publish SCTracker to the backend's private GCS bucket -------
     # The backend fetches SCTracker.dll + SCTracker.version.json from this bucket
     # at runtime (1h cache) instead of bundling them in its image, so a plugin-only
     # update needs no backend redeploy. Runs on every master build (mirrors
-    # "Publish rolling plugins-latest"), after the manifest sha256 has been
-    # corrected for any signing above. Needs the GCP_SA_KEY secret + the
+    # "Publish rolling plugins-latest"). Needs the GCP_SA_KEY secret + the
     # GCP_PLUGIN_BUCKET repo variable; a no-op on forks without them.
     - name: Authenticate to Google Cloud (plugin bucket)
       if: github.ref == 'refs/heads/master' && github.repository != 'gwdevhub/GWToolboxpp' && env.GCP_SA_KEY != ''
