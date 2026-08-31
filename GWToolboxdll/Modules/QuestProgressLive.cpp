@@ -6,7 +6,9 @@
 #include <Modules/QuestObservationService.h>
 
 #include <GWCA/Context/CharContext.h>
+#include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/WorldContext.h>
+#include <GWCA/GameEntities/Title.h>
 #include <GWCA/Managers/MapMgr.h>
 
 #include <Utils/TextUtils.h>
@@ -23,6 +25,12 @@ UuidWords WordsFromUint32(const uint32_t words[4])
 std::u16string WStringToU16(const std::wstring& w)
 {
     return std::u16string(w.begin(), w.end());
+}
+
+uint32_t ReadPlayerLevel(const GW::WorldContext& world)
+{
+    // Avoid PCH macro collisions on the field name `level`.
+    return world.level_dupe > 0u ? world.level_dupe : 0u;
 }
 
 } // namespace
@@ -165,24 +173,24 @@ JourneySnapshotResult SampleLiveJourneySnapshot(
     std::vector<TitleSnapshotInput> inputs;
     inputs.reserve(world->titles.size());
     for (size_t i = 0; i < world->titles.size(); ++i) {
-        const auto& title = world->titles[i];
-        if (title.current_points == 0 && title.current_title_tier_index == 0) {
+        const uint32_t tier_index = world->titles[i].current_title_tier_index;
+        const uint32_t current_points = world->titles[i].current_points;
+        if (current_points == 0 && tier_index == 0) {
             continue;
         }
         TitleSnapshotInput row;
         row.title_id = static_cast<uint32_t>(i);
-        row.tier_index = title.current_title_tier_index;
-        row.current_points = title.current_points;
+        row.tier_index = tier_index;
+        row.current_points = current_points;
         inputs.push_back(row);
     }
 
-    const auto level = world->level > 0 ? world->level : 0u;
     return MergeJourneySnapshot(
         previous_titles,
         previous_level,
         existing_events,
         inputs,
-        level,
+        ReadPlayerLevel(*world),
         observed_at);
 }
 
