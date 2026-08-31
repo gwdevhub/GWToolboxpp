@@ -1,5 +1,7 @@
 #include <Modules/QuestProgressDomain.h>
 #include <Modules/QuestProgressReducer.h>
+#include <Modules/QuestMissionSnapshot.h>
+#include <Modules/QuestCharacterJourney.h>
 
 #include "test_assert.h"
 
@@ -686,9 +688,55 @@ int main()
     TestDuplicateObjectiveIndexDeterministic();
     TestCanonicalTimestampContract();
 
+    {
+        uint32_t completed[] = {0b101u};
+        const MissionBitsetWords completed_nm{completed, 1};
+        const auto rows = BuildMissionRecordsFromBitsets(
+            completed_nm, {}, {}, {}, "2026-08-30T12:00:00.000Z", nullptr);
+        Expect(rows.size() == 2, "mission_bitset_two_maps");
+        Expect(MissionBitAt(completed_nm, 0), "mission_bit_zero");
+        Expect(MissionBitAt(completed_nm, 2), "mission_bit_two");
+        Expect(!MissionBitAt(completed_nm, 1), "mission_bit_one_false");
+    }
+
+    {
+        std::map<uint32_t, TitleStateRecord> previous;
+        TitleStateRecord title12;
+        title12.title_id = 12;
+        title12.tier_index = 2;
+        title12.current_points = 3000;
+        title12.last_observed_at = "2026-07-24T10:00:00.000Z";
+        previous.emplace(12, title12);
+
+        const std::vector<TitleSnapshotInput> inputs{{12, 3, 4500}};
+        const auto first = MergeJourneySnapshot(
+            previous,
+            std::optional<uint32_t>{4},
+            {},
+            inputs,
+            5,
+            "2026-07-25T20:00:00.000Z");
+        Expect(first.new_events.size() == 2, "journey_title_and_level_events");
+        Expect(first.new_events.at(0).kind == "title_tier", "journey_title_kind");
+        Expect(first.new_events.at(0).tier_index == 3, "journey_title_tier");
+        Expect(first.new_events.at(1).kind == "level_up", "journey_level_kind");
+        Expect(first.new_events.at(1).level == 5, "journey_level_value");
+
+        const auto again = MergeJourneySnapshot(
+            first.titles,
+            first.level,
+            first.new_events,
+            inputs,
+            5,
+            "2026-07-25T21:00:00.000Z");
+        Expect(again.new_events.empty(), "journey_idempotent");
+    }
+
     RunBatch2BStoreTests();
     RunBatch2CServiceTests();
     RunAbandonProbeTests();
+    RunChatEvidenceTests();
+    RunContractExporterTests();
 
     std::printf("\n%d passed, %d failed\n", g_test_passed, g_test_failed);
     return g_test_failed == 0 ? 0 : 1;

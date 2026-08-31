@@ -2,6 +2,7 @@
 
 #include <Modules/QuestObservationService.h>
 #include <Modules/AudioSettings.h>
+#include <Modules/QuestChatEvidence.h>
 #include <Modules/QuestSessionIdentity.h>
 #include <Utils/ToolboxUtils.h>
 #include <Utils/TextUtils.h>
@@ -53,6 +54,8 @@ void QuestObservationService::RegisterCallbacks()
         GW::UI::UIMessage::kSendAbandonQuest,
         GW::UI::UIMessage::kSendDialog,
         GW::UI::UIMessage::kLogout,
+        GW::UI::UIMessage::kLogChatMessage,
+        GW::UI::UIMessage::kWriteToChatLog,
     };
 
     for (const auto message_id : messages) {
@@ -164,6 +167,63 @@ void QuestObservationService::PushEvidence(uint32_t quest_id, QuestProgress::Evi
     stamp.steady_at = std::chrono::steady_clock::now();
     std::scoped_lock lock(evidence_mutex_);
     pending_evidence_.push_back(stamp);
+}
+
+uint32_t QuestObservationService::ResolveQuestIdFromLiveLog(const wchar_t* name_argument) const
+{
+    if (!name_argument || !*name_argument) {
+        return 0;
+    }
+    const auto* log = GW::QuestMgr::GetQuestLog();
+    if (!log) {
+        return 0;
+    }
+    std::vector<std::pair<uint32_t, std::wstring>> names;
+    names.reserve(log->size());
+    for (const auto& quest : *log) {
+        if (quest.quest_id == custom_marker_quest_id || quest.quest_id == GW::Constants::QuestID::None) {
+            continue;
+        }
+        if (!quest.name) {
+            continue;
+        }
+        names.emplace_back(static_cast<uint32_t>(quest.quest_id), std::wstring(quest.name));
+    }
+    return QuestChatEvidence::ResolveQuestIdByEncodedName(name_argument, names);
+}
+
+void QuestObservationService::OnChatEvidenceMessage(const wchar_t* message)
+{
+    if (terminated_ || !message || !*message) {
+        return;
+    }
+    const auto chat_kind = QuestChatEvidence::Classify(message);
+    if (chat_kind == QuestChatEvidence::MessageKind::None) {
+        return;
+    }
+
+    const auto* name_argument = QuestChatEvidence::ExtractQuestNameArgument(message);
+    const auto quest_id = ResolveQuestIdFromLiveLog(name_argument);
+    if (quest_id == 0) {
+        return;
+    }
+
+    const auto evidence_kind = chat_kind == QuestChatEvidence::MessageKind::RewardAccepted
+        ? QuestProgress::EvidenceKind::ChatReward
+        : QuestProgress::EvidenceKind::ChatUpdated;
+
+    const auto now = std::chrono::steady_clock::now();
+    if (recent_chat_evidence_.quest_id == quest_id
+        && recent_chat_evidence_.kind == evidence_kind
+        && now - recent_chat_evidence_.at < std::chrono::milliseconds(250)) {
+        return;
+    }
+    recent_chat_evidence_ = {quest_id, evidence_kind, now};
+
+    PushEvidence(quest_id, evidence_kind);
+    if (evidence_kind == QuestProgress::EvidenceKind::ChatUpdated) {
+        quest_log_dirty_ = true;
+    }
 }
 
 void QuestObservationService::DrainPendingEvidence(std::vector<QuestEvidenceStamp>& out)
@@ -406,7 +466,15 @@ void QuestObservationService::OnUIMessage(GW::HookStatus*, GW::UI::UIMessage mes
     if (terminated_) return;
 
     switch (message_id) {
-        case GW::UI::UIMessage::kQuestAdded:
+        case GW::UI::UIMessage::kQuestAdded: {
+            quest_log_dirty_ = true;
+            active_quest_dirty_ = true;
+            if (wparam) {
+                const auto quest_id = *static_cast<uint32_t*>(wparam);
+                PushEvidence(quest_id, QuestProgress::EvidenceKind::Accepted);
+            }
+            break;
+        }
         case GW::UI::UIMessage::kQuestRemoved:
             quest_log_dirty_ = true;
             active_quest_dirty_ = true;
@@ -460,6 +528,20 @@ void QuestObservationService::OnUIMessage(GW::HookStatus*, GW::UI::UIMessage mes
             // Character-select / session end — not kStartMapLoad.
             std::scoped_lock lock(evidence_mutex_);
             logout_pending_ = true;
+            break;
+        }
+        case GW::UI::UIMessage::kLogChatMessage: {
+            const auto packet = static_cast<GW::UI::UIPacket::kLogChatMessage*>(wparam);
+            if (packet && packet->message) {
+                OnChatEvidenceMessage(packet->message);
+            }
+            break;
+        }
+        case GW::UI::UIMessage::kWriteToChatLog: {
+            const auto packet = static_cast<GW::UI::UIPacket::kWriteToChatLog*>(wparam);
+            if (packet && packet->message) {
+                OnChatEvidenceMessage(packet->message);
+            }
             break;
         }
         default:

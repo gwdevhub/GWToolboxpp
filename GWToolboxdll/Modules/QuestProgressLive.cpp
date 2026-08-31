@@ -1,9 +1,12 @@
 #include "stdafx.h"
 
 #include <Modules/QuestProgressLive.h>
+#include <Modules/QuestMissionSnapshot.h>
+#include <Modules/QuestCharacterJourney.h>
 #include <Modules/QuestObservationService.h>
 
 #include <GWCA/Context/CharContext.h>
+#include <GWCA/Context/WorldContext.h>
 #include <GWCA/Managers/MapMgr.h>
 
 #include <Utils/TextUtils.h>
@@ -94,6 +97,93 @@ QuestSnapshot ToQuestSnapshot(const LiveQuestView& view)
         snap.quests.push_back(std::move(oq));
     }
     return snap;
+}
+
+std::map<uint32_t, MissionRecord> SampleLiveMissionCompletion(
+    std::chrono::system_clock::time_point wall_now,
+    const std::map<uint32_t, MissionRecord>* previous)
+{
+    if (!GW::Map::GetIsMapLoaded()) {
+        return {};
+    }
+    const auto* game = GW::GetGameContext();
+    const auto* world = game ? game->world : nullptr;
+    if (!world) {
+        return {};
+    }
+
+    const MissionBitsetWords completed_normal{
+        world->missions_completed.m_buffer,
+        world->missions_completed.m_size,
+    };
+    const MissionBitsetWords bonus_normal{
+        world->missions_bonus.m_buffer,
+        world->missions_bonus.m_size,
+    };
+    const MissionBitsetWords completed_hard{
+        world->missions_completed_hm.m_buffer,
+        world->missions_completed_hm.m_size,
+    };
+    const MissionBitsetWords bonus_hard{
+        world->missions_bonus_hm.m_buffer,
+        world->missions_bonus_hm.m_size,
+    };
+
+    const auto observed_at = FormatCanonicalUtc(wall_now);
+    if (!IsCanonicalUtcTimestamp(observed_at)) {
+        return {};
+    }
+    return BuildMissionRecordsFromBitsets(
+        completed_normal,
+        bonus_normal,
+        completed_hard,
+        bonus_hard,
+        observed_at,
+        previous);
+}
+
+JourneySnapshotResult SampleLiveJourneySnapshot(
+    std::chrono::system_clock::time_point wall_now,
+    const std::map<uint32_t, TitleStateRecord>& previous_titles,
+    std::optional<uint32_t> previous_level,
+    const std::vector<JourneyEventRecord>& existing_events)
+{
+    if (!GW::Map::GetIsMapLoaded()) {
+        return {};
+    }
+    const auto* game = GW::GetGameContext();
+    const auto* world = game ? game->world : nullptr;
+    if (!world) {
+        return {};
+    }
+
+    const auto observed_at = FormatCanonicalUtc(wall_now);
+    if (!IsCanonicalUtcTimestamp(observed_at)) {
+        return {};
+    }
+
+    std::vector<TitleSnapshotInput> inputs;
+    inputs.reserve(world->titles.size());
+    for (size_t i = 0; i < world->titles.size(); ++i) {
+        const auto& title = world->titles[i];
+        if (title.current_points == 0 && title.current_title_tier_index == 0) {
+            continue;
+        }
+        TitleSnapshotInput row;
+        row.title_id = static_cast<uint32_t>(i);
+        row.tier_index = title.current_title_tier_index;
+        row.current_points = title.current_points;
+        inputs.push_back(row);
+    }
+
+    const auto level = world->level > 0 ? world->level : 0u;
+    return MergeJourneySnapshot(
+        previous_titles,
+        previous_level,
+        existing_events,
+        inputs,
+        level,
+        observed_at);
 }
 
 } // namespace QuestProgress

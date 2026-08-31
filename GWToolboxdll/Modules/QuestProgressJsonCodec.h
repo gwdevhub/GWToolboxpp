@@ -3,6 +3,7 @@
 // Internal quest-progress JSON codec (not Contract v1 export). Uses glaze.
 
 #include <Modules/QuestProgressDomain.h>
+#include <Modules/QuestCharacterJourney.h>
 
 #include <cstdint>
 #include <map>
@@ -41,6 +42,9 @@ struct StoredCharacter {
     std::string last_observed_at;
     std::map<uint32_t, QuestProgress> quests;
     std::map<uint32_t, MissionRecord> missions;
+    std::map<uint32_t, TitleStateRecord> titles;
+    std::optional<uint32_t> last_known_level;
+    std::vector<JourneyEventRecord> journey_events;
 };
 
 struct AccountProgressStore {

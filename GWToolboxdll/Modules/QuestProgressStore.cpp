@@ -1,4 +1,5 @@
 #include <Modules/QuestProgressStore.h>
+#include <Modules/QuestCharacterJourney.h>
 #include <Utils/AtomicJsonFile.h>
 
 #ifndef NOMINMAX
@@ -151,6 +152,15 @@ QuestProgress ProjectQuest(const QuestProgress& disk, const QuestProgress& memor
     out.completed_at = preferred.completed_at;
     out.last_observed_at = preferred.last_observed_at;
     out.game_quest_id = preferred.game_quest_id;
+    if (disk.accepted_at.has_value() && memory.accepted_at.has_value()) {
+        out.accepted_at = std::min(*disk.accepted_at, *memory.accepted_at);
+    }
+    else if (disk.accepted_at.has_value()) {
+        out.accepted_at = disk.accepted_at;
+    }
+    else {
+        out.accepted_at = memory.accepted_at;
+    }
     if (disk.first_observed_at.empty()) {
         out.first_observed_at = memory.first_observed_at;
     }
@@ -177,6 +187,57 @@ MissionRecord ProjectMission(const MissionRecord& disk, const MissionRecord& mem
     out.bonus_normal = disk.bonus_normal || memory.bonus_normal;
     out.bonus_hard = disk.bonus_hard || memory.bonus_hard;
     return out;
+}
+
+TitleStateRecord ProjectTitle(const TitleStateRecord& a, const TitleStateRecord& b)
+{
+    if (a.tier_index != b.tier_index) {
+        return a.tier_index > b.tier_index ? a : b;
+    }
+    if (a.current_points != b.current_points) {
+        return a.current_points > b.current_points ? a : b;
+    }
+    return a.last_observed_at >= b.last_observed_at ? a : b;
+}
+
+void MergeJourneyFields(StoredCharacter& out, const StoredCharacter& disk, const StoredCharacter& memory)
+{
+    std::map<uint32_t, char> title_ids;
+    for (const auto& [id, _] : disk.titles) {
+        (void)_;
+        title_ids[id] = 1;
+    }
+    for (const auto& [id, _] : memory.titles) {
+        (void)_;
+        title_ids[id] = 1;
+    }
+    for (const auto& [id, _] : title_ids) {
+        (void)_;
+        const auto d_it = disk.titles.find(id);
+        const auto m_it = memory.titles.find(id);
+        if (d_it == disk.titles.end()) {
+            out.titles.emplace(id, m_it->second);
+        }
+        else if (m_it == memory.titles.end()) {
+            out.titles.emplace(id, d_it->second);
+        }
+        else {
+            out.titles.emplace(id, ProjectTitle(d_it->second, m_it->second));
+        }
+    }
+
+    if (disk.last_known_level.has_value() && memory.last_known_level.has_value()) {
+        out.last_known_level = std::max(*disk.last_known_level, *memory.last_known_level);
+    }
+    else if (memory.last_known_level.has_value()) {
+        out.last_known_level = memory.last_known_level;
+    }
+    else {
+        out.last_known_level = disk.last_known_level;
+    }
+
+    out.journey_events = disk.journey_events;
+    AppendUniqueJourneyEvents(out.journey_events, memory.journey_events);
 }
 
 StoredCharacter MergeCharacter(const StoredCharacter& disk, const StoredCharacter& memory, StoreDiagnostics& d, bool& conflict)
@@ -249,6 +310,7 @@ StoredCharacter MergeCharacter(const StoredCharacter& disk, const StoredCharacte
             out.missions.emplace(id, ProjectMission(d_it->second, m_it->second));
         }
     }
+    MergeJourneyFields(out, disk, memory);
     return out;
 }
 
@@ -321,6 +383,15 @@ QuestProgress ProjectQuestKeepConflicts(
     out.completed_at = preferred.completed_at;
     out.last_observed_at = preferred.last_observed_at;
     out.game_quest_id = preferred.game_quest_id;
+    if (disk.accepted_at.has_value() && memory.accepted_at.has_value()) {
+        out.accepted_at = std::min(*disk.accepted_at, *memory.accepted_at);
+    }
+    else if (disk.accepted_at.has_value()) {
+        out.accepted_at = disk.accepted_at;
+    }
+    else {
+        out.accepted_at = memory.accepted_at;
+    }
     if (disk.first_observed_at.empty()) {
         out.first_observed_at = memory.first_observed_at;
     }
@@ -420,6 +491,8 @@ CoalesceCharacterResult CoalesceStoredCharactersImpl(
             out.missions.emplace(id, ProjectMission(e_it->second, i_it->second));
         }
     }
+
+    MergeJourneyFields(out, existing, incoming);
 
     result.character = std::move(out);
     result.status = conflict ? StoreOpStatus::MergeConflict : StoreOpStatus::Ok;

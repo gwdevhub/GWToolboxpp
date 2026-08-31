@@ -39,6 +39,7 @@ struct JsonQuest {
     std::string confidence;
     std::string first_observed_at;
     std::string last_observed_at;
+    std::optional<std::string> accepted_at;
     std::optional<std::string> completed_at;
     std::vector<JsonObjective> objectives;
     std::vector<JsonHistoryEvent> history;
@@ -53,6 +54,22 @@ struct JsonMission {
     std::string last_observed_at;
 };
 
+struct JsonTitle {
+    uint32_t title_id = 0;
+    uint32_t tier_index = 0;
+    uint32_t current_points = 0;
+    std::string last_observed_at;
+};
+
+struct JsonJourneyEvent {
+    std::string kind;
+    std::string subject_key;
+    std::string observed_at;
+    uint32_t title_id = 0;
+    uint32_t tier_index = 0;
+    uint32_t level = 0;
+};
+
 struct JsonCharacter {
     std::string character_key;
     std::string display_name;
@@ -62,6 +79,9 @@ struct JsonCharacter {
     std::string last_observed_at;
     std::vector<JsonQuest> quests;
     std::vector<JsonMission> missions;
+    std::vector<JsonTitle> titles;
+    std::optional<uint32_t> last_known_level;
+    std::vector<JsonJourneyEvent> journey_events;
 };
 
 struct JsonAccountStore {
@@ -114,6 +134,7 @@ struct glz::meta<QuestProgress::JsonQuest> {
         "confidence", &T::confidence,
         "firstObservedAt", &T::first_observed_at,
         "lastObservedAt", &T::last_observed_at,
+        "acceptedAt", &T::accepted_at,
         "completedAt", &T::completed_at,
         "objectives", &T::objectives,
         "history", &T::history);
@@ -132,6 +153,28 @@ struct glz::meta<QuestProgress::JsonMission> {
 };
 
 template <>
+struct glz::meta<QuestProgress::JsonTitle> {
+    using T = QuestProgress::JsonTitle;
+    static constexpr auto value = object(
+        "titleId", &T::title_id,
+        "tierIndex", &T::tier_index,
+        "currentPoints", &T::current_points,
+        "lastObservedAt", &T::last_observed_at);
+};
+
+template <>
+struct glz::meta<QuestProgress::JsonJourneyEvent> {
+    using T = QuestProgress::JsonJourneyEvent;
+    static constexpr auto value = object(
+        "kind", &T::kind,
+        "subjectKey", &T::subject_key,
+        "observedAt", &T::observed_at,
+        "titleId", &T::title_id,
+        "tierIndex", &T::tier_index,
+        "level", &T::level);
+};
+
+template <>
 struct glz::meta<QuestProgress::JsonCharacter> {
     using T = QuestProgress::JsonCharacter;
     static constexpr auto value = object(
@@ -142,7 +185,10 @@ struct glz::meta<QuestProgress::JsonCharacter> {
         "firstObservedAt", &T::first_observed_at,
         "lastObservedAt", &T::last_observed_at,
         "quests", &T::quests,
-        "missions", &T::missions);
+        "missions", &T::missions,
+        "titles", &T::titles,
+        "lastKnownLevel", &T::last_known_level,
+        "journeyEvents", &T::journey_events);
 };
 
 template <>
@@ -215,6 +261,9 @@ bool ParseEvidenceKind(std::string_view s, EvidenceKind& out)
     if (s == "abandon") { out = EvidenceKind::Abandon; return true; }
     if (s == "reward") { out = EvidenceKind::Reward; return true; }
     if (s == "enquire_reward") { out = EvidenceKind::EnquireReward; return true; }
+    if (s == "accepted") { out = EvidenceKind::Accepted; return true; }
+    if (s == "chat_reward") { out = EvidenceKind::ChatReward; return true; }
+    if (s == "chat_updated") { out = EvidenceKind::ChatUpdated; return true; }
     return false;
 }
 
@@ -319,6 +368,12 @@ bool ConvertQuest(const JsonQuest& in, QuestProgress& out, CodecDiagnostics& d)
     }
     out.first_observed_at = in.first_observed_at;
     out.last_observed_at = in.last_observed_at;
+    if (in.accepted_at) {
+        if (!RequireCanonicalTs(*in.accepted_at, d, "quest.acceptedAt")) {
+            return false;
+        }
+        out.accepted_at = *in.accepted_at;
+    }
     if (in.completed_at) {
         if (!RequireCanonicalTs(*in.completed_at, d, "quest.completedAt")) {
             return false;
@@ -354,6 +409,7 @@ JsonQuest ToJsonQuest(const QuestProgress& in)
     out.confidence = ToString(in.confidence);
     out.first_observed_at = in.first_observed_at;
     out.last_observed_at = in.last_observed_at;
+    out.accepted_at = in.accepted_at;
     out.completed_at = in.completed_at;
     auto objectives = in.objectives;
     NormalizeObjectives(objectives);
@@ -421,6 +477,46 @@ bool ConvertCharacter(const JsonCharacter& in, StoredCharacter& out, CodecDiagno
         }
         out.missions.emplace(mission.map_id, std::move(mission));
     }
+    out.titles.clear();
+    for (const auto& jt : in.titles) {
+        TitleStateRecord title;
+        title.title_id = jt.title_id;
+        title.tier_index = jt.tier_index;
+        title.current_points = jt.current_points;
+        if (!jt.last_observed_at.empty()
+            && !RequireCanonicalTs(jt.last_observed_at, d, "title.lastObservedAt")) {
+            return false;
+        }
+        title.last_observed_at = jt.last_observed_at;
+        if (title.title_id == 0) {
+            AddDiag(d, "titleId must be non-zero");
+            return false;
+        }
+        if (out.titles.contains(title.title_id)) {
+            AddDiag(d, "duplicate titleId in character");
+            return false;
+        }
+        out.titles.emplace(title.title_id, std::move(title));
+    }
+    out.last_known_level = in.last_known_level;
+    out.journey_events.clear();
+    for (const auto& je : in.journey_events) {
+        JourneyEventRecord event;
+        event.kind = je.kind;
+        event.subject_key = je.subject_key;
+        event.title_id = je.title_id;
+        event.tier_index = je.tier_index;
+        event.level = je.level;
+        if (event.kind.empty() || event.subject_key.empty()) {
+            AddDiag(d, "journey event missing kind or subjectKey");
+            return false;
+        }
+        if (je.observed_at.empty() || !RequireCanonicalTs(je.observed_at, d, "journeyEvent.observedAt")) {
+            return false;
+        }
+        event.observed_at = je.observed_at;
+        out.journey_events.push_back(std::move(event));
+    }
     return true;
 }
 
@@ -454,6 +550,39 @@ JsonCharacter ToJsonCharacter(const StoredCharacter& in)
     std::sort(out.missions.begin(), out.missions.end(), [](const JsonMission& a, const JsonMission& b) {
         return a.map_id < b.map_id;
     });
+    for (const auto& [id, title] : in.titles) {
+        (void)id;
+        JsonTitle jt;
+        jt.title_id = title.title_id;
+        jt.tier_index = title.tier_index;
+        jt.current_points = title.current_points;
+        jt.last_observed_at = title.last_observed_at;
+        out.titles.push_back(jt);
+    }
+    std::sort(out.titles.begin(), out.titles.end(), [](const JsonTitle& a, const JsonTitle& b) {
+        return a.title_id < b.title_id;
+    });
+    out.last_known_level = in.last_known_level;
+    for (const auto& ev : in.journey_events) {
+        JsonJourneyEvent je;
+        je.kind = ev.kind;
+        je.subject_key = ev.subject_key;
+        je.observed_at = ev.observed_at;
+        je.title_id = ev.title_id;
+        je.tier_index = ev.tier_index;
+        je.level = ev.level;
+        out.journey_events.push_back(je);
+    }
+    std::sort(out.journey_events.begin(), out.journey_events.end(),
+        [](const JsonJourneyEvent& a, const JsonJourneyEvent& b) {
+            if (a.observed_at != b.observed_at) {
+                return a.observed_at < b.observed_at;
+            }
+            if (a.kind != b.kind) {
+                return a.kind < b.kind;
+            }
+            return a.subject_key < b.subject_key;
+        });
     return out;
 }
 
@@ -569,6 +698,16 @@ void CanonicalizeAccountStore(AccountProgressStore& store)
                     return a.semantic_event_key < b.semantic_event_key;
                 });
         }
+        std::sort(character.journey_events.begin(), character.journey_events.end(),
+            [](const JourneyEventRecord& a, const JourneyEventRecord& b) {
+                if (a.observed_at != b.observed_at) {
+                    return a.observed_at < b.observed_at;
+                }
+                if (a.kind != b.kind) {
+                    return a.kind < b.kind;
+                }
+                return a.subject_key < b.subject_key;
+            });
     }
 }
 

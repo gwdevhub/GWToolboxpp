@@ -51,6 +51,7 @@
 #include <Windows/MainWindow.h>
 
 #include <Utils/TextUtils.h>
+#include <Utils/ToolboxUtils.h>
 #include "Utils/FontLoader.h"
 
 #include <EmbeddedResource.h>
@@ -402,16 +403,66 @@ namespace {
         return true;
     }
 
-    bool CanRenderToolbox()
+    bool IsCharacterSelectScreen()
+    {
+        return GW::LoginMgr::IsCharSelectReady();
+    }
+
+    bool DeviceReadyForToolboxDraw()
     {
         const auto device = GW::Render::GetDevice();
         const HRESULT hr = device ? device->TestCooperativeLevel() : D3DERR_DEVICELOST;
-        if (hr != D3D_OK) {
-            // Device is lost or not ready - skip all rendering
+        return hr == D3D_OK;
+    }
+
+    bool CanRenderToolbox()
+    {
+        if (!DeviceReadyForToolboxDraw()) {
             return false;
         }
-        return !gwtoolbox_disabled && !GW::GetPreGameContext() && !GW::Map::GetIsInCinematic() && !IsIconic(GW::MemoryMgr::GetGWWindowHandle()) &&
-               (!ToolboxSettings::hide_on_loading_screen || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading) && FontLoader::FontsLoaded();
+        return !gwtoolbox_disabled && !GW::GetPreGameContext() && !IsCharacterSelectScreen() && !GW::Map::GetIsInCinematic()
+               && !IsIconic(GW::MemoryMgr::GetGWWindowHandle())
+               && (!ToolboxSettings::hide_on_loading_screen || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading)
+               && FontLoader::FontsLoaded();
+    }
+
+    bool CanRenderCharacterSelectIndicator()
+    {
+        if (!DeviceReadyForToolboxDraw()) {
+            return false;
+        }
+        return !gwtoolbox_disabled && IsCharacterSelectScreen() && !IsIconic(GW::MemoryMgr::GetGWWindowHandle())
+               && FontLoader::FontsLoaded();
+    }
+
+    void DrawCharacterSelectIndicator([[maybe_unused]] IDirect3DDevice9* device)
+    {
+        ImGui_ImplDX9_NewFrame();
+        ImGui_ImplWin32_NewFrame();
+        ImGui::NewFrame();
+
+        constexpr ImGuiWindowFlags flags =
+            ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings
+            | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoMove;
+
+        const auto& io = ImGui::GetIO();
+        constexpr float margin = 8.f;
+        ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x - margin, io.DisplaySize.y - margin), ImGuiCond_Always, ImVec2(1.f, 1.f));
+        ImGui::SetNextWindowBgAlpha(0.35f);
+
+        if (ImGui::Begin("##tb_char_select_indicator", nullptr, flags)) {
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.55f, 0.85f, 1.f, 0.9f));
+            ImGui::TextUnformatted("Toolbox");
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("GWToolbox++ is running");
+            }
+            ImGui::PopStyleColor();
+        }
+        ImGui::End();
+
+        ImGui::EndFrame();
+        ImGui::Render();
+        ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
     }
 
     bool ToggleTBModule(ToolboxModule& m, std::vector<ToolboxModule*>& vec, const bool enable)
@@ -1124,6 +1175,11 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
     }
 
     Resources::DxUpdate(device);
+
+    if (CanRenderCharacterSelectIndicator()) {
+        DrawCharacterSelectIndicator(device);
+        return;
+    }
 
     can_render_toolbox = CanRenderToolbox();
     if (!can_render_toolbox) return;

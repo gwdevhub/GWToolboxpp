@@ -109,6 +109,9 @@ There is no account envelope in Contract v1.
   "characterKey": "opaque-stable-producer-key",
   "displayName": "Character Name",
   "isPreSearing": false,
+  "primaryProfession": "1",
+  "secondaryProfession": "5",
+  "missions": [],
   "quests": []
 }
 ```
@@ -123,11 +126,98 @@ There is no account envelope in Contract v1.
   NOT be treated as stable identity.
 - `isPreSearing` is optional. When absent, consumers MUST treat the value as
   **unknown** and MUST NOT invent `true` or `false`.
+- `primaryProfession` is optional metadata. Producers MAY emit a Guild Wars
+  profession id (`"1"`–`"10"`) or a stable profession slug/name string.
+  Consumers MUST treat it as display/metadata only, not identity.
+- `secondaryProfession` is optional metadata with the same rules as
+  `primaryProfession`.
+- `missions` is optional and MUST be a JSON array when present (MAY be empty).
+  Each element describes mission-map completion evidence from
+  `mission_completion_data` (see [Mission observation record](#31-mission-observation-record)).
+- `titles` is optional and MUST be a JSON array when present. Each element is the
+  latest observed title tier snapshot (see [Title observation record](#32-title-observation-record)).
+- `journeyEvents` is optional and MUST be a JSON array when present. Each element
+  is an append-only life-journey milestone (see [Journey event record](#33-journey-event-record)).
 - `quests` is required and MUST be a JSON array (MAY be empty).
 - Duplicate `characterKey` values within one file are invalid; consumers MUST
   reject the file.
 - Consumers MUST NOT silently link ambiguous duplicate display names.
 - Contract v1 does not introduce a second Codex-local character UUID.
+
+### 3.1 Mission observation record
+
+Optional elements of `character.missions[]`:
+
+```json
+{
+  "mapId": 73,
+  "completedNormal": true,
+  "completedHard": false,
+  "bonusNormal": true,
+  "bonusHard": false,
+  "lastObservedAt": "2026-07-25T20:00:00.000Z"
+}
+```
+
+#### Mission rules
+
+- `mapId` is required and MUST be a non-negative JSON integer (Guild Wars map id).
+- `completedNormal`, `completedHard`, `bonusNormal`, and `bonusHard` are required booleans.
+- `lastObservedAt` is optional UTC ISO-8601 metadata for when the producer last
+  observed this bitset row.
+- Duplicate `mapId` values within one character record are invalid; consumers
+  MUST reject the file.
+- Mission bits describe **mission map / bonus** progress, not general quest-log turn-ins.
+
+### 3.2 Title observation record
+
+Optional elements of `character.titles[]`:
+
+```json
+{
+  "titleId": 12,
+  "tierIndex": 3,
+  "currentPoints": 4500,
+  "lastObservedAt": "2026-07-25T20:00:00.000Z"
+}
+```
+
+#### Title rules
+
+- `titleId` is required (non-negative integer; Guild Wars title id).
+- `tierIndex` and `currentPoints` are required non-negative integers.
+- `lastObservedAt` is optional UTC ISO-8601 metadata.
+
+### 3.3 Journey event record
+
+Optional elements of `character.journeyEvents[]`:
+
+```json
+{
+  "kind": "title_tier",
+  "subjectKey": "title:12",
+  "observedAt": "2026-07-25T20:00:00.000Z",
+  "titleId": 12,
+  "tierIndex": 3
+}
+```
+
+```json
+{
+  "kind": "level_up",
+  "subjectKey": "level:5",
+  "observedAt": "2026-07-25T20:00:00.000Z",
+  "level": 5
+}
+```
+
+#### Journey rules
+
+- `kind` is required (`title_tier` or `level_up` in v1 producers).
+- `subjectKey` is required opaque milestone key.
+- `observedAt` is required UTC ISO-8601.
+- Optional `titleId`, `tierIndex`, `level` clarify payload by kind.
+- Duplicate `(kind, subjectKey, observedAt)` within one character SHOULD be avoided.
 
 ---
 

@@ -1,7 +1,7 @@
 #pragma once
 
 // Runtime quest progress coordinator (Batch 2C). Offline-testable via explicit store paths.
-// No Draw I/O. No Contract export. No mission-bit observation.
+// No Draw I/O. No Contract export.
 
 #include <Modules/QuestProgressDomain.h>
 #include <Modules/QuestProgressReducer.h>
@@ -140,6 +140,11 @@ public:
         const QuestSnapshot& snap,
         std::chrono::system_clock::time_point wall_now,
         std::chrono::steady_clock::time_point steady_now);
+
+    // Mission completion bitsets (mission_completion_data). Pure merge; GWCA sampling lives in QuestProgressLive.
+    void IngestMissionCompletion(std::map<uint32_t, MissionRecord> missions);
+
+    void IngestJourneySnapshot(JourneySnapshotResult snapshot);
 
     bool Flush(bool session_boundary);
 

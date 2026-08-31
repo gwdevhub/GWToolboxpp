@@ -1,5 +1,6 @@
 #include <Modules/QuestProgressJsonCodec.h>
 #include <Modules/QuestProgressStore.h>
+#include <Modules/QuestCharacterJourney.h>
 #include <Utils/AtomicJsonFile.h>
 
 #include "test_assert.h"
@@ -127,6 +128,36 @@ void TestCodecRoundTripDeterministic()
         "codec_semantic_key_preserved");
     Expect(parsed.store.characters.begin()->second.quests.at(100).objectives[0].encoded_content == u"Kill rats",
         "codec_utf16_roundtrip");
+}
+
+void TestCodecJourneyRoundTrip()
+{
+    auto store = MakeStore(kAcct);
+    auto& character = store.characters.begin()->second;
+    TitleStateRecord title;
+    title.title_id = 12;
+    title.tier_index = 3;
+    title.current_points = 4500;
+    title.last_observed_at = "2026-07-25T20:00:00.000Z";
+    character.titles.emplace(12, title);
+    character.last_known_level = 5;
+    JourneyEventRecord ev;
+    ev.kind = "title_tier";
+    ev.subject_key = "title:12";
+    ev.observed_at = "2026-07-25T20:00:00.000Z";
+    ev.title_id = 12;
+    ev.tier_index = 3;
+    character.journey_events.push_back(ev);
+
+    const auto ser = SerializeAccountStoreJson(store);
+    Expect(ser.status == CodecStatus::Ok, "codec_journey_serialize_ok");
+    const auto parsed = ParseAccountStoreJson(ser.utf8_json, kAcct);
+    Expect(parsed.status == CodecStatus::Ok, "codec_journey_parse_ok");
+    const auto& round = parsed.store.characters.begin()->second;
+    Expect(round.titles.at(12).tier_index == 3, "codec_journey_title_tier");
+    Expect(round.last_known_level == 5, "codec_journey_level");
+    Expect(round.journey_events.size() == 1, "codec_journey_events_count");
+    Expect(round.journey_events[0].kind == "title_tier", "codec_journey_event_kind");
 }
 
 void TestCodecOrderingIndependent()
@@ -698,6 +729,7 @@ void TestSaveTimeoutDoesNotWrite()
 void RunBatch2BStoreTests()
 {
     TestCodecRoundTripDeterministic();
+    TestCodecJourneyRoundTrip();
     TestCodecOrderingIndependent();
     TestCodecEnumsAndValidation();
     TestCodecVersioning();

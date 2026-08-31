@@ -100,6 +100,8 @@ private:
     void SyncPendingRequestsFromSnapshot(const LiveQuestView& view);
     void ProcessPendingRequests();
     void OnUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void* lparam);
+    void OnChatEvidenceMessage(const wchar_t* message);
+    uint32_t ResolveQuestIdFromLiveLog(const wchar_t* name_argument) const;
     void PushEvidence(uint32_t quest_id, QuestProgress::EvidenceKind kind);
     void ScheduleAbandonProbe(uint32_t quest_id);
     void ResolveAbandonProbes(const LiveQuestView& view, std::chrono::steady_clock::time_point now);
@@ -129,6 +131,13 @@ private:
 
     QuestProgress::QuestAbandonProbeTracker abandon_probes_;
     std::vector<std::string> abandon_probe_diagnostics_;
+
+    struct RecentChatEvidence {
+        uint32_t quest_id = 0;
+        QuestProgress::EvidenceKind kind = QuestProgress::EvidenceKind::None;
+        std::chrono::steady_clock::time_point at{};
+    };
+    RecentChatEvidence recent_chat_evidence_{};
 
     struct RequestState {
         std::chrono::steady_clock::time_point last_request{};

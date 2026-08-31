@@ -1,4 +1,6 @@
 #include <Modules/QuestProgressService.h>
+#include <Modules/QuestMissionSnapshot.h>
+#include <Modules/QuestCharacterJourney.h>
 
 #include <algorithm>
 #include <cstdio>
@@ -298,6 +300,9 @@ StoredCharacter QuestProgressService::BuildOutgoingStoredCharacter() const
             stored.last_observed_at = existing->last_observed_at;
         }
         stored.missions = existing->missions;
+        stored.titles = existing->titles;
+        stored.last_known_level = existing->last_known_level;
+        stored.journey_events = existing->journey_events;
     }
     return stored;
 }
@@ -809,7 +814,7 @@ bool QuestProgressService::ApplyEvidenceToCharacter(
 
     std::unordered_set<uint32_t> actionable;
     for (const auto& e : evidence) {
-        if (e.kind == EvidenceKind::Abandon || e.kind == EvidenceKind::Reward) {
+        if (e.kind == EvidenceKind::Abandon || e.kind == EvidenceKind::Reward || e.kind == EvidenceKind::ChatReward) {
             actionable.insert(e.game_quest_id);
         }
     }
@@ -1109,6 +1114,70 @@ void QuestProgressService::IngestSnapshot(
         return;
     }
     ReduceFromSnapshot(snap, wall_now, steady_now);
+}
+
+void QuestProgressService::IngestMissionCompletion(std::map<uint32_t, MissionRecord> missions)
+{
+    if (!accept_input_ || missions.empty()) {
+        return;
+    }
+    if (identity_.kind != IdentityKind::Persistent || identity_.character_key.empty()) {
+        return;
+    }
+    EnsureCharacterRecord();
+    auto* stored = FindCharacter(account_store_, identity_.character_key);
+    if (!stored) {
+        return;
+    }
+
+    if (!MergeMissionRecords(stored->missions, missions)) {
+        return;
+    }
+
+    semantic_dirty_ = true;
+    heartbeat_pending_ = false;
+    if (!LatchBlocksAutoRetry(persist_latch_)) {
+        persist_latch_ = PersistLatch::DirtyDebouncing;
+    }
+}
+
+void QuestProgressService::IngestJourneySnapshot(JourneySnapshotResult snapshot)
+{
+    if (!accept_input_) {
+        return;
+    }
+    if (identity_.kind != IdentityKind::Persistent || identity_.character_key.empty()) {
+        return;
+    }
+    EnsureCharacterRecord();
+    auto* stored = FindCharacter(account_store_, identity_.character_key);
+    if (!stored) {
+        return;
+    }
+
+    bool changed = false;
+    if (snapshot.titles != stored->titles) {
+        stored->titles = std::move(snapshot.titles);
+        changed = true;
+    }
+    if (snapshot.level != stored->last_known_level) {
+        stored->last_known_level = snapshot.level;
+        changed = true;
+    }
+    const auto before = stored->journey_events.size();
+    AppendUniqueJourneyEvents(stored->journey_events, snapshot.new_events);
+    if (stored->journey_events.size() != before) {
+        changed = true;
+    }
+    if (!changed) {
+        return;
+    }
+
+    semantic_dirty_ = true;
+    heartbeat_pending_ = false;
+    if (!LatchBlocksAutoRetry(persist_latch_)) {
+        persist_latch_ = PersistLatch::DirtyDebouncing;
+    }
 }
 
 void QuestProgressService::ScheduleRetryBackoff(std::chrono::steady_clock::time_point steady_now)

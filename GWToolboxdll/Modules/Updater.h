@@ -41,6 +41,8 @@ public:
     struct Settings {
         Mode update_mode = Mode::CheckAndAsk;
         ReleaseType update_release_type = ReleaseType::Stable;
+        // Fork: upstream hotfix at the same tag (size-only delta); cleared on rebuild.
+        uintmax_t dismissed_upstream_size = 0;
         bool has_starred = false;
     };
 
@@ -62,4 +64,5 @@ public:
     void DrawSettingsInternal() override;
 
     static const std::string& GetServerVersion();
+    static bool IsForkBuild();
 };

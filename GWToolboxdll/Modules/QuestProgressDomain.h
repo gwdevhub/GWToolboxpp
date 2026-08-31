@@ -54,6 +54,9 @@ enum class EvidenceKind : uint8_t {
     Abandon,
     Reward,        // REWARD dialog turn-in
     EnquireReward, // never turn-in by itself
+    Accepted,      // kQuestAdded — quest entered the log
+    ChatReward,    // chat 0x7C8 Quest Reward Accepted
+    ChatUpdated,   // chat 0x7C9 Quest Updated
 };
 
 // Result of resolving zero-or-more evidence rows for one quest id.
@@ -94,6 +97,7 @@ struct QuestProgress {
     Confidence confidence = Confidence::Uncertain;
     std::string first_observed_at;
     std::string last_observed_at;
+    std::optional<std::string> accepted_at;
     std::optional<std::string> completed_at;
     std::vector<ObjectiveObservation> objectives;
     std::vector<QuestHistoryEvent> history;

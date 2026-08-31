@@ -114,6 +114,26 @@ void QuestTrackerWindow::Update(float delta)
         // Identity barrier rejects pre-bind / cross-character published views.
         if (snap && progress_.identity().kind != QuestProgress::IdentityKind::Unbound) {
             progress_.IngestSnapshot(QuestProgress::ToQuestSnapshot(*snap), wall_now, steady_now);
+            if (world_ready
+                && progress_.identity().kind == QuestProgress::IdentityKind::Persistent) {
+                const auto missions = QuestProgress::SampleLiveMissionCompletion(wall_now);
+                progress_.IngestMissionCompletion(std::move(missions));
+
+                const auto* stored = [&]() -> const QuestProgress::StoredCharacter* {
+                    for (const auto& [key, ch] : progress_.account_store().characters) {
+                        if (key == progress_.identity().character_key) {
+                            return &ch;
+                        }
+                    }
+                    return nullptr;
+                }();
+                const auto journey = QuestProgress::SampleLiveJourneySnapshot(
+                    wall_now,
+                    stored ? stored->titles : std::map<uint32_t, QuestProgress::TitleStateRecord>{},
+                    stored ? stored->last_known_level : std::nullopt,
+                    stored ? stored->journey_events : std::vector<QuestProgress::JourneyEventRecord>{});
+                progress_.IngestJourneySnapshot(std::move(journey));
+            }
         }
     }
 

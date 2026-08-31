@@ -215,6 +215,65 @@ void ApplyPresentQuest(
     TryAppend(quest, out, std::move(event));
 }
 
+void ApplyPresentQuestSideEvidence(
+    CharacterProgress& next,
+    ReducerOutput& out,
+    uint32_t quest_id,
+    const std::vector<QuestEvidence>& evidence,
+    const std::string& observed_at)
+{
+    auto it = next.quests.find(quest_id);
+    if (it == next.quests.end()) {
+        return;
+    }
+    auto& quest = it->second;
+
+    bool saw_accepted = false;
+    bool saw_chat_updated = false;
+    for (const auto& item : evidence) {
+        if (item.game_quest_id != quest_id) {
+            continue;
+        }
+        if (item.kind == EvidenceKind::Accepted) {
+            saw_accepted = true;
+        }
+        else if (item.kind == EvidenceKind::ChatUpdated) {
+            saw_chat_updated = true;
+        }
+    }
+
+    if (saw_accepted && !quest.accepted_at.has_value()) {
+        quest.accepted_at = observed_at;
+        auto event = MakeEvent(
+            quest_id,
+            HistoryEventType::Observation,
+            ProgressState::Active,
+            ProgressSource::GameEvent,
+            Confidence::Confirmed,
+            observed_at,
+            quest.objectives,
+            EvidenceKind::Accepted);
+        TryAppend(quest, out, std::move(event));
+    }
+
+    if (saw_chat_updated
+        && quest.state != ProgressState::ReadyForReward
+        && quest.state != ProgressState::CompletedObserved
+        && quest.state != ProgressState::AbandonedObserved) {
+        const auto state = quest.state == ProgressState::Unknown ? ProgressState::Active : quest.state;
+        auto event = MakeEvent(
+            quest_id,
+            HistoryEventType::Observation,
+            state,
+            ProgressSource::GameEvent,
+            Confidence::Confirmed,
+            observed_at,
+            quest.objectives,
+            EvidenceKind::ChatUpdated);
+        TryAppend(quest, out, std::move(event));
+    }
+}
+
 void ApplyMissingQuest(
     CharacterProgress& next,
     ReducerOutput& out,
@@ -438,6 +497,9 @@ const char* ToString(EvidenceKind kind)
         case EvidenceKind::Abandon: return "abandon";
         case EvidenceKind::Reward: return "reward";
         case EvidenceKind::EnquireReward: return "enquire_reward";
+        case EvidenceKind::Accepted: return "accepted";
+        case EvidenceKind::ChatReward: return "chat_reward";
+        case EvidenceKind::ChatUpdated: return "chat_updated";
     }
     return "none";
 }
@@ -567,10 +629,10 @@ EvidenceResolution ResolveEvidenceForQuest(
         if (item.kind == EvidenceKind::Abandon) {
             saw_abandon = true;
         }
-        else if (item.kind == EvidenceKind::Reward) {
+        else if (item.kind == EvidenceKind::Reward || item.kind == EvidenceKind::ChatReward) {
             saw_reward = true;
         }
-        // EnquireReward is non-actionable and ignored for resolution.
+        // Accepted, ChatUpdated, and EnquireReward are handled on present quests or ignored here.
     }
     if (saw_abandon && saw_reward) {
         return EvidenceResolution::Conflict;
@@ -636,8 +698,9 @@ ReducerOutput Reduce(const ReducerInput& input)
     }
 
     for (const auto& [quest_id, obs] : present) {
-        (void)quest_id;
+        (void)obs;
         ApplyPresentQuest(out.next, out, obs, input.observed_at_utc);
+        ApplyPresentQuestSideEvidence(out.next, out, quest_id, input.evidence, input.observed_at_utc);
     }
 
     std::vector<uint32_t> missing;

@@ -39,10 +39,40 @@ struct ContractQuestJson {
     std::vector<ContractHistoryJson> history;
 };
 
+struct ContractMissionJson {
+    uint32_t map_id = 0;
+    bool completed_normal = false;
+    bool completed_hard = false;
+    bool bonus_normal = false;
+    bool bonus_hard = false;
+    std::optional<std::string> last_observed_at;
+};
+
+struct ContractTitleJson {
+    uint32_t title_id = 0;
+    uint32_t tier_index = 0;
+    uint32_t current_points = 0;
+    std::optional<std::string> last_observed_at;
+};
+
+struct ContractJourneyEventJson {
+    std::string kind;
+    std::string subject_key;
+    std::string observed_at;
+    std::optional<uint32_t> title_id;
+    std::optional<uint32_t> tier_index;
+    std::optional<uint32_t> level;
+};
+
 struct ContractCharacterJson {
     std::string character_key;
     std::string display_name;
     std::optional<bool> is_pre_searing;
+    std::optional<std::string> primary_profession;
+    std::optional<std::string> secondary_profession;
+    std::vector<ContractMissionJson> missions;
+    std::vector<ContractTitleJson> titles;
+    std::vector<ContractJourneyEventJson> journey_events;
     std::vector<ContractQuestJson> quests;
 };
 
@@ -158,6 +188,68 @@ ContractCharacterJson MapCharacter(const StoredCharacter& in, ContractExportDiag
         AddDiag(diag, "displayName empty; exported as Unknown (identity is characterKey)");
     }
     out.is_pre_searing = in.is_pre_searing;
+    if (!in.profession.empty()) {
+        out.primary_profession = in.profession;
+    }
+
+    for (const auto& [map_id, mission] : in.missions) {
+        (void)map_id;
+        if (mission.map_id == 0) {
+            continue;
+        }
+        ContractMissionJson row;
+        row.map_id = mission.map_id;
+        row.completed_normal = mission.completed_normal;
+        row.completed_hard = mission.completed_hard;
+        row.bonus_normal = mission.bonus_normal;
+        row.bonus_hard = mission.bonus_hard;
+        if (!mission.last_observed_at.empty()) {
+            row.last_observed_at = mission.last_observed_at;
+        }
+        out.missions.push_back(std::move(row));
+    }
+    std::sort(out.missions.begin(), out.missions.end(), [](const ContractMissionJson& a, const ContractMissionJson& b) {
+        return a.map_id < b.map_id;
+    });
+
+    for (const auto& [title_id, title] : in.titles) {
+        (void)title_id;
+        ContractTitleJson row;
+        row.title_id = title.title_id;
+        row.tier_index = title.tier_index;
+        row.current_points = title.current_points;
+        if (!title.last_observed_at.empty()) {
+            row.last_observed_at = title.last_observed_at;
+        }
+        out.titles.push_back(std::move(row));
+    }
+    std::sort(out.titles.begin(), out.titles.end(), [](const ContractTitleJson& a, const ContractTitleJson& b) {
+        return a.title_id < b.title_id;
+    });
+
+    for (const auto& ev : in.journey_events) {
+        if (!IsCanonicalUtcTimestamp(ev.observed_at)) {
+            AddDiag(diag, "skipped journey event with invalid observedAt");
+            continue;
+        }
+        ContractJourneyEventJson row;
+        row.kind = ev.kind;
+        row.subject_key = ev.subject_key;
+        row.observed_at = ev.observed_at;
+        if (ev.title_id != 0) {
+            row.title_id = ev.title_id;
+        }
+        if (ev.tier_index != 0) {
+            row.tier_index = ev.tier_index;
+        }
+        if (ev.level != 0) {
+            row.level = ev.level;
+        }
+        out.journey_events.push_back(std::move(row));
+    }
+    std::sort(out.journey_events.begin(), out.journey_events.end(), [](const ContractJourneyEventJson& a, const ContractJourneyEventJson& b) {
+        return a.observed_at < b.observed_at;
+    });
 
     for (const auto& [id, quest] : in.quests) {
         (void)id;
@@ -243,12 +335,51 @@ struct glz::meta<QuestProgress::ContractQuestJson> {
 };
 
 template <>
+struct glz::meta<QuestProgress::ContractMissionJson> {
+    using T = QuestProgress::ContractMissionJson;
+    static constexpr auto value = object(
+        "mapId", &T::map_id,
+        "completedNormal", &T::completed_normal,
+        "completedHard", &T::completed_hard,
+        "bonusNormal", &T::bonus_normal,
+        "bonusHard", &T::bonus_hard,
+        "lastObservedAt", &T::last_observed_at);
+};
+
+template <>
+struct glz::meta<QuestProgress::ContractTitleJson> {
+    using T = QuestProgress::ContractTitleJson;
+    static constexpr auto value = object(
+        "titleId", &T::title_id,
+        "tierIndex", &T::tier_index,
+        "currentPoints", &T::current_points,
+        "lastObservedAt", &T::last_observed_at);
+};
+
+template <>
+struct glz::meta<QuestProgress::ContractJourneyEventJson> {
+    using T = QuestProgress::ContractJourneyEventJson;
+    static constexpr auto value = object(
+        "kind", &T::kind,
+        "subjectKey", &T::subject_key,
+        "observedAt", &T::observed_at,
+        "titleId", &T::title_id,
+        "tierIndex", &T::tier_index,
+        "level", &T::level);
+};
+
+template <>
 struct glz::meta<QuestProgress::ContractCharacterJson> {
     using T = QuestProgress::ContractCharacterJson;
     static constexpr auto value = object(
         "characterKey", &T::character_key,
         "displayName", &T::display_name,
         "isPreSearing", &T::is_pre_searing,
+        "primaryProfession", &T::primary_profession,
+        "secondaryProfession", &T::secondary_profession,
+        "missions", &T::missions,
+        "titles", &T::titles,
+        "journeyEvents", &T::journey_events,
         "quests", &T::quests);
 };
 

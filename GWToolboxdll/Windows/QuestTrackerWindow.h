@@ -54,6 +54,7 @@ private:
 
     void ClearDecodeCache();
     void SyncDecodeCache(const LiveQuestView& view);
+    void ExportContractV1();
     GuiUtils::EncString& NameDecoder(GW::Constants::QuestID quest_id, const std::wstring& encoded);
     GuiUtils::EncString& QuestObjectiveDecoder(GW::Constants::QuestID quest_id, size_t index, const std::wstring& encoded);
     GuiUtils::EncString& MissionObjectiveDecoder(uint32_t objective_id, const std::wstring& encoded);
