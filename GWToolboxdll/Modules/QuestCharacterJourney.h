@@ -16,6 +16,14 @@ struct TitleStateRecord {
     uint32_t tier_index = 0;
     uint32_t current_points = 0;
     std::string last_observed_at;
+
+    friend bool operator==(const TitleStateRecord& a, const TitleStateRecord& b)
+    {
+        return a.title_id == b.title_id
+            && a.tier_index == b.tier_index
+            && a.current_points == b.current_points
+            && a.last_observed_at == b.last_observed_at;
+    }
 };
 
 struct JourneyEventRecord {
