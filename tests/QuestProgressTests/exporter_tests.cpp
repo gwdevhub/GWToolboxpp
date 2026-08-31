@@ -133,7 +133,12 @@ void TestEnvelopeAndMapping()
     Expect(json.find("encodedContentHex") == std::string::npos, "export_no_encoded_hex");
     Expect(json.find("semanticEventKey") == std::string::npos, "export_no_semantic_key_field");
     Expect(json.find("\"observedAt\"") != std::string::npos, "export_has_observed_at");
-    Expect(json.find("lastObservedAt") == std::string::npos, "export_renames_last_observed");
+    Expect(json.find("\"observedAt\": \"2026-07-25T20:00:00.000Z\"") != std::string::npos
+            || json.find("\"observedAt\":\"2026-07-25T20:00:00.000Z\"") != std::string::npos,
+        "export_quest_observed_at");
+    Expect(json.find("\"lastObservedAt\": \"2026-07-25T18:00:00.000Z\"") != std::string::npos
+            || json.find("\"lastObservedAt\":\"2026-07-25T18:00:00.000Z\"") != std::string::npos,
+        "export_mission_last_observed_at");
     Expect(json.find("\"objectiveIndex\"") != std::string::npos, "export_objective_index");
     Expect(json.find("\"primaryProfession\"") != std::string::npos, "export_primary_profession");
     Expect(json.find("\"mapId\"") != std::string::npos, "export_mission_map_id");
