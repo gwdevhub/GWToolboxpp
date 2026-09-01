@@ -90,9 +90,6 @@ namespace {
         return settings.enable_cursor_fix && !GW::UI::IsInControllerMode();
     }
 
-    HCURSOR current_cursor = nullptr;
-    bool cursor_size_hooked = false;
-
     void OnSetCursorPosCenter(GwMouseMove* gwmm)
     {
         GW::Hook::EnterHook();
@@ -225,6 +222,9 @@ namespace {
         }
     }
 #endif // MOUSEFIX_ENABLE_CAMERA_FIX
+
+    HCURSOR current_cursor = nullptr;
+    bool cursor_size_hooked = false;
 
     HBITMAP ScaleBitmap(const HBITMAP inBitmap, const int inWidth, const int inHeight, const int outWidth, const int outHeight)
     {
