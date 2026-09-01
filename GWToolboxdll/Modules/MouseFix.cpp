@@ -53,6 +53,10 @@ namespace {
         // ... rest of 815-byte structure ...
     };
 
+    MouseFix::Settings settings;
+
+#if MOUSEFIX_ENABLE_CAMERA_FIX
+    bool initialized = false;
     using OnProcessInput_pt = bool(__cdecl*)(uint32_t* wParam, uint32_t* lParam);
     OnProcessInput_pt ProcessInput_Func = nullptr;
     OnProcessInput_pt ProcessInput_Ret = nullptr;
@@ -81,16 +85,14 @@ namespace {
     SetCursorPosCenter_pt SetCursorPosCenter_Func = nullptr;
     SetCursorPosCenter_pt SetCursorPosCenter_Ret = nullptr;    // Override (and rewrite) GW's handling of setting the mouse cursor to the center of the screen (bypass GameMutex, may be the cause of camera glitch)
     // This could be a patch really, but rewriting the function out is a bit more readable.
-    
-    bool initialized = false;
-    MouseFix::Settings settings;
 
     bool ShouldFixCursor() {
         return settings.enable_cursor_fix && !GW::UI::IsInControllerMode();
     }
+
     HCURSOR current_cursor = nullptr;
     bool cursor_size_hooked = false;
-    
+
     void OnSetCursorPosCenter(GwMouseMove* gwmm)
     {
         GW::Hook::EnterHook();
@@ -222,6 +224,7 @@ namespace {
             GW::Hook::EnableHooks(SetCursorPosCenter_Func);
         }
     }
+#endif // MOUSEFIX_ENABLE_CAMERA_FIX
 
     HBITMAP ScaleBitmap(const HBITMAP inBitmap, const int inWidth, const int inHeight, const int outWidth, const int outHeight)
     {
@@ -436,6 +439,7 @@ namespace {
         RedrawCursorIcon();
     }
 
+#if MOUSEFIX_ENABLE_CAMERA_FIX
     GW::HookEntry UIMessage_HookEntry;
 
     void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void*, void*) {
@@ -448,6 +452,7 @@ namespace {
             break;
         }
     }
+#endif // MOUSEFIX_ENABLE_CAMERA_FIX
 
 } // namespace
 
@@ -466,6 +471,7 @@ void MouseFix::Initialize()
     ASSERT(ChangeCursorIcon_Func);
 #endif
 
+#if MOUSEFIX_ENABLE_CAMERA_FIX
     const GW::UI::UIMessage ui_messages[] = {
         GW::UI::UIMessage::kLogout,
         GW::UI::UIMessage::kMapLoaded
@@ -474,6 +480,7 @@ void MouseFix::Initialize()
     for (const auto ui_message : ui_messages) {
         RegisterUIMessageCallback(&UIMessage_HookEntry, ui_message, OnUIMessage);
     }
+#endif // MOUSEFIX_ENABLE_CAMERA_FIX
 }
 
 void MouseFix::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
@@ -492,19 +499,22 @@ void MouseFix::SaveSettings(SettingsDoc& doc)
 void MouseFix::Terminate()
 {
     ToolboxModule::Terminate();
-    CursorFixEnable(false);
-    GW::UI::RemoveUIMessageCallback(&UIMessage_HookEntry);
     GW::Hook::RemoveHook(ChangeCursorIcon_Func);
 
+#if MOUSEFIX_ENABLE_CAMERA_FIX
+    CursorFixEnable(false);
+    GW::UI::RemoveUIMessageCallback(&UIMessage_HookEntry);
     gw_mouse_move = nullptr;
-
+#endif // MOUSEFIX_ENABLE_CAMERA_FIX
 }
 
 void MouseFix::DrawSettingsInternal()
 {
+#if MOUSEFIX_ENABLE_CAMERA_FIX
     if (ImGui::Checkbox("Enable cursor fix", &settings.enable_cursor_fix)) {
         CursorFixEnable(settings.enable_cursor_fix);
     }
+#endif // MOUSEFIX_ENABLE_CAMERA_FIX
     ImGui::SliderInt("Guild Wars cursor size", &settings.cursor_size, 16, 64);
     ImGui::ShowHelp("Sizes other than 32 might lead the the cursor disappearing at random.\n"
         "Right click to make the cursor dis- and reappear for this to take effect.");
@@ -520,6 +530,7 @@ void MouseFix::DrawSettingsInternal()
 
 bool MouseFix::WndProc(const UINT Message, const WPARAM wParam, const LPARAM lParam)
 {
+#if MOUSEFIX_ENABLE_CAMERA_FIX
     if (!ShouldFixCursor()) {
         return false;
     }
@@ -528,5 +539,10 @@ bool MouseFix::WndProc(const UINT Message, const WPARAM wParam, const LPARAM lPa
         initialized = true;
     }
     CursorFixWndProc(Message, wParam, lParam);
+#else
+    UNREFERENCED_PARAMETER(Message);
+    UNREFERENCED_PARAMETER(wParam);
+    UNREFERENCED_PARAMETER(lParam);
+#endif // MOUSEFIX_ENABLE_CAMERA_FIX
     return false;
 }
