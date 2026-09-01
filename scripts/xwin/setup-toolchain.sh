@@ -34,13 +34,30 @@ fi
 # codebase (and vendored GWCA) spell some of them a third way -- <Shlobj.h>, <ShellApi.h>,
 # <DelayImp.h>. Windows resolves those case-insensitively; a native Linux clang does not.
 # Link every spelling the sources actually use, skipping any name that already resolves.
-echo "==> linking SDK headers for the casings the sources use"
-INCLUDE_DIRS=(crt/include sdk/include/ucrt sdk/include/um sdk/include/shared sdk/include/winrt)
-grep -rhoP '(?<=#include <)[A-Za-z0-9_./\\-]+(?=>)' \
+#
+# The source tree is absent when this runs from the Dockerfile (the image is built before any
+# repo is mounted), so scan only the directories that exist and let the container entrypoint
+# redo this against the real mount.
+SOURCE_DIRS=()
+for candidate in Core GWToolboxdll GWToolbox RestClient plugins Dependencies; do
+    [ -d "$REPO_ROOT/$candidate" ] && SOURCE_DIRS+=("$REPO_ROOT/$candidate")
+done
+
+if [ ${#SOURCE_DIRS[@]} -eq 0 ]; then
+    echo "==> no source tree under ${REPO_ROOT}; skipping the header-casing pass for now"
+    INCLUDED_HEADERS=""
+else
+    echo "==> linking SDK headers for the casings the sources use"
+    # `|| true`: grep exits non-zero when nothing matches, which pipefail would turn fatal.
+    INCLUDED_HEADERS=$(grep -rhoP '(?<=#include <)[A-Za-z0-9_./\\-]+(?=>)' \
         --include=*.cpp --include=*.h --include=*.hpp --include=*.inl \
-        "$REPO_ROOT"/{Core,GWToolboxdll,GWToolbox,RestClient,plugins,Dependencies} 2>/dev/null \
-    | sort -u \
+        "${SOURCE_DIRS[@]}" 2>/dev/null | sort -u || true)
+fi
+
+INCLUDE_DIRS=(crt/include sdk/include/ucrt sdk/include/um sdk/include/shared sdk/include/winrt)
+printf '%s\n' "$INCLUDED_HEADERS" \
     | while read -r included; do
+        [ -n "$included" ] || continue
         relative=${included//\\//}
         for directory in "${INCLUDE_DIRS[@]}"; do
             [ -e "xwin-sdk/$directory/$relative" ] && continue 2

@@ -65,8 +65,11 @@ On a Windows host, `scripts\build-xwin.ps1` drives the same container through Do
 to check a change builds clean under clang - for ordinary Windows development build with
 Visual Studio or `build-clang.bat` instead.
 
-**Directly on the host** - needs `clang`, `lld`, `llvm` (for `llvm-rc`/`llvm-lib`/`llvm-mt`),
-`cmake` >= 3.29, `ninja`, `python3`, and a bootstrapped `vcpkg` in `$VCPKG_ROOT`:
+**Directly on the host** - needs `clang` **19 or newer** (the MSVC STL rejects older ones
+outright with `error STL1000`; note Ubuntu 24.04 still ships 18), `lld`, `llvm` (for
+`llvm-rc`/`llvm-lib`/`llvm-mt`), `cmake` >= 3.29, `ninja`, `python3`, and a bootstrapped
+`vcpkg` in `$VCPKG_ROOT`. Some distros do not ship a `clang-cl`; it is the same binary as
+`clang` selected by name, so `ln -s $(command -v clang) /usr/local/bin/clang-cl` is enough.
 
 ```sh
 ./scripts/xwin/setup-toolchain.sh          # one-off: SDK (~800MB) + vkd3d-compiler

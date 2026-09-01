@@ -8,12 +8,13 @@
 # replace link/rc/lib/mt, and vkd3d-shader replaces fxc for the SM3 shaders.
 FROM ubuntu:24.04
 
+# autoconf/automake/libtool/bison/flex/libjson-perl/libvulkan-dev are all here for vkd3d,
+# which builds from source (see setup-toolchain.sh). Its configure hard-requires Vulkan even
+# though only libvkd3d-shader is wanted and nothing here renders with Vulkan.
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         ca-certificates \
-        clang \
-        lld \
-        llvm \
         curl \
+        gnupg \
         git \
         ninja-build \
         pkg-config \
@@ -29,6 +30,25 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
         bison \
         flex \
         libjson-perl \
+        libvulkan-dev \
+    && apt-get clean -y \
+    && rm -rf /var/lib/apt/lists/*
+
+# NOT Ubuntu's clang: 24.04 ships 18, and the MSVC STL that xwin fetches refuses it outright
+# ("error STL1000: Unexpected compiler version, expected Clang 19.0.0 or newer"), so the image
+# would build and then fail on the first translation unit. Take a pinned build from LLVM's own
+# apt repo instead. Ubuntu also never ships a clang-cl binary - it is the same executable as
+# clang, selected by argv[0] - so symlink it, along with the llvm-* tools the toolchain names.
+ARG LLVM_VERSION=21
+RUN curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key -o /etc/apt/trusted.gpg.d/llvm.asc \
+    && echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-${LLVM_VERSION} main" > /etc/apt/sources.list.d/llvm.list \
+    && apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        clang-${LLVM_VERSION} lld-${LLVM_VERSION} llvm-${LLVM_VERSION} \
+    && ln -sf "/usr/lib/llvm-${LLVM_VERSION}/bin/clang" /usr/bin/clang-cl \
+    && for tool in clang lld-link llvm-rc llvm-lib llvm-mt llvm-ar; do \
+           ln -sf "/usr/lib/llvm-${LLVM_VERSION}/bin/${tool}" "/usr/bin/${tool}"; \
+       done \
     && apt-get clean -y \
     && rm -rf /var/lib/apt/lists/*
 
@@ -51,12 +71,8 @@ ENV PATH="${VCPKG_ROOT}:${PATH}"
 # header-casing symlink pass in setup-toolchain.sh reads the repo, which isn't present at
 # image build time, so it re-runs (cheaply) from the entrypoint against the mounted source.
 ENV TOOLCHAIN_ROOT=/opt/xwin-toolchain
-COPY setup-toolchain.sh /opt/setup-toolchain.sh
-RUN mkdir -p /src/scripts/xwin \
-    && cp /opt/setup-toolchain.sh /src/scripts/xwin/setup-toolchain.sh \
-    && chmod +x /src/scripts/xwin/setup-toolchain.sh \
-    && /src/scripts/xwin/setup-toolchain.sh \
-    && rm -rf /src/scripts
+COPY setup-toolchain.sh /opt/xwin/setup-toolchain.sh
+RUN chmod +x /opt/xwin/setup-toolchain.sh && /opt/xwin/setup-toolchain.sh
 
 ENV XWIN_SDK=/opt/xwin-toolchain/xwin-sdk
 ENV VKD3D_COMPILER=/opt/xwin-toolchain/vkd3d-1.19/vkd3d-compiler
