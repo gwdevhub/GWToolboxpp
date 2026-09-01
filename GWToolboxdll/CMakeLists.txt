@@ -159,6 +159,8 @@ file(GLOB SOURCES CONFIGURE_DEPENDS
     "Windows/*.cpp"
     "Windows/Hotkeys/*.h"
     "Windows/Hotkeys/*.cpp"
+    "Windows/Splits/*.h"
+    "Windows/Splits/*.cpp"
     "Windows/Pathfinding/*.h"
     "Windows/Pathfinding/*.hpp"
     "Windows/Pathfinding/*.cpp"
