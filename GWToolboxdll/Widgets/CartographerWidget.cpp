@@ -70,10 +70,10 @@ namespace Carto {
         return 0.5f + 0.5f * sinf(t * (2.f * IM_PI) / 1.6f);
     }
 
-    // World map coords have north at -y.
+    // 世界坐标中北方为 -y。
     const char* CompassDir(const GW::Vec2f& from, const GW::Vec2f& to)
     {
-        static constexpr const char* dirs[] = {"E", "SE", "S", "SW", "W", "NW", "N", "NE"};
+        static constexpr const char* dirs[] = {"东", "东南", "南", "西南", "西", "西北", "北", "东北"};
         const int idx = static_cast<int>(roundf(atan2f(to.y - from.y, to.x - from.x) / (IM_PI / 4.f)));
         return dirs[(idx + 8) % 8];
     }
@@ -85,7 +85,7 @@ namespace Carto {
     bool set_quest_marker = true;
 
     std::map<GW::Constants::MapID, MapProbe> probe_cache;
-    // A different character's fog makes different tiles worth probing, though the terrain has not moved.
+    // 不同角色的迷雾使不同的格子值得探索，尽管地形未变。
     std::wstring probe_cache_character;
 
     MapProbe no_map_probe;
@@ -104,7 +104,7 @@ namespace Carto {
         if (!grid.bits || !grid.dword_count || !row_words) return;
         if (carto_snapshot.size() != grid.dword_count) {
             carto_snapshot.assign(grid.bits, grid.bits + grid.dword_count);
-            coverage_stale = true; // no basis for a diff, so rebuild wholesale
+            coverage_stale = true; // 没有差异基准，所以完全重建
             return;
         }
         for (uint32_t i = 0; i < grid.dword_count; i++) {
@@ -136,7 +136,7 @@ namespace Carto {
         if (!Pathing::CopyBlockedPlanes(blocked) || blocked == probe->blocked_planes) return;
         probe->cells.clear();
         probe->strict.clear();
-        // A closed gate is one reason a square credited nothing, so that verdict expires with the gate.
+        // 关闭的门会使某些方格无法获得探索计数，因此门状态改变时这些判定失效。
         probe->skipped.clear();
         probe->blocked_planes = std::move(blocked);
         probe->complete = false;
@@ -144,7 +144,7 @@ namespace Carto {
         CARTO_LOG("[cartographer] blocked planes changed; re-probing this map");
     }
 
-    // Kept off RebuildFog's pair, which is filled after scoring and reads as the whole world on a revisit.
+    // 与 RebuildFog 的 pair 分开，后者在评分后填充并作为重新访问时的整体数据。
     GW::Constants::MapID map_rect_id = static_cast<GW::Constants::MapID>(0);
     std::pair<int, int> map_rect_min{}, map_rect_max{};
     ImRect map_rect_bounds;
@@ -171,7 +171,7 @@ namespace Carto {
 
     bool InMapBounds(const int cx, const int cy)
     {
-        if (!EnsureMapRect()) return true; // no rectangle to clamp against - do not hide everything
+        if (!EnsureMapRect()) return true; // 无矩形可约束 – 不要隐藏所有内容
         return cx >= map_rect_min.first && cx < map_rect_max.first
             && cy >= map_rect_min.second && cy < map_rect_max.second;
     }
@@ -194,7 +194,7 @@ namespace Carto {
             && cy < static_cast<int>(ceilf(bounds.Max.y / kWorldMapUnitsPerCell)) + slack;
     }
 
-    // SetCustomQuestMarker degrades to a travel marker outside the current map's world-map rectangle.
+    // 若目标在世界地图矩形之外，SetCustomQuestMarker 会降级为旅行标记。
     bool StandRoutable(const GW::Vec2f& wm)
     {
         if (!EnsureMapRect()) return true;
@@ -219,7 +219,7 @@ namespace Carto {
     }
 
     std::set<std::pair<int, int>> declined_cells;
-    // A point placed on fog retires when that tile is credited; one on explored ground is just a waypoint.
+    // 放置在迷雾上的点会在该格子被探索后移除；放在已探索地面上的只是一个路径点。
     struct CustomPoint {
         GW::Vec2f wm{};
         bool was_fog = true;
@@ -256,7 +256,7 @@ namespace Carto {
         custom_points.clear();
         for (const auto& tok : TextUtils::Split(custom_points_str, ",")) {
             float x, y;
-            int was_fog = 1; // points written before the flag existed were all placed on fog
+            int was_fog = 1; // 在标志存在之前写入的点都是在迷雾上
             if (sscanf_s(tok.c_str(), "%f:%f:%d", &x, &y, &was_fog) >= 2) custom_points.push_back({{x, y}, was_fog != 0});
         }
     }
@@ -264,12 +264,12 @@ namespace Carto {
     int unreachable_fog_cells = 0;
     constexpr size_t kUncoverableListMax = 4096;
     std::vector<UncoverableCell> uncoverable_cells;
-    // A queued fog point selection had to pass over because nothing reachable credits it.
+    // 因无可达格子能探索此点而被跳过的迷雾点选择。
     bool blocked_point = false;
 
     bool show_unexpected = false;
     bool show_uncoverable = true;
-    // Squares only a gate glitch can credit: off means the overlay answers for normal play.
+    // 只有传送门穿行才能探索的方格：关闭表示覆盖层针对正常玩法。
     bool allow_gate_glitch = false;
     int explored_tiles = 0;
     int coverable_tiles = 0;
@@ -303,7 +303,7 @@ namespace Carto {
         continent_mask.raw = allow_gate_glitch ? &src->standable_glitched : &src->standable;
         continent_mask.credit = allow_gate_glitch ? &src->creditable_glitched : &src->creditable;
         continent_mask.glitch_only = &src->creditable_glitched;
-        // Ground existing at all, not ground anything can reach: fog beside it must read as uncoverable.
+        // 地面本身存在，而不是什么可达：其旁边的迷雾应读作无法探索。
         continent_mask.raw_any = &src->standable_any;
         continent_mask.any_credit = &src->creditable_any;
         continent_mask.any_raw = &src->standable_any;
@@ -313,7 +313,7 @@ namespace Carto {
         continent_mask.h = continent_mask.credit->height;
     }
 
-    // The undercity stopped counting, so its ground still dilates into these. Only a list can record that.
+    // 地下城不再计数，因此其地面仍会扩散到这些区域。只有列表才能记录这一点。
     struct DeadTile {
         int continent, cx, cy;
     };
@@ -330,7 +330,7 @@ namespace Carto {
         });
     }
 
-    // Says nothing about the loaded navmesh: which map you are in must not change a square's worth.
+    // 与加载的导航网格无关：您所在的地图不会改变一个方格的价值。
     bool FogCellCoverable(const int cx, const int cy)
     {
         if (TileNeverCredits(cx, cy)) return false;
@@ -347,19 +347,19 @@ namespace Carto {
         });
     }
 
-    // Ground within reach but no credit means the bake clipped it against a map this square is outside.
+    // 可达地面但未获得计数意味着烘焙数据已针对此方格所在的地图进行了裁剪。
     FogSkip WhyNotCoverable(const int cx, const int cy)
     {
         if (TileNeverCredits(cx, cy)) return FogSkip::NeverCredits;
         if (continent_mask.NeedsGlitch(cx, cy)) return FogSkip::GlitchOnly;
         const int r = RevealRadius();
-        // Standable ground first: that means the per-map clip dropped it, not the terrain being out of reach.
+        // 首先检查可站立地面：这意味着地图裁剪丢弃了它，而非地形不可达。
         if (AnyInRing(cx, cy, r, [](const int nx, const int ny, int, int) { return continent_mask.RawGet(nx, ny); })) return FogSkip::PastMapBoundary;
         if (AnyInRing(cx, cy, r, [](const int nx, const int ny, int, int) { return continent_mask.AnyGroundAt(nx, ny); })) return FogSkip::Unreachable;
         return FogSkip::NoGroundInRange;
     }
 
-    // The bake clipped each map's dilation already, so only the extra Bird's Eye rings walk the raw ground.
+    // 烘焙已裁剪了每个地图的扩散，因此只有额外的制图师指南针环会遍历原始地面。
     bool StandableWithin(const int cx, const int cy, const int radius, const bool permissive = false)
     {
         const auto* credit = permissive ? continent_mask.any_credit : continent_mask.credit;
@@ -390,7 +390,7 @@ namespace Carto {
             while (word) {
                 const int cx = base_x + std::countr_zero(word);
                 word &= word - 1;
-                // Permissive: ground the bake found but cannot walk to still explains the square.
+                // 宽容：烘焙找到但无法走到的地面仍可解释该方格。
                 if (StandableWithin(cx, cy, radius, true)) continue;
                 unexpected_tiles++;
                 if (unexpected_cells.size() < kUnexpectedListMax) unexpected_cells.push_back({cx, cy});
@@ -439,14 +439,14 @@ namespace Carto {
     }
 
 
-    // A footing sits anywhere in its cell, so it can be a half-diagonal off the centre the search sorts by.
+    // 立足点位于其格子的任意位置，因此与搜索排序的中心可能相差半个对角线。
     constexpr float kStandOffsetMax = kWorldMapUnitsPerCell * 0.5f * 1.41421356f;
 
     struct NavCells {
         int x0 = 0, y0 = 0, width = 0, height = 0;
-        std::vector<uint8_t> ground; // walkable at all, gate-independent
+        std::vector<uint8_t> ground; // 可行走，与门无关
         std::vector<uint8_t> standable;
-        // Credit is per cell, so which trapezoid's overlap the footing came from does not matter.
+        // 探索按格子计，因此立足点来自哪个梯形无关紧要。
         std::vector<GW::GamePos> stand;
         std::vector<float> line_x, line_y;
         int ground_count = 0, stand_count = 0;
@@ -496,7 +496,7 @@ namespace Carto {
         void CellBox(const int cx, const int cy, GW::Vec2f& box_min, GW::Vec2f& box_max) const
         {
             const float x_lo = line_x[cx - x0], x_hi = line_x[cx - x0 + 1];
-            const float y_lo = line_y[cy - y0], y_hi = line_y[cy - y0 + 1]; // y flips in the conversion
+            const float y_lo = line_y[cy - y0], y_hi = line_y[cy - y0 + 1]; // y 在转换中翻转
             box_min = {std::min(x_lo, x_hi), std::min(y_lo, y_hi)};
             box_max = {std::max(x_lo, x_hi), std::max(y_lo, y_hi)};
         }
@@ -529,17 +529,17 @@ namespace Carto {
     {
         const auto map_id = GW::Map::GetMapID();
         std::vector<uint32_t> blocked;
-        // Rebuilding against an empty gate state on every call is how this became a per-frame full-map sweep.
+        // 每次调用都在空门状态上重建，这就是它每帧全地图扫描的原因。
         if (!Pathing::CopyBlockedPlanes(blocked)) return false;
         if (nav_cells.built && nav_cells.map_id == map_id && nav_cells.blocked_planes == blocked) return true;
-        // Before the walk finds the player every trapezoid reads as reachable, and these cells are kept.
+        // 在行走找到玩家之前，每个梯形都被视为可达，这些格子会被保留。
         if (!Pathing::IsReachabilityKnown()) return false;
 
         const auto started = clock();
         const auto trapezoids = Pathing::GetTrapezoidsWithReachability();
         if (trapezoids.empty()) return false;
 
-        // Geometry extents, not the world-map rectangle: credit reaches past that edge and extents are free.
+        // 几何范围，而非世界地图矩形：探索能延伸到边缘之外，范围是自由的。
         float min_x = FLT_MAX, min_y = FLT_MAX, max_x = -FLT_MAX, max_y = -FLT_MAX;
         for (const auto& ref : trapezoids) {
             const auto* t = ref.trapezoid;
@@ -587,7 +587,7 @@ namespace Carto {
             }
         }
         nav_cells.built = true;
-        // The player stands on the navmesh, so a missing cell means the trapezoid-to-cell mapping is wrong.
+        // 玩家站在导航网格上，因此缺失单元格意味着梯形到格子的映射错误。
         const auto* self = GW::Agents::GetControlledCharacter();
         GW::Vec2f self_wm{};
         const bool have_self = self && WorldMapWidget::GamePosToWorldMap(self->pos, self_wm);
@@ -608,7 +608,7 @@ namespace Carto {
     bool ProbeStandCell(const int cx, const int cy, StandCell& out)
     {
         if (!EnsureNavCells()) return false;
-        if (!nav_cells.InGrid(cx, cy)) return true; // off the geometry entirely: genuinely nothing there
+        if (!nav_cells.InGrid(cx, cy)) return true; // 不在几何范围内：确实无地面
         const size_t i = nav_cells.Index(cx, cy);
         out.navmesh = nav_cells.ground[i] != 0;
         if (!nav_cells.standable[i]) return true;
@@ -622,7 +622,7 @@ namespace Carto {
     bool ResolveStandWorldPos(const GW::Vec2f& fog_wm, const GW::Vec2f& from, GW::Vec2f& out, std::pair<int, int>& out_cell, bool& any_navmesh)
     {
         const auto [fx, fy] = FogTileAt(fog_wm);
-        // `covered` is the ring already tried, so the wide pass only visits what the near one did not.
+        // `covered` 是已尝试的环，因此宽范围只访问近环未访问的。
         const auto try_ring = [&](const int covered, const int r) {
             std::vector<std::pair<int, int>> candidates;
             ForEachInRing(fx, fy, r, [&](const int nx, const int ny, const int dx, const int dy) {
@@ -635,14 +635,14 @@ namespace Carto {
             bool found = false;
             for (const auto& cell : candidates) {
                 const float centre_d2 = Dist2(CreditCellCenterWorldMap(cell.first, cell.second), from);
-                // A centre only bounds the walk its footing costs, so this cannot stop at the first hit.
+                // 中心点仅界定了立足点的行走代价，因此不能在第一击中停止。
                 if (found && sqrtf(centre_d2) - kStandOffsetMax > sqrtf(best_d2)) break;
                 auto it = probe->cells.find(cell);
                 if (it == probe->cells.end()) {
                     StandCell sc;
                     if (!ProbeStandCell(cell.first, cell.second, sc)) continue;
                     it = probe->cells.emplace(cell, sc).first;
-                    coverage_stale = true; // scored by the next recompute, not by us - we have no grid here
+                    coverage_stale = true; // 由下一次重新计算评分，而非我们——我们在这里没有网格
                 }
                 if (it->second.navmesh) any_navmesh = true;
                 GW::Vec2f wm;
@@ -656,7 +656,7 @@ namespace Carto {
             }
             return found;
         };
-        // Near-range credit is unconditional; BEC range is a guess whose only disproof costs a 15s dwell.
+        // 近距探索是无条件的；制图师指南针范围是一个猜测，唯一的反驳需要15秒停留。
         if (try_ring(-1, kRevealRadius)) return true;
         return RevealRadius() > kRevealRadius && CellQualifies(fx, fy) && try_ring(kRevealRadius, RevealRadius());
     }
@@ -673,7 +673,7 @@ namespace Carto {
         if (probe->complete) return;
         ImRect bounds;
         if (!(map_info && GW::Map::GetMapWorldMapBounds(map_info, &bounds))) return;
-        // Only this map's squares are standable; the fog they credit may still be the next map's.
+        // 只有此地图的方格是可站立的；它们探索的迷雾可能仍是下一张地图的。
         const int x0 = CreditCellX(bounds.Min.x);
         const int y0 = CreditCellY(bounds.Min.y);
         const int x1 = static_cast<int>(ceilf(bounds.Max.x / kWorldMapUnitsPerCell));
@@ -684,7 +684,7 @@ namespace Carto {
                 if (probe->cells.contains({cx, cy})) continue;
                 if (!CellWorthProbing(grid, cx, cy)) continue;
                 StandCell sc;
-                if (!ProbeStandCell(cx, cy, sc)) return; // navmesh not up; nothing learned, nothing kept
+                if (!ProbeStandCell(cx, cy, sc)) return; // 导航网格未就绪；未学到任何东西，不保留
                 probe->cells[{cx, cy}] = sc;
                 budget--;
             }
@@ -702,7 +702,7 @@ namespace Carto {
         });
     }
 
-    // A tile's score counts fog within the reveal radius, so only stands that near a flip can move.
+    // 一个格子的评分会统计探索半径内的迷雾，因此只有接近翻转的立足点才会移动。
     void RescoreAround(const CartoGrid& grid, const std::vector<std::pair<int, int>>& changed)
     {
         for (const auto& [fx, fy] : changed) {
@@ -727,7 +727,7 @@ namespace Carto {
         int y1 = static_cast<int>(ceilf(bounds.Max.y / kWorldMapUnitsPerCell));
         map_cell_min = {x0, y0};
         map_cell_max = {x1, y1};
-        // The bake answers for the whole continent, so the world map shows everything worth walking to.
+        // 烘焙数据覆盖整个大陆，因此世界地图显示所有值得前往的地面。
         if (show_whole_continent && !continent_mask.Empty()) {
             x0 = continent_mask.x0;
             y0 = continent_mask.y0;
@@ -739,7 +739,7 @@ namespace Carto {
                 if (!grid.InGrid(cx, cy) || grid.IsExplored(cx, cy)) continue;
                 if (!FogCellCoverable(cx, cy)) {
                     unreachable_fog_cells++;
-                    // Only where ground is near: the space between maps was never fog anyone could clear.
+                    // 仅在地面附近：地图之间的空间从来不是可清除的迷雾。
                     const auto why = WhyNotCoverable(cx, cy);
                     if (why != FogSkip::NoGroundInRange && uncoverable_cells.size() < kUncoverableListMax) {
                         uncoverable_cells.push_back({cx, cy, why});
@@ -765,18 +765,18 @@ namespace Carto {
     }
 
 
-    // Elsewhere keeps the raw point: outside this map's rectangle the marker becomes a travel marker.
+    // 其他地方保留原始点：此地图矩形之外，标记变为旅行标记。
     enum class GoalKind { None, Elsewhere, Waypoint, Stand };
 
     struct Target {
         bool valid = false;
         bool custom = false;
-        // For fog targets these are the cell to go and stand in, not the cell being uncovered.
+        // 对于迷雾目标，这些是要去站立的目标格子，而不是要探索的格子。
         int cx = 0;
         int cy = 0;
         int reveals = 0;
         GW::Vec2f wm{};
-        // Carried, not re-derived: the arrival test compares cells, and re-deriving is a chance to disagree.
+        // 携带而非重新推导：到达测试比较格子，重新推导有分歧的风险。
         GW::Vec2f stand_wm{};
         int stand_cx = 0;
         int stand_cy = 0;
@@ -794,7 +794,7 @@ namespace Carto {
     bool warned_no_data = false;
     bool warned_no_fog = false;
 
-    // Where the player is being sent. Null means nothing reachable credits the target.
+    // 玩家被送往的位置。空表示无可达地面能探索该目标。
     const GW::Vec2f* TargetGoal()
     {
         if (!target.valid) return nullptr;
@@ -804,7 +804,7 @@ namespace Carto {
             : nullptr;
     }
 
-    // The custom quest marker is shared, so never touch one that has since become somebody else's.
+    // 自定义任务标记是共享的，因此绝不要碰已经属于别人的标记。
     bool marker_placed = false;
     GW::Vec2f marker_point{};
     GW::Vec2f marker_goal{};
@@ -834,7 +834,7 @@ namespace Carto {
             ReleaseQuestMarker();
             return;
         }
-        // Outside the rectangle the marker degrades to a travel marker, so leave that square unmarked.
+        // 在矩形之外，标记会降级为旅行标记，因此不标记该方格。
         if (target.goal == GoalKind::Stand && !StandRoutable(*goal)) {
             if (!warned_stand_off_rect) {
                 warned_stand_off_rect = true;
@@ -844,7 +844,7 @@ namespace Carto {
             return;
         }
         if (marker_placed && Dist2(marker_point, target.wm) < 1.f) {
-            // Same point: follow it only while the marker is still ours, so clearing it by hand sticks.
+            // 同一点：仅当标记仍属于我们时遵循它，因此手动清除标记会保持。
             if (Dist2(*goal, marker_goal) < 1.f || !MarkerStillOurs()) return;
         }
         else {
@@ -875,7 +875,7 @@ namespace Carto {
         return WorldMapWidget::GetMapIdForLocation(point_wm) == GW::Map::GetMapID() ? GoalKind::None : GoalKind::Elsewhere;
     }
 
-    // Re-resolved every scan: the sweep keeps learning, and a gate moving can take the answer away.
+    // 每次扫描重新解析：扫描会学习新内容，且门移动可能使答案失效。
     void RefreshCustomTargetStand(const GW::Vec2f& from)
     {
         if (!target.valid || !target.custom) return;
@@ -936,13 +936,13 @@ namespace Carto {
     {
         CartoGrid grid;
         const auto [fx, fy] = FogTileAt(raw_wm);
-        // Credit is per tile, so where in it you clicked carries no information - two clicks are one point.
+        // 探索按格子计，因此点击在格内的位置不携带信息——两次点击是同一个点。
         const GW::Vec2f wm = CreditCellCenterWorldMap(fx, fy);
         const bool foggy = GetCartoGrid(grid) && !grid.IsExplored(fx, fy);
         std::erase_if(custom_points, [&wm](const CustomPoint& p) { return FogTileAt(p.wm) == FogTileAt(wm); });
         custom_points.push_back({wm, foggy});
         SerializePoints();
-        // Taking the target over now points the marker at the fog you asked about, not the nearest point.
+        // 立即将目标指向您询问的迷雾点，而非最近点。
         target = {};
         target.valid = true;
         target.custom = true;
@@ -950,7 +950,7 @@ namespace Carto {
         arrived = false;
         RefreshCustomTargetStand(player_wm_cached);
 #ifdef _DEBUG
-        // Without the whole near ring the chosen square is a verdict with no reason behind it.
+        // 没有整个近环，选择的方格只是一个没有理由的判定。
         Log::Log("[carto-ring] fog tile (%d, %d) wm(%.0f, %.0f) player wm(%.0f, %.0f) radius=%d\n",
                  fx, fy, wm.x, wm.y, player_wm_cached.x, player_wm_cached.y, RevealRadius());
         ForEachInRing(fx, fy, kRevealRadius, [&](const int nx, const int ny, const int dx, const int dy) {
@@ -978,7 +978,7 @@ namespace Carto {
                   : " - this map has ground near it, but none reachable from here");
     }
 
-    // Travel portals block here exactly as they block the live reachability walk, so the two agree.
+    // 传送门在此处的阻挡方式与实时可达性行走相同，因此两者一致。
     using PlaneOf = std::unordered_map<const GW::PathingTrapezoid*, size_t>;
 
     PlaneOf PlaneIndex(const Pathing::PathingMapData& data)
@@ -1034,7 +1034,7 @@ namespace Carto {
         return FloodIndexed(data, PlaneIndex(data), seeds, gates, honour_no_pathing);
     }
 
-    // An outpost and its explorable share a file and you zone between them, so largest is not playable.
+    // 前哨站与其可探索区域共享同一文件，且您会在它们之间传送，因此最大的组件并非可玩区域。
     std::unordered_set<const GW::PathingTrapezoid*> LargestComponent(const Pathing::PathingMapData& data, const PlaneOf& plane_of,
                                                                      const std::vector<Pathing::TravelDoorway>& gates)
     {
@@ -1051,7 +1051,7 @@ namespace Carto {
         return best;
     }
 
-    // Seeded at the gates you could zone in on; a gate does not block its own flood. Mirrors ffna.py's entrance_component.
+    // 以您可以进入的门为种子；门不阻止自身的洪水。与 ffna.py 的 entrance_component 镜像。
     void PlayableTrapezoids(const Pathing::PathingMapData& data,
                             std::unordered_set<const GW::PathingTrapezoid*>& gated_out,
                             std::unordered_set<const GW::PathingTrapezoid*>& open_out)
@@ -1078,12 +1078,12 @@ namespace Carto {
         }
         const auto largest = LargestComponent(data, plane_of, gates);
         gated_out.insert(largest.begin(), largest.end());
-        // The gate-glitch pair: the same ground walked as if a travel portal did not stop you.
+        // 传送门穿行对：行走时仿佛传送门不阻挡你。
         const std::vector<const GW::PathingTrapezoid*> seeds(gated_out.begin(), gated_out.end());
         open_out = FloodIndexed(data, plane_of, seeds, {}, true);
     }
 
-    // GetMapIdForLocation walks the continent, and rectangles overlap: this labels where a square is.
+    // GetMapIdForLocation 遍历大陆，且矩形重叠：这标记了方格所属的地图。
     std::map<std::pair<int, int>, GW::Constants::MapID> tile_rect_map;
 
     GW::Constants::MapID MapForTile(const int cx, const int cy)
@@ -1107,7 +1107,7 @@ namespace Carto {
         bool under_tile = false;
     };
 
-    // From the DAT, because the overlapping rectangles routinely name a map with no ground there at all.
+    // 来自 DAT，因为重叠的矩形经常将无地面的地图命名为所在区域。
     struct OwnerQuery {
         std::pair<int, int> cell{INT_MIN, INT_MIN};
         std::vector<GW::Constants::MapID> queue;
@@ -1153,7 +1153,7 @@ namespace Carto {
             const auto map_id = static_cast<GW::Constants::MapID>(i);
             const auto info = GW::Map::GetMapInfo(map_id);
             if (!(info && info->GetIsOnWorldMap() && info->continent == here->continent)) continue;
-            // A map's ground can sit outside its rectangle, so test what it may credit, not the reveal ring.
+            // 地图的地面可能位于其矩形之外，因此测试它可能探索的区域，而非探索环。
             if (!InCreditableBoundsOf(map_id, cell.first, cell.second)) {
                 if (InCreditableBoundsOf(map_id, cell.first, cell.second, r + 1)) owner_query.out_of_reach_maps++;
                 continue;
@@ -1196,7 +1196,7 @@ namespace Carto {
         owner_query.owners.push_back(owner);
     }
 
-    // One map file per tick: parsing one out of the DAT is far too slow to loop over in a frame.
+    // 每帧处理一个地图文件：从 DAT 解析一个文件对帧来说太慢。
     void StepOwnerQuery()
     {
         if (owner_cache_continent != continent_mask.continent) {
@@ -1219,7 +1219,7 @@ namespace Carto {
         owner_cache[owner_query.cell] = owner_query;
     }
 
-    // `why_lines` only where the square cannot be uncovered: elsewhere "walkable: false" reads as a bug.
+    // `why_lines` 仅在该方格无法探索时显示：否则 “walkable: false” 读起来像 bug。
     std::string OwnerTooltip(const OwnerQuery& q, const bool why_lines)
     {
         std::string out;
@@ -1227,15 +1227,15 @@ namespace Carto {
             const auto& name = Resources::GetMapName(owner.map_id)->string();
             const auto& travel = Resources::GetMapName(owner.travel_to)->string();
             if (!out.empty()) out += "\n";
-            out += std::format("{} (map {}, file 0x{:X})", name.empty() ? "Unnamed map" : name.c_str(),
+            out += std::format("{}（地图 {}，文件 0x{:X}）", name.empty() ? "未命名地图" : name.c_str(),
                                static_cast<int>(owner.map_id), owner.file_id);
-            out += owner.travel_to == GW::Constants::MapID::None || travel.empty() ? "\nNo outpost travels there" : "\nTravel to " + travel;
+            out += owner.travel_to == GW::Constants::MapID::None || travel.empty() ? "\n没有前哨站可传送至此" : "\n传送至 " + travel;
             if (why_lines) {
-                out += std::format("\nwalkable: {}\nexplorable: {}",
-                                   owner.under_tile ? "true" : "false", owner.connected ? "true" : "false");
+                out += std::format("\n可行走：{}\n可探索：{}",
+                                   owner.under_tile ? "是" : "否", owner.connected ? "是" : "否");
             }
         }
-        return out + std::format("\nUnexplored square ({}, {})", q.cell.first, q.cell.second);
+        return out + std::format("\n未探索的方格（{}，{}）", q.cell.first, q.cell.second);
     }
 
 
@@ -1247,19 +1247,19 @@ namespace Carto {
 
     void BuildStatusText(char* buf, const size_t len)
     {
-        static constexpr const char* no_goal = "no reachable square credits your fog point - right-click it on the map to remove it";
+        static constexpr const char* no_goal = "没有可到达的方格能探索您的迷雾点 - 在地图上右键单击移除它";
         if (!target.valid) {
             const char* idle = blocked_point ? no_goal
-                : map_fog_cells == 0 ? "nothing left to uncover on this map"
-                : !probe->complete ? "scanning this map's fog..."
-                : "nothing reachable left here - travel on, or add a fog point";
+                : map_fog_cells == 0 ? "此地图上已无迷雾可探索"
+                : !probe->complete ? "正在扫描此地图的迷雾..."
+                : "此处已无可到达的迷雾 - 前往别处，或添加迷雾点";
             snprintf(buf, len, "%s", idle);
             return;
         }
         if (arrived) {
             snprintf(buf, len, target.custom
-                         ? "standing in the square for your fog point - if it does not register, take a step or click-walk"
-                         : "standing in the right tile - if it does not register, take a step or click-walk");
+                         ? "已站在您迷雾点所在的方格 - 如果未计探索，请移动一步或用鼠标点走"
+                         : "已站在目标方格 - 如果未计探索，请移动一步或用鼠标点走");
             return;
         }
         const GW::Vec2f* goal = TargetGoal();
@@ -1270,18 +1270,16 @@ namespace Carto {
         const float dist_k = sqrtf(Dist2(player_wm_cached, *goal)) * kGwinchesPerWorldMapUnit / 1000.f;
         if (target.custom) {
             if (target.goal == GoalKind::Stand) {
-                snprintf(buf, len, "stand in the square %.1fk units %s of you to uncover your fog point", dist_k,
-                         CompassDir(player_wm_cached, *goal));
+                snprintf(buf, len, "站在您迷雾点所在的方格，距您 %s %.1fk 单位", CompassDir(player_wm_cached, *goal), dist_k);
                 return;
             }
-            snprintf(buf, len, "heading to your fog point, %.1fk units %s of you%s", dist_k,
-                     CompassDir(player_wm_cached, *goal),
-                     target.goal == GoalKind::Elsewhere ? " (another map)" : "");
+            snprintf(buf, len, "前往您的迷雾点，距您 %s %.1fk 单位%s", CompassDir(player_wm_cached, *goal), dist_k,
+                     target.goal == GoalKind::Elsewhere ? "（另一张地图）" : "");
             return;
         }
-        snprintf(buf, len, "stand in the square %.1fk units %s of you to uncover %d %s%s", dist_k,
-                 CompassDir(player_wm_cached, target.wm), target.reveals, target.reveals == 1 ? "square" : "squares",
-                 blocked_point ? " (a fog point here credits nothing reachable)" : "");
+        snprintf(buf, len, "站在目标方格，距您 %s %.1fk 单位，可探索 %d 个%s%s", CompassDir(player_wm_cached, *goal), dist_k,
+                 target.reveals, target.reveals == 1 ? "方格" : "方格",
+                 blocked_point ? "（此处的迷雾点无可到达的地面能探索它）" : "");
     }
 
     int FindCustomPointNear(const GW::Vec2f& wm, const float max_dist)
@@ -1321,49 +1319,49 @@ namespace Carto {
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
         const ImVec2 item_size = {250.f * ImGui::FontScale(), 0.f};
         {
-            ImGui::TextColored(ImColor(kTargetColor).Value, ICON_FA_MAP_MARKED_ALT " Cartographer");
+            ImGui::TextColored(ImColor(kTargetColor).Value, ICON_FA_MAP_MARKED_ALT " 制图师");
             char status[224];
             BuildStatusText(status, sizeof(status));
             ImGui::TextDisabled("%s", status);
-            if (map_fog_cells > 0) ImGui::TextDisabled("%d squares left to uncover on this map", map_fog_cells);
+            if (map_fog_cells > 0) ImGui::TextDisabled("此地图剩余 %d 个未探索方格", map_fog_cells);
 
             const float near_dist = px_per_wm_unit > 0.f ? 12.f / px_per_wm_unit : 8.f;
             const int point_here = FindCustomPointNear(click_wm, near_dist);
-            // Offering a fog point on the spot already being suggested is nonsense.
+            // 在已建议的位置上再添加迷雾点是无意义的。
             const bool on_suggestion = target.valid && !target.custom
                 && CreditCellAt(click_wm) == std::pair{target.cx, target.cy};
             if (target.valid && (on_suggestion || (target.custom && point_here >= 0))) {
-                if (ImGui::Button(target.custom ? "Remove this fog point" : "Skip this suggestion", item_size)) {
+                if (ImGui::Button(target.custom ? "移除这个迷雾点" : "跳过此建议", item_size)) {
                     CartographerWidget::SkipCurrentTarget(false);
                     keep_open = false;
                 }
-                if (!target.custom && ImGui::Button("Never suggest this spot again", item_size)) {
+                if (!target.custom && ImGui::Button("不再建议此位置", item_size)) {
                     CartographerWidget::SkipCurrentTarget(true);
                     keep_open = false;
                 }
             }
             else if (point_here >= 0) {
-                if (ImGui::Button("Remove fog point", item_size)) {
+                if (ImGui::Button("移除迷雾点", item_size)) {
                     CartographerWidget::RemoveCustomPointNear(click_wm, near_dist);
                     keep_open = false;
                 }
             }
             else {
-                if (ImGui::Button("Add fog point here", item_size)) {
+                if (ImGui::Button("在此添加迷雾点", item_size)) {
                     CartographerWidget::AddCustomPoint(click_wm);
                     keep_open = false;
                 }
             }
             if (custom_points.size() > 1) {
                 char label[48];
-                snprintf(label, sizeof(label), "Clear all %u fog points", static_cast<unsigned>(custom_points.size()));
+                snprintf(label, sizeof(label), "清除所有 %u 个迷雾点", static_cast<unsigned>(custom_points.size()));
                 if (ImGui::Button(label, item_size)) {
                     CartographerWidget::ClearCustomPoints();
                     keep_open = false;
                 }
             }
 #ifdef _DEBUG
-            if (ImGui::Button("Log what the helper sees here", item_size)) {
+            if (ImGui::Button("记录此处的辅助信息", item_size)) {
                 const GW::Vec2f at = click_wm;
                 GW::GameThread::Enqueue([at] { LogProbe(at); });
                 keep_open = false;
@@ -1407,7 +1405,7 @@ namespace Carto {
             project({(cx + 1) * kWorldMapUnitsPerCell, (cy + 1) * kWorldMapUnitsPerCell}, max_out);
     }
 
-    // Returns whether the pointer is over the square, and hands back its rectangle for callers that draw from it.
+    // 返回指针是否在方格上，并返回矩形供调用者绘制。
     bool DrawCell(ImDrawList* dl, const ProjectToScreen project, const int cx, const int cy, const ImU32 colour,
                   const int fill_alpha, const int edge_alpha, const float thickness, const ImVec2& mouse,
                   ImRect* rect_out = nullptr)
@@ -1422,7 +1420,7 @@ namespace Carto {
         return rect.Contains(mouse);
     }
 
-    // One quad per fog texel, so ImGui interpolates them as the GPU does when it samples the texture.
+    // 每个迷雾纹素一个四边形，让 ImGui 像 GPU 采样纹理时那样插值。
     void DrawFog(ImDrawList* dl, const ProjectToScreen project, const ImVec2& mouse,
                  std::string& tooltip_out, std::string& warning_out)
     {
@@ -1446,30 +1444,30 @@ namespace Carto {
             }
         }
         if (!hovered) return;
-        // Only inside the square's own rectangle: elsewhere "not from the loaded map" is trivially true.
+        // 仅在方格自身矩形内：否则“不属于当前加载的地图”是显然的。
         if (InMapBounds(hovered->cx, hovered->cy) && !ThisMapCanCredit(hovered->cx, hovered->cy)) {
-            warning_out = "Not uncoverable from the currently loaded map";
+            warning_out = "从当前加载的地图无法探索此方格";
         }
         RequestOwnerQuery(hovered->cx, hovered->cy);
         const auto* resolved = FinishedOwnerQuery(hovered->cx, hovered->cy);
         if (!resolved) {
-            tooltip_out = std::format("Unexplored square ({}, {})\nReading the map files to find the ground that credits it...", hovered->cx, hovered->cy);
+            tooltip_out = std::format("未探索的方格（{}，{}）\n正在读取地图文件以寻找能探索它的地面...", hovered->cx, hovered->cy);
             return;
         }
         if (!resolved->owners.empty()) {
             tooltip_out = OwnerTooltip(*resolved, false);
             return;
         }
-        tooltip_out = std::format("Unexplored square ({}, {})\nNo map that could credit it has ground within reveal range", hovered->cx, hovered->cy);
+        tooltip_out = std::format("未探索的方格（{}，{}）\n没有地图在探索范围内拥有可探索它的地面", hovered->cx, hovered->cy);
         const auto rect_name = MapRectName(hovered->cx, hovered->cy);
-        if (!rect_name.empty()) tooltip_out += "\nThe world map rectangle it falls in belongs to " + rect_name;
+        if (!rect_name.empty()) tooltip_out += "\n它所在的世界地图矩形属于 " + rect_name;
         if (resolved->out_of_reach_maps) {
-            tooltip_out += std::format("\n{} nearby map(s) skipped: this square is more than one past their boundary, which is as far as a map can credit", resolved->out_of_reach_maps);
+            tooltip_out += std::format("\n{} 张附近地图被跳过：此方格距其边界超过一圈，这是地图能探索的最远距离", resolved->out_of_reach_maps);
         }
-        if (resolved->unreadable) tooltip_out += "\nSome of those map files are not in your Gw.dat yet";
+        if (resolved->unreadable) tooltip_out += "\n其中一些地图文件不在您的 Gw.dat 中";
     }
 
-    // Every tile is credited as a unit, so seeing the boundaries is what makes "stand there" actionable.
+    // 每个方格作为一个整体被探索，因此看到边界才能让“站在那”可操作。
     void DrawGrid(ImDrawList* dl, const ProjectToScreen project)
     {
         const auto [x0, y0] = map_cell_min;
@@ -1479,8 +1477,8 @@ namespace Carto {
         if (!ProjectCell(project, x0, y0, origin, corner)) return;
         const float step_x = corner.x - origin.x;
         const float step_y = corner.y - origin.y;
-        if (step_x < 3.f || step_y < 3.f) return; // denser than this is a smear, not a grid
-        // Both projections are affine, so the far edge follows from the step rather than a second one.
+        if (step_x < 3.f || step_y < 3.f) return; // 更密集会糊成一片，不是网格
+        // 两个投影都是仿射的，因此远边由步长而非第二次投影决定。
         const ImRect clip(dl->GetClipRectMin(), dl->GetClipRectMax());
         const float top = std::max(origin.y, clip.Min.y);
         const float bottom = std::min(origin.y + (y1 - y0) * step_y, clip.Max.y);
@@ -1505,37 +1503,37 @@ namespace Carto {
         }
     }
 
-    // Drawn rather than omitted: a blank patch reads as "already done". Yellow means gate-glitch only.
+    // 绘制而非省略：空白区域会被读作“已完成”。黄色表示仅传送门穿行。
     void DrawUncoverableCells(ImDrawList* dl, const ProjectToScreen project, const ImVec2& mouse, std::string& tooltip_out)
     {
         for (const auto& [cx, cy, why] : uncoverable_cells) {
             const auto colour = why == FogSkip::GlitchOnly ? kGlitchOnlyColor : kUncoverableColor;
             if (!DrawCell(dl, project, cx, cy, colour, 60, 150, 1.f, mouse)) continue;
-            // Which map the ground belongs to is the answer worth having, so run the same DAT lookup.
+            // 地面所属的地图是值得知道的答案，因此同样进行 DAT 查找。
             RequestOwnerQuery(cx, cy);
             const auto* resolved = FinishedOwnerQuery(cx, cy);
             if (!resolved) {
-                tooltip_out = std::format("Unexplored square ({}, {})\nReading the map files to find the ground that credits it...", cx, cy);
+                tooltip_out = std::format("未探索的方格（{}，{}）\n正在读取地图文件以寻找能探索它的地面...", cx, cy);
                 continue;
             }
             if (!resolved->owners.empty()) {
                 tooltip_out = OwnerTooltip(*resolved, true);
                 continue;
             }
-            tooltip_out = std::format("Unexplored square ({}, {})\nNo map has ground within {} square(s) of it", cx, cy, RevealRadius());
+            tooltip_out = std::format("未探索的方格（{}，{}）\n没有地图在其 %d 格范围内拥有地面", cx, cy, RevealRadius());
             const auto rect_name = MapRectName(cx, cy);
-            if (!rect_name.empty()) tooltip_out += "\nIts world map rectangle belongs to " + rect_name;
+            if (!rect_name.empty()) tooltip_out += "\n其世界地图矩形属于 " + rect_name;
         }
     }
 
-    // Explored squares the bake says nothing could credit: missing ground, or a route it does not model.
+    // 已探索的方格，但烘焙数据说其范围内无任何可站立地面。
     void DrawUnexpectedCells(ImDrawList* dl, const ProjectToScreen project, const ImVec2& mouse, std::string& tooltip_out)
     {
         for (const auto& [cx, cy] : unexpected_cells) {
             if (!DrawCell(dl, project, cx, cy, kUnexpectedColor, 40, 190, 1.f, mouse)) continue;
             const auto rect_name = MapRectName(cx, cy);
-            tooltip_out = std::format("Explored square ({}, {}) with no baked ground within {} squares of it", cx, cy, RevealRadius());
-            tooltip_out += "\nThe world map rectangle it falls in belongs to " + rect_name;
+            tooltip_out = std::format("已探索的方格（{}，{}）但在其 %d 格范围内没有烘焙地面", cx, cy, RevealRadius());
+            tooltip_out += "\n其世界地图矩形属于 " + rect_name;
         }
     }
 
@@ -1544,11 +1542,11 @@ namespace Carto {
         for (const auto& [cell, sc] : probe->cells) {
             if (!sc.reachable || sc.reveals <= 0) continue;
             if (declined_cells.contains(cell)) continue;
-            // Skipped only while the suggestion is drawn on top, else an ownership recheck blanks it.
+            // 仅在建议绘制在顶部时跳过，否则所有权重新检查会将其清空。
             if (target.valid && !target.custom && target.cx == cell.first && target.cy == cell.second) continue;
             const int strength = std::min(sc.reveals, 9);
             if (DrawCell(dl, project, cell.first, cell.second, kStandColor, 10 + 6 * strength, 60 + 12 * strength, 1.f, mouse)) {
-                tooltip = "Cartographer: stand here to uncover nearby squares";
+                tooltip = "制图师：站在此方格以探索附近的迷雾";
             }
         }
     }
@@ -1576,7 +1574,7 @@ namespace Carto {
             DrawStandCells(dl, project, mouse, stand_tooltip);
             if (cell_tooltip) tooltip = stand_tooltip;
         }
-        // The ranges key off the tile, not the dot, so the character marker cannot answer this.
+        // 范围以格子为单位，而非点，因此角色标记无法回答此问题。
         if (player_cell_valid) {
             DrawCell(dl, project, player_cell.first, player_cell.second, kCurrentTileColor, 28, 150, 1.f, mouse);
         }
@@ -1588,14 +1586,14 @@ namespace Carto {
             const int tcy = target.custom ? target.stand_cy : target.cy;
             ImRect rect(FLT_MAX, FLT_MAX, FLT_MAX, FLT_MAX);
             const bool hovered = DrawCell(dl, project, tcx, tcy, kTargetColor, 16 + static_cast<int>(24.f * pulse), 210, 1.5f + pulse, mouse, &rect);
-            // A leader back to the fog point, so it is obvious the square is not where the fog is.
+            // 指向迷雾点的引导线，以明确方格并非迷雾所在。
             ImVec2 point_at;
             if (point_stand && rect.Min.x != FLT_MAX && project(target.wm, point_at)) {
                 dl->AddLine(rect.GetCenter(), point_at, WithAlpha(kFogPointColor, 140), 1.f);
             }
             if (cell_tooltip && hovered) {
-                tooltip = point_stand ? "Cartographer: stand in this square to uncover your fog point"
-                                      : "Cartographer: stand in this square to uncover the fog around it\nRight-click the map for options";
+                tooltip = point_stand ? "制图师：站在此方格以探索您的迷雾点"
+                                      : "制图师：站在此方格以探索周围的迷雾\n在地图上右键单击可查看选项";
             }
         }
         for (const auto& p : custom_points) {
@@ -1606,7 +1604,7 @@ namespace Carto {
             const float mdx = mouse.x - c.x;
             const float mdy = mouse.y - c.y;
             if (mdx * mdx + mdy * mdy < 12.f * 12.f) {
-                tooltip = "Cartographer fog point\nRight-click nearby to remove it";
+                tooltip = "制图师迷雾点\n在附近右键单击可移除它";
             }
         }
         if (tooltip) ImGui::SetTooltip("%s", tooltip);
@@ -1625,7 +1623,7 @@ namespace Carto {
         char status[224];
         BuildStatusText(status, sizeof(status));
         char line[256];
-        snprintf(line, sizeof(line), ICON_FA_MAP_MARKED_ALT " Cartographer: %s", status);
+        snprintf(line, sizeof(line), ICON_FA_MAP_MARKED_ALT " 制图师：%s", status);
         dl->AddText({16.f, dl->GetClipRectMax().y - 68.f}, ImGui::GetColorU32(ImGuiCol_Text), line);
     }
 
@@ -1634,7 +1632,7 @@ namespace Carto {
         if (!CartographerWidget::GetEnabled() || !map_on_world_map) return;
         DrawMapOverlay(dl, [](const GW::Vec2f& wm, ImVec2& out) { return MissionMapWidget::WorldMapToScreen(wm, out); }, false);
     }
-    // One table for both, so a setting cannot be added to one list and forgotten in the other.
+    // 一张表供两者使用，因此设置不会在一处添加而在另一处遗漏。
     struct Option {
         const char* setting;
         const char* label;
@@ -1644,40 +1642,35 @@ namespace Carto {
     };
 
     const Option kOptions[] = {
-        {"show_fog", "Show remaining fog", &show_fog, nullptr,
-         "Green: everything still unexplored that some square on this map can credit. Fog nothing here can reach draws nothing."},
-        {"show_stand_cells", "Show squares to stand in", &show_stand_cells, nullptr,
-         "Draws every 32x32 square worth walking into, shaded by how many foggy squares standing there would credit. The current suggestion is outlined and pulses."},
-        {"show_whole_continent", "Show the whole continent", &show_whole_continent, [] { coverage_stale = true; },
-         "Draws every square still worth uncovering anywhere on this continent, not just the map you are in, using data baked from the game's own map files. Turn off to show only the current map."},
-        {"show_grid", "Show the cartography grid", &show_grid, nullptr,
-         "Draws the 32x32 tile boundaries. Exploration is credited a whole tile at a time, so this is what tells you which tile you are actually standing in. Hidden when zoomed out far enough that the lines would smear together."},
-        {"show_uncoverable", "Show squares that cannot be uncovered", &show_uncoverable, [] { coverage_stale = true; },
-         "Draws foggy squares that no ground on this continent can credit, with a note on why: grey where"
-         "\nnothing can ever reach them, yellow where only a gate glitch can. Without them the world map shows"
-         "\na blank patch where fog you can never clear used to be, which reads as already explored."},
-        {"allow_gate_glitch", "Count gate glitching", &allow_gate_glitch,
+        {"show_fog", "显示剩余迷雾", &show_fog, nullptr,
+         "绿色：所有仍未探索且此地图上某个方格可以探索的迷雾。此地图无法到达的迷雾不会绘制。"},
+        {"show_stand_cells", "显示可站立格子", &show_stand_cells, nullptr,
+         "绘制每个 32x32 的值得走进的方格，按站立其中可探索的迷雾格数着色。当前建议的方格以轮廓和脉冲高亮。"},
+        {"show_whole_continent", "显示整个大陆", &show_whole_continent, [] { coverage_stale = true; },
+         "使用游戏地图文件烘焙的数据，绘制此大陆上所有仍值得探索的方格，而不限于您所在的地图。关闭此选项则仅显示当前地图。"},
+        {"show_grid", "显示探索网格", &show_grid, nullptr,
+         "绘制 32x32 的格子边界。探索按整个格子计数，因此这告诉您实际站在哪个格子里。缩放太远时网格会消失以避免模糊。"},
+        {"show_uncoverable", "显示无法探索的方格", &show_uncoverable, [] { coverage_stale = true; },
+         "绘制那些此大陆没有任何地面能探索的迷雾方格，并附上原因说明：灰色表示永远无法到达，黄色表示只有传送门穿行可以。不显示它们时，世界地图会显示一块空白，看起来像已探索。"},
+        {"allow_gate_glitch", "计入传送门穿行", &allow_gate_glitch,
          [] {
              Pathing::SetGateGlitchAllowed(allow_gate_glitch);
              coverage_stale = true;
          },
-         "Travel portals normally stop you walking past them, so ground behind one is out of reach and the"
-         "\nsquares it would credit are drawn yellow. Turn this on if you Shadow-step through gates and they"
-         "\ncount as ordinary fog instead. Applies to the baked table and the live overlay alike, so the two"
-         "\nkeep agreeing."},
-        {"show_unexpected", "Show unexpected explored squares", &show_unexpected, nullptr,
-         "Draws every square you have already uncovered that the baked map data says has no standable ground within reveal range - not even ground only a gate glitch reaches - so nothing should have been able to credit it. Either the bake is missing that ground, or it was uncovered from somewhere the bake does not model. The reveal range follows the Bird's Eye Compass setting below."},
-        {"using_bec", "Using a Bird's Eye Compass", &using_bec,
+         "传送门通常阻止您走到另一边，因此门后的地面不可达，其能探索的方格会显示为黄色。如果您通过暗影步穿过门且它们计入正常探索，则启用此选项。适用于烘焙表和实时覆盖层，两者保持一致。"},
+        {"show_unexpected", "显示意外已探索方格", &show_unexpected, nullptr,
+         "绘制您已探索但烘焙地图数据表示其探索范围内没有可站立地面（即使仅传送门穿行可达的地面也没有）的方格，因此不应该有任何东西能探索它。要么烘焙缺少该地面，要么它是从烘焙未建模的位置探索的。探索范围遵循下方的制图师指南针设置。"},
+        {"using_bec", "使用制图师指南针", &using_bec,
          [] {
-             // The radius only widens which tiles are worth probing; `strict` is a fog-tile property and survives.
+             // 半径仅扩大值得探索的格子范围；`strict` 是迷雾格子属性，保留不变。
              for (auto& [map_id, cached] : probe_cache) cached.complete = false;
              owner_cache.clear();
              owner_query = {};
              coverage_stale = true;
          },
-         "Standing in a tile credits it and the 8 tiles around it (Chebyshev distance, so a square block - not a circle, which is why the nearest-looking spot often is not the right one). A Bird's Eye Compass widens that to 3 tiles in each direction. Where inside the tile you stand makes no difference. Rescans the map."},
-        {"set_quest_marker", "Set a quest marker to fog points", &set_quest_marker, [] { SyncQuestMarker(); },
-         "Placing a fog point puts a custom quest marker on the square you need to stand in to uncover it, so the usual quest path walks you there. It clears itself once the point is reached or removed, and clearing the marker by hand leaves it cleared. Suggested squares never touch the marker."},
+         "站在一个格子内会探索它及其周围的 8 个格子（切比雪夫距离，即方形区域——这就是为什么最近的点通常不是正确的位置）。制图师指南针将此范围扩大到每个方向 3 格。站在格子内的具体位置不影响结果。重新扫描地图。"},
+        {"set_quest_marker", "为迷雾点设置任务标记", &set_quest_marker, [] { SyncQuestMarker(); },
+         "放置迷雾点会在您需要站立的格子上放置一个自定义任务标记，因此常规任务路径会引导您到达那里。到达或移除点后标记会自行清除，手动清除标记会保持清除。建议的方格不会触及标记。"},
     };
 } // namespace Carto
 
@@ -1741,12 +1734,12 @@ void CartographerWidget::Update(float)
         SelectProbe(map_id);
     }
 
-    // Everything here is in world-map coordinates, so a map off the world map has nothing to compute.
+    // 这里所有坐标都是世界地图坐标，因此不在世界地图上的地图无需计算。
     const auto map_info = GW::Map::GetMapInfo(map_id);
     map_on_world_map = map_info && map_info->GetIsOnWorldMap();
     if (!map_on_world_map) return;
 
-    // Coordinate anchors can be transitional right after a map change; let them settle.
+    // 地图变更后坐标锚点可能过渡，让其稳定。
     if (TIMER_DIFF(map_settled_at) < 2000) return;
 
     const auto player = GW::Agents::GetControlledCharacter();
@@ -1768,7 +1761,7 @@ void CartographerWidget::Update(float)
     if (!WorldMapWidget::GamePosToWorldMap(player->pos, player_wm)) return;
     player_wm_cached = player_wm;
     BuildContinentMask(static_cast<int>(map_info->continent));
-    // A completing sweep still needs one last full pass, so the flag is read before the sweep.
+    // 完成扫描仍需要最后一次完整遍历，因此在扫描之前读取标志。
     DropProbeIfGatesMoved();
     const bool sweeping = !probe->complete;
     SweepStandCells(grid, map_info);
@@ -1780,7 +1773,7 @@ void CartographerWidget::Update(float)
         const int our_cx = CreditCellX(player_wm.x);
         const int our_cy = CreditCellY(player_wm.y);
         const auto [fog_cx, fog_cy] = FogTileAt(player_wm);
-        // Every d must now land inside [-r, r]; one that does not is this bug class coming back.
+        // 每个 d 现在必须在 [-r, r] 内；否则表示此类错误再次出现。
         Log::Log("[carto-reveal] map=%d game(%.1f, %.1f) wm(%.4f, %.4f) credit_cell(%d, %d) fog_tile(%d, %d) tile(%d, %d) d(%d, %d) r=%d\n",
                  static_cast<int>(map_id), player->pos.x, player->pos.y, player_wm.x, player_wm.y,
                  our_cx, our_cy, fog_cx, fog_cy, tx, ty, tx - our_cx, ty - our_cy, RevealRadius());
@@ -1788,7 +1781,7 @@ void CartographerWidget::Update(float)
     if (!changed.empty()) Log::FlushFile();
 #endif
     if (coverage_stale || sweeping) {
-        // Rebuilding from scratch supersedes any pending diff, so re-baseline the snapshot.
+        // 从头重建会取代任何待处理的差异，因此重新基准快照。
         if (grid.bits && grid.dword_count) carto_snapshot.assign(grid.bits, grid.bits + grid.dword_count);
         RecomputeCoverage(grid, map_info);
     }
@@ -1801,16 +1794,16 @@ void CartographerWidget::Update(float)
     coverage_stale = false;
     PruneUncoveredPoints(grid);
 
-    // Arrival is being inside the square, not near the goal - on a ledge those are a square apart.
+    // 到达是指站在方格内，而非接近目标——在悬崖上可能相差一格。
     const int player_cx = CreditCellX(player_wm.x);
     const int player_cy = CreditCellY(player_wm.y);
     player_cell = {player_cx, player_cy};
     player_cell_valid = true;
     if (target.valid) {
         if (target.custom) {
-            // Fog points retire when their tile is credited; arriving only starts the clock.
+            // 迷雾点在其格子被探索后移除；到达只启动计时。
             if (target.goal == GoalKind::Waypoint) {
-                // Already-explored ground, so getting to the point itself is all there is to finish it off.
+                // 已探索的地面，因此到达该点本身即完成。
                 if (Dist2(player_wm, target.wm) < 2.f * 2.f) {
                     CARTO_LOG("[cartographer] reached custom point wm(%.0f, %.0f)", target.wm.x, target.wm.y);
                     RemoveCustomPointAt(target.wm);
@@ -1821,7 +1814,7 @@ void CartographerWidget::Update(float)
                 arrived = false;
                 arrived_at = 0;
             }
-            // Leaving stops the clock: the verdict below is about standing here, not about getting here.
+            // 离开停止计时：下面的判定是关于站在这里，而非到达这里。
             else if (player_cell != std::pair{target.stand_cx, target.stand_cy}) {
                 arrived = false;
                 arrived_at = 0;
@@ -1843,17 +1836,17 @@ void CartographerWidget::Update(float)
         }
     }
 
-    // Credit can need a step or a click-walk first, so give the square a fair while before concluding.
+    // 探索可能需要移动一步或点击行走，因此给方格足够时间再下结论。
     if (arrived && target.valid && !target.custom && TIMER_DIFF(arrived_at) > 15000) {
         const auto it = probe->cells.find({target.cx, target.cy});
         if (it != probe->cells.end() && it->second.reveals > 0) {
-            // A wide visit crediting nothing usually means it reached for tiles only normal range uncovers.
+            // 宽范围访问未探索任何东西通常是因为它尝试了只有正常范围才能探索的格子。
             const int r = RevealRadius();
             int demoted = 0;
             ForEachInRing(target.cx, target.cy, r, [&](const int nx, const int ny, const int dx, const int dy) {
                 if (abs(dx) <= kRevealRadius && abs(dy) <= kRevealRadius) return;
                 if (!grid.InGrid(nx, ny) || grid.IsExplored(nx, ny)) return;
-                // Blame only what the square was scored on: an excluded tile was never this visit's to credit.
+                // 仅归咎于该方格评分时计数的格子：被排除的格子并非本次访问应探索的。
                 if (CellCreditableFrom(dx, dy, nx, ny) && probe->strict.insert({nx, ny}).second) demoted++;
             });
             if (r > kRevealRadius) {
@@ -1869,12 +1862,12 @@ void CartographerWidget::Update(float)
         }
     }
 
-    // Same for a fog point, except the tile that has to credit is the one the player picked.
+    // 同理对迷雾点，除了必须探索的是玩家选择的格子。
     if (arrived && target.valid && target.custom && target.goal == GoalKind::Stand && TIMER_DIFF(arrived_at) > 15000) {
         const std::pair cell = FogTileAt(target.wm);
         const int dx = target.stand_cx - cell.first;
         const int dy = target.stand_cy - cell.second;
-        // Already at normal range and still nothing: there is no closer square to send them to.
+        // 已在正常范围内仍未探索：没有更近的格子可送他去。
         if (abs(dx) > kRevealRadius || abs(dy) > kRevealRadius) {
             arrived = false;
             arrived_at = 0;
@@ -1887,7 +1880,7 @@ void CartographerWidget::Update(float)
     Target cand{};
     float cand_d2 = FLT_MAX;
     blocked_point = false;
-    // A point nothing can credit must not hold the queue hostage, so selection passes over it.
+    // 没有任何东西能探索的点不能阻塞队列，因此选择会跳过它。
     std::vector<size_t> by_distance(custom_points.size());
     std::iota(by_distance.begin(), by_distance.end(), size_t{0});
     std::ranges::sort(by_distance, [&player_wm](const size_t a, const size_t b) {
@@ -1907,15 +1900,14 @@ void CartographerWidget::Update(float)
         break;
     }
     if (!cand.valid) {
-        // Ranked by cells-credited-per-square-walked: a spot crediting several is worth extra steps.
+        // 按每行走一格可探索的格子数排序：可探索多个格子的点值得多走几步。
         float best_value = 0.f;
         for (const auto& [cell, sc] : probe->cells) {
             if (!sc.reachable || sc.reveals <= 0) continue;
             if (probe->skipped.contains(cell) || declined_cells.contains(cell)) continue;
-            // The probed footing, not the cell centre: on a coastline sliver the centre is unwalkable water.
+            // 立足点位置，而非格子中心：在海岸线狭缝上，中心是水。
             GW::Vec2f stand;
             if (!WorldMapWidget::GamePosToWorldMap(sc.pos, stand)) continue;
-            // To the footing, because the hysteresis below compares this against the incumbent's `wm`.
             const float d2 = Dist2(stand, player_wm);
             const float dist_cells = sqrtf(d2) / kWorldMapUnitsPerCell;
             const float value = static_cast<float>(sc.reveals) / (dist_cells + 2.f);
@@ -1939,7 +1931,7 @@ void CartographerWidget::Update(float)
     bool same = target.valid && target.custom == cand.custom
         && (cand.custom ? Dist2(target.wm, cand.wm) < 1.f : (target.cx == cand.cx && target.cy == cand.cy));
     if (target.valid && !same && !(cand.custom && !target.custom)) {
-        // Hysteresis: keep the current target unless it became ineligible or the candidate is meaningfully closer.
+        // 滞后：除非当前目标变得不合格或候选明显更近，否则保留当前目标。
         const auto current = probe->cells.find({target.cx, target.cy});
         const bool current_eligible = target.custom
             ? target.goal != GoalKind::None && std::ranges::any_of(custom_points, [&](const CustomPoint& p) { return Dist2(p.wm, target.wm) < 1.f; })
@@ -1948,7 +1940,7 @@ void CartographerWidget::Update(float)
         if (current_eligible && cand_d2 >= 0.7f * Dist2(target.wm, player_wm)) same = true;
     }
     if (same) {
-        // Same square, but the fog around it may have shrunk and the status line quotes it.
+        // 同一方格，但其周围的迷雾可能缩小了，状态行会引用它。
         if (target.valid && !target.custom) {
             const auto it = probe->cells.find({target.cx, target.cy});
             if (it != probe->cells.end()) target.reveals = it->second.reveals;
@@ -1983,7 +1975,7 @@ void CartographerWidget::DrawWorldMapOptions()
 
 void CartographerWidget::Draw(IDirect3DDevice9*)
 {
-    // Toggle on the mission map, so the helper can be turned on mid-run without opening settings.
+    // 在任务地图上切换，因此可以在游戏过程中打开辅助而无需打开设置。
     if (!MissionMapWidget::IsRenderReady()) return;
     const auto top_left = MissionMapWidget::GetTopLeft();
     const auto bottom_right = MissionMapWidget::GetBottomRight();
@@ -2001,7 +1993,7 @@ void CartographerWidget::Draw(IDirect3DDevice9*)
             GW::GameThread::Enqueue([on] { SetEnabled(on); });
         }
         if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip(visible ? "Cartographer active. Click to hide." : "Cartographer hidden. Click to show.");
+            ImGui::SetTooltip(visible ? "制图师已激活。点击隐藏。" : "制图师已隐藏。点击显示。");
         }
         ImGui::PopStyleColor();
     }
@@ -2011,26 +2003,26 @@ void CartographerWidget::Draw(IDirect3DDevice9*)
 
 void CartographerWidget::DrawSettingsInternal()
 {
-    ImGui::TextDisabled("Exploration is credited by 32x32 world-map square: standing anywhere inside a square\ncredits it and the ring of squares around it. This works out which squares you could\nstand in, which of them would credit something still foggy, and draws those on the\nworld map and mission map with the most worthwhile one highlighted. Getting there is\nup to you.");
+    ImGui::TextDisabled("探索按 32x32 世界地图方格计数：站在方格内的任意位置会探索它及其周围的方格。\n此功能会计算您可以站立哪些方格、其中哪些能探索未探索的迷雾，并在世界地图和任务地图上绘制它们，最值得前往的方格会高亮。前往那里由您自己完成。");
     ImGui::Separator();
     bool on = GetEnabled();
-    if (ImGui::Checkbox("Enabled", &on)) {
+    if (ImGui::Checkbox("启用", &on)) {
         GW::GameThread::Enqueue([on] { SetEnabled(on); });
     }
-    ImGui::ShowHelp("Also togglable from the button on the mission map, and from the world map's own Cartographer checkbox.");
+    ImGui::ShowHelp("也可通过任务地图上的按钮或世界地图自身的制图师复选框切换。");
     DrawWorldMapOptions();
 
     ImGui::Separator();
-    ImGui::TextDisabled("Right-click the world map or mission map to skip a suggestion or queue your own fog points.");
-    ImGui::Text("Declined forever: %u squares", static_cast<unsigned>(declined_cells.size()));
+    ImGui::TextDisabled("在世界地图或任务地图上右键单击可跳过建议或添加自己的迷雾点。");
+    ImGui::Text("永久跳过的方格：%u", static_cast<unsigned>(declined_cells.size()));
     ImGui::SameLine();
-    if (ImGui::SmallButton("Clear##declined")) ClearDeclined();
-    ImGui::Text("Custom fog points: %u", static_cast<unsigned>(custom_points.size()));
+    if (ImGui::SmallButton("清除##declined")) ClearDeclined();
+    ImGui::Text("自定义迷雾点：%u", static_cast<unsigned>(custom_points.size()));
     ImGui::SameLine();
-    if (ImGui::SmallButton("Clear##points")) ClearCustomPoints();
+    if (ImGui::SmallButton("清除##points")) ClearCustomPoints();
 
 #ifdef _DEBUG
-    // Before the early-out: re-baking should not need the widget turned on.
+    // 在早期返回之前：重新烘焙不应需要打开小部件。
     Carto::DrawBakeSettings();
 #endif
 
@@ -2043,20 +2035,20 @@ void CartographerWidget::DrawSettingsInternal()
         if (sc.reveals > 0) useful++;
     }
     ImGui::Separator();
-    ImGui::TextDisabled("This map: %u squares probed, %u standable, %u worth visiting", static_cast<unsigned>(probe->cells.size()), standable, useful);
-    ImGui::TextDisabled("Foggy squares: %d reachable, %d that nothing can credit", map_fog_cells, unreachable_fog_cells);
+    ImGui::TextDisabled("此地图：已探索 %u 个方格，%u 个可站立，%u 个值得前往", static_cast<unsigned>(probe->cells.size()), standable, useful);
+    ImGui::TextDisabled("迷雾方格：%d 个可到达，%d 个无法探索", map_fog_cells, unreachable_fog_cells);
     if (coverable_tiles > 0) {
-        ImGui::TextDisabled("This continent: %d squares explored of %d the baked data can credit at radius %d (%.2f%%)",
+        ImGui::TextDisabled("此大陆：已探索 %d 个方格，烘焙数据可探索 %d 个（半径 %d），完成度 %.2f%%",
                             explored_tiles, coverable_tiles, RevealRadius(), 100.f * explored_tiles / coverable_tiles);
     }
     else {
-        ImGui::TextDisabled("This continent: %d squares explored", explored_tiles);
+        ImGui::TextDisabled("此大陆：已探索 %d 个方格", explored_tiles);
     }
-    ImGui::Text("Explored squares the baked data did not expect: %d", unexpected_tiles);
-    ImGui::ShowHelp("Squares you have uncovered that have no baked standable ground within reveal range, counting ground only a gate glitch reaches. Turn on \"Show unexpected explored squares\" to see where they are on the world map.");
-    if (unexpected_tiles > 0 && ImGui::TreeNodeEx("List them##unexpected", ImGuiTreeNodeFlags_NoTreePushOnOpen)) {
+    ImGui::Text("烘焙数据未预期的已探索方格：%d", unexpected_tiles);
+    ImGui::ShowHelp("您已探索的方格，但烘焙数据在探索范围内（包括仅传送门穿行可达的地面）没有可站立地面。启用“显示意外已探索方格”可在世界地图上查看它们的位置。");
+    if (unexpected_tiles > 0 && ImGui::TreeNodeEx("列出它们##unexpected", ImGuiTreeNodeFlags_NoTreePushOnOpen)) {
         if (static_cast<size_t>(unexpected_tiles) > unexpected_cells.size()) {
-            ImGui::TextDisabled("Showing the first %u.", static_cast<unsigned>(unexpected_cells.size()));
+            ImGui::TextDisabled("仅显示前 %u 个。", static_cast<unsigned>(unexpected_cells.size()));
         }
         ImGui::BeginChild("##unexpected_list", {0.f, 160.f * ImGui::FontScale()}, true);
         ImGuiListClipper clipper;
@@ -2070,10 +2062,10 @@ void CartographerWidget::DrawSettingsInternal()
         ImGui::EndChild();
     }
     if (continent_mask.Empty()) {
-        ImGui::TextDisabled("No baked data for this continent - showing this map only.");
+        ImGui::TextDisabled("此大陆无烘焙数据 - 仅显示当前地图。");
     }
     else {
-        ImGui::TextDisabled("Baked continent data: %dx%d squares at (%d,%d), radius %d",
+        ImGui::TextDisabled("烘焙大陆数据：%dx%d 方格，位于 (%d,%d)，半径 %d",
                             continent_mask.w, continent_mask.h, continent_mask.x0, continent_mask.y0, kMaskRadius);
     }
 }
@@ -2183,4 +2175,3 @@ void CartographerWidget::GetStatus(char* buf, const size_t len)
              static_cast<unsigned>(probe->skipped.size()), static_cast<unsigned>(probe->cells.size()),
              static_cast<unsigned>(declined_cells.size()), static_cast<unsigned>(custom_points.size()), map_fog_cells, marker_placed);
 }
-

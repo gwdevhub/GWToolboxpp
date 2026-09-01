@@ -23,10 +23,10 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Cartographer"; }
+    [[nodiscard]] const char* Name() const override { return "探索绘制"; }
     [[nodiscard]] const char* Description() const override
     {
-        return "Works out which 32x32 world-map squares you need to stand in to uncover the fog around you, and draws them on the world map and mission map.";
+        return "计算出你需要站在哪些32x32的方格中才能驱散周围的迷雾，并将这些方格绘制在世界地图和任务地图上。";
     }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_MAP_MARKED_ALT; }
 

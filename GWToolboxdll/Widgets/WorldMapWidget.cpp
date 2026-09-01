@@ -1060,7 +1060,7 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
     if (ImGui::Begin(Name(), &visible, GetWinFlags() | ImGuiWindowFlags_AlwaysAutoResize)) {
         window = ImGui::GetCurrentWindowRead();
         bool carto_enabled = CartographerWidget::GetEnabled();
-        if (ImGui::Checkbox("Cartographer", &carto_enabled)) {
+        if (ImGui::Checkbox("制图师", &carto_enabled)) {
             GW::GameThread::Enqueue([carto_enabled] {
                 CartographerWidget::SetEnabled(carto_enabled);
             });
@@ -1070,7 +1070,7 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
             CartographerWidget::DrawWorldMapOptions();
             ImGui::Unindent();
         }
-        if (ImGui::Checkbox("Show all areas", &settings.showing_all_outposts)) {
+        if (ImGui::Checkbox("显示所有区域", &settings.showing_all_outposts)) {
             GW::GameThread::Enqueue([] {
                 ShowAllOutposts(settings.showing_all_outposts);
             });
@@ -1095,7 +1095,7 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
                 });
             }
         }
-        ImGui::Checkbox("在 world map 上显示工具箱小地图线", &settings.show_lines_on_world_map);
+        ImGui::Checkbox("在世界地图上显示工具箱小地图线", &settings.show_lines_on_world_map);
         if (ImGui::Checkbox("显示所有任务的任务标记", &settings.showing_all_quests)) {
             QuestModule::FetchMissingQuestInfo();
         }
@@ -1153,7 +1153,7 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
             const auto& completion = CompletionWindow::Instance().GetCharacterCompletion(GW::PlayerMgr::GetPlayerName(), false);
             if (!completion) ImGui::TextDisabled("如果完成窗口被禁用，则仅限于你的主/副职业");
         }
-        ImGui::Checkbox("Color skill icons by profession", &settings.color_elite_icons_by_profession);
+        ImGui::Checkbox("按职业为技能图标着色", &settings.color_elite_icons_by_profession);
         ImGui::Unindent();
     }
     ImGui::End();
@@ -1347,5 +1347,5 @@ bool WorldMapWidget::WndProc(const UINT Message, WPARAM, LPARAM lParam)
 
 void WorldMapWidget::DrawSettingsInternal()
 {
-    ImGui::TextDisabled("The world map options (show all areas, quest markers, elite capture locations, ...)\nare drawn on the world map itself - open the world map to change them.");
+    ImGui::TextDisabled("世界地图选项（显示所有区域、任务标记、精英技能位置等）\n请打开世界地图进行更改。");
 }
