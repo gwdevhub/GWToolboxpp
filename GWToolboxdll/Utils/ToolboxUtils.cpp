@@ -135,7 +135,14 @@ namespace GW {
                 case MapID::The_Elusive_Golemancer_mission:
                 case MapID::Genius_Operated_Living_Enchanted_Manifestation_mission:
                     return {TitleID::Deldrimor};
-                // Lightbringer: Grand Court of Sebelkeh mission has Margonites (would otherwise show Sunspear by continent)
+                case MapID::Turais_Procession:
+                case MapID::Jennurs_Horde:
+                case MapID::Nundu_Bay:
+                case MapID::Dzagonur_Bastion:
+                case MapID::Yatendi_Canyons:
+                case MapID::Vehtendi_Valley:
+                case MapID::Forum_Highlands:
+                case MapID::The_Mirror_of_Lyss:
                 case MapID::Grand_Court_of_Sebelkeh:
                     return {TitleID::Lightbringer};
                 // Vanguard: DepthsOfTyria dungeons in Charr territory
