@@ -164,22 +164,22 @@ namespace {
     };
 
     // Whether the backend has a map_configs row for this (tracked map, real-player count): the
-    // Underworld is 8-man; the Fissure of Woe supports both a 2-person duo and a full 8-man. A run
-    // whose CountRealPlayers matches no config is never published and never opens a vote (ProcessSync).
+    // Underworld is 8-man; the Fissure of Woe has a config for every party size 1-8. A run whose
+    // CountRealPlayers matches no config is never published and never opens a vote (ProcessSync).
     bool IsAcceptablePartySize(const uint32_t map_id, const uint32_t real_player_count)
     {
         switch (static_cast<GW::Constants::MapID>(map_id)) {
             case GW::Constants::MapID::The_Fissure_of_Woe:
-                return real_player_count == 2 || real_player_count == 8;
+                return real_player_count >= 1 && real_player_count <= 8;
             default: // The_Underworld and any future 8-man-only tracked area
                 return real_player_count == 8;
         }
     }
 
     // Whether a (map, real-player count) run has a role model at all. The Underworld trapper team
-    // and the Fissure of Woe duo do (T1-T3 / Ranger-Derv); FoW 8-man has no fixed composition
-    // (map_configs.role_model = NULL), so its runs get no post-run failure/MVP vote - there are no
-    // roles to blame or credit. Keep in sync with the backend's map_configs.
+    // and the Fissure of Woe *duo* do (T1-T3 / Ranger-Derv); every other FoW size has no fixed
+    // composition (map_configs.role_model = NULL), so those runs get no post-run failure/MVP vote
+    // - there are no roles to blame or credit. Keep in sync with the backend's map_configs.
     bool MapSizeHasRoles(const uint32_t map_id, const uint32_t real_player_count)
     {
         if (static_cast<GW::Constants::MapID>(map_id) == GW::Constants::MapID::The_Fissure_of_Woe) {
@@ -199,8 +199,9 @@ namespace {
 
     // Which kVoteRoles entries the post-run popup offers for a run on map_id. The Underworld shows
     // all of them (the plugin can't see the server's profession-combo derivation, so it can't
-    // pre-filter). The Fissure of Woe duo's role model only ever yields Ranger/Derv, so only those
-    // (plus "Nobody") can validate server-side - showing the rest would just be dead buttons.
+    // pre-filter). The only FoW run that opens a vote is the duo (MapSizeHasRoles), whose role
+    // model only ever yields Ranger/Derv, so only those (plus "Nobody") can validate server-side -
+    // showing the rest would just be dead buttons.
     bool VoteRoleVisibleForMap(const uint32_t map_id, const size_t role_index)
     {
         if (static_cast<GW::Constants::MapID>(map_id) != GW::Constants::MapID::The_Fissure_of_Woe) {
@@ -1036,7 +1037,7 @@ void SCTracker::OnGameSrvTransfer()
 
     // Open the post-run vote immediately using this locally-known outcome, rather than waiting for
     // ProcessSync to publish (which needs GWToolboxdll's own delayed objective file) - see OpenVote.
-    // Skipped for a role-less (map, size) like FoW 8-man - there are no roles to blame or credit.
+    // Skipped for a role-less (map, size) like any non-duo FoW run - there are no roles to blame or credit.
     if (can_report_failures && !plugin_outdated
         && MapSizeHasRoles(pending_map_id, CountRealPlayers(party_members))) {
         if (end_reason == "wipe" || end_reason == "resign") {
@@ -1323,8 +1324,8 @@ void SCTracker::ProcessSync()
     // FindNextPendingEntry(), so several already-known-disqualified runs still drain within one
     // ProcessSync() tick instead of one per scan interval. Only a real-player party matching one of
     // the map's backend map_configs sizes is meaningful for the leaderboard (8 for the Underworld,
-    // 2 or 8 for the Fissure of Woe - IsAcceptablePartySize; a solo player filling the rest of an
-    // 8-slot party with heroes/henchmen isn't a guild run), and a run with no matching GWToolboxdll
+    // any of 1-8 for the Fissure of Woe - IsAcceptablePartySize; note heroes/henchmen never count
+    // toward the real-player total), and a run with no matching GWToolboxdll
     // objective entry can never be leaderboard-eligible anyway. Both cases mark the entry synced
     // instead of retrying it forever - which also cancels any pending vote (CancelPendingVoteIfMatching).
     bool advanced_watermark = false;
