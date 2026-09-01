@@ -51,6 +51,11 @@ the Wine path is pinned to. The twelve SM3 shaders are compiled by
 Same options as the Wine script (`--config`, `--target`, `--jobs`, `--shell`,
 `--rebuild-image`); output lands in `bin/`, build tree in `build-xwin/`.
 
+On a Windows host, `scripts\build-xwin.ps1` drives the same container through Docker Desktop
+(`-Config`, `-Target`, `-Jobs`, `-Shell`, `-RebuildImage`). Use it to reproduce a CI result or
+to check a change builds clean under clang - for ordinary Windows development build with
+Visual Studio or `build-clang.bat` instead.
+
 **Directly on the host** - needs `clang`, `lld`, `llvm` (for `llvm-rc`/`llvm-lib`/`llvm-mt`),
 `cmake` >= 3.29, `ninja`, `python3`, and a bootstrapped `vcpkg` in `$VCPKG_ROOT`:
 
