@@ -1,5 +1,5 @@
 <#
-  build-xwin.ps1 — Windows host driver for the wine-free clang + xwin cross-build.
+  build-xwin.ps1 — Windows host driver for the clang + xwin cross-build.
 
   PowerShell port of scripts/build-xwin.sh, driving the same Linux container
   (scripts/xwin/Dockerfile) through Docker Desktop. Output is bit-identical to the Linux
@@ -25,30 +25,41 @@ param(
   [switch]$Shell
 )
 
-$ErrorActionPreference = 'Stop'
+# NOT 'Stop': Windows PowerShell 5.1 surfaces native-command stderr as an ErrorRecord, which
+# 'Stop' escalates into a terminating error - so `docker image inspect` on a missing image,
+# the normal first-run case, would abort the script. Every failure below is raised explicitly
+# from a $LASTEXITCODE check instead, and `throw` terminates regardless of this preference.
+$ErrorActionPreference = 'Continue'
 Set-StrictMode -Version Latest
 
 $ImageName = 'gwtoolboxpp-xwin'
-$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..') -ErrorAction Stop).Path
 $XwinDir = Join-Path $PSScriptRoot 'xwin'
 
 if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
   throw 'docker is required but was not found in PATH. Install Docker Desktop and enable Linux containers.'
 }
 
+# StrictMode makes reading an unset $LASTEXITCODE fatal, and it stays unset until a native
+# command has actually run to completion.
+$global:LASTEXITCODE = 0
+
 # A Windows daemon cannot run this image at all; failing here beats a confusing build error.
-$dockerOs = (docker version --format '{{.Server.Os}}' 2>$null)
+# Collect the whole output before picking a line: piping into Select-Object -First stops the
+# native command early, which leaves $LASTEXITCODE unset.
+$dockerVersionOutput = @(docker version --format '{{.Server.Os}}' 2>&1)
 if ($LASTEXITCODE -ne 0) {
   throw 'Could not talk to the Docker daemon. Is Docker Desktop running?'
 }
-if ($dockerOs -and $dockerOs.Trim() -ne 'linux') {
-  throw "Docker is in $($dockerOs.Trim())-container mode; this image is Linux. Switch Docker Desktop to Linux containers."
+$dockerOs = ($dockerVersionOutput | ForEach-Object { "$_".Trim() } | Where-Object { $_ } | Select-Object -First 1)
+if ($dockerOs -and $dockerOs -ne 'linux') {
+  throw "Docker is in $dockerOs-container mode; this image is Linux. Switch Docker Desktop to Linux containers."
 }
 
 # The bind-mounted .sh files run as-is inside the container, so CRLF endings break the
 # shebang. .gitattributes pins them to LF, but a checkout predating it (or an editor that
 # rewrote one) still bites -- and the resulting "bad interpreter" is not an obvious symptom.
-$crlfScripts = Get-ChildItem -Path $XwinDir -Filter '*.sh' | Where-Object {
+$crlfScripts = Get-ChildItem -Path $XwinDir -Filter '*.sh' -ErrorAction Stop | Where-Object {
   [System.IO.File]::ReadAllBytes($_.FullName) -contains 13
 }
 if ($crlfScripts) {
@@ -59,7 +70,7 @@ if ($crlfScripts) {
 
 # Test the exit code, not the output: a missing image still prints "[]" on stdout, which is
 # truthy, so an output test would silently skip building the image on a first run.
-docker image inspect $ImageName *> $null
+docker image inspect $ImageName 2>&1 | Out-Null
 $imageExists = ($LASTEXITCODE -eq 0)
 
 if ($RebuildImage -or -not $imageExists) {
