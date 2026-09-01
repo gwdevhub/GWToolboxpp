@@ -12,15 +12,19 @@ namespace GW {
 
 	namespace Chat {
 		typedef uint32_t Color;
+#ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable: 4200)
+#endif
 		struct ChatMessage {
 			uint32_t channel;
 			uint32_t unk1;
 			FILETIME timestamp;
 			wchar_t message[0];
 		};
+#ifdef _MSC_VER
 #pragma warning(pop)
+#endif
 
 		const size_t CHAT_LOG_LENGTH = 0x200;
 		struct ChatBuffer {
@@ -105,9 +109,7 @@ namespace GW {
 	};
 }
 
-// ============================================================
 // C Interop API
-// ============================================================
 extern "C" {
 	GWCA_API void* GetChatLog();
 	GWCA_API bool     AddToChatLog(wchar_t* message, uint32_t channel);

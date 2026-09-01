@@ -65,8 +65,7 @@ namespace GW {
         float GetYaw()          const { return yaw; }
         float GetPitch()        const { return pitch; }
 
-        /// \brief This is not the FoV that GW uses to render
-        /// see GW::Render::GetFieldOfView()
+        // rief Not the FoV GW renders with -- see GW::Render::GetFieldOfView()
         float GetFieldOfView()  const { return field_of_view; }
 
         bool IsCameraUnlocked() const { return camera_mode == 3; }

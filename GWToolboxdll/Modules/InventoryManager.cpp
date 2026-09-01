@@ -37,6 +37,8 @@
 #include <Windows/GWMarketWindow.h>
 
 #include <GWCA/GameEntities/Frame.h>
+
+#include <Defines.h>
 #include <Utils/ToolboxUtils.h>
 #include <Utils/TextUtils.h>
 
@@ -392,7 +394,6 @@ namespace {
         }
 
         const GW::Constants::Bag bag_id = (GW::Constants::Bag)((size_t)GW::Constants::Bag::Storage_1 + (size_t)page);
-        // if the item is stackable we try to complete stack that already exist in the current storage page
         if (remaining) {
             remaining -= complete_existing_stack(item, bag_id, bag_id, remaining);
         }
@@ -439,7 +440,6 @@ namespace {
 
         const uint16_t to_move = std::min<uint16_t>(item->quantity, quantity);
         uint16_t remaining = to_move;
-        // If item is stackable, try to complete similar stack
         remaining -= complete_existing_stack(item, GW::Constants::Bag::Backpack, GW::Constants::Bag::Bag_2, remaining);
         while (remaining) {
             const uint16_t moved = move_to_first_empty_slot(item, GW::Constants::Bag::Backpack, GW::Constants::Bag::Bag_2, remaining);
@@ -828,7 +828,6 @@ namespace {
     };
     std::queue<ButtonPress> queued_button_presses;
 
-    // Cycle through queued buttons, trigger as necessary
     void ProcessQueuedButtonPresses() {
         while (queued_button_presses.size()) {
             auto todo = queued_button_presses.front();
@@ -1078,7 +1077,6 @@ namespace {
         if (!is_identifying_all || is_identifying) {
             return;
         }
-        // Get next item to identify
         const auto unid = GetNextUnidentifiedItem();
         if (!unid) {
             // Log::Info("Identified %d items", identified_count);
@@ -1126,7 +1124,6 @@ namespace {
             case GW::UI::UIMessage::kVendorWindow: {
                 merchant_list_tab = *static_cast<uint32_t*>(wparam);
             } break;
-            // About to request a quote for an item
             case GW::UI::UIMessage::kSendMerchantRequestQuote: {
                 const auto packet = (GW::UI::UIPacket::kSendMerchantRequestQuote*)wparam;
                 requesting_quote_type = (GW::Merchant::TransactionType)0;
@@ -1141,7 +1138,6 @@ namespace {
                 show_transact_quantity_popup = true;
                 status->blocked = true;
             } break;
-            // About to move an item
             case GW::UI::UIMessage::kSendMoveItem: {
                 const auto packet = (GW::UI::UIPacket::kSendMoveItem*)wparam;
 
@@ -1153,7 +1149,6 @@ namespace {
                 status->blocked = true;
                 InventoryManager::MoveItem((InventoryManager::Item*)GW::Items::GetItemById(packet->item_id), static_cast<uint16_t>(packet->quantity));
             } break;
-            // Quote for item has been received
             case GW::UI::UIMessage::kVendorQuote: {
                 auto& transaction = pending_transaction;
                 if (!transaction.in_progress()) {
@@ -1177,11 +1172,9 @@ namespace {
                 pending_transaction_amount--;
                 transaction.setState(PendingTransaction::State::Pending);
             } break;
-            // Map left; cancel all actions
             case GW::UI::UIMessage::kMapChange: {
                 CancelAll();
             } break;
-            // Item moved; clear prompt
             case GW::UI::UIMessage::kMoveItem: {
                 stack_prompt_item_id = 0;
             } break;
@@ -1249,12 +1242,10 @@ namespace {
     void DrawMerchantHiddenItemsSettings()
     {
         ImGui::NewLine();
-        // Two-column layout for merchant items using tables
         if (ImGui::BeginTable("merchant_settings_table", 2, ImGuiTableFlags_Resizable | ImGuiTableFlags_BordersInnerV)) {
             ImGui::TableSetupColumn("从商人处隐藏", ImGuiTableColumnFlags_WidthStretch);
             ImGui::TableSetupColumn("拆解时忽略", ImGuiTableColumnFlags_WidthStretch);
 
-            // Header row
             ImGui::TableNextRow();
             ImGui::TableSetColumnIndex(0);
             ImGui::Text("从商人出售窗口中隐藏的物品：");
@@ -1265,10 +1256,8 @@ namespace {
             ImGui::SameLine();
             ImGui::TextDisabled("（点击物品可移除）");
 
-            // Content row
             ImGui::TableNextRow();
 
-            // Left column: Hidden items list
             ImGui::TableSetColumnIndex(0);
             ImGui::Separator();
             const float list_height = 100.f;
@@ -1280,12 +1269,10 @@ namespace {
 
                 const auto button_label = std::format("{} | X", item_name);
 
-                // Calculate if this button would exceed available width
                 const ImVec2 button_size = ImGui::CalcTextSize(button_label.c_str());
                 const float button_width = button_size.x + ImGui::GetStyle().FramePadding.x * 2.0f;
                 const float cursor_x = ImGui::GetCursorPosX();
 
-                // Wrap to next line if button would go past the edge
                 if (cursor_x + button_width > wrap_width && cursor_x > 0.0f) {
                     ImGui::NewLine();
                 }
@@ -1307,7 +1294,6 @@ namespace {
             ImGui::EndChild();
             ImGui::Text("要将物品添加到此列表，请从背包中右键点击物品并选择\"出售时隐藏此物品\"");
 
-            // Right column: Salvage ignore list
             ImGui::TableSetColumnIndex(1);
             ImGui::Separator();
             ImGui::BeginChild("block_from_being_salvaged", ImVec2(0.0F, list_height));
@@ -1319,12 +1305,10 @@ namespace {
 
                 const auto button_label = std::format("{} | X", it.second);
 
-                // Calculate if this button would exceed available width
                 const ImVec2 button_size = ImGui::CalcTextSize(button_label.c_str());
                 const float button_width = button_size.x + ImGui::GetStyle().FramePadding.x * 2.0f;
                 const float cursor_x = ImGui::GetCursorPosX();
 
-                // Wrap to next line if button would go past the edge
                 if (cursor_x + button_width > wrap_width2 && cursor_x > 0.0f) {
                     ImGui::NewLine();
                 }
@@ -1439,15 +1423,8 @@ namespace {
         if (!pending_salvage_kit.item_id || !pending_salvage_item.item_id) {
             return false;
         }
-        const auto current_kit = pending_salvage_kit.item();
-        if (current_kit && current_kit->GetUses() == pending_salvage_kit.uses) {
-            return true;
-        }
         const auto current_item = pending_salvage_item.item();
-        if (current_item && current_item->quantity == pending_salvage_item.quantity) {
-            return true;
-        }
-        return false;
+        return current_item && current_item->quantity == pending_salvage_item.quantity;
     }
 
     void ContinueSalvage()
@@ -1509,7 +1486,6 @@ namespace {
                     CancelTransaction();
                     return;
                 }
-                // Check if we need any more of this item; send quote if yes, complete if no.
                 if (pending_transaction_amount <= 0) {
                     Log::Flash("交易完成");
                     CancelTransaction();
@@ -1524,7 +1500,6 @@ namespace {
                 }
             } break;
             case PendingTransaction::State::Quoting:
-                // Check for timeout having asked for a quote.
                 if (TIMER_DIFF(pending_transaction.state_timestamp) > 3000) {
                     if (pending_transaction.retries > 0) {
                         Log::ErrorW(L"等待物品报价超时");
@@ -1542,7 +1517,6 @@ namespace {
                     return;
                 }
                 Log::Log("PendingTransaction quoted %d, moving to buy/sell\n", pending_transaction.price);
-                // Got a quote; begin transaction
                 pending_transaction.setState(PendingTransaction::State::Transacting);
                 if (!GW::Merchant::TransactItems()) {
                     Log::ErrorW(L"执行交易失败");
@@ -1551,7 +1525,6 @@ namespace {
                 }
             } break;
             case PendingTransaction::State::Transacting:
-                // Check for timeout having agreed to buy or sell
                 if (TIMER_DIFF(pending_transaction.state_timestamp) > 3000) {
                     if (pending_transaction.retries > 0) {
                         Log::ErrorW(L"等待物品买卖超时");
@@ -1563,7 +1536,6 @@ namespace {
                 }
                 break;
             default:
-                // Anything else, cancel the transaction.
                 CancelTransaction();
         }
     }
@@ -1573,15 +1545,8 @@ namespace {
         if (!pending_identify_kit.item_id || !pending_identify_item.item_id) {
             return false;
         }
-        const auto current_kit = pending_identify_kit.item();
-        if (current_kit && current_kit->GetUses() == pending_identify_kit.uses) {
-            return true;
-        }
         const auto current_item = pending_identify_item.item();
-        if (current_item && !current_item->GetIsIdentified()) {
-            return true;
-        }
-        return false;
+        return current_item && !current_item->GetIsIdentified();
     }
 
 } // namespace
@@ -1617,6 +1582,7 @@ void InventoryManager::Initialize()
 
     AddItemRowToWindow_Func = reinterpret_cast<AddItemRowToWindow_pt>(GW::Scanner::Find(
         "\x83\xc4\x04\x80\x78\x04\x06\x0f\x84\xd3\x00\x00\x00\x6a\x02\xff\x37", nullptr, -0x10));
+    DEBUG_ASSERT(AddItemRowToWindow_Func);
     if (AddItemRowToWindow_Func) {
         GW::Hook::CreateHook((void**)&AddItemRowToWindow_Func, OnAddItemToWindow, reinterpret_cast<void**>(&RetAddItemRowToWindow));
         GW::Hook::EnableHooks(AddItemRowToWindow_Func);
@@ -2129,7 +2095,6 @@ void InventoryManager::Draw(IDirect3DDevice9*)
                     if (pending_transaction.selling()) {
                         const Item* item = pending_transaction.item();
                         if (item) {
-                            // Set initial transaction amount to be the entire stack
                             pending_transaction_amount = item->quantity;
                             if (item->GetIsMaterial() && !item->IsRareMaterial() && pending_transaction.type == GW::Merchant::TransactionType::TraderSell) {
                                 pending_transaction_amount = static_cast<int>(floor(pending_transaction_amount / 10));
@@ -2137,8 +2102,7 @@ void InventoryManager::Draw(IDirect3DDevice9*)
                         }
                     }
                 }
-                // Prompt user for amount
-                ImGui::Text(pending_transaction.selling() ? "输入要出售的数量：" : "输入要购买的数量：");
+                ImGui::Text(pending_transaction.selling() ? "Enter quantity to sell:" : "Enter quantity to buy:");
                 if (ImGui::InputInt("###transacting_quantity", &pending_transaction_amount, 1, 1)) {
                     if (pending_transaction_amount < 1) {
                         pending_transaction_amount = 1;
@@ -2185,9 +2149,8 @@ void InventoryManager::Draw(IDirect3DDevice9*)
             ImGui::CloseCurrentPopup();
         }
         else if (is_salvaging_all) {
-            // Salvage in progress
-            ImGui::Text("正在拆解物品...");
-            if (ImGui::Button("取消", ImVec2(120, 0)) || ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+            ImGui::Text("Salvaging items...");
+            if (ImGui::Button("Cancel", ImVec2(120, 0)) || ImGui::IsKeyPressed(ImGuiKey_Escape)) {
                 pending_cancel_salvage = true;
                 ImGui::CloseCurrentPopup();
             }
@@ -2316,12 +2279,6 @@ bool InventoryManager::DrawItemContextMenu(const bool open)
     ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0, 0));
     ImGui::PushStyleColor(ImGuiCol_Button, ImColor(0, 0, 0, 0).Value);
     const auto size = ImVec2(250.0f * ImGui::FontScale(), 0);
-    /*IDirect3DTexture9** tex = Resources::GetItemImage(context_item.wiki_name.wstring());
-    if (tex && *tex) {
-        const float text_height = ImGui::CalcTextSize(" ").y;
-        ImGui::Image(*tex, ImVec2(text_height, text_height));
-        ImGui::SameLine();
-    }*/
     ImGui::Text(context_item.name->string().c_str());
     ImGui::Separator();
     const auto bag = context_item_actual->bag;
@@ -2551,20 +2508,8 @@ bool InventoryManager::DrawItemContextMenu(const bool open)
     return true;
 }
 
-// Move a whole stack into/out of storage
 uint16_t InventoryManager::MoveItem(const Item* item, const uint16_t quantity)
 {
-    // Expected behaviors
-    //  When clicking on item in inventory
-    //   case storage close (or move_item_to_current_storage_pane = false):
-    //    - If the item is a material, it look if it can move it to the material page.
-    //    - If the item is stackable, search in all the storage if there is already similar items and completes the stack
-    //    - If not everything was moved, move the remaining in the first empty slot of the storage.
-    //   case storage open:
-    //    - If the item is a material, it look if it can move it to the material page.
-    //    - If the item is stackable, search for incomplete stacks in the current storage page and completes them
-    //    - If not everything was moved, move the remaining in the first empty slot of the current page.
-
     // @Cleanup: Bad
     if (item->model_file_id == 0x0002f301) {
         Log::Error("Ctrl+点击 暂不支持生日礼物");
@@ -2597,11 +2542,7 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, GW::UI::UIPacke
         case GW::UI::UIPacket::ActionState::MouseClick:
         case GW::UI::UIPacket::ActionState::MouseUp: // Left click
             if (ImGui::IsKeyDown(ImGuiMod_Ctrl)) {
-                // Get any hovered item in order to get info about it for Ctrl+Click shortcuts.
-                // May be null, in which case said shortcuts are ignored.
-
                 if (item && settings.identify_all_on_ctrl_click && item->IsIdentificationKit() && ImGui::IsKeyDown(ImGuiMod_Ctrl)) {
-                    // Ctrl+Click on identification kit: Identify all items
                     ImGui::CloseCurrentPopup();
                     CancelIdentify();
                     if (context_item.set(item)) {
@@ -2613,7 +2554,6 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, GW::UI::UIPacke
                     return;
                 }
                 else if (item && settings.salvage_all_on_ctrl_click && item->IsSalvageKit() && ImGui::IsKeyDown(ImGuiMod_Ctrl)) {
-                    // Ctrl+Click on salvage kit: Open salvage all window
                     ImGui::CloseCurrentPopup();
                     CancelSalvage();
                     if (context_item.set(item)) {
@@ -2624,7 +2564,6 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, GW::UI::UIPacke
                     return;
                 }
                 else if (GameSettings::GetSettingBool("move_item_on_ctrl_click") && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
-                    // Ctrl+Click: Move item to inventory/chest
                     if (ImGui::IsKeyDown(ImGuiMod_Shift) && item->quantity > 1) {
                         prompt_split_stack(item);
                     }
@@ -2635,7 +2574,6 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, GW::UI::UIPacke
                 }
             }
             if (ImGui::IsKeyDown(ImGuiMod_Alt) && settings.move_to_trade_on_alt_click && IsTradeWindowOpen()) {
-                // Alt+Click: Add to trade window if available
                 if (!item || !item->CanOfferToTrade()) {
                     return;
                 }
@@ -2652,7 +2590,6 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, GW::UI::UIPacke
         case GW::UI::UIPacket::ActionState::MouseDoubleClick: // Double click
             if (settings.move_to_trade_on_double_click && IsTradeWindowOpen()) {
                 status->blocked = true;
-                // Alt+Click: Add to trade window if available
                 if (!item || !item->CanOfferToTrade()) {
                     return;
                 }
@@ -2677,7 +2614,6 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, GW::UI::UIPacke
                 return;
             }
 
-            // Context menu applies
             if (context_item.item_id == item->item_id && show_item_context_menu) {
                 return; // Double looped.
             }
@@ -2704,7 +2640,7 @@ bool InventoryItem::CanOfferToTrade() const
 
 bool InventoryItem::IsSalvagable(bool check_bag, bool check_blocked_from_being_salvaged) const
 {
-    if (item_formula == 0x5da) {
+    if (!GW::Items::GetItemFormula(this)) {
         return false;
     }
     if (IsUsable() || IsGreen()) {

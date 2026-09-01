@@ -182,19 +182,16 @@ void Pcon::Terminate()
 void Pcon::Update(int delay)
 {
     if (mapid != GW::Map::GetMapID() || maptype != GW::Map::GetInstanceType()) {
-        // 地图变化；重置变量
         mapid = GW::Map::GetMapID();
         maptype = GW::Map::GetInstanceType();
         SetPlayerName();
         ResetCounts();
         Refill(refill_if_below_threshold && IsEnabled() && PconsWindow::Instance().GetEnabled());
     }
-    // 需要时补充消耗品
     UpdateRefill();
     if (maptype == GW::Constants::InstanceType::Loading || GW::Map::GetIsObserving()) {
         return;
     }
-    // 检查背包中的消耗品数量
     if (!pcon_quantity_checked) {
         const auto qty = CheckInventory();
         if (qty < 0) {
@@ -272,7 +269,6 @@ void Pcon::AfterUsed(const bool used, const int qty)
         if (used) {
             timer = TIMER_INIT();
             if (quantity == 0) {
-                // 如果刚用完最后一个
                 mapid = GW::Map::GetMapID();
                 maptype = GW::Map::GetInstanceType();
                 Log::Warning("刚用完最后一个 %s", chat.c_str());
@@ -299,7 +295,6 @@ void Pcon::AfterUsed(const bool used, const int qty)
 
 bool Pcon::FindVacantStackOrSlotInInventory(const GW::Item* likeItem, GW::Item* result)
 {
-    // 扫描背包，寻找未满的堆叠或空槽位。
     GW::Bag** bags = GW::Items::GetBagArray();
     if (bags == nullptr) {
         return false;
@@ -322,7 +317,6 @@ bool Pcon::FindVacantStackOrSlotInInventory(const GW::Item* likeItem, GW::Item* 
             const size_t slotIndex = i - 1;
             GW::Item* item = items[slotIndex];
             if (!item || item == nullptr) {
-                // 为此槽位预留
                 if (!emptyBag && ReserveSlotForMove(bag->index, slotIndex)) {
                     emptySlotIdx = slotIndex;
                     emptyBag = bag;
@@ -473,9 +467,6 @@ void Pcon::UpdateRefill()
         return;
     }
 
-    // Lambda：扫描仓库寻找匹配物品并移动到背包。
-    // 如果 preferred_model_id != 0，只考虑该 model_id 的物品。
-    // 如果启动移动则返回 true，否则返回 false。
     auto try_move_from_storage = [&](DWORD preferred_model_id) -> bool {
         GW::Item inventoryItem;
         for (auto bagIndex = static_cast<size_t>(GW::Constants::Bag::Storage_1); bagIndex <= static_cast<size_t>(GW::Constants::Bag::Storage_14); ++bagIndex) {

@@ -184,6 +184,9 @@ namespace {
 
         static std::wstring last_item_name;
         static std::wstring last_nicholas_text;
+        static time_t last_nicholas_text_time = 0;
+
+        const auto current_time = time(nullptr);
 
         auto append = [&](std::wstring text) {
             if (!description.empty()) description += L"\x2";
@@ -191,23 +194,25 @@ namespace {
             last_nicholas_text = text;
         };
 
-        if (item->name_enc == last_item_name) {
-            append(last_nicholas_text);
+        // Cached text holds a relative time ("in 3 days"), so it has to be recalculated once it's had chance to go stale
+        if (item->name_enc == last_item_name && current_time - last_nicholas_text_time < 60) {
+            if (!last_nicholas_text.empty()) append(last_nicholas_text);
             return;
         }
         last_nicholas_text.clear();
         last_item_name = item->name_enc;
-
-        const auto current_time = time(nullptr);
+        last_nicholas_text_time = current_time;
 
         if (GW::Map::IsPreSearing()) {
             const auto info = DailyQuests::GetNicholasSandfordItemInfo(item->name_enc);
             if (!info) return;
-            const auto collection_time = DailyQuests::GetTimestampFromNicholasSandford(info);
+            const auto collection_time = DailyQuests::GetTimestampFromNicholasSandford(info, current_time);
+            // Same as Nicholas the Traveler below: show the total needed for all 5 trades, not the amount for a single trade
+            constexpr auto quantity_for_total_gifts = DailyQuests::NICHOLAS_SANDFORD_ITEMS_PER_TRADE * DailyQuests::NICHOLAS_TRADES_PER_ROTATION;
             if (collection_time <= current_time)
-                append(std::format(L"Nicholas Sandford 现在收集 {} 个这种物品！", 5));
+                append(std::format(L"Nicholas Sandford collects {} of these right now!", quantity_for_total_gifts));
             else
-                append(std::format(L"Nicholas Sandford 将在 {} 收集 {} 个这种物品！", TextUtils::RelativeTimeW(collection_time), 5));
+                append(std::format(L"Nicholas Sandford collects {} of these {}!", quantity_for_total_gifts, TextUtils::RelativeTimeW(collection_time)));
             return;
         }
 
@@ -217,18 +222,18 @@ namespace {
 
         const auto ingredient_nick_info = ingredient ? DailyQuests::GetNicholasItemInfo(ingredient->nicholas_item) : nullptr;
 
-        const auto info_time = info ? DailyQuests::GetTimestampFromNicholasTheTraveller(info) : std::numeric_limits<time_t>::max();
-        const auto ingredient_time = ingredient_nick_info ? DailyQuests::GetTimestampFromNicholasTheTraveller(ingredient_nick_info) : std::numeric_limits<time_t>::max();
+        const auto info_time = info ? DailyQuests::GetTimestampFromNicholasTheTraveller(info, current_time) : std::numeric_limits<time_t>::max();
+        const auto ingredient_time = ingredient_nick_info ? DailyQuests::GetTimestampFromNicholasTheTraveller(ingredient_nick_info, current_time) : std::numeric_limits<time_t>::max();
 
         if (info && info_time <= ingredient_time) {
-            const auto quantity_for_total_gifts = info->quantity * 5;
+            const auto quantity_for_total_gifts = info->quantity * DailyQuests::NICHOLAS_TRADES_PER_ROTATION;
             if (info_time <= current_time)
                 append(std::format(L"Nicholas The Traveler 现在收集 {} 个这种物品！", quantity_for_total_gifts));
             else
                 append(std::format(L"Nicholas The Traveler 将在 {} 收集 {} 个这种物品！", TextUtils::RelativeTimeW(info_time), quantity_for_total_gifts));
         }
         else if (ingredient_nick_info) {
-            const auto quantity_for_total_gifts = ingredient_nick_info->quantity * 5;
+            const auto quantity_for_total_gifts = ingredient_nick_info->quantity * DailyQuests::NICHOLAS_TRADES_PER_ROTATION;
             const auto total_qty = ingredient->ingredient_quantity * quantity_for_total_gifts;
             if (ingredient_time <= current_time)
                 append(std::format(L"收集 {} 个这种物品来制作 {} 个 Nicholas The Traveler 物品！", total_qty, quantity_for_total_gifts));
@@ -276,7 +281,6 @@ namespace {
         }
     }
 
-        // Check and re-render item tooltips if modifier key held
     void UpdateItemTooltip()
     {
         if (GetKeyState(modifier_key_item_descriptions) == modifier_key_item_descriptions_key_state) {
@@ -367,23 +371,46 @@ namespace {
 
     GW::HookEntry UIMessage_HookEntry;
     std::wstring tmp_item_name_tag;
+    struct NameTagSections {
+        time_t built_time = 0;
+        std::wstring encoded;
+    };
+    std::unordered_map<uint32_t, NameTagSections> name_tag_sections_cache;
+
     void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* wParam, void*)
     {
         if (message_id != GW::UI::UIMessage::kSetAgentNameTagAttribs) return;
 
         auto* packet = static_cast<GW::UI::AgentNameTagInfo*>(wParam);
         if (!packet->underline) return;
-        if (packet->extra_info_enc != tmp_item_name_tag.data()) {
-            tmp_item_name_tag.assign(packet->extra_info_enc ? packet->extra_info_enc : L"");
-        }
         const auto agent = static_cast<GW::AgentItem*>(GW::Agents::GetAgentByID(packet->agent_id));
         if (!(agent && agent->GetIsItemType())) return;
         if (agent->owner && agent->owner != GW::Agents::GetControlledCharacterId()) return;
 
         const auto item_id = agent->item_id;
-        if (settings.show_salvage_info) AppendSalvageInfo(item_id, tmp_item_name_tag);
-        if (settings.show_trader_prices) AppendPriceInfo(item_id, tmp_item_name_tag);
-        if (settings.show_nicholas_info) AppendNicholasInfo(item_id, tmp_item_name_tag);
+        const auto current_time = time(nullptr);
+        if (packet->extra_info_enc != tmp_item_name_tag.data()) {
+            tmp_item_name_tag.assign(packet->extra_info_enc ? packet->extra_info_enc : L"");
+            auto cached = name_tag_sections_cache.find(item_id);
+            if (cached != name_tag_sections_cache.end() && current_time - cached->second.built_time < 60) {
+                tmp_item_name_tag += cached->second.encoded;
+            }
+            else {
+                if (cached == name_tag_sections_cache.end() && name_tag_sections_cache.size() > 64) {
+                    std::erase_if(name_tag_sections_cache, [current_time](const auto& entry) {
+                        return current_time - entry.second.built_time >= 60;
+                    });
+                }
+                const auto sections_start = tmp_item_name_tag.size();
+                if (settings.show_salvage_info) AppendSalvageInfo(item_id, tmp_item_name_tag);
+                if (settings.show_trader_prices) AppendPriceInfo(item_id, tmp_item_name_tag);
+                if (settings.show_nicholas_info) AppendNicholasInfo(item_id, tmp_item_name_tag);
+                if (cached == name_tag_sections_cache.end())
+                    cached = name_tag_sections_cache.emplace(item_id, NameTagSections{}).first;
+                cached->second.built_time = current_time;
+                cached->second.encoded.assign(tmp_item_name_tag, sections_start);
+            }
+        }
 
         packet->extra_info_enc = tmp_item_name_tag.data();
     }
@@ -516,7 +543,7 @@ void ItemTooltipModule::DrawSettingsInternal()
     }
 
     // --- Trader prices -------------------------------------------------------
-    ImGui::CheckboxWithHelp("在物品提示中显示交易价格", &settings.show_trader_prices, "当前的符文、染料和组件价格从 https://kamadan.gwtoolbox.com 获取");
+    ImGui::CheckboxWithHelp("Show trader prices in item tooltip", &settings.show_trader_prices, "Current rune, dye and mod prices are fetched from https://kamadan.gwtoolbox.com (or, while pre-searing, presearing.com's community price sheet)");
     if (settings.show_trader_prices) {
         ImGui::Indent();
 

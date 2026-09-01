@@ -62,18 +62,14 @@ namespace {
 
     Status GetResignStatus(const uint32_t player_number)
     {
-        return party_member_statuses.contains(player_number) ? party_member_statuses[player_number].status : Status::Unknown;
+        const auto found = party_member_statuses.find(player_number);
+        return found != party_member_statuses.end() ? found->second.status : Status::Unknown;
     }
 
     void UpdatePlayerStates() {
         const auto players = GW::PartyMgr::GetPartyPlayers();
         if (!players) return;
         for (auto& p : *players) {
-            if (!party_member_statuses.contains(p.login_number)) {
-                party_member_statuses[p.login_number] = {
-                    Status::Unknown,0
-                };
-            }
             auto& st = party_member_statuses[p.login_number];
             if (!p.connected()) {
                 if (st.status != Status::NotInParty) {
@@ -204,9 +200,8 @@ bool ResignLogModule::PrintResignStatus(const uint32_t player_number, std::wstri
     if (!player_name) {
         return false;
     }
-    const auto status = party_member_statuses.contains(player_number) ? party_member_statuses[player_number] : PartyMemberStatus({
-        Status::Unknown, 0
-    });
+    const auto found = party_member_statuses.find(player_number);
+    const auto status = found != party_member_statuses.end() ? found->second : PartyMemberStatus{};
     out = std::format(L"{}. {} - {}", idx, player_name, TextUtils::StringToWString(GetStatusStr(status.status)));
     if (include_timestamp && status.timestamp) {
         out += std::format(L" [{}:{:02}:{:02}:{:03}]", status.timestamp / (60 * 60 * 1000), status.timestamp / (60 * 1000) % 60, status.timestamp / 1000 % 60, status.timestamp % 1000);

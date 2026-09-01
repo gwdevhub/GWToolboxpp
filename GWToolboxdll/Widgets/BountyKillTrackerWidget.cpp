@@ -27,6 +27,17 @@ namespace {
     ImGuiViewport* viewport = nullptr;
     ImDrawList* draw_list = nullptr;
 
+    GW::HookEntry effects_frame_hook;
+    void OnEffectsFrameUIMessage(GW::HookStatus*, const GW::UI::Frame* frame, const GW::UI::UIMessage message_id, void*, void*) {
+        switch (message_id) {
+        case GW::UI::UIMessage::kDestroyFrame:
+        case GW::UI::UIMessage::kSetLayout:
+            if (frame == effects_frame)
+                effects_frame = nullptr;
+            break;
+        }
+    }
+
     struct BountyState {
         GW::Constants::TitleID title_id;
         uint32_t points_per_kill;
@@ -38,9 +49,6 @@ namespace {
     std::unordered_map<GW::Constants::SkillID, BountyState> active_bounties;
     std::unordered_map<uint32_t, GW::Constants::SkillID> effect_id_to_skill;
 
-    // 北方之眼赏金在等级 1-4 分别奖励 25/50/75/100 称号点数。
-    // 夜幕和派系赏金默认每击杀奖励 1 点；
-    // 确切数值应在游戏中验证并在此更新。
     uint32_t GetPointsPerKill(const GW::Constants::SkillID skill_id)
     {
         using S = GW::Constants::SkillID;
@@ -305,12 +313,16 @@ void BountyKillTrackerWidget::Initialize()
     for (const auto msg : messages) {
         RegisterUIMessageCallback(&UIMessage_HookEntry, msg, OnUIMessage, -0x6000);
     }
+    GW::UI::RegisterFrameUIMessageCallback(&effects_frame_hook, GW::UI::UIMessage::kDestroyFrame, OnEffectsFrameUIMessage);
+    GW::UI::RegisterFrameUIMessageCallback(&effects_frame_hook, GW::UI::UIMessage::kSetLayout, OnEffectsFrameUIMessage);
 }
 
 void BountyKillTrackerWidget::Terminate()
 {
     ToolboxWidget::Terminate();
     GW::UI::RemoveUIMessageCallback(&UIMessage_HookEntry);
+    GW::UI::RemoveFrameUIMessageCallback(&effects_frame_hook);
+    effects_frame = nullptr;
     active_bounties.clear();
     effect_id_to_skill.clear();
 }
@@ -320,7 +332,8 @@ void BountyKillTrackerWidget::Draw(IDirect3DDevice9*)
     if (!visible) return;
     if (active_bounties.empty()) return;
 
-    effects_frame = GW::UI::GetFrameByLabel(L"Effects");
+    if (!effects_frame)
+        effects_frame = GW::UI::GetFrameByLabel(L"Effects");
     if (!effects_frame) return;
 
     DummyWindow();

@@ -109,10 +109,8 @@ void AlcoholWidget::AlcUpdate(GW::HookStatus*, const GW::Packet::StoC::PostProce
     if (packet->level > instance.alcohol_level) {
         // 如果玩家已经在饮酒状态
         if (instance.alcohol_level) {
-            // 设置剩余时间
             instance.alcohol_time = static_cast<int>(instance.alcohol_time + static_cast<long>(instance.last_alcohol) - static_cast<long>(time(nullptr)));
         }
-        // 增加饮酒时间
         instance.alcohol_time += 60 * static_cast<int>(packet->level - instance.alcohol_level);
         instance.last_alcohol = time(nullptr);
     }

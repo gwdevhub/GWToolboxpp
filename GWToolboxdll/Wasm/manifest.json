@@ -1,0 +1,6 @@
+{
+  "format": 1,
+  "name": "gwtoolbox",
+  "entry": "GWToolboxdll.wasm",
+  "modules": ["gwca.wasm", "GWToolboxdll.wasm"]
+}

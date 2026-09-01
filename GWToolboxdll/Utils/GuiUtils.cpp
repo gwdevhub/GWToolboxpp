@@ -80,18 +80,6 @@ namespace {
 
     const char* GetWikiPrefix()
     {
-        /*uint32_t language = GW::UI::GetPreference(GW::UI::Preference_TextLanguage);
-        char* wiki_prefix = "https://wiki.guildwars.com/wiki/";
-        switch (static_cast<GW::Constants::MapLanguage>(language)) {
-        case GW::Constants::MapLanguage::German: // German wiki
-            wiki_prefix = "https://www.guildwiki.de/wiki/";
-            break;
-        case GW::Constants::MapLanguage::French: // French wiki
-            wiki_prefix = "https://www.gwiki.fr/w/index.php";
-            break;
-
-        }
-        return wiki_prefix;*/
         return "https://wiki.guildwars.com/wiki/";
     }
 
@@ -134,7 +122,6 @@ namespace GuiUtils {
 
     bool IconButton(const char* label, GwButtonIcon icon, const ImVec2& size, const ImGuiButtonFlags flags)
     {
-        // Icons from GW_BUTTON_ICONS_FILE_ID
         if (icon == GwButtonIcon::ChatIcon) {
             IDirect3DTexture9** tex = GwDatModule::LoadTextureFromFileId(GW_BUTTON_ICONS_FILE_ID);
             if (!tex || !*tex) return false;
@@ -151,7 +138,6 @@ namespace GuiUtils {
             return ImGui::CompositeIconButton(label, &tex_id, 1, size, flags, ICON_SIZE, uv0, uv1);
         }
 
-        // Icons from TEMPLATE_ICONS_FILE_ID
         IDirect3DTexture9** tex = GwDatModule::LoadTextureFromFileId(TEMPLATE_ICONS_FILE_ID);
         if (!tex || !*tex) return false;
 

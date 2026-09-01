@@ -24,6 +24,8 @@
 #include <GWCA/Context/WorldContext.h>
 #include <GWCA/Managers/MemoryMgr.h>
 #include <GWCA/Utilities/MemoryPatcher.h>
+
+#include <Defines.h>
 #include <Utils/GuiUtils.h>
 #include <Utils/ToolboxUtils.h>
 #include <Widgets/WorldMapWidget.h>
@@ -122,8 +124,6 @@ namespace {
         clock_t calculating = 0;
         GW::Vec2f goal_world{};
         bool has_full_route = false;
-        // 一旦在地图上的 A* 证明该目标在当前地图上不可达（尽管它投影到该地图），则锁定。
-        // 孤立区域仅与共置地图共享文件ID。强制为此目标进行跨地图路由，以免每次位置更新都重新尝试地图内路径。
         bool goal_cross_map = false;
         std::vector<GW::Vec2f> route_world{}; // 世界地图坐标（地图之间的 PATH_BREAK）
         std::vector<GW::GamePos> route_map{};
@@ -243,27 +243,29 @@ namespace {
             const bool same_map = PathfindingWindow::IsWorldPosOnMap(goal_world) && !goal_cross_map;
             GW::GamePos target{};
             if (same_map) {
-                if (!WorldMapWidget::WorldMapToGamePos(goal_world, target)) return;
+                if (!WorldMapWidget::WorldMapToGamePos(goal_world, target)) {
+                    // Nothing enqueued, so clear the in-flight flag — leaving it set blocks every Update for 5s.
+                    calculating = 0;
+                    calculated_at = 0;
+                    return;
+                }
             }
             else {
-                if (route_world.empty() || route_map.empty()) return;
+                if (route_world.empty() || route_map.empty()) {
+                    // No cross-map route to walk toward: bailing left `calculating` set with no work queued, freezing the path.
+                    has_full_route = false;
+                    GW::Vec2f from_world{};
+                    WorldMapWidget::GamePosToWorldMap(from, from_world);
+                    RecalculateWorld(from_world);
+                    return;
+                }
                 target = route_map.back();
             }
-            // RecalculateSegment 的游戏坐标段保持每个路点的 z 平面（世界坐标往返会将其归零），因此线条贴合实际表面；只需定向（使最后一个点最接近目标）。
-            auto orient = [target](std::vector<GW::GamePos>& out) {
-                if (out.size() <= 1) return;
-                const auto sq = [](const GW::GamePos& a, const GW::GamePos& b) {
-                    const float dx = a.x - b.x, dy = a.y - b.y;
-                    return dx * dx + dy * dy;
-                };
-                if (sq(out.front(), target) < sq(out.back(), target)) std::ranges::reverse(out);
-            };
-
-            Resources::EnqueueWorkerTask([qid = quest_id, from, target, same_map, orient, gw = goal_world] {
-                auto pts = new std::vector<GW::Vec2f>();         // 必需的输出参数；此处未使用
-                auto route_map = new std::vector<GW::GamePos>(); // 当前地图的游戏坐标（带有 z 平面）
+            // RecalculateSegment's game-coord leg keeps the A* per-waypoint zplane (a world-coord round-trip would zero it), so the line drapes on the real surface.
+            Resources::EnqueueWorkerTask([qid = quest_id, from, target, same_map, gw = goal_world] {
+                auto pts = new std::vector<GW::Vec2f>();         // required out-param; unused here
+                auto route_map = new std::vector<GW::GamePos>(); // current-map game coords with carried zplane
                 const bool ok = PathfindingWindow::RecalculateSegment(static_cast<GW::Constants::MapID>(0), from, target, pts, route_map);
-                if (ok) orient(*route_map);
                 Resources::EnqueueMainTask([qid, from, route_map, pts, ok, same_map, gw] {
                     const auto cqp = GetCalculatedQuestPath(qid, false);
                     if (cqp && cqp->goal_world != gw) {
@@ -287,8 +289,6 @@ namespace {
                         cqp->UpdateUI();
                     }
                     else if (cqp && same_map) {
-                        // 目标投影到此地图但地图内 A* 无法到达 — 孤立区域仅与共置地图共享文件ID。
-                        // 锁定跨地图，以便未来位置更新直接通过其他地图路由，并立即计算完整路线。
                         cqp->goal_cross_map = true;
                         GW::Vec2f from_world{};
                         WorldMapWidget::GamePosToWorldMap(from, from_world);
@@ -323,11 +323,15 @@ namespace {
 
             calculating = TIMER_INIT();
             const bool goal_changed = calculated_to != goal_world;
-            if (goal_changed) goal_cross_map = false; // 新目标 — 重新测试在当前地图上是否可达
-            calculated_from = from_game; // Update 的移动阈值锚点
+            if (goal_changed) {
+                goal_cross_map = false; // new goal — re-test whether it's reachable on the current map
+                has_full_route = false; // and plot it from scratch instead of re-walking the old route's leg
+            }
+            calculated_from = from_game; // anchor for Update's move threshold
             calculated_to = goal_world;
             const bool same_map = PathfindingWindow::IsWorldPosOnMap(goal_world) && !goal_cross_map;
-            if (!same_map && goal_changed) {
+            // Gate on the route we hold, not on `goal_changed`: a failed plot otherwise left us re-walking a leg that no longer exists.
+            if (!same_map && !has_full_route) {
                 RecalculateWorld(from_world);
             }
             else {
@@ -335,7 +339,7 @@ namespace {
             }
         }
 
-        // 丢弃已走过的点
+        // Drop points we've walked past; the drawn head starts at the live player pos, so anything behind us draws backwards.
         bool TrimLeadingWaypoints(const GW::GamePos& from)
         {
             bool dropped = false;
@@ -344,7 +348,11 @@ namespace {
                 const float segx = b.x - a.x, segy = b.y - a.y;
                 const float len2 = segx * segx + segy * segy;
                 const float t = len2 > 0.f ? ((from.x - a.x) * segx + (from.y - a.y) * segy) / len2 : 1.f;
-                if (t < 1.f) break; // route_map[1] 仍在前面
+                // Also drop when standing on b: walking off the line keeps the projection short of 1 and pins the head to a reached waypoint.
+                constexpr float waypoint_reached_sqr = 166.f * 166.f; // adjacent range
+                const float bx = from.x - b.x, by = from.y - b.y;
+                const bool reached = bx * bx + by * by < waypoint_reached_sqr;
+                if (t < 1.f && !reached) break; // route_map[1] still ahead
                 route_map.erase(route_map.begin());
                 dropped = true;
             }
@@ -422,14 +430,12 @@ namespace {
 
     bool is_spoofing_quest_update = false;
 
-    // 设置
     GW::GamePos* GetPlayerPos()
     {
         const auto p = GW::Agents::GetControlledCharacter();
         return p ? &p->pos : nullptr;
     }
 
-    // 距离辅助
     float GetSquareDistance(const GW::GamePos& a, const GW::GamePos& b)
     {
         return GetSquareDistance(static_cast<GW::Vec2f>(a), static_cast<GW::Vec2f>(b));
@@ -592,6 +598,10 @@ namespace {
         if (!quest) return;
         auto w = GW::GetWorldContext();
         auto& quest_log = w->quest_log;
+        // Grab the owned buffers before the shift below overwrites this slot; otherwise
+        // we'd free the trailing duplicate's pointers, which the last live quest still uses.
+        wchar_t* const owned[] = {quest->objectives, quest->description, quest->npc, quest->name, quest->location};
+
         const auto idx = quest - quest_log.m_buffer;
         const auto remaining = quest_log.m_size - idx - 1;
         if (remaining > 0) memmove(quest, quest + 1, remaining * sizeof(*quest_log.m_buffer));
@@ -599,12 +609,12 @@ namespace {
             w->active_quest_id = GW::Constants::QuestID::None;
         }
         quest_log.m_size--;
-        auto* removed = &quest_log.m_buffer[quest_log.m_size];
-        GW::MemoryMgr::MemFree(removed->objectives);
-        GW::MemoryMgr::MemFree(removed->description);
-        GW::MemoryMgr::MemFree(removed->npc);
-        GW::MemoryMgr::MemFree(removed->name);
-        GW::MemoryMgr::MemFree(removed->location);
+        // Clear the vacated slot so its stale copy can't alias the live quest's buffers.
+        memset(&quest_log.m_buffer[quest_log.m_size], 0, sizeof(*quest_log.m_buffer));
+
+        for (auto* buf : owned) {
+            GW::MemoryMgr::MemFree(buf);
+        }
 
         GW::UI::SendUIMessage(GW::UI::UIMessage::kMessage_0x10000152, (void*)&quest_id);
     }
@@ -827,6 +837,7 @@ void QuestModule::Initialize()
 
     memset(&custom_quest_marker, 0, sizeof(custom_quest_marker));
     uintptr_t address = GW::Scanner::FindAssertion("UiCtlWebLink.cpp", "challengeId < CHALLENGES", 0, -0x7);
+    DEBUG_ASSERT(address);
     if (address) {
         bypass_custom_quest_assertion_patch.SetPatch(address, "\xeb", 1);
         bypass_custom_quest_assertion_patch.TogglePatch(true);

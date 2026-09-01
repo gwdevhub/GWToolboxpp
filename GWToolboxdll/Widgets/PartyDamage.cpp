@@ -28,9 +28,6 @@ constexpr const wchar_t* JSON_FILENAME = L"healthlog.json";
 namespace {
     GW::HookEntry ChatCmd_HookEntry;
 
-    // 伤害值
-
-
     uint32_t total = 0;
     uint32_t total_healing = 0;
 
@@ -74,7 +71,6 @@ namespace {
         return -1;
     }
 
-    // 结算追踪器上所有激活状态的伤害，然后移除它
     void FinalizeAndRemoveTracker(uint32_t ti) {
         if (ti >= cond_tracker_count) return;
         const clock_t now = TIMER_INIT();
@@ -106,7 +102,6 @@ namespace {
     std::map<DWORD, DWORD> hp_map_hm{};
     const std::pair<const char*, std::map<DWORD, DWORD>*> section_maps[] = {{"health_nm", &hp_map_nm}, {"health_hm", &hp_map_hm}};
 
-    // 主程序变量
     bool in_explorable = false;
     clock_t send_timer = 0;
     std::queue<std::wstring> send_queue{};
@@ -162,7 +157,6 @@ void PartyDamage::ReconcileDamageIndices()
     if (party_agent_ids_by_index == prev_party_agent_ids) return;
     prev_party_agent_ids = party_agent_ids_by_index;
 
-    // 映射旧 agent_id -> 当前伤害数组中的索引
     std::unordered_map<uint32_t, uint32_t> old_agent_to_idx;
     for (uint32_t i = 0; i < damage.size(); i++) {
         if (damage[i].agent_id != 0) old_agent_to_idx[damage[i].agent_id] = i;
@@ -181,7 +175,6 @@ void PartyDamage::ReconcileDamageIndices()
         if (new_idx >= new_damage.size()) continue;
         if (new_idx >= pets_start_idx) continue;
 
-        // 先尝试按 agent_id 匹配
         auto it = old_agent_to_idx.find(agent_id);
         if (it != old_agent_to_idx.end()) {
             new_damage[new_idx] = damage[it->second];
@@ -194,7 +187,6 @@ void PartyDamage::ReconcileDamageIndices()
         if (new_idx < party_names_by_index.size()) {
             const auto& name = party_names_by_index[new_idx]->wstring();
             if (!name.empty()) {
-                // 检查已离开的条目
                 auto dit = departed_by_name.find(name);
                 if (dit != departed_by_name.end()) {
                     new_damage[new_idx] = departed_damage[dit->second];
@@ -202,7 +194,6 @@ void PartyDamage::ReconcileDamageIndices()
                     departed_damage[dit->second].Reset();
                     continue;
                 }
-                // 按名称检查旧的伤害条目
                 for (uint32_t i = 0; i < damage.size(); i++) {
                     if (!claimed_old_indices.count(i) && damage[i].name == name && !damage[i].name.empty()) {
                         new_damage[new_idx] = damage[i];
@@ -215,7 +206,6 @@ void PartyDamage::ReconcileDamageIndices()
         }
     }
 
-    // 将带有数据的未认领条目移至已离开列表
     for (uint32_t i = 0; i < damage.size(); i++) {
         if (claimed_old_indices.count(i)) continue;
         if (damage[i].damage > 0 || damage[i].healing > 0)
@@ -366,8 +356,7 @@ void PartyDamage::ConditionValueCallback(GW::HookStatus*, const GW::Packet::StoC
         const clock_t now = TIMER_INIT();
         const double elapsed = static_cast<double>(now - cond_trackers[ti].apply_time[ci]) / 1000.0;
         cond_damage[ci] += static_cast<double>(CONDITION_DPS_RATES[ci]) * elapsed;
-        cond_trackers[ti].apply_time[ci] = 0; // 清除它
-        // 如果所有状态都清除了，移除追踪器
+        cond_trackers[ti].apply_time[ci] = 0; // clear it
         bool all_cleared = true;
         for (int cj = 0; cj < 4; cj++) {
             if (cond_trackers[ti].apply_time[cj] != 0) { all_cleared = false; break; }
@@ -382,7 +371,6 @@ void PartyDamage::ConditionValueCallback(GW::HookStatus*, const GW::Packet::StoC
 
 void PartyDamage::DamagePacketCallback(GW::HookStatus*, const GW::Packet::StoC::GenericModifier* packet)
 {
-    // 忽略非伤害/治疗数据包
     switch (packet->type) {
         case GW::Packet::StoC::P156_Type::damage:
         case GW::Packet::StoC::P156_Type::critical:
@@ -591,7 +579,6 @@ void PartyDamage::Update(const float)
         }
     }
 
-    // 必要时重置近期数据
     for (auto& entry : damage) {
         if (TIMER_DIFF(entry.last_damage) > settings.recent_max_time) {
             entry.recent_damage = 0;
@@ -600,8 +587,10 @@ void PartyDamage::Update(const float)
             entry.recent_healing = 0;
         }
     }
-    FetchPartyInfo();
-    ReconcileDamageIndices();
+    if (visible) {
+        FetchPartyInfo();
+        ReconcileDamageIndices();
+    }
 
     // 更新尚未解码名称的伤害条目
     // 并在名称可用时恢复已离开的条目
@@ -614,7 +603,6 @@ void PartyDamage::Update(const float)
             damage[party_idx].name = decoded;
         }
 
-        // 如果此槽位为空但已离开成员按名称匹配，则恢复已离开条目
         if (damage[party_idx].damage == 0 && damage[party_idx].healing == 0) {
             for (auto& dep : departed_damage) {
                 if (dep.name == decoded && (dep.damage > 0 || dep.healing > 0)) {
@@ -724,7 +712,6 @@ void PartyDamage::Draw(IDirect3DDevice9*)
         constexpr size_t buffer_size = 16;
         char buffer[buffer_size];
 
-        // 状态 DPS 标题行
         if (settings.show_condition_dps) {
             const struct { uint32_t color; const char* icon; int ci; } conds[] = {
                 {IM_COL32(200, 50, 50, 255), ICON_FA_TINT, 0},
@@ -759,15 +746,12 @@ void PartyDamage::Draw(IDirect3DDevice9*)
             const auto x = damage_top_left.x;
 
             const float damage_float = static_cast<float>(entry->damage);
-            // 总伤害条
             DrawGradientBar(draw_list, x, width, damage_top_left.y, damage_bottom_right.y, settings.bars_left, max > 0 ? damage_float / max : 0, damage_col_from, damage_col_to);
 
-            // 近期伤害条（底部）
             if (settings.show_damage && entry->recent_damage) {
                 DrawGradientBar(draw_list, x, width, damage_bottom_right.y - 6, damage_bottom_right.y, settings.bars_left, max_recent > 0 ? static_cast<float>(entry->recent_damage) / max_recent : 0, damage_recent_from, damage_recent_to);
             }
 
-            // 近期治疗条（顶部）
             if (settings.show_healing && entry->recent_healing) {
                 DrawGradientBar(draw_list, x, width, damage_top_left.y, damage_top_left.y + 6, settings.bars_left, max_recent_healing > 0 ? static_cast<float>(entry->recent_healing) / max_recent_healing : 0, healing_from, healing_to);
             }
@@ -780,7 +764,6 @@ void PartyDamage::Draw(IDirect3DDevice9*)
                 FormatValueString(buffer, buffer_size, damage_float);
                 draw_list->AddText(ImVec2(x + ImGui::GetStyle().ItemSpacing.x, text_y), IM_COL32(255, 255, 255, 255), buffer);
 
-                // 伤害百分比
                 if (!settings.show_healing) {
                     const float perc_of_total = GetPercentageOfTotal(entry->damage);
                     snprintf(buffer, buffer_size, "%.1f %%", perc_of_total);
@@ -801,7 +784,6 @@ void PartyDamage::Draw(IDirect3DDevice9*)
                 const float heal_text_x = settings.show_damage ? x + width / 2 : x + ImGui::GetStyle().ItemSpacing.x;
                 draw_list->AddText(ImVec2(heal_text_x, text_y), settings.color_healing, buffer);
 
-                // 治疗百分比
                 if (!settings.show_damage) {
                     const float perc_of_total_heal = GetPercentageOfTotalHealing(entry->healing);
                     snprintf(buffer, buffer_size, "%.1f %%", perc_of_total_heal);

@@ -36,6 +36,32 @@ namespace {
         RegWriteStr(kDefenderPromptSuppressKey, CurrentVersion().c_str(), error);
     }
 
+    // OK-only warning dialog carrying a "don't ask again" checkbox; reports the checkbox state.
+    // Falls back to a plain (checkbox-less) message box if TaskDialog is unavailable.
+    void ShowWarningWithSuppressOption(const wchar_t* base_title, const std::wstring& instruction,
+                                       const std::wstring& content, const std::wstring& verification,
+                                       bool& dont_ask_again)
+    {
+        const std::wstring title = GwtbDialogTitle(base_title);
+
+        TASKDIALOGCONFIG config = {sizeof(config)};
+        config.dwFlags = TDF_ALLOW_DIALOG_CANCELLATION;
+        config.dwCommonButtons = TDCBF_OK_BUTTON;
+        config.pszWindowTitle = title.c_str();
+        config.pszMainIcon = TD_WARNING_ICON;
+        config.pszMainInstruction = instruction.c_str();
+        config.pszContent = content.c_str();
+        config.pszVerificationText = verification.c_str();
+
+        BOOL checked = FALSE;
+        if (FAILED(TaskDialogIndirect(&config, nullptr, nullptr, &checked))) {
+            dont_ask_again = false;
+            ShowMessageBoxW(nullptr, (instruction + L"\n\n" + content).c_str(), base_title, MB_OK | MB_ICONWARNING);
+            return;
+        }
+        dont_ask_again = checked == TRUE;
+    }
+
     // Yes/No prompt carrying a "don't ask again" checkbox. Returns true for Yes and reports the
     // checkbox state; falls back to a plain (checkbox-less) message box if TaskDialog is unavailable.
     bool AskYesNoWithSuppressOption(const wchar_t* base_title, const std::wstring& instruction,
@@ -240,9 +266,6 @@ bool AddDefenderExceptions(const std::filesystem::path& exclusion_path,
     if (cmdlets.empty())
         return true;
 
-    // Controlled Folder Access fixes a process's allowed status at launch, so allowing an
-    // already-running Gw.exe now won't let the injected Toolbox write to Documents until that
-    // client restarts. Note it here so we can tell the user once the change lands.
     bool allowing_running_gw = false;
     if (state.controlled_folder_access == 1) {
         for (const auto& gw : GetGuildWarsExecutablePaths()) {
@@ -301,17 +324,20 @@ bool AddDefenderExceptions(const std::filesystem::path& exclusion_path,
 
     if (!success) {
         if (!quiet) {
-            std::wstring message = L"Failed to add Windows Security exceptions for GWToolbox.\n\n"
-                L"You can add them manually in Windows Security -> Virus & threat protection:\n"
+            std::wstring content = L"You can add them manually in Windows Security -> Virus & threat protection:\n"
                 L"- Add a folder exclusion for:\n  ";
-            message += exclusion_path.wstring();
-            message += L"\n- Allow Guild Wars and GWToolbox through Controlled Folder Access (Ransomware protection).";
+            content += exclusion_path.wstring();
+            content += L"\n- Allow Guild Wars and GWToolbox through Controlled Folder Access (Ransomware protection).";
 
-            ShowMessageBoxW(
-                nullptr,
-                message.c_str(),
+            bool dont_ask_again = false;
+            ShowWarningWithSuppressOption(
                 L"Windows Defender Exclusion",
-                MB_OK | MB_ICONWARNING);
+                L"Failed to add Windows Security exceptions for GWToolbox",
+                content,
+                L"Don't ask again until GWToolbox is updated",
+                dont_ask_again);
+            if (dont_ask_again)
+                SuppressDefenderPromptForThisVersion();
         }
 
         return false;

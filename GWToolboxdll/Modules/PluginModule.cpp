@@ -266,7 +266,6 @@ void PluginModule::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
         auto matching_plugins = std::views::filter(plugins_available, [filename](auto plugin) {
             return plugin->path.filename() == filename;
         });
-        // 查找所有匹配的插件并加载它们
         for (const auto plugin : matching_plugins) {
             if (!LoadPlugin(plugin)) {
                 continue;

@@ -1,8 +1,15 @@
 name: CMake
 
 on:
+  # push covers dev (post-merge validation) and master (release builds, gated
+  # below on should_release). pull_request covers PRs against dev - including
+  # from forks, where CERTUM_OTP_URI is unset and signing/release is skipped -
+  # so branches only build once a PR is open instead of on every push.
   push:
-    paths:
+    branches:
+      - dev
+      - master
+    paths: &cmake-paths
       # C/C++ source and headers
       - '**/*.cpp'
       - '**/*.c'
@@ -21,6 +28,16 @@ on:
       - 'vcpkg-overlays/**'
       # The workflow itself
       - '.github/workflows/cmake.yml'
+  pull_request:
+    branches:
+      - dev
+    paths: *cmake-paths
+
+# Cancel a still-running build for the same ref when a new commit supersedes
+# it, instead of letting both run to completion on the paid Windows runner.
+concurrency:
+  group: cmake-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -49,13 +66,16 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ${{ github.workspace }}/vcpkg
-        key: vcpkg-tool-${{ runner.os }}-ce613c41372b23b1f51333815feb3edd87ef8a8b
+        key: vcpkg-tool-${{ runner.os }}-2b65c20fc66eda893aa15a15a453c3cf09500b19
 
     - name: Install vcpkg
       if: steps.cache-vcpkg-tool.outputs.cache-hit != 'true'
       shell: bash
+      # Keep in sync with the default-registry baseline in vcpkg-configuration.json:
+      # this checkout provides scripts/, including the pinned msys2 package URLs that
+      # vcpkg_fixup_pkgconfig downloads. Stale pins 404 once MSYS2 rotates them out.
       env:
-        VCPKG_COMMIT: ce613c41372b23b1f51333815feb3edd87ef8a8b
+        VCPKG_COMMIT: 2b65c20fc66eda893aa15a15a453c3cf09500b19
       run: |
         git clone https://github.com/microsoft/vcpkg.git
         cd vcpkg
@@ -99,7 +119,7 @@ jobs:
       # access regardless of the host operating system
       shell: bash
       working-directory: ${{runner.workspace}}/GWToolboxpp/build
-      run: cmake $GITHUB_WORKSPACE --preset=vcpkg
+      run: cmake $GITHUB_WORKSPACE --preset=vcpkg -DGWTOOLBOX_BUILD_EXAMPLE_PLUGIN=OFF
       env:
         VCPKG_ROOT: ${{ env.VCPKG_ROOT }}
         VCPKG_BINARY_SOURCES: "clear;files,${{ github.workspace }}/vcpkg-bincache,readwrite"
@@ -113,7 +133,11 @@ jobs:
     - name: Save output
       uses: actions/upload-artifact@v4
       with:
-        path: ${{runner.workspace}}/GWToolboxpp/bin/RelWithDebInfo/
+        # GWToolboxdll.pdb.gz (compress.ps1, GWToolboxdll/CMakeLists.txt POST_BUILD) already carries the
+        # debug info the raw .pdb has - excluded so the artifact doesn't ship both.
+        path: |
+          ${{runner.workspace}}/GWToolboxpp/bin/RelWithDebInfo/*
+          !${{runner.workspace}}/GWToolboxpp/bin/RelWithDebInfo/GWToolboxdll.pdb
 
     - name: Determine release version
       id: version
@@ -182,7 +206,8 @@ jobs:
         VERSION="${{ steps.version.outputs.version }}"
         BIN_DIR="${{runner.workspace}}/GWToolboxpp/bin/RelWithDebInfo"
 
-        gzip -c "$BIN_DIR/GWToolboxdll.pdb" > GWToolboxdll.pdb.gz
+        # Already built by compress.ps1 (GWToolboxdll/CMakeLists.txt POST_BUILD) - no need to re-gzip.
+        cp "$BIN_DIR/GWToolboxdll.pdb.gz" GWToolboxdll.pdb.gz
 
         # Pull this version's patch notes from history.md for the release body. Exact heading
         # match so "8.3" can't grab "8.30"; stop at the next version heading. Fall back to a

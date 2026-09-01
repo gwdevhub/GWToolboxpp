@@ -23,8 +23,7 @@ namespace GW {
 
     namespace PartyMgr {
 
-        // set or unset the fact that ticking will work as a toggle instead
-        // of showing a drop-down menu
+        // Set or unset whether ticking works as a toggle instead of showing a drop-down menu.
 
         GWCA_API void SetTickToggle(bool enable);
 

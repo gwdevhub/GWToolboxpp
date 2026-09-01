@@ -209,6 +209,8 @@ namespace GW {
     namespace PlayerMgr {
         bool IsMelandrusAccord();
         GW::GamePos* GetPlayerPosition();
+        // Old title variants the game still exposes but that no longer accrue
+        bool IsDeprecatedTitle(GW::Constants::TitleID title_id);
     }
     namespace Agents {
         bool IsAgentCarryingBundle(uint32_t agent_id);
@@ -235,15 +237,8 @@ namespace GW {
         bool IsAlcohol(const GW::Item* item);
     }
     namespace Effects {
-        // Adds a synthetic effect to the local player's effects array and notifies the in-game UI.
-        // Effect ID is deterministic: 0x0f000000 | skill_id, so the same skill always reuses the same slot.
-        // If an existing custom effect for the same skill already exists it is updated instead.
-        // Returns the effect_id on success, 0 on failure (e.g. no capacity in the effects array).
         uint32_t AddCustomEffect(GW::Constants::SkillID skill_id, float duration_seconds);
 
-        // Removes a previously added custom effect from the local player's effects array and
-        // notifies the in-game UI.  Only removes effects whose effect_id has high byte 0x0f.
-        // Returns true if the effect was found and removed.
         bool RemoveCustomEffect(uint32_t effect_id);
     }
 }
@@ -317,6 +312,8 @@ namespace ToolboxUtils {
     const GW::PlayerPartyMember* GetPlayerPartyMember(uint32_t, GW::PartyInfo** = nullptr);
     bool IsPlayerInParty(uint32_t);
     bool IsAgentInParty(uint32_t);
+    bool IsAgentInOtherParty(uint32_t);
+    bool IsAgentInMyParty(uint32_t);
 
     // Skills
 

@@ -255,7 +255,6 @@ namespace {
 
             ImGui::PushID(static_cast<int>(i));
 
-            // 收集该职业的可用角色用于下拉列表
             std::vector<const wchar_t*> candidates;
             if (available_chars_ptr && available_chars_ptr->valid()) {
                 for (const auto& c : *available_chars_ptr) {
@@ -273,8 +272,7 @@ namespace {
 
             ImGui::SetNextItemWidth(dropdown_w);
             if (ImGui::BeginCombo("##pref", preview)) {
-                // "(任意)" 选项
-                if (ImGui::Selectable("(任意)", pref.empty())) {
+                if (ImGui::Selectable("(any)", pref.empty())) {
                     pref.clear();
                 }
                 for (const auto* cname : candidates) {
@@ -394,7 +392,6 @@ namespace {
             return false;
         }
 
-        // 首先检查配置的首选角色
         const auto account_it = preferred_chars_per_account.find(GetCurrentAccountUuidStr());
         if (account_it != preferred_chars_per_account.end()) {
             const auto pref_it = account_it->second.find(static_cast<uint32_t>(profession));
@@ -406,7 +403,6 @@ namespace {
             }
         }
 
-        // 回退到第一个非排除的匹配职业角色
         for (const auto& available_char : *available_characters) {
             if (IsExcludedFromReroll(available_char.player_name)) {
                 continue;
@@ -569,10 +565,17 @@ void RerollWindow::Draw(IDirect3DDevice9*)
         const ImVec2 btn_dim = {btnw, 0.f};
         std::string buf;
         ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.f, 0.5f));
-        auto available_chars_vector = std::ranges::to<std::vector>(*available_chars_ptr);
-        std::ranges::sort(available_chars_vector, [](const auto& a, const auto& b) {
-            return std::wstring_view(a.player_name) < std::wstring_view(b.player_name);
-        });
+        static std::vector<GW::AvailableCharacterInfo> available_chars_snapshot;
+        static std::vector<GW::AvailableCharacterInfo> available_chars_vector;
+        const auto available_chars_size = available_chars_ptr->size();
+        if (available_chars_snapshot.size() != available_chars_size
+            || (available_chars_size && memcmp(available_chars_snapshot.data(), available_chars_ptr->begin(), available_chars_size * sizeof(GW::AvailableCharacterInfo)) != 0)) {
+            available_chars_snapshot.assign(available_chars_ptr->begin(), available_chars_ptr->end());
+            available_chars_vector = available_chars_snapshot;
+            std::ranges::sort(available_chars_vector, [](const auto& a, const auto& b) {
+                return std::wstring_view(a.player_name) < std::wstring_view(b.player_name);
+            });
+        }
         for (const auto& [idx, character] : available_chars_vector | std::views::enumerate) {
             const wchar_t* player_name = character.player_name;
             const auto profession = character.primary();
@@ -606,7 +609,7 @@ void RerollWindow::Draw(IDirect3DDevice9*)
                     uv_x0 = 0.75f;
                 else if (character.is_dhuums_covenant())
                     uv_x0 = 0.50f;
-                else if (character.is_reforged())         
+                else if (character.is_reforged())
                     uv_x0 = 0.25f;
                 if (uv_x0 >= 0.f) {
                     const ImVec2 item_min = ImGui::GetItemRectMin();
@@ -699,7 +702,7 @@ void RerollWindow::Update(float)
             if (!GW::LoginMgr::IsCharSelectReady()) {
                 return;
             }
-            
+
             GW::FriendListMgr::SetFriendListStatus(online_status);
             if (!GW::LoginMgr::SelectCharacterToPlay(reroll_to_player_name, true)) {
                 RerollFailed(L"选择要游玩的角色失败");

@@ -10,6 +10,7 @@
 #include <GWCA/Managers/SkillbarMgr.h>
 
 #include <Color.h>
+#include <D3DContainers.h>
 #include <ImGuiAddons.h>
 #include <Modules/SkillRangeRingsModule.h>
 #include <Utils/GameWorldCompositor.h>
@@ -24,9 +25,6 @@ namespace {
     constexpr float kMaxRingRadius = 5200.f; // 忽略超出罗盘范围的虚假范围数据
     constexpr uint8_t kTargetNone = 0;        // Skill.target == no_target（瞬发附魔/姿态/自我施放形态）
 
-    // 这些技能的 aoe_range 是技能重做前遗留的值；const_effect 持有实际半径，
-    // 并被绘制为 AoE 环（例如 Double Dragon：aoe_range=240 来自其 2008 年版本的“附近”，
-    // const_effect=156 是 2012 年重做后的实际邻近脉冲）。
     constexpr GW::Constants::SkillID kStaleAoeRange[] = {
         GW::Constants::SkillID::Double_Dragon,
     };
@@ -52,8 +50,6 @@ namespace {
         bool at_target;
     };
 
-    // 拖拽后的环几何体（绝对世界坐标）使用 DrawPrimitiveUP 绘制。
-    // 每个顶点的地形拖拽开销较大，因此 `scratch` 被缓存，仅当锚点移动、悬停技能改变或设置改变时重建——而非每帧。
     std::vector<RingSpec> built_specs;
     std::vector<RingVertex> scratch;
     GW::Constants::SkillID built_skill = static_cast<GW::Constants::SkillID>(0);
@@ -83,8 +79,6 @@ namespace {
         const bool shout_like = type == Shout || type == Chant || type == EchoRefrain;
         const bool spell_like = type == Spell || type == Hex || type == Enchantment || type == Well
                                 || type == Signet || type == ItemSpell || type == WeaponSpell;
-        // 不显示施法距离环：施法者已经知道自己的施法距离，显示只是杂乱。
-        // `targets_other` 仍决定 AoE 锚定目标还是施法者（自身/瞬发技能 Skill.target == no_target -> 围绕施法者）。
         const bool targets_other = skill.target != kTargetNone;
         if (shout_like) {
             out.push_back({GW::Constants::Range::Earshot, color_earshot, false});
@@ -238,16 +232,13 @@ void SkillRangeRingsModule::DrawInWorld(IDirect3DDevice9* device)
     }
     if (scratch.size() < 3) return;
 
-    IDirect3DStateBlock9* state_block = nullptr;
-    if (device->CreateStateBlock(D3DSBT_ALL, &state_block) != D3D_OK) return;
-    // 静态深度使墙壁/道具遮挡覆盖层；代理在 GW 的后续通道中绘制。
+    const D3DStateGuard state_guard(device);
+    // Static depth keeps walls/props occluding overlays; agents draw later in GW's pass.
     if (GameWorldCompositor::SetupPipeline(device, true, render_max_distance, fog_factor)) {
         constexpr BOOL dotted_off[1] = {FALSE};
         device->SetPixelShaderConstantB(0, dotted_off, 1);
         device->DrawPrimitiveUP(D3DPT_TRIANGLELIST, static_cast<UINT>(scratch.size() / 3), scratch.data(), sizeof(RingVertex));
     }
-    state_block->Apply();
-    state_block->Release();
 }
 
 void SkillRangeRingsModule::RegisterSettings(ToolboxModule* module)

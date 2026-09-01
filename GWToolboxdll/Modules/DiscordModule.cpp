@@ -197,10 +197,8 @@ namespace {
     IDiscordNetworkEvents network_events{};
     IDiscordCoreEvents core_events{};
 
-    // setting vars
     DiscordModule::Settings settings;
 
-    // runtime vars
     bool discord_connected = false;
     time_t zone_entered_time = 0;
     bool pending_activity_update = false;
@@ -256,7 +254,6 @@ namespace {
         Log::Log("Discord 日志级别 %d：%s\n", level, message);
     }
 
-    // Get pid from executable name (i.e. DiscordCanary.exe)
     DWORD GetProcId(const char* ProcName)
     {
         PROCESSENTRY32 pe32;
@@ -430,7 +427,6 @@ namespace {
             return false;
         }
 
-        // resolve function address here
         discordCreate = (DiscordCreate_pt)(uintptr_t)GetProcAddress(hGetProcIDDLL, "DiscordCreate");
         if (!discordCreate) {
             ASSERT(UnloadDll());
@@ -476,14 +472,6 @@ namespace {
             return true; // Already connected
         }
 #ifdef _DEBUG
-        /*
-            如何在调试模式下用 2 个 Discord 实例测试：
-            1. 关闭 DiscordCanary.exe，加载第一个 GW 客户端并启动工具箱
-                客户端 1 现在正在向 Discord.exe 发送状态
-            2. 打开 DiscordCanary.exe，加载第二个 GW 客户端并启动工具箱
-                客户端 2 现在正在向 DiscordCanary.exe 发送状态
-            注意：断开/重新连接会打乱这个设置，所以请重复此过程。
-        */
         ConnectCanary(); // Sets env var to attach to canary if its open.
 #endif
         SetLastError(0);
@@ -662,7 +650,6 @@ namespace {
             }
         }
         if (memcmp(&last_activity, &activity, sizeof(last_activity)) != 0) {
-            // Only update if activity is new.
             last_activity_update = time(nullptr);
             if (show_activity) {
                 Log::Log("传出 Discord 状态 = %s, %s\n", activity.details, activity.state);
@@ -698,7 +685,6 @@ void DiscordModule::Initialize()
 
     strcpy(activity.name, "Guild Wars");
     activity.application_id = DISCORD_APP_ID;
-    // Initialise discord objects
     memset(&app, 0, sizeof(app));
     memset(&activities_events, 0, sizeof(activities_events));
     memset(&network_events, 0, sizeof(network_events));

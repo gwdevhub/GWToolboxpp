@@ -81,6 +81,12 @@ namespace {
     void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage, void*, void*) {
         party_window_health_bars = nullptr;
     }
+
+    struct PendingPartyMember {
+        uint32_t agent_id;
+        const wchar_t* enc_name;
+    };
+    std::vector<PendingPartyMember> pending_party_members;
 }
 
 std::unordered_map<uint32_t, SnapsToPartyWindow::PartyFramePosition> SnapsToPartyWindow::agent_health_bar_positions;
@@ -93,65 +99,85 @@ std::vector<uint32_t> SnapsToPartyWindow::party_agent_ids_by_index;
 std::vector<std::unique_ptr<GuiUtils::EncString>> SnapsToPartyWindow::party_names_by_index;
 
 SnapsToPartyWindow::PartyFramePosition* SnapsToPartyWindow::GetAgentHealthBarPosition(uint32_t agent_id) {
-    if (!(agent_id && agent_health_bar_positions.contains(agent_id)))
+    const auto found = agent_health_bar_positions.find(agent_id);
+    if (agent_id == 0 || found == agent_health_bar_positions.end())
         return nullptr;
-    return &agent_health_bar_positions[agent_id];
+    return &found->second;
 }
 
 bool SnapsToPartyWindow::FetchPartyInfo()
 {
-    party_indeces_by_agent_id.clear();
-    party_agent_ids_by_index.clear();
     const GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
     if (!info) {
+        pending_party_members.clear();
+        party_indeces_by_agent_id.clear();
+        party_agent_ids_by_index.clear();
         return false;
     }
-    for (const auto& str : party_names_by_index) {
-        if (str->IsDecoding())
-            return false; // 等待上一轮完成后再重试
-    }
 
-    auto append_agent = [&](uint32_t agent_id, const wchar_t* enc_name = nullptr) {
-        if (party_indeces_by_agent_id.contains(agent_id))
+    pending_party_members.clear();
+    auto consider_agent = [&](const uint32_t agent_id, const wchar_t* enc_name = nullptr) {
+        if (std::find_if(pending_party_members.begin(), pending_party_members.end(),
+                [agent_id](const PendingPartyMember& m) { return m.agent_id == agent_id; }) != pending_party_members.end())
             return;
-        party_indeces_by_agent_id[agent_id] = party_agent_ids_by_index.size();
-        party_agent_ids_by_index.push_back(agent_id);
-        while (party_names_by_index.size() < party_agent_ids_by_index.size()) {
-            party_names_by_index.push_back(std::make_unique<GuiUtils::EncString>());
-        }
-        auto* str = party_names_by_index[party_agent_ids_by_index.size() - 1].get();
-        str->reset(enc_name ? enc_name : GW::Agents::GetAgentEncName(agent_id))
-            ->wstring(); // 触发解码
+        pending_party_members.push_back({agent_id, enc_name});
         };
 
     for (const auto& player : info->players) {
-        // 注意：玩家可能已离开游戏，意味着 GW::Agents::GetAgentEncName(agent_id) 会因 agent 消失而失败。传入 enc_name。
         if (const auto gwplayer = GW::PlayerMgr::GetPlayerByID(player.login_number)) {
-            append_agent(gwplayer->agent_id, gwplayer->name_enc);
+            consider_agent(gwplayer->agent_id, gwplayer->name_enc);
         }
         for (const auto& hero : info->heroes) {
             if (hero.owner_player_id == player.login_number) {
-                append_agent(hero.agent_id);
+                consider_agent(hero.agent_id);
             }
         }
     }
 
-    henchmen_start_idx = party_indeces_by_agent_id.size();
+    const auto henchmen_count = pending_party_members.size();
     for (const auto& hench : info->henchmen) {
-        append_agent(hench.agent_id);
+        consider_agent(hench.agent_id);
     }
 
-    pets_start_idx = party_indeces_by_agent_id.size();
+    const auto pets_count = pending_party_members.size();
     const auto w = GW::GetWorldContext();
     if (w) {
         for (const auto& pet : w->pets) {
-            append_agent(pet.agent_id);
+            consider_agent(pet.agent_id);
         }
     }
 
-    allies_start_idx = party_indeces_by_agent_id.size();
+    const auto allies_count = pending_party_members.size();
     for (const auto& other_agent_id : info->others) {
-        append_agent(other_agent_id);
+        consider_agent(other_agent_id);
+    }
+
+    const auto unchanged = party_names_by_index.size() >= pending_party_members.size()
+        && pending_party_members.size() == party_agent_ids_by_index.size()
+        && std::equal(pending_party_members.begin(), pending_party_members.end(), party_agent_ids_by_index.begin(),
+            [](const PendingPartyMember& m, const uint32_t agent_id) { return m.agent_id == agent_id; });
+    if (unchanged)
+        return true;
+
+    party_indeces_by_agent_id.clear();
+    party_agent_ids_by_index.clear();
+    for (const auto& str : party_names_by_index) {
+        if (str->IsDecoding())
+            return false;
+    }
+
+    henchmen_start_idx = henchmen_count;
+    pets_start_idx = pets_count;
+    allies_start_idx = allies_count;
+    for (const auto& member : pending_party_members) {
+        party_indeces_by_agent_id[member.agent_id] = party_agent_ids_by_index.size();
+        party_agent_ids_by_index.push_back(member.agent_id);
+        while (party_names_by_index.size() < party_agent_ids_by_index.size()) {
+            party_names_by_index.push_back(std::make_unique<GuiUtils::EncString>());
+        }
+        auto* str = party_names_by_index[party_agent_ids_by_index.size() - 1].get();
+        str->reset(member.enc_name ? member.enc_name : GW::Agents::GetAgentEncName(member.agent_id))
+            ->wstring();
     }
     return true;
 }
@@ -183,7 +209,6 @@ ImGuiWindowFlags SnapsToPartyWindow::GetWinFlags(ImGuiWindowFlags flags, const b
 void SnapsToPartyWindow::Draw(IDirect3DDevice9* device)
 {
     ToolboxWidget::Draw(device);
-    // @清理：不要每帧都执行此操作
     RecalculatePartyPositions();
 }
 

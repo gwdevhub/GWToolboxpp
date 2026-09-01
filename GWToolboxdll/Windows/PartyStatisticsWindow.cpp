@@ -142,16 +142,6 @@ namespace {
     }
     PartyMember* GetPartyMemberByEncName(const wchar_t* enc_name)
     {
-        /* 
-        @清理： 
-         - 当 3 个玩家各带同一个英雄（例如"Ebon Vanguard Mesmer" x 2）时会发生什么？
-         - GW 有时会在 NPC 创建后发送 enc_name 数据包；这会影响佣兵吗？
-         - 在某些边缘情况下，玩家的名字可能与英雄或佣兵重名
-         - 混淆器可能是个问题
-
-         可以改为挂钩 PartyPlayerAdd / PartyAllyAdd / PartyHeroAdd 数据包，通过玩家拥有者/英雄 ID 来识别，而不仅仅是使用名称。
-        */
-
         if (pending_party_members)
             return nullptr;
         const auto found = std::ranges::find_if(party_members, [enc_name](const auto party_member) {
@@ -374,7 +364,6 @@ namespace {
         }
         ASSERT(player_party_member);
 
-        // 添加玩家技能
         for (const GW::SkillbarSkill& skill : my_skillbar->skills) {
             set_member_skill(player_party_member, skill.skill_id);
         }
@@ -407,14 +396,11 @@ namespace {
             return;
         }
 
-        /* 自身玩家的所有技能 */
         if (static_cast<size_t>(-1) == player_idx) {
             WritePlayerStatisticsAllSkills(player_party_member);
-            /* 某玩家的单个技能 */
         }
         else if (std::numeric_limits<uint32_t>::max() != skill_idx) {
             WritePlayerStatisticsSingleSkill(GetPartyMemberByPartyIdx(player_idx), skill_idx);
-            /* 某玩家的所有技能 */
         }
         else {
             WritePlayerStatisticsAllSkills(GetPartyMemberByPartyIdx(player_idx));

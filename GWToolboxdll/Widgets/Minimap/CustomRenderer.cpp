@@ -75,7 +75,6 @@ void CustomRenderer::RegisterSettings(ToolboxModule* module)
 
 void CustomRenderer::LoadMarkers()
 {
-    // 清除当前标记
     lines.clear();
     markers.clear();
     polygons.clear();
@@ -1005,17 +1004,14 @@ void CustomRenderer::DrawCustomMarkers(IDirect3DDevice9* device)
         return;
     }
 
-    // 自定义多边形
     for (CustomPolygon& polygon : polygons) {
         polygon.Render(device);
     }
 
-    // 自定义标记
     for (CustomMarker& marker : markers) {
         marker.Render(device);
     }
 
-    // 英雄标记圆圈
     hero_circles_.Update(color_hero_flags_, hero_flag_line_thickness_, gwinches_per_pixel_);
     if (GW::HeroFlagArray& flags = GW::GetGameContext()->world->hero_flags; flags.valid()) {
         for (const auto& flag : flags) {
@@ -1045,9 +1041,6 @@ void CustomRenderer::DrawCustomLines(const IDirect3DDevice9*)
         if (doa_outpost && !line->draw_everywhere) continue;
 
         if (line->world_coords) {
-            // 跨地图路径尾部以世界地图坐标存储；投影到当前地图游戏空间
-            // 以便在罗盘上渲染（指向下一张地图）。WorldMapToGamePos 在当前地图上精确，
-            // 在超出大陆范围时保持线性。
             GW::GamePos g1, g2;
             if (!WorldMapWidget::WorldMapToGamePos({line->p1.x, line->p1.y}, g1) || !WorldMapWidget::WorldMapToGamePos({line->p2.x, line->p2.y}, g2)) continue;
             vertices.push_back({g1.x, g1.y, 0.f, line->color});

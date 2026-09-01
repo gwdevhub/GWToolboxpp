@@ -3,19 +3,12 @@
 #include "ThreadedWebSocket.h"
 #include <Timer.h>
 
-ThreadedWebSocket::ThreadedWebSocket()
-{
-    wsa_ok_ = (WSAStartup(MAKEWORD(2, 2), &wsa_data_) == 0);
-}
+ThreadedWebSocket::ThreadedWebSocket() = default;
 
 ThreadedWebSocket::~ThreadedWebSocket()
 {
     // Best-effort cleanup; caller should have called Disconnect() + polled Update() to idle.
     Disconnect(true);
-    if (wsa_ok_) {
-        WSACleanup();
-        wsa_ok_ = false;
-    }
 }
 
 // --- Configuration ---
@@ -70,7 +63,6 @@ void ThreadedWebSocket::SetOnClose(NotifyCallback cb)
 
 void ThreadedWebSocket::Connect()
 {
-    if (!wsa_ok_) return;
     if (pending_disconnect_.load()) return;
     connect_requested_ = true;
     EnsureThreadRunning();
@@ -78,7 +70,6 @@ void ThreadedWebSocket::Connect()
 
 bool ThreadedWebSocket::Send(std::string payload)
 {
-    if (!wsa_ok_) return false;
     if (pending_disconnect_.load()) return false;
     connect_requested_ = true;
     EnsureThreadRunning();
@@ -129,11 +120,6 @@ bool ThreadedWebSocket::IsIdle() const
 bool ThreadedWebSocket::IsReady() const
 {
     return ws_ && ws_->getReadyState() == easywsclient::WebSocket::OPEN;
-}
-
-bool ThreadedWebSocket::IsWsaReady() const
-{
-    return wsa_ok_;
 }
 
 // --- Private ---

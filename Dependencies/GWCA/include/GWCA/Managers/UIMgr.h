@@ -148,7 +148,7 @@ namespace GW {
 			uint32_t field15_0x3c;
 			uint32_t field16_0x40;
 			uint32_t field17_0x44;
-			uint32_t field18_0x48;
+			uint32_t m_ctlSpec;
 			uint32_t field19_0x4c;
 			uint32_t field20_0x50;
 			uint32_t field21_0x54;
@@ -236,10 +236,10 @@ namespace GW {
 
 		struct AgentNameTagInfo {
 			/* +h0000 */ uint32_t agent_id;
-			/* +h0004 */ uint32_t h0002;
-			/* +h0008 */ uint32_t h0003;
+			/* +h0004 */ uint32_t h0004;
+			/* +h0008 */ uint32_t h0008;
 			/* +h000C */ wchar_t* name_enc;
-			/* +h0010 */ uint8_t h0010;
+			/* +h0010 */ uint8_t highlight;
 			/* +h0011 */ uint8_t h0012;
 			/* +h0012 */ uint8_t h0013;
 			/* +h0013 */ uint8_t background_alpha; // ARGB, NB: Actual color is ignored, only alpha is used
@@ -250,6 +250,8 @@ namespace GW {
 			/* +h001E */ uint8_t h001E;
 			/* +h001F */ uint8_t h001F;
 			/* +h0020 */ wchar_t* extra_info_enc; // Title etc
+			/* +h0024 */ uint32_t extra_info_color; // ARGB
+			/* +h0028 */ uint32_t extra_info_attributes; // bold/size etc
 		};
 
 		// Note: some windows are affected by UI scale (e.g. party members), others are not (e.g. compass)
@@ -783,10 +785,35 @@ namespace GW {
 
 		GWCA_API bool DestroyUIComponent(Frame* frame);
 
-		// Frame layout primitives (GW's Frame::SetBounds/SetPosition), for measuring and
-		// stacking child frames from a custom container's kMeasureContent/kSetLayout handler.
-		GWCA_API void SetFrameBounds(Frame* frame, uint32_t mode, float* rect, float* size_out);
-		GWCA_API void SetFramePosition(Frame* frame, uint32_t mode, float* rect);
+		// Bitfield accepted by Frame::SetBounds/SetPositionInternal
+		enum FrameLayoutMode : uint32_t {
+			FrameLayoutMode_None = 0,
+			FrameLayoutMode_AnchorBottom = 0x1,           // vertical: anchor to the rect's bottom edge
+			FrameLayoutMode_Center = 0x2,                // required alongside centered placement on either axis (asserts otherwise)
+			FrameLayoutMode_AnchorLeft = 0x4,             // horizontal: anchor to the rect's left edge
+			FrameLayoutMode_AnchorRight = 0x8,            // horizontal: anchor to the rect's right edge
+			FrameLayoutMode_AnchorTop = 0x10,             // vertical: anchor to the rect's top edge
+			FrameLayoutMode_StretchWidth = 0x20,          // horizontal: fill the rect's full width (also behaves as a left anchor)
+			FrameLayoutMode_StretchHeight = 0x40,         // vertical: fill the rect's full height (also behaves as a bottom anchor)
+			FrameLayoutMode_AnchorHorizontalMargin = 0x80,  // gate: trim the resolved rect inward on the AnchorLeft/AnchorRight edge(s)
+			FrameLayoutMode_AnchorVerticalMargin = 0x100,   // gate: trim the resolved rect inward on the AnchorTop/AnchorBottom edge(s)
+		};
+		inline FrameLayoutMode operator|(FrameLayoutMode a, FrameLayoutMode b) {
+			return static_cast<FrameLayoutMode>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+		}
+		inline FrameLayoutMode operator&(FrameLayoutMode a, FrameLayoutMode b) {
+			return static_cast<FrameLayoutMode>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
+		}
+		inline FrameLayoutMode operator~(FrameLayoutMode a) {
+			return static_cast<FrameLayoutMode>(~static_cast<uint32_t>(a));
+		}
+
+		// Frame layout primitives (GW's Frame::SetBounds/SetPosition) for a container's kMeasureContent/kSetLayout handler.
+		GWCA_API void SetFrameBounds(Frame* frame, FrameLayoutMode mode, float* rect, float* size_out);
+		GWCA_API void SetFramePosition(Frame* frame, FrameLayoutMode mode, float* rect);
+
+		// Appends an additional handler onto frame->frame_callbacks
+		GWCA_API bool AddFrameCallback(Frame* frame, UIInteractionCallback callback, void* uictl_context = nullptr);
 
 		GWCA_API bool SelectDropdownOption(Frame* frame, uint32_t value);
 
@@ -867,6 +894,7 @@ namespace GW {
 		GWCA_API bool SetFrameVisible(UI::Frame* frame, bool flag);
 		GWCA_API bool SetFrameDisabled(UI::Frame* frame, bool flag);
 
+		// Stubbed: always returns false. The underlying game function is not scanned for.
 		GWCA_API bool AddFrameUIInteractionCallback(GW::UI::Frame*, UI::UIInteractionCallback callback, void* wparam);
 
 		GWCA_API bool TriggerFrameRedraw(UI::Frame* frame);

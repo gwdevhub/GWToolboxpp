@@ -12,6 +12,7 @@
 #include <Modules/Resources.h>
 
 #include "Utils/TextUtils.h"
+#include "Utils/TextUtils_Time.h"
 
 
 namespace {
@@ -75,8 +76,7 @@ namespace {
             ImGui::TableHeadersRow();
 
             for (auto drop : drops) {
-                std::tm tm_buf{};
-                localtime_s(&tm_buf, &drop->system_time);
+                std::tm tm_buf = TextUtils::Time::SafeLocaltime(drop->system_time);
                 char time_str[32];
                 std::strftime(time_str, sizeof(time_str), "%H:%M:%S", &tm_buf);
 
@@ -126,8 +126,7 @@ namespace {
                 // 使用索引作为ID，而不是字符串内容
                 ImGui::PushID(group_idx++);
 
-                // 使用TreeNodeEx，简单的标签
-                bool open = ImGui::TreeNodeEx("##tree", ImGuiTreeNodeFlags_SpanAvailWidth, "%s", key.empty() ? "(未知)" : key.c_str());
+                bool open = ImGui::TreeNodeEx("##tree", ImGuiTreeNodeFlags_SpanAvailWidth, "%s", key.empty() ? "(Unknown)" : key.c_str());
 
                 ImGui::TableNextColumn();
                 ImGui::Text("%zu", items.size());
@@ -139,8 +138,7 @@ namespace {
                     for (auto drop : items) {
                         ImGui::PushID(item_idx++); // 为每个子项提供唯一ID
 
-                        std::tm tm_buf{};
-                        localtime_s(&tm_buf, &drop->system_time);
+                        std::tm tm_buf = TextUtils::Time::SafeLocaltime(drop->system_time);
                         char time_str[32];
                         std::strftime(time_str, sizeof(time_str), "%H:%M:%S", &tm_buf);
 
@@ -240,15 +238,13 @@ namespace {
                     for (auto drop : items) {
                         ImGui::PushID(item_idx++);
 
-                        std::tm tm_buf{};
-                        localtime_s(&tm_buf, &drop->system_time);
+                        std::tm tm_buf = TextUtils::Time::SafeLocaltime(drop->system_time);
                         char time_str[32];
                         std::strftime(time_str, sizeof(time_str), "%H:%M:%S", &tm_buf);
 
                         ImGui::TableNextRow();
                         ImGui::TableNextColumn();
 
-                        // 显示带有武器属性的物品详情
                         ImGui::TextColored(GW::Items::GetRarityColor(drop->rarity), "%s", drop->GetItemName()->string().c_str());
                         ImGui::TableNextColumn();
                         ImGui::Text("%d", drop->quantity);

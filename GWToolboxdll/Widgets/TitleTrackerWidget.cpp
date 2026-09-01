@@ -97,9 +97,7 @@ namespace {
     float GetTitleProgressRatio(GW::Constants::TitleID title_id, GW::Title* title, bool current_tier = false)
     {
         if (!title) return 0.f;
-        // 像原版一样计算进度比例
         if (title->is_percentage_based()) {
-            // 基于百分比：min(current_points, 1000) / 1000
             uint32_t capped_points = std::min(title->current_points, 1000u);
             return (float)capped_points / 1000.0f;
         }
@@ -124,7 +122,6 @@ namespace {
 
         if (!title_1 || !title_2) return false;
 
-        // 检查不可用称号（points_needed_next_rank == -1）
         bool unavailable_1 = (title_1->points_needed_next_rank == 0xFFFFFFFF);
         bool unavailable_2 = (title_2->points_needed_next_rank == 0xFFFFFFFF);
 
@@ -169,7 +166,6 @@ namespace {
         update_progress(frame_id_1, GetTitleProgressRatio(title_id_1, title_1, settings.show_overall_title_progress));
         update_progress(frame_id_2, GetTitleProgressRatio(title_id_2, title_2, settings.show_overall_title_progress));
 
-        // 通过临时包装器复用 TitleProgress 比较逻辑
         TitleProgress p1(title_id_1), p2(title_id_2);
         return CompareTitleProgress(&p1, &p2) ? 1 : 0;
     }
@@ -333,7 +329,9 @@ void TitleTrackerWidget::Initialize()
         RegisterUIMessageCallback(&OnPostUIMessage_HookEntry, msg, OnPostUIMessage, 0x8000);
     }
     for (size_t i = 0; i != (size_t)GW::Constants::TitleID::Codex; i++) {
-        title_progress_by_id.push_back(new TitleProgress(static_cast<GW::Constants::TitleID>(i)));
+        const auto title_id = static_cast<GW::Constants::TitleID>(i);
+        if (GW::PlayerMgr::IsDeprecatedTitle(title_id)) continue;
+        title_progress_by_id.push_back(new TitleProgress(title_id));
         title_progress_by_title.push_back(title_progress_by_id.back());
     }
     GW::GameThread::Enqueue(RefreshTitleProgress, true);
@@ -373,12 +371,10 @@ void TitleTrackerWidget::Draw(IDirect3DDevice9*)
         ImVec2 bar_size(available_width, settings.progress_bar_height);
         const auto draw_list = ImGui::GetWindowDrawList();
 
-        // 计算进度条颜色
         const ImVec4 base_color = ImGui::ColorConvertU32ToFloat4(settings.progress_bar_foreground_color);
         const float lighten_factor = 1.5f; // 调整以控制亮度程度
         ImVec4 light_color(std::min(base_color.x * lighten_factor, 1.0f), std::min(base_color.y * lighten_factor, 1.0f), std::min(base_color.z * lighten_factor, 1.0f), base_color.w);
 
-        // 将 ImVec4 颜色转换为 ImU32
         ImU32 color_start = settings.progress_bar_foreground_color;
         ImU32 color_end = ImGui::ColorConvertFloat4ToU32(light_color);
 
@@ -388,7 +384,6 @@ void TitleTrackerWidget::Draw(IDirect3DDevice9*)
                 continue;
             }
             if (p->overlay_label->encoded().empty()) continue;
-            // 从 EncString 获取字符串
             const auto& title_text = p->title_label.string();
             auto sub_title_text = p->tier_label.string();
             if (p->current_rank > 0)
@@ -414,10 +409,8 @@ void TitleTrackerWidget::Draw(IDirect3DDevice9*)
 
             ImVec2 bar_pos = ImGui::GetCursorScreenPos();
             ImVec2 bar_pos_max = ImVec2(bar_pos.x + bar_size.x, bar_pos.y + bar_size.y);
-            // 背景进度条
             draw_list->AddRectFilled(bar_pos, bar_pos_max, settings.progress_bar_background_color);
 
-            // 前景进度条
             float fill_width = bar_size.x * p->percent;
             draw_list->AddRectFilledMultiColor(bar_pos, ImVec2(bar_pos.x + fill_width, bar_pos.y + bar_size.y), color_start, color_end, color_end, color_start);
 
@@ -427,7 +420,6 @@ void TitleTrackerWidget::Draw(IDirect3DDevice9*)
                 ImVec2 secondary_bar_pos(bar_pos.x, bar_pos_max.y - secondary_height);
                 float secondary_fill_width = bar_size.x * p->secondary_percent;
 
-                // 根据进度阈值确定颜色
                 ImU32 secondary_color;
                 if (p->secondary_percent >= 1.0f) {
                     secondary_color = IM_COL32(255, 0, 0, 150); // 满时红色
@@ -442,10 +434,8 @@ void TitleTrackerWidget::Draw(IDirect3DDevice9*)
                 draw_list->AddRectFilled(secondary_bar_pos, ImVec2(secondary_bar_pos.x + secondary_fill_width, secondary_bar_pos.y + secondary_height), secondary_color);
             }
 
-            // 边框
             draw_list->AddRect(bar_pos, bar_pos_max, progress_bar_border_color);
 
-            // 叠加标签
             if (Colors::IsVisible(settings.progress_overlay_label_color)) {
                 ImVec2 overlay_size = ImGui::CalcTextSize(overlay_text.c_str());
                 ImVec2 overlay_pos(bar_pos.x + (bar_size.x - overlay_size.x) * 0.5f, bar_pos.y + (bar_size.y - overlay_size.y) * 0.5f);

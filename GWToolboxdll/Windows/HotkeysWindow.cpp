@@ -120,6 +120,7 @@ namespace {
 
         using GetActionLabel_pt = wchar_t*(__cdecl*)(GW::UI::ControlAction action);
         const auto GetActionLabel_Func = reinterpret_cast<GetActionLabel_pt>(GW::Scanner::Find("\x83\xfe\x5b\x74\x27\x83\xfe\x5c\x74\x22\x83\xfe\x5d\x74\x1d", "xxxxxxxxxxxxxxx", -0x7));
+        DEBUG_ASSERT(GetActionLabel_Func);
         GWCA_INFO("[SCAN] GetActionLabel_Func = %p\n", reinterpret_cast<void*>(GetActionLabel_Func));
         if (!GetActionLabel_Func) {
             return;
@@ -136,8 +137,8 @@ namespace {
     bool IsFrameCreated(GW::UI::Frame* frame) {
         return frame && frame->IsCreated();
     }
-    
-    
+
+
     bool IsPlayerEquipmentReady()
     {
         const auto player = GW::Agents::GetControlledCharacter();
@@ -148,8 +149,8 @@ namespace {
     }
     bool IsMapReady()
     {
-        return GW::Map::GetIsMapLoaded() 
-            && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading 
+        return GW::Map::GetIsMapLoaded()
+            && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading
             && !GW::Map::GetIsObserving() && IsPlayerEquipmentReady()
             && IsFrameCreated(GW::UI::GetFrameByLabel(L"Skillbar"));
     }
@@ -166,8 +167,7 @@ namespace {
         }
     }
 
-    // 根据当前角色/地图上下文重新填充 applicable_hotkeys。
-    // 因为无需在每次按键时检查这些变量，只在它们变化时检查即可。
+    // Used because its not necessary to check these vars on every keystroke, only when they change
     bool CheckSetValidHotkeys()
     {
         const auto c = GW::GetCharContext();
@@ -207,7 +207,6 @@ namespace {
             return false;
         }
         bool is_in_controller_mode = GW::UI::IsInControllerMode();
-        // 检查快捷键或其任何祖先组是否设置了触发标志。
         auto inherited_trigger = [&mt](const TBHotkey* hk) -> bool {
             for (const TBHotkey* cur = hk; cur; cur = cur->group) {
                 if (cur->trigger_on_explorable && mt == GW::Constants::InstanceType::Explorable) return true;
@@ -262,7 +261,6 @@ namespace {
         keysHeld.reset(); // 清除先前按键状态
         BYTE keyState[256];
 
-        // 获取当前键盘状态
         if (GetKeyboardState(keyState)) {
             for (uint32_t vkey = 0; vkey < 256; ++vkey) {
                 // 检查高位是否置位（按键被按下）
@@ -298,7 +296,6 @@ namespace {
             hotkey_popup_first_draw = false;
         }
 
-        // 记录任何新的按键按下
         keys_selected |= wndproc_keys_held;
 
         std::string keys_held_buf = ModKeyName(keys_selected);
@@ -469,9 +466,6 @@ void HotkeysWindow::Draw(IDirect3DDevice9*)
             hotkeys_changed = new_hotkey != 0;
         }
 
-        // === 每个快捷键 / 组 ===
-        // 组是 `hotkeys` 中的一等公民；HotkeyGroup::Draw 处理其子项。
-        // 顶层的所有移动都是简单交换——无需旋转。
         for (auto hotkey : TBHotkey::top_level_hotkeys) {
             if (hotkey->Draw()) break; // 列表变异后下一帧重新绘制
         }
@@ -541,8 +535,6 @@ void HotkeysWindow::SaveSettings(SettingsDoc& doc)
     ToolboxWindow::SaveSettings(doc);
     doc.SetStruct(Name(), settings);
 
-    // 将所有快捷键保存为平面标记条目。每个条目都有一个 sort_order 字段，
-    // 用于在加载时确定显示顺序。子项还有一个 group 字段，包含其父组的标签。
     std::vector<HotkeyEntry> entries;
     entries.reserve(TBHotkey::all_hotkeys.size());
     ToolboxIni tmp_ini;
@@ -589,7 +581,8 @@ bool HotkeysWindow::WndProc(const UINT Message, const WPARAM wParam, LPARAM)
     size_t hotkeys_triggered = 0;
 
     auto check_triggers = [check_trigger, &hotkeys_triggered](bool is_key_up, uint32_t keyData) {
-        std::vector<TBHotkey*> matching_hotkeys;
+        static std::vector<TBHotkey*> matching_hotkeys;
+        matching_hotkeys.clear();
         size_t max_modifier_count = 0;
 
         bool is_in_controller_mode = GW::UI::IsInControllerMode();
@@ -598,17 +591,10 @@ bool HotkeysWindow::WndProc(const UINT Message, const WPARAM wParam, LPARAM)
         for (TBHotkey* hk : valid_hotkeys) {
             if (is_key_up) hk->pressed = false;
 
-            // 如果满足以下条件，则快捷键被视为“匹配”：
-            // - 尚未触发（`hk->pressed == false`）
-            // - 应在按键释放时触发（如果正在处理按键释放事件）
-            // - 所有必需的键都处于按下状态（`hk->key_combo & wndproc_keys_held == hk->key_combo`）
-            // - 刚刚按下/释放的键属于此快捷键（`hk->key_combo.test(keyData)`）
             if (check_trigger(hk, is_key_up, keyData, is_in_controller_mode)) {
-                // 计算此快捷键所需的按键数量（修饰键 + 主键）
                 size_t modifier_count = hk->key_combo.count();
                 matching_hotkeys.push_back(hk);
 
-                // 跟踪最高所需的按键数（最具体的快捷键）
                 max_modifier_count = std::max(max_modifier_count, modifier_count);
             }
         }
@@ -620,7 +606,6 @@ bool HotkeysWindow::WndProc(const UINT Message, const WPARAM wParam, LPARAM)
             if (hk->key_combo.count() == max_modifier_count) {
                 PushPendingHotkey(hk);
 
-                // 如果此快捷键设置为阻止激战输入，则标记为已触发
                 if (!is_key_up && hk->block_gw) {
                     triggered = true;
                 }
@@ -676,7 +661,11 @@ void HotkeysWindow::Update(const float)
         return;
     }
     if (!map_change_triggered) {
-        map_change_triggered = OnMapChanged();
+        static clock_t last_map_check = 0;
+        if (!last_map_check || TIMER_DIFF(last_map_check) > 500) {
+            last_map_check = TIMER_INIT();
+            map_change_triggered = OnMapChanged();
+        }
     }
     for (auto hotkey : TBHotkey::all_hotkeys) {
         if (hotkey->ongoing) hotkey->Execute();

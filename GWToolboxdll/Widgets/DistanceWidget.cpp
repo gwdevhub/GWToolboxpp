@@ -99,7 +99,6 @@ void DistanceWidget::Draw(IDirect3DDevice9*)
 
             ImVec2 cur = ImGui::GetCursorPos();
             constexpr auto background = ImColor(Colors::Black());
-            // '距离'
             if (settings.font_size_header > 0.f && show_titlebar) {
                 ImGui::PushFont(FontLoader::GetFont(), static_cast<float>(FontLoader::FontSize::header1));
                 ImGui::SetCursorPos(ImVec2(cur.x + 1, cur.y + 1));
@@ -109,7 +108,6 @@ void DistanceWidget::Draw(IDirect3DDevice9*)
                 ImGui::PopFont();
             }
 
-            // 百分比
             if (settings.font_size_perc_value > 0.f) {
                 ImGui::PushFont(FontLoader::GetFont(), settings.font_size_perc_value);
                 cur = ImGui::GetCursorPos();
@@ -121,7 +119,6 @@ void DistanceWidget::Draw(IDirect3DDevice9*)
                 ImGui::PopFont();
             }
 
-            // 绝对值
             if (settings.font_size_abs_value > 0.f) {
                 ImGui::PushFont(FontLoader::GetFont(), settings.font_size_abs_value);
                 cur = ImGui::GetCursorPos();

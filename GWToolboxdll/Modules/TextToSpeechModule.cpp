@@ -77,15 +77,15 @@ namespace {
         return nullptr;
     }
 
-    // API 配置结构体
     struct APIConfig {
         GenerateVoiceCallback callback;
         const char* name;
         const char* signup_url;
         const char* note = nullptr;
         bool has_user_id = false;
-        char api_key[128] = {0};
-        char user_id[128] = {0};
+        // Some providers issue long keys (e.g. OpenAI project keys are ~200 chars), and Kokoro stores a server URL here
+        char api_key[512] = {0};
+        char user_id[512] = {0};
     };
 
     GW::Constants::Language GetAudioLanguage()
@@ -195,6 +195,11 @@ namespace {
     float GetSystemVolume(bool cache = true)
     {
         if (cache && TIMER_DIFF(last_cached_system_volume) < 10000) return cached_system_volume;
+        if (cache) {
+            last_cached_system_volume = TIMER_INIT();
+            Resources::EnqueueWorkerTask([] { GetSystemVolume(false); });
+            return cached_system_volume;
+        }
 
         HRESULT hr = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
         bool needs_uninit = SUCCEEDED(hr);
@@ -582,10 +587,6 @@ Gender GetGenderByFileId(const uint32_t file_id)
             if (!duration) duration = EstimateAudioDuration(path);
         }
 
-        // --- 阶段 2：在不持有锁的情况下调用音频系统 ---
-        // shared_ptr 确保即使另一个线程在此处调用 ClearSounds() 或 CancelDialogSpeech()，
-        // `this` 仍然存活 — 它们将 Stop() 并释放其 shared_ptr，
-        // 但我们的引用计数在此作用域退出前不会归零。
         const auto pos = GetAgentVec3f(agent_id);
         VoiceLog("正在播放音频文件：%s（估计时长：%dms）", path.filename().string().c_str(), duration);
         const uint32_t flags = is_dialog_window ? SoundFlags_Dialog : (SoundFlags_Dialog | SoundFlags_Positional);
@@ -768,7 +769,6 @@ Gender GetGenderByFileId(const uint32_t file_id)
     GW::HookEntry UIMessage_HookEntry;
     GW::HookEntry PreUIMessage_HookEntry;
 
-    // 前向声明
     void GenerateVoice(std::shared_ptr<PendingNPCAudio> audio);
 
     void GenerateVoiceFromDecodedString(std::shared_ptr<PendingNPCAudio> audio)
@@ -819,8 +819,7 @@ Gender GetGenderByFileId(const uint32_t file_id)
         return GW::GetDistance(agent->pos, GetPlayerPosition());
     }
 
-    GW::UI::UIInteractionCallback OnNPCInteract_UICallback_Func = nullptr, OnNPCInteract_UICallback_Ret = nullptr;
-    GW::UI::UIInteractionCallback OnVendorInteract_UICallback_Func = nullptr, OnVendorInteract_UICallback_Ret = nullptr;
+    GW::HookEntry FrameUIMessage_HookEntry;
 
     bool was_dialog_already_open = false;
 
@@ -841,51 +840,12 @@ Gender GetGenderByFileId(const uint32_t file_id)
         }
     }
 
-    void OnNPCInteract_UICallback(GW::UI::InteractionMessage* message, void* wParam, void* lParam)
+    // Not a hook on the frame's callback: DialogModule and GWCA hook that same function, and
+    // GWCA fatally asserts when its own CreateHook then collides on the already-hooked target.
+    void OnDialogFrameDestroyed(GW::HookStatus*, const GW::UI::Frame* frame, GW::UI::UIMessage, void*, void*)
     {
-        GW::Hook::EnterHook();
-        OnNPCInteract_UICallback_Ret(message, wParam, lParam);
-        if (message->message_id == GW::UI::UIMessage::kDestroyFrame) OnNPCDialogClosed();
-        GW::Hook::LeaveHook();
-    }
-
-    void OnVendorInteract_UICallback(GW::UI::InteractionMessage* message, void* wParam, void* lParam)
-    {
-        GW::Hook::EnterHook();
-        OnVendorInteract_UICallback_Ret(message, wParam, lParam);
-        if (message->message_id == GW::UI::UIMessage::kDestroyFrame) OnNPCDialogClosed();
-        GW::Hook::LeaveHook();
-    }
-
-    void HookNPCInteractFrame()
-    {
-        if (!OnNPCInteract_UICallback_Func) {
-            const auto frame = GW::UI::GetFrameByLabel(L"NPCInteract");
-            if (frame && frame->frame_callbacks.size()) {
-                OnNPCInteract_UICallback_Func = frame->frame_callbacks[0].callback;
-                GW::Hook::CreateHook((void**)&OnNPCInteract_UICallback_Func, OnNPCInteract_UICallback, (void**)&OnNPCInteract_UICallback_Ret);
-                GW::Hook::EnableHooks(OnNPCInteract_UICallback_Func);
-            }
-        }
-        if (!OnVendorInteract_UICallback_Func) {
-            const auto vendor_frame = GW::UI::GetFrameByLabel(L"Vendor");
-            if (vendor_frame && vendor_frame->frame_callbacks.size()) {
-                OnVendorInteract_UICallback_Func = vendor_frame->frame_callbacks[0].callback;
-                GW::Hook::CreateHook((void**)&OnVendorInteract_UICallback_Func, OnVendorInteract_UICallback, (void**)&OnVendorInteract_UICallback_Ret);
-                GW::Hook::EnableHooks(OnVendorInteract_UICallback_Func);
-            }
-        }
-    }
-
-    void UnHookNPCInteractFrame()
-    {
-        if (OnNPCInteract_UICallback_Func) {
-            GW::Hook::RemoveHook(OnNPCInteract_UICallback_Func);
-            OnNPCInteract_UICallback_Func = nullptr;
-        }
-        if (OnVendorInteract_UICallback_Func) {
-            GW::Hook::RemoveHook(OnVendorInteract_UICallback_Func);
-            OnVendorInteract_UICallback_Func = nullptr;
+        if (frame == GW::UI::GetFrameByLabel(L"NPCInteract") || frame == GW::UI::GetFrameByLabel(L"Vendor")) {
+            OnNPCDialogClosed();
         }
     }
 
@@ -910,7 +870,6 @@ Gender GetGenderByFileId(const uint32_t file_id)
         if (status->blocked) return;
         switch (msgid) {
             case GW::UI::UIMessage::kDialogBody: {
-                HookNPCInteractFrame();
                 was_dialog_already_open = false;
             } break;
             case GW::UI::UIMessage::kPreferenceValueChanged: {
@@ -937,7 +896,6 @@ Gender GetGenderByFileId(const uint32_t file_id)
                 ClearSounds();
             } break;
             case GW::UI::UIMessage::kVendorWindow: {
-                HookNPCInteractFrame();
                 const auto packet = (GW::UI::UIPacket::kVendorWindow*)wParam;
                 last_dialog_agent_id = packet->unk;
                 switch (packet->transaction_type) {
@@ -1268,8 +1226,6 @@ Gender GetGenderByFileId(const uint32_t file_id)
             return bail();
         }
 
-        // --- 交给工作线程 ---
-        // 捕获 weak_ptr；如果在等待网络调用时音频被取消，lock() 将返回 nullptr，我们安全退出。
         std::weak_ptr<PendingNPCAudio> weak_audio = audio;
         // 现在释放我们的强引用 — pending_audio 仍持有一个。
         audio.reset();
@@ -1715,6 +1671,7 @@ void TextToSpeechModule::Initialize()
         RegisterUIMessageCallback(&UIMessage_HookEntry, message_id, OnPostUIMessage, 0x4000);
     }
     AudioSettings::RegisterPlaySoundCallback(&UIMessage_HookEntry, OnPlaySound);
+    GW::UI::RegisterFrameUIMessageCallback(&FrameUIMessage_HookEntry, GW::UI::UIMessage::kDestroyFrame, OnDialogFrameDestroyed);
 
     OnAgentSpeechBubble_UICallback_Func = (GW::UI::UIInteractionCallback)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("AtMonolog.cpp", "msg.createParam", 0, 0), 0xfff);
     if (OnAgentSpeechBubble_UICallback_Func) {
@@ -1728,7 +1685,7 @@ void TextToSpeechModule::Terminate()
 {
     ToolboxModule::Terminate();
     ClearSounds();
-    UnHookNPCInteractFrame();
+    GW::UI::RemoveFrameUIMessageCallback(&FrameUIMessage_HookEntry);
     GW::UI::RemoveUIMessageCallback(&UIMessage_HookEntry);
     GW::UI::RemoveUIMessageCallback(&PreUIMessage_HookEntry);
     AudioSettings::RemovePlaySoundCallback(&UIMessage_HookEntry);
@@ -1830,12 +1787,18 @@ void TextToSpeechModule::DrawSettingsInternal()
 
     if (api_config) {
         if (!is_api_locked_down) {
-            ImGui::Text("%s API Key：", api_config->name);
+            // Fill the rest of the line, leaving room for the show/hide password button
+            const auto secret_input_width = [] {
+                return std::max(ImGui::GetContentRegionAvail().x - ImGui::GetFrameHeight() - ImGui::GetStyle().ItemSpacing.x, 100.f * ImGui::FontScale());
+            };
+            ImGui::Text("%s API Key: ", api_config->name);
             ImGui::SameLine();
+            ImGui::SetNextItemWidth(secret_input_width());
             ImGui::InputTextSecret("###current provider API Key", api_config->api_key, _countof(api_config->api_key), &show_passwords);
             if (api_config->has_user_id) {
                 ImGui::Text("%s User ID：", api_config->name);
                 ImGui::SameLine();
+                ImGui::SetNextItemWidth(secret_input_width());
                 ImGui::InputTextSecret("###current provider User ID", api_config->user_id, _countof(api_config->user_id), &show_passwords);
             }
             ImGui::TextColored(col.Value, "点击此处获取 %s API 凭证", api_config->name);

@@ -9,6 +9,8 @@
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 
+#include <Windows/Pathfinding/Pathing.h>
+
 #include <Color.h>
 #include <D3DContainers.h>
 #include <Defines.h>
@@ -26,7 +28,6 @@ namespace {
     Color vq_color_blocked = IM_COL32(60, 20, 20, 170);
     Color vq_color_blocked_border = IM_COL32(180, 100, 100, 140);
 
-    // 敌人追踪
     enum class EnemyState { NotApplicable, Alive, Stale };
     struct TrackedEnemy {
         GW::Vec2f pos;
@@ -228,8 +229,6 @@ namespace {
         return !newly_explored_cells.empty();
     }
 
-    // 纯函数，在工作线程上安全：构建迷雾单元格索引 + 四边形。
-    // 在迷雾缓冲区中包含可行走和被阻止的单元格，以便被阻止区域也可以被“探索”（迷雾清除，露出被阻止的颜色）。
     void BuildFogVertices(const MapGridData& data, std::vector<int>& out_cell_index, std::vector<D3DVertex>& out_verts)
     {
         out_cell_index.assign(data.size, -1);
@@ -454,113 +453,13 @@ namespace {
         return cx1 > left && cx0 < right;
     }
 
-    const GW::PathingTrapezoid* FindTrapezoidInPlane(const GW::Vec2f& point, const GW::PathingMap& plane)
-    {
-        GW::Node* n = plane.root_node;
-        int cnt = 50000;
-        while (n && cnt--) {
-            switch (n->type) {
-                case 0: {
-                    auto* xn = static_cast<GW::XNode*>(n);
-                    float d = (point.y - xn->pos.y) * xn->dir.x - (point.x - xn->pos.x) * xn->dir.y;
-                    n = d >= 0.0f ? xn->right : xn->left;
-                    break;
-                }
-                case 1: {
-                    auto* yn = static_cast<GW::YNode*>(n);
-                    if (point.y > yn->pos.y) n = yn->above;
-                    else if (point.y < yn->pos.y) n = yn->below;
-                    else n = point.x >= yn->pos.x ? yn->above : yn->below;
-                    break;
-                }
-                case 2: {
-                    auto* sn = static_cast<GW::SinkNode*>(n);
-                    return sn ? sn->trapezoid : nullptr;
-                }
-            }
-        }
-        return nullptr;
-    }
-
-    // 从玩家的梯形开始通过邻接和未阻塞的传送门进行 BFS。
-    // 返回可到达的梯形集合，如果玩家位置未知则为空。
-    // 阻塞检查与游戏原生 A* 匹配（IPath_ExpandPortalLeft/Right）：
-    //   - portal.flags & 0x04（传送门被标记为阻塞）
-    //   - blockedPlanes[neighbor_plane] & 1（目标平面在运行时被阻塞）
-    std::unordered_set<const GW::PathingTrapezoid*> FindReachableTrapezoids(const GW::PathingMapArray* pathing_map)
-    {
-        std::unordered_set<const GW::PathingTrapezoid*> reachable;
-
-        const auto* player = GW::Agents::GetControlledCharacter();
-        if (!player) return reachable;
-        const GW::Vec2f player_pos = {player->pos.x, player->pos.y};
-
-        auto* map_ctx = GW::GetMapContext();
-        auto* path_ctx = map_ctx ? map_ctx->path : nullptr;
-
-        const GW::PathingTrapezoid* start_trap = nullptr;
-        size_t start_plane = 0;
-
-        if (player->pos.zplane < pathing_map->size()) {
-            start_trap = FindTrapezoidInPlane(player_pos, pathing_map->at(player->pos.zplane));
-            start_plane = player->pos.zplane;
-        }
-        if (!start_trap) {
-            for (size_t p = 0; p < pathing_map->size(); p++) {
-                start_trap = FindTrapezoidInPlane(player_pos, pathing_map->at(p));
-                if (start_trap) { start_plane = p; break; }
-            }
-        }
-        if (!start_trap) return reachable;
-
-        struct TrapRef { const GW::PathingTrapezoid* trap; size_t plane; };
-        std::vector<TrapRef> queue;
-        queue.push_back({start_trap, start_plane});
-        reachable.insert(start_trap);
-
-        for (size_t head = 0; head < queue.size(); head++) {
-            const auto [trap, plane_idx] = queue[head];
-
-            for (int i = 0; i < 4; i++) {
-                auto* adj = trap->adjacent[i];
-                if (adj && !reachable.contains(adj)) {
-                    reachable.insert(adj);
-                    queue.push_back({adj, plane_idx});
-                }
-            }
-
-            const auto& pm = pathing_map->at(plane_idx);
-            auto check_portal = [&](uint16_t portal_idx) {
-                if (portal_idx >= pm.portal_count) return;
-                auto& portal = pm.portals[portal_idx];
-                if (portal.flags & 0x04) return;
-                auto* pair = portal.pair;
-                if (!pair) return;
-                size_t target_plane = portal.neighbor_plane;
-                if (path_ctx && target_plane < path_ctx->blockedPlanes.size()
-                    && (path_ctx->blockedPlanes[target_plane] & 1)) return;
-                for (uint32_t i = 0; i < pair->count; i++) {
-                    auto* t = pair->trapezoids[i];
-                    if (t && !reachable.contains(t)) {
-                        reachable.insert(t);
-                        queue.push_back({t, target_plane});
-                    }
-                }
-            };
-            check_portal(trap->portal_left);
-            check_portal(trap->portal_right);
-        }
-
-        return reachable;
-    }
-
-    // 仅游戏线程：BFS + 将梯形坐标复制到工作线程。
+    // Game thread only: BFS + copy out trapezoid coords for the worker thread.
     std::vector<TrapezoidSnapshot> SnapshotPathingMap()
     {
         std::vector<TrapezoidSnapshot> out;
         const auto pathing_map = GW::Map::GetPathingMap();
         if (!pathing_map) return out;
-        const auto reachable = FindReachableTrapezoids(pathing_map);
+        const auto reachable = Pathing::FindReachableTrapezoids();
         for (size_t p = 0; p < pathing_map->size(); p++) {
             const auto& plane = pathing_map->at(p);
             for (uint32_t t = 0; t < plane.trapezoid_count; t++) {
@@ -670,10 +569,6 @@ namespace {
 
     bool grid_rebuild_pending = false;
 
-    // 异步重建：繁重的光栅化和顶点构建在工作线程上运行；只有 BFS 快照
-    // 和最终交换触及游戏线程。用于地图切换和实例内变化（门、
-    // 传送）。`force` 绕过进行中保护，以便地图切换即使在旧地图的
-    // 先前构建仍在运行时也始终重建（其陈旧结果由应用步骤中的 map_id 守卫丢弃）。
     void QueueRebuildMapBorder(bool force = false)
     {
         if (grid_rebuild_pending && !force) return;
@@ -1024,7 +919,8 @@ void VanquishMapOverlayWidget::DrawVanquishToggleButton()
 void VanquishMapOverlayWidget::Update(float)
 {
     const bool render_ready = MissionMapWidget::IsRenderReady();
-    should_draw = render_ready && visible && ToolboxUtils::IsExplorable();
+    const bool explorable = ToolboxUtils::IsExplorable();
+    should_draw = render_ready && visible && explorable;
 
     if (render_ready) {
         cached_px_to_game = MissionMapWidget::GetPxToGame();
@@ -1067,12 +963,13 @@ void VanquishMapOverlayWidget::Update(float)
         }
     }
 
-    // 昂贵更新的帧率检查
     static clock_t last_check = TIMER_INIT();
     if (!ToolboxUtils::FrameRateCheck(last_check, 30)) return;
 
+    if (!visible && explorable) return;
+
     const auto player_pos = GW::PlayerMgr::GetPlayerPosition();
-    if (ToolboxUtils::IsExplorable()) {
+    if (explorable) {
         UpdateEnemyTracking();
         if (UpdateExploration(player_pos))
             UpdateFrontierIncremental();

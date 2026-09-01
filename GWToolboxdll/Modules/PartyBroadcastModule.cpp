@@ -126,8 +126,6 @@ namespace {
 
     void on_websocket_closed()
     {
-        // 注意：由 ThreadedWebSocket 在工作线程上调用。
-        // 仅在此处触碰原子变量或自包含状态；任何需要游戏线程的操作都应通过 GW::GameThread::Enqueue 排队。
         last_update_timestamp = 0;
         server_parties.clear();
         need_to_send_party_searches = TIMER_INIT();

@@ -29,6 +29,7 @@ namespace {
 
     std::vector<MissionMapWidget::DrawCallback> draw_callbacks;
     std::vector<MissionMapWidget::ContextMenuCallback> context_menu_callbacks;
+    std::vector<MissionMapWidget::OverlayCallback> overlay_callbacks;
 
     // 像素到游戏单位的比例 — 将像素厚度转换为游戏单位
     float cached_px_to_game = 1.f;
@@ -133,8 +134,6 @@ namespace {
         if (!mm_ctx || !mm_ctx->h003c) return;
         const GW::Vec2f mm_pos = mm_ctx->h003c->player_mission_map_pos;
 
-        // 未观战时使用受控角色的位置（在地下地图中 WorldMapToGamePos 返回错误坐标时有效）。
-        // 观战时 mm_pos 追踪被观察角色，因此必须将其转换回游戏坐标以与原点计算保持一致。
         float px, py;
         const auto* player = GW::Agents::GetControlledCharacter();
         const bool spectating = player && GW::Agents::GetObservingId() != player->agent_id;
@@ -255,10 +254,6 @@ namespace {
         return true;
     }
 
-    // --- 可行走地形覆盖层 -----------------------------------------------
-    // 将地图不可行走部分着色为灰色，并勾勒可行走地形的轮廓。
-    // 与 Vanquish 覆盖层的网格不同，这里没有可达性/BFS、没有战争迷雾和敌人追踪 —
-    // 它是对路径地图中每个梯形的静态光栅化，完全独立于 Vanquish 小部件。
     constexpr float TERRAIN_CELL_SIZE = GW::Constants::Range::Adjacent / 2.f;
 
     struct TerrainTrapezoidSnapshot {
@@ -519,8 +514,8 @@ namespace {
             cb(dx_device);
         }
 
-        // 覆盖层关闭时（默认），直接绘制线 — 使用上面已设置的状态单次 DrawPrimitive。
-        // 只有选择加入的覆盖层才需支付 Minimap::Render（D3DSBT_ALL 捕获）的成本。
+        // When the overlay is off (default), draw the lines directly — a single DrawPrimitive with the
+        // state already set above. Only the opt-in overlay pays for Minimap::Render's own state guard.
         if (settings.draw_minimap && Minimap::IsEnabled()) {
             RenderMinimapLayers(dx_device, gameToScreen, ortho);
         }
@@ -551,9 +546,6 @@ namespace {
         ctx.draw_background = false;
         ctx.draw_cardinals = false; // 任务地图始终朝北
         ctx.draw_pmap = settings.draw_pmap;
-        // pmap 阴影偏移应用于视图的输出空间，对于任务地图的 game->px 视图是原始像素；
-        // 以像素表示一个小的游戏单位偏移，使其保持微妙并按任务地图缩放比例缩放
-        //（指南针使用其自己空间中的默认值）。
         constexpr float shadow_gwinches = 180.f;
         ctx.shadow_translation = shadow_gwinches / cached_px_to_game;
         ctx.draw_symbols = settings.draw_symbols;
@@ -577,8 +569,9 @@ namespace {
         const float LINE_HALF_THICKNESS = 1.f * cached_px_to_game;
         for (const auto& line : lines) {
             if (!line->visible) continue;
-            if (line->world_coords) continue; // 世界坐标，非游戏坐标；由 DrawWorldCoordRouteLines 绘制
-            if (!line->draw_on_mission_map && !(settings.draw_all_minimap_lines && line->draw_on_minimap) && !(settings.draw_all_terrain_lines && line->draw_on_terrain)) continue;
+            if (line->world_coords) continue; // world coords, not game coords; drawn by DrawWorldCoordRouteLines
+            const bool draw_all_override = !line->created_by_toolbox && ((settings.draw_all_minimap_lines && line->draw_on_minimap) || (settings.draw_all_terrain_lines && line->draw_on_terrain));
+            if (!line->draw_on_mission_map && !draw_all_override) continue;
             if (line->map != map_id) continue;
             if (line->from_player_pos && player_pos) {
                 minimap_lines.push_back(D3DLine(*player_pos, line->p2, LINE_HALF_THICKNESS, static_cast<DWORD>(line->color)));
@@ -590,10 +583,6 @@ namespace {
 
     }
 
-    // 跨地图路径尾部以世界地图坐标存储（唯一能将其他地图位置放置的形式）。
-    // 通过 world->mission-map 转换在 ImGui 覆盖层中绘制它们，并裁剪到小部件范围内。
-    // 这些覆盖整个路径（包括当前地图超出最近传送门的出口段，游戏坐标线无法到达）；
-    // 与游戏坐标当前地图线的重叠是相同的路径，因此无害 — 与世界地图匹配。
     void DrawWorldCoordRouteLines()
     {
         const auto& lines = Minimap::Instance().custom_renderer.GetLines();
@@ -639,7 +628,16 @@ void MissionMapWidget::Draw(IDirect3DDevice9* dx_device)
 
     DrawWorldCoordRouteLines();
 
-    // POC：任务地图图标，去饱和。复活圣坛图标（可能还有其他）默认颜色错误，因此我们去饱和，但这会影响其他图标！
+    if (!overlay_callbacks.empty()) {
+        auto* draw_list = ImGui::GetBackgroundDrawList();
+        draw_list->PushClipRect({mission_map_top_left.x, mission_map_top_left.y}, {mission_map_bottom_right.x, mission_map_bottom_right.y}, true);
+        for (const auto cb : overlay_callbacks) {
+            cb(draw_list);
+        }
+        draw_list->PopClipRect();
+    }
+
+    // POC: mission map icons, desaturated. Res shrine icon (maybe others) are wrong colour by default so we desaturate, but this impacts other icons!
     #if 0
     const auto* world_ctx = GW::GetWorldContext();
     if (!world_ctx) return;
@@ -813,3 +811,20 @@ void MissionMapWidget::RemoveDrawCallback(DrawCallback cb) { std::erase(draw_cal
 void MissionMapWidget::AddContextMenuCallback(ContextMenuCallback cb) { context_menu_callbacks.push_back(cb); }
 void MissionMapWidget::RemoveContextMenuCallback(ContextMenuCallback cb) { std::erase(context_menu_callbacks, cb); }
 GW::Vec2f MissionMapWidget::GetContextMenuWorldMapPos() { return world_map_click_pos; }
+
+void MissionMapWidget::AddOverlayCallback(OverlayCallback cb) { overlay_callbacks.push_back(cb); }
+void MissionMapWidget::RemoveOverlayCallback(OverlayCallback cb) { std::erase(overlay_callbacks, cb); }
+
+bool MissionMapWidget::WorldMapToScreen(const GW::Vec2f& world_map_pos, ImVec2& out)
+{
+    if (!mission_map_ready) return false;
+    GW::Vec2f screen_pos;
+    if (!WorldMapCoordsToMissionMapScreenPos(world_map_pos, screen_pos)) return false;
+    out = {screen_pos.x, screen_pos.y};
+    return true;
+}
+
+float MissionMapWidget::GetPxPerWorldMapUnit()
+{
+    return mission_map_ready ? mission_map_zoom * mission_map_scale.x : 0.f;
+}

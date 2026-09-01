@@ -24,8 +24,10 @@
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 
+#include <Widgets/CartographerWidget.h>
 #include <Modules/GwDatModule.h>
 #include <Modules/Resources.h>
+#include <Widgets/Minimap/AgentRenderer.h>
 #include <Widgets/Minimap/Minimap.h>
 #include <Widgets/Minimap/GameWorldRenderer.h>
 
@@ -140,6 +142,7 @@ namespace {
 
     bool world_map_clicking = false;
     GW::Vec2f world_map_click_pos;
+    bool world_map_click_pos_valid = false;
 
     GW::Constants::QuestID hovered_quest_id = GW::Constants::QuestID::None;
     GuiUtils::EncString hovered_quest_name;
@@ -218,6 +221,7 @@ namespace {
     }
 
     std::vector<WorldMapWidget::ContextMenuCallback> context_menu_callbacks;
+    std::vector<WorldMapWidget::OverlayCallback> overlay_callbacks;
 
     bool ContextMenuMarkerButtons()
     {
@@ -280,6 +284,11 @@ namespace {
         ImGui::PopStyleVar();
         ImGui::Separator();
         if (!ContextMenuMarkerButtons()) return false;
+        if (world_map_click_pos_valid) {
+            for (const auto& cb : context_menu_callbacks) {
+                if (!cb()) return false;
+            }
+        }
 
         if (set_active) {
             GW::GameThread::Enqueue([quest_id] {
@@ -358,9 +367,8 @@ namespace {
 
     uint32_t GetMapPropModelFileId(GW::MapProp* prop)
     {
-        if (!(prop && prop->h0034[4])) return 0;
-        uint32_t* sub_deets = (uint32_t*)prop->h0034[4];
-        return ArenaNetFileParser::FileHashToFileId((wchar_t*)sub_deets[1]);
+        if (!(prop && prop->model_info)) return 0;
+        return ArenaNetFileParser::FileHashToFileId(prop->model_info->model_file_name);
     };
 
     bool IsTravelPortal(GW::MapProp* prop)
@@ -429,11 +437,9 @@ namespace {
         if (!props) return found;
         for (auto prop : *props) {
             if (!IsTravelPortal(prop)) continue;
-            // TODO：如果 found 为空或此 prop->location 比 found 更近，则此获胜
-            // 计算当前传送门与给定位置之间的距离
+            // TOOD: If found is null or this prop->location is closer than the found one, this wins
             float distance = GW::GetDistance(prop->position, game_pos);
 
-            // 如果 found 为空或此传送门比当前找到的更近，则更新 found
             if (!found || distance < closest_distance) {
                 found = prop;
                 closest_distance = distance;
@@ -502,7 +508,6 @@ namespace {
         });
     }
 
-    // 计算旋转点的辅助函数
     void CalculateRotatedPoints(const ImRect& rect, const ImVec2& center, float rotation_angle, ImVec2 out_points[4])
     {
         ImVec2 points[4] = {
@@ -516,12 +521,10 @@ namespace {
             const float dx = points[i].x - center.x;
             const float dy = points[i].y - center.y;
 
-            // 使用 rotation_angle 应用旋转变换
             out_points[i] = {center.x + dx * cos(rotation_angle) - dy * sin(rotation_angle), center.y + dx * sin(rotation_angle) + dy * cos(rotation_angle)};
         }
     }
 
-    // 计算精灵地图 UV 坐标的辅助函数
     void CalculateUVCoords(float uv_start_x, float uv_end_x, ImVec2 uv_points[4])
     {
         uv_points[0] = {uv_start_x, 0.0f}; // 左上
@@ -532,7 +535,6 @@ namespace {
 
 
 
-    // 计算视口位置的函数
     ImVec2 CalculateViewportPos(const GW::Vec2f& marker_world_pos, const ImVec2& top_left)
     {
         return {world_map_proj_scale.x * (marker_world_pos.x - top_left.x) + viewport_offset.x, world_map_proj_scale.y * (marker_world_pos.y - top_left.y) + viewport_offset.y};
@@ -584,9 +586,6 @@ namespace {
                 world_map_scale = world_map_zoomed_out_size.x / world_map_size_in_coords.x;
             }
         }
-        // 每帧从可见矩形（top_left..bottom_right）的每世界坐标像素，
-        // 客户端每帧从动画缩放中重新导出。通过它投影可追踪缩放动画，
-        // 而 world_map_scale（仅静止状态）不能。在客户端填充矩形之前回退到静止状态因子。
         world_map_proj_scale = {ui_scale.x * world_map_scale, ui_scale.y * world_map_scale};
         if (world_map_frame) {
             const auto frame_size = world_map_frame->position.GetSizeOnScreen();
@@ -606,30 +605,7 @@ namespace {
         return true;
     }
 
-    GW::Vec2f southern_shivers_start = {4570.f, 4230.f};
-    GW::Vec2f post_searing_region = {5705.f, 3590.f};
-    GW::Vec2f maguuma_region = {220.f, 4150.f};
-    GW::Vec2f crystal_desert_region = {6105.f, 6735.f};
-    GW::Vec2f ring_of_fire_region = {1070.f, 7190.f};
-    GW::Vec2f kryta_region = {2150.f, 3800.f};
-
-    GW::Vec2f shing_jea_island = {700.f, 2050.f};
-    GW::Vec2f kaineng_city = {2430.f, 590.f};
-    GW::Vec2f echovald_forest = {3220.f, 2120.f};
-    GW::Vec2f jade_sea = {3790.f, 1925.f};
-
-    GW::Vec2f istan = {625.f, 2660.f};
-    GW::Vec2f kourna = {2760.f, 1645.f};
-    GW::Vec2f vabbi = {3230.f, 360.f};
-    GW::Vec2f desolation = {1860.f, 87.f};
-
-    GW::Vec2f far_shiverpeaks = {4470.f, 810.f};
-    GW::Vec2f charr_homelands = {6640.f, 1300.f};
-    GW::Vec2f tarnished_coast = {1210.f, 5770.f};
-
     ImVec2 skill_texture_size = {};
-
-    float default_scale = 1.37f;
 
     std::unordered_map<GW::Constants::MapID, uint32_t> locations_assigned_to_outposts;
 
@@ -663,7 +639,6 @@ namespace {
         }
 
         const auto texture = Resources::GetSkillImage(boss.skill_id);
-        // const auto texture = Resources::GetProfessionIcon((GW::Constants::Profession)skill->profession);
 
         if (!(texture && *texture)) return false;
 
@@ -672,114 +647,30 @@ namespace {
         const float icon_size = std::lerp(16.f, 32.f, std::clamp(world_map_context->zoom, 0.f, 1.f)); // 随缩放增长
         const auto half_size = icon_size / 2.f;
 
+        const auto prof_idx = static_cast<uint32_t>(skill->profession);
+        const auto prof_color = (settings.color_elite_icons_by_profession && prof_idx)
+            ? AgentRenderer::Instance().GetProfessionColor(prof_idx)
+            : 0u;
+
         bool hovered = false;
-        float elites_scale = default_scale;
-        for (auto boss_pos : boss.coords) {
-            GW::Vec2f* region_offset = nullptr;
-            switch (map_info->campaign) {
-                case GW::Constants::Campaign::Prophecies: {
-                    switch (boss.region_id) {
-                        case 1: {
-                            region_offset = &crystal_desert_region;
-                        } break;
-                        case 2: {
-                            region_offset = &southern_shivers_start;
-                        } break;
-                        case 3: {
-                            region_offset = &ring_of_fire_region;
-                        } break;
-                        case 4: {
-                            region_offset = &post_searing_region;
-                        } break;
-                        case 5: {
-                            region_offset = &kryta_region;
-                        } break;
-                        case 7: {
-                            region_offset = &maguuma_region;
-                        } break;
-                    }
-                } break;
-                case GW::Constants::Campaign::Factions: {
-                    switch (boss.region_id) {
-                        case 1: {
-                            region_offset = &kaineng_city;
-                        } break;
-                        case 2: {
-                            region_offset = &echovald_forest;
-                        } break;
-                        case 3: {
-                            region_offset = &jade_sea;
-                        } break;
-                        case 4: {
-                            region_offset = &shing_jea_island;
-                        } break;
-                    }
-                } break;
-                case GW::Constants::Campaign::Nightfall: {
-                    switch (boss.region_id) {
-                        case 1: {
-                            region_offset = &istan;
-                        } break;
-                        case 2: {
-                            region_offset = &kourna;
-                        } break;
-                        case 3: {
-                            region_offset = &vabbi;
-                            elites_scale = 1.34f;
-                        } break;
-                        case 4: {
-                            region_offset = &desolation;
-                            elites_scale = 1.34f;
-                        } break;
-                        case 5: {
-                            // 痛苦领域是开发者放弃让世界地图有用的地方。
-                            boss_pos = GW::Vec2f((float)map_info->x - icon_size * 2.f, (float)map_info->y);
-                            locations_assigned_to_outposts[boss.map_id]++;
-                            boss_pos.x += icon_size * (locations_assigned_to_outposts[boss.map_id] - 1);
-                            elites_scale = 1.f;
-                        }
-                    }
-                } break;
-                case GW::Constants::Campaign::EyeOfTheNorth: {
-                    elites_scale = 1.315f;
-                    switch (boss.region_id) {
-                        case 1: {
-                            region_offset = &far_shiverpeaks;
-                        } break;
-                        case 2: {
-                            region_offset = &charr_homelands;
-                        } break;
-                        case 3: {
-                            region_offset = &tarnished_coast;
-                            if (boss.map_id == GW::Constants::MapID::Sparkfly_Swamp) {
-                                // MappingOut 将锈蚀海岸拼接在一起，这意味着我必须手动放置 Sparkfly Swamp 的精英。无需偏移或缩放。
-                                region_offset = nullptr;
-                                elites_scale = 1.f;
-                            }
-                        } break;
-                    }
-                } break;
-            }
-            if (boss.region_id == 0xff) {
-                boss_pos = GW::Vec2f((float)map_info->x - icon_size * 2.f, (float)map_info->y);
-                locations_assigned_to_outposts[boss.map_id]++;
-                boss_pos.x += icon_size * (locations_assigned_to_outposts[boss.map_id] - 1);
-                elites_scale = 1.f;
-            }
-
-            boss_pos *= elites_scale;
-            if (region_offset) {
-                boss_pos += *region_offset;
-            }
-
-
-            const auto viewport_quest_pos = CalculateViewportPos(boss_pos, world_map_context->top_left);
-
-
-            const ImRect icon_rect = {{viewport_quest_pos.x - half_size, viewport_quest_pos.y - half_size}, {viewport_quest_pos.x + half_size, viewport_quest_pos.y + half_size}};
-
+        const auto draw_boss_icon = [&](const GW::Vec2f& boss_pos) {
+            const auto viewport_boss_pos = CalculateViewportPos(boss_pos, world_map_context->top_left);
+            const ImRect icon_rect = {{viewport_boss_pos.x - half_size, viewport_boss_pos.y - half_size}, {viewport_boss_pos.x + half_size, viewport_boss_pos.y + half_size}};
             ImGui::AddImageScaled(draw_list, *texture, icon_rect.Min, skill_texture_size, icon_size, icon_size);
+            if (prof_color) {
+                draw_list->AddRect(icon_rect.Min, icon_rect.Max, prof_color, 0.f, 0, 2.f);
+            }
             hovered |= icon_rect.Contains(ImGui::GetMousePos());
+        };
+        if (boss.coords.empty()) {
+            // Dungeons and the Realm of Torment have no area on the world map, so stack their icons next to the entrance outpost
+            const auto slot = locations_assigned_to_outposts[boss.map_id]++;
+            draw_boss_icon({(float)map_info->x - icon_size * 2.f + icon_size * slot, (float)map_info->y});
+        }
+        else {
+            for (const auto& boss_pos : boss.coords) {
+                draw_boss_icon(boss_pos);
+            }
         }
 
         return hovered;
@@ -797,7 +688,6 @@ namespace {
             color = QuestModule::GetQuestColor(quest->quest_id);
         }
 
-        // 绘制任务标记
         const auto draw_quest_marker = [&](const GW::Vec2f& quest_marker_pos) {
             const auto viewport_quest_pos = CalculateViewportPos(quest_marker_pos, world_map_context->top_left);
 
@@ -819,11 +709,9 @@ namespace {
             return icon_rect.Contains(ImGui::GetMousePos());
         };
 
-        // 绘制任务箭头
         const auto draw_quest_arrow = [&](const GW::Vec2f& quest_marker_pos) {
             const auto viewport_quest_pos = CalculateViewportPos(quest_marker_pos, world_map_context->top_left);
             const auto viewport_player_pos = CalculateViewportPos(player_world_map_pos, world_map_context->top_left);
-            // 计算从你的位置到任务标记的向量
             const float dx = viewport_quest_pos.x - viewport_player_pos.x;
             const float dy = viewport_quest_pos.y - viewport_player_pos.y;
 
@@ -941,7 +829,9 @@ GW::Constants::MapID WorldMapWidget::GetMapIdForLocation(const GW::Vec2f& world_
 void WorldMapWidget::Initialize()
 {
     ToolboxWidget::Initialize();
-    SettingsRegistry::Register(this, settings);
+    // These are all drawn by the controls window on the world map itself, not in the Settings window,
+    // so keep them out of settings search - a result here would navigate to a section without them.
+    SettingsRegistry::Register(this, settings, false);
 
     memset(show_elite_capture_locations, true, sizeof(show_elite_capture_locations));
     quest_icon_texture = GwDatModule::LoadTextureFromFileId(0x1b4d5);
@@ -998,8 +888,8 @@ namespace {
         if (!area_info || !GW::Map::GetMapWorldMapBounds(area_info, &map_bounds)) return false;
 
         mid_out = {
-            map_bounds.Min.x + (abs(game_min.x) / gwinches_per_unit),
-            map_bounds.Min.y + (abs(game_max.y) / gwinches_per_unit),
+            map_bounds.Min.x - (game_min.x / gwinches_per_unit),
+            map_bounds.Min.y + (game_max.y / gwinches_per_unit) + 1.f,
         };
         return true;
     }
@@ -1051,6 +941,20 @@ bool& WorldMapWidget::ShowLinesOnWorldMap()
 void WorldMapWidget::AddContextMenuCallback(ContextMenuCallback cb) { context_menu_callbacks.push_back(cb); }
 void WorldMapWidget::RemoveContextMenuCallback(ContextMenuCallback cb) { std::erase(context_menu_callbacks, cb); }
 GW::Vec2f WorldMapWidget::GetContextMenuWorldMapPos() { return world_map_click_pos; }
+
+void WorldMapWidget::AddOverlayCallback(OverlayCallback cb) { overlay_callbacks.push_back(cb); }
+void WorldMapWidget::RemoveOverlayCallback(OverlayCallback cb) { std::erase(overlay_callbacks, cb); }
+
+bool WorldMapWidget::WorldMapToScreen(const GW::Vec2f& world_map_pos, ImVec2& out)
+{
+    if (!(world_map_context && GW::UI::GetIsWorldMapShowing())) return false;
+    const auto map_info = GW::Map::GetMapInfo(GW::Map::GetMapID());
+    if (!(map_info && map_info->continent == world_map_context->continent)) return false;
+    out = CalculateViewportPos(world_map_pos, world_map_context->top_left);
+    return true;
+}
+
+float WorldMapWidget::GetPxPerWorldMapUnit() { return world_map_proj_scale.x; }
 
 void WorldMapWidget::ShowAllOutposts(const bool show = settings.showing_all_outposts)
 {
@@ -1127,10 +1031,6 @@ void WorldMapWidget::SaveSettings(SettingsDoc& doc)
     doc.SetStruct(Name(), settings);
 
     const std::filesystem::path map_info_by_file_id_file = Resources::GetPath(L"MapInfoByFileId.txt");
-    // 文件格式（纯文本，每个地图块一个条目）：
-    //   MAP <map_file_id> <world_pos_start.x> <world_pos_start.y> <world_pos_end.x> <world_pos_end.y> <portal_count> <map_id>
-    //   PORTAL <map_file_id> <prop_model_file_id> <world_pos.x> <world_pos.y>
-    //   ...
     std::ofstream out(map_info_by_file_id_file);
     if (!out.is_open()) return;
     for (const auto& [file_id, info] : map_info_by_file_id) {
@@ -1159,7 +1059,18 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
     mouse_offset.y *= -1;
     if (ImGui::Begin(Name(), &visible, GetWinFlags() | ImGuiWindowFlags_AlwaysAutoResize)) {
         window = ImGui::GetCurrentWindowRead();
-        if (ImGui::Checkbox("显示所有区域", &settings.showing_all_outposts)) {
+        bool carto_enabled = CartographerWidget::GetEnabled();
+        if (ImGui::Checkbox("Cartographer", &carto_enabled)) {
+            GW::GameThread::Enqueue([carto_enabled] {
+                CartographerWidget::SetEnabled(carto_enabled);
+            });
+        }
+        if (carto_enabled) {
+            ImGui::Indent();
+            CartographerWidget::DrawWorldMapOptions();
+            ImGui::Unindent();
+        }
+        if (ImGui::Checkbox("Show all areas", &settings.showing_all_outposts)) {
             GW::GameThread::Enqueue([] {
                 ShowAllOutposts(settings.showing_all_outposts);
             });
@@ -1242,11 +1153,9 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
             const auto& completion = CompletionWindow::Instance().GetCharacterCompletion(GW::PlayerMgr::GetPlayerName(), false);
             if (!completion) ImGui::TextDisabled("如果完成窗口被禁用，则仅限于你的主/副职业");
         }
+        ImGui::Checkbox("Color skill icons by profession", &settings.color_elite_icons_by_profession);
         ImGui::Unindent();
     }
-    // ImGui::InputFloat("region.x", &tarnished_coast.x, 10.f);
-    // ImGui::InputFloat("region.y", &tarnished_coast.y, 10.f);
-    // ImGui::InputFloat("default_scale", &default_scale, 0.001f);
     ImGui::End();
     ImGui::PopStyleColor();
 
@@ -1281,7 +1190,6 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
     }
 
     hovered_quest_id = GW::Constants::QuestID::None;
-    // 如果适用，在世界地图上绘制所有任务标记
     if (settings.showing_all_quests) {
         if (const auto quest_log = GW::QuestMgr::GetQuestLog()) {
             for (auto& quest : *quest_log) {
@@ -1309,34 +1217,27 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
         }
     }
     if (hovered_boss) {
-        ImGui::SetTooltip("%s", BossInfo(hovered_boss).c_str());
+        ImGui::SetTooltip([&]() {
+            if (settings.color_elite_icons_by_profession) {
+                const auto skill = GW::SkillbarMgr::GetSkillConstantData(hovered_boss->skill_id);
+                const auto prof_img = skill ? Resources::GetProfessionIcon(static_cast<GW::Constants::Profession>(skill->profession)) : 0;
+
+                const auto sz = ImGui::CalcTextSize("").y * 1.5f;
+                if (prof_img && *prof_img) {
+                    ImGui::Image(*prof_img, {sz, sz});
+                    ImGui::SameLine();
+                }
+            }
+            ImGui::TextUnformatted(BossInfo(hovered_boss).c_str());
+        });
     }
     if (hovered_map_portal) {
         ImGui::SetTooltip([]() {
             if (hovered_map_portal) DrawMapPortalInfo(hovered_map_portal);
         });
+        
     }
 
-    /*for (const auto& portal : map_portals) {
-        static constexpr auto uv0 = ImVec2(0.0f, 0.0f);
-        static constexpr auto ICON_SIZE = ImVec2(24.0f, 24.0f);
-
-        const ImVec2 portal_pos = {
-            ui_scale.x * (portal.world_pos.x - world_map_context->top_left.x) + viewport_offset.x - (ICON_SIZE.x / 2.f),
-            ui_scale.y * (portal.world_pos.y - world_map_context->top_left.y) + viewport_offset.y - (ICON_SIZE.y / 2.f)
-        };
-
-        const ImRect hover_rect = {
-            portal_pos, {portal_pos.x + ICON_SIZE.x, portal_pos.y + ICON_SIZE.y}
-        };
-
-        draw_list->AddImage(*GwDatModule::LoadTextureFromFileId(0x1b4d5), hover_rect.GetTL(), hover_rect.GetBR());
-
-
-        if (hover_rect.Contains(ImGui::GetMousePos())) {
-            ImGui::SetTooltip("传送门");
-        }
-    }*/
     if (settings.show_lines_on_world_map) {
         const auto& lines = Minimap::Instance().custom_renderer.GetLines();
         const auto map_id = GW::Map::GetMapID();
@@ -1369,8 +1270,6 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
             draw_list->AddLine(p1, p2, line->color);
         }
 
-        // 导航网格调试覆盖层：现在它是批处理的游戏世界 VB（不是 CustomLines），因此在此处以 2D 方式重新绘制其源段
-        // — 世界地图是俯视图。除非导航网格覆盖层打开，否则为空。匹配预批处理行为，其中导航网格作为自定义线在世界地图上运行。
         if (GameWorldRenderer::GetNavmeshWorldMapMapId() == map_id) {
             for (const auto& e : GameWorldRenderer::GetNavmeshWorldMapLines()) {
                 if (!GamePosToWorldMap(e.a, line_start)) continue;
@@ -1392,6 +1291,9 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
         const auto rect = draw_list->GetClipRectMax();
         draw_list->AddText({16.f, rect.y - 48.f}, ImGui::GetColorU32(ImGuiCol_Text), "正在计算路径...");
     }
+    for (const auto cb : overlay_callbacks) {
+        cb(draw_list);
+    }
     drawn = true;
 }
 
@@ -1405,17 +1307,23 @@ bool WorldMapWidget::WndProc(const UINT Message, WPARAM, LPARAM lParam)
     switch (Message) {
         case WM_GW_RBUTTONCLICK: {
             if (!(world_map_context && GW::UI::GetIsWorldMapShowing())) break;
+            // Resolve the click position before dispatching: the hovered-quest menu carries
+            // contributed items that act on where the user clicked, so it needs it too.
+            const bool have_click_pos = world_map_context->zoom == 1.0f;
+            world_map_click_pos_valid = have_click_pos;
+            if (have_click_pos) {
+                world_map_click_pos = {GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
+                world_map_click_pos.x /= ui_scale.x;
+                world_map_click_pos.y /= ui_scale.y;
+                world_map_click_pos.x += world_map_context->top_left.x;
+                world_map_click_pos.y += world_map_context->top_left.y;
+            }
             if (GW::QuestMgr::GetQuest(hovered_quest_id)) {
                 ImGui::SetContextMenu(HoveredQuestContextMenu, (void*)hovered_quest_id);
                 break;
             }
 
-            if (!(world_map_context && world_map_context->zoom == 1.0f)) break;
-            world_map_click_pos = {GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
-            world_map_click_pos.x /= ui_scale.x;
-            world_map_click_pos.y /= ui_scale.y;
-            world_map_click_pos.x += world_map_context->top_left.x;
-            world_map_click_pos.y += world_map_context->top_left.y;
+            if (!have_click_pos) break;
             if (hovered_boss) {
                 ImGui::SetContextMenu(EliteBossLocationContextMenu, (void*)hovered_boss);
                 break;
@@ -1439,5 +1347,5 @@ bool WorldMapWidget::WndProc(const UINT Message, WPARAM, LPARAM lParam)
 
 void WorldMapWidget::DrawSettingsInternal()
 {
-    ImGui::Text("注意：仅在困难模式探索区域可见。");
+    ImGui::TextDisabled("The world map options (show all areas, quest markers, elite capture locations, ...)\nare drawn on the world map itself - open the world map to change them.");
 }

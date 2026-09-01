@@ -11,10 +11,11 @@
 #include <Modules/ToolboxTheme.h>
 #include <Modules/Updater.h>
 #include <Windows/SettingsWindow.h>
-
 #include <ToolboxWidget.h>
+#include <ToolboxWindow.h>
 
 #include <Utils/TextUtils.h>
+#include <unordered_map>
 #include <imgui_test_engine_hooks/imgui_test_engine_hooks.h>
 
 namespace {
@@ -23,6 +24,7 @@ namespace {
     struct SearchResult {
         std::string nav_section; // SettingsName() used for NavigateToSection
         std::string label;       // empty for category results
+        std::string row_label;
         int score = 0;
     };
 
@@ -152,48 +154,86 @@ namespace {
         ctx->TestEngineHookItems = locate.HooksNeeded();
     }
 
+    std::string NavSectionForModule(ToolboxModule* module)
+    {
+        if (!module) {
+            return {};
+        }
+        const auto& callbacks = ToolboxModule::GetSettingsCallbacks();
+        const auto* settings_name = module->SettingsName();
+        if (callbacks.contains(settings_name)) {
+            return settings_name;
+        }
+        std::string found;
+        for (const auto& [section, list] : callbacks) {
+            const auto drawn_here = std::ranges::any_of(list, [module](const SectionDrawCallbackInfo& info) {
+                return info.module == module;
+            });
+            if (drawn_here && (found.empty() || section < found)) {
+                found = section;
+            }
+        }
+        return found;
+    }
+
+    const std::string& CachedToLower(const std::string& s)
+    {
+        static std::unordered_map<std::string, std::string> lowered;
+        const auto found = lowered.find(s);
+        if (found != lowered.end()) {
+            return found->second;
+        }
+        return lowered.emplace(s, TextUtils::ToLower(s)).first->second;
+    }
+
     std::vector<SearchResult> BuildSearchResults(const std::string& query_lower)
     {
         std::vector<SearchResult> results;
         for (const auto& section : ToolboxModule::GetSettingsCallbacks() | std::views::keys) {
-            const auto score = MatchScore(TextUtils::ToLower(section), query_lower);
+            const auto score = MatchScore(CachedToLower(section), query_lower);
             if (score >= 0) {
-                results.push_back({section, "", score});
+                results.push_back({.nav_section = section, .score = score});
             }
         }
         for (const auto& e : SettingsRegistry::GetEntries()) {
-            auto best = MatchScore(TextUtils::ToLower(e.label), query_lower);
+            if (!e.in_settings_window) {
+                continue; // Drawn by the module's own UI; navigating here would land on nothing
+            }
+            auto best = MatchScore(CachedToLower(e.label), query_lower);
             for (const auto& text : {e.section, e.description}) {
                 if (text.empty()) {
                     continue;
                 }
-                const auto score = MatchScore(TextUtils::ToLower(text), query_lower);
+                const auto score = MatchScore(CachedToLower(text), query_lower);
                 if (score >= 0 && (best < 0 || score < best)) {
                     best = score;
                 }
             }
-            if (best >= 0) {
-                results.push_back({e.module->SettingsName(), e.label, best});
+            if (best < 0) {
+                continue;
+            }
+            if (const auto nav_section = NavSectionForModule(e.module); !nav_section.empty()) {
+                results.push_back({.nav_section = nav_section, .label = e.label, .score = best});
             }
         }
         for (const auto& [section, label] : sub_sections) {
-            const auto score = MatchScore(TextUtils::ToLower(label), query_lower);
+            const auto score = MatchScore(CachedToLower(label), query_lower);
             if (score >= 0) {
-                results.push_back({section, label, score});
+                results.push_back({.nav_section = section, .label = label, .score = score});
             }
         }
         // The "Enable the following features" checkboxes; labels match the checkbox text so locate works
         const auto* toggles_section = ToolboxSettings::Instance().SettingsName();
         for (const auto& [name, description] : ToolboxSettings::GetOptionalModuleToggles()) {
-            auto best = MatchScore(TextUtils::ToLower(name), query_lower);
+            auto best = MatchScore(CachedToLower(name), query_lower);
             if (*description) {
-                const auto score = MatchScore(TextUtils::ToLower(description), query_lower);
+                const auto score = MatchScore(CachedToLower(description), query_lower);
                 if (score >= 0 && (best < 0 || score < best)) {
                     best = score;
                 }
             }
             if (best >= 0) {
-                results.push_back({toggles_section, name, best});
+                results.push_back({.nav_section = toggles_section, .label = name, .score = best});
             }
         }
         std::ranges::sort(results, [](const SearchResult& a, const SearchResult& b) {
@@ -203,6 +243,17 @@ namespace {
         if (results.size() > max_results) {
             results.resize(max_results);
         }
+        const auto& icons = ToolboxModule::GetSettingsIcons();
+        for (size_t i = 0; i < results.size(); i++) {
+            auto& result = results[i];
+            const char* icon = nullptr;
+            if (const auto it = icons.find(result.nav_section); it != icons.end()) {
+                icon = it->second;
+            }
+            result.row_label = result.label.empty()
+                                   ? std::format("{}  {}##result_{}", icon ? icon : " ", result.nav_section, i)
+                                   : std::format("{}  {} > {}##result_{}", icon ? icon : " ", result.nav_section, result.label, i);
+        }
         return results;
     }
 
@@ -210,11 +261,12 @@ namespace {
     {
         static int selected_index = 0;
         static std::string last_query;
+        static std::vector<SearchResult> results;
         if (last_query != search_buf) {
             last_query = search_buf;
             selected_index = 0;
+            results = BuildSearchResults(TextUtils::ToLower(search_buf));
         }
-        const auto results = BuildSearchResults(TextUtils::ToLower(search_buf));
         if (results.empty()) {
             ImGui::TextDisabled("没有与 '%s' 匹配的设置", search_buf);
             return;
@@ -229,18 +281,10 @@ namespace {
 
         const SearchResult* activated = nullptr;
         if (ImGui::BeginChild("##settings_search_results")) {
-            const auto& icons = ToolboxModule::GetSettingsIcons();
             for (size_t i = 0; i < results.size(); i++) {
                 const auto& result = results[i];
-                const char* icon = nullptr;
-                if (const auto it = icons.find(result.nav_section); it != icons.end()) {
-                    icon = it->second;
-                }
-                const auto text = result.label.empty()
-                                      ? std::format("{}  {}##result_{}", icon ? icon : " ", result.nav_section, i)
-                                      : std::format("{}  {} > {}##result_{}", icon ? icon : " ", result.nav_section, result.label, i);
                 const bool is_selected = static_cast<int>(i) == selected_index;
-                if (ImGui::Selectable(text.c_str(), is_selected) || (is_selected && activate_selected)) {
+                if (ImGui::Selectable(result.row_label.c_str(), is_selected) || (is_selected && activate_selected)) {
                     activated = &result;
                 }
             }
@@ -455,66 +499,68 @@ void SettingsWindow::Draw(IDirect3DDevice9*)
 
         const auto& settings_sections = GetSettingsCallbacks();
 
-        std::vector<std::string> sections_to_draw;
-
         DrawSettingsSection(ToolboxTheme::Instance().SettingsName());
         DrawSettingsSection(ToolboxSettings::Instance().SettingsName());
 
-        const auto sort = [](const ToolboxModule* a, const ToolboxModule* b) {
-            return strcmp(a->Name(), b->Name()) < 0;
+        // Section names only change when a module is toggled or (un)registers settings content, not per frame.
+        struct CachedSections {
+            std::vector<ToolboxModule*> source;
+            std::vector<std::string> sections;
         };
-        const auto queue_settings_for_module = [&](ToolboxModule* m) {
-            for (const auto& [section, cb] : settings_sections) {
-                for (const auto& cbs : cb) {
-                    if (cbs.module == m) {
-                        sections_to_draw.push_back(section);
-                        break;
+        static CachedSections modules, windows, widgets;
+        static uint32_t cached_callbacks_revision = static_cast<uint32_t>(-1);
+
+        const auto callbacks_revision = ToolboxModule::GetSettingsCallbacksRevision();
+        const bool callbacks_changed = cached_callbacks_revision != callbacks_revision;
+        cached_callbacks_revision = callbacks_revision;
+
+        const auto sync_sections = [&](CachedSections& cache, const auto& src) {
+            if (!callbacks_changed && std::ranges::equal(cache.source, src)) {
+                return;
+            }
+            cache.source.assign(src.begin(), src.end());
+            std::vector<ToolboxModule*> sorted(cache.source);
+            std::ranges::sort(sorted, [](const ToolboxModule* a, const ToolboxModule* b) {
+                return strcmp(a->Name(), b->Name()) < 0;
+            });
+
+            cache.sections.clear();
+            for (const auto m : sorted) {
+                if (!m->HasSettings()) {
+                    continue;
+                }
+                for (const auto& [section, cb] : settings_sections) {
+                    for (const auto& cbs : cb) {
+                        if (cbs.module == m) {
+                            cache.sections.push_back(section);
+                            break;
+                        }
                     }
                 }
+                cache.sections.emplace_back(m->SettingsName());
             }
-            sections_to_draw.push_back(m->SettingsName());
+            std::ranges::sort(cache.sections);
         };
-        const auto sort_and_draw_settings = [&] {
-            std::ranges::sort(sections_to_draw);
-            for (auto& s : sections_to_draw) {
+        const auto draw_sections = [&](const CachedSections& cache) {
+            for (const auto& s : cache.sections) {
                 DrawSettingsSection(s.c_str());
             }
-            sections_to_draw.clear();
         };
 
+        sync_sections(modules, GWToolbox::GetModules());
+        draw_sections(modules);
 
-        auto modules = GWToolbox::GetModules();
-        std::ranges::sort(modules, sort);
-        for (const auto m : modules) {
-            if (m->HasSettings()) {
-                queue_settings_for_module(m);
-            }
+        sync_sections(windows, GWToolbox::GetWindows());
+        if (!windows.source.empty()) {
+            ImGui::Text("Windows:");
         }
-        sort_and_draw_settings();
+        draw_sections(windows);
 
-        auto windows = GWToolbox::GetWindows();
-        std::ranges::sort(windows, sort);
-        if (!windows.empty()) {
-            ImGui::Text("窗口：");
+        sync_sections(widgets, GWToolbox::GetWidgets());
+        if (!widgets.source.empty()) {
+            ImGui::Text("Widgets:");
         }
-        for (const auto m : windows) {
-            if (m->HasSettings()) {
-                queue_settings_for_module(m);
-            }
-        }
-        sort_and_draw_settings();
-
-        auto widgets = GWToolbox::GetWidgets();
-        std::ranges::sort(widgets, sort);
-        if (!widgets.empty()) {
-            ImGui::Text("小部件：");
-        }
-        for (const auto m : widgets) {
-            if (m->HasSettings()) {
-                queue_settings_for_module(m);
-            }
-        }
-        sort_and_draw_settings();
+        draw_sections(widgets);
 
         if (ImGui::Button("立即保存", ImVec2(w, 0))) {
             GWToolbox::SaveSettings();
@@ -572,7 +618,8 @@ bool SettingsWindow::DrawSettingsSection(const char* section)
     else if (!pending_navigate_to.empty()) {
         ImGui::SetNextItemOpen(false, ImGuiCond_Always);
     }
-    const bool is_showing = ImGui::CollapsingHeader(std::format("##{}", section).c_str(), ImGuiTreeNodeFlags_AllowOverlap);
+    ImGui::PushID(section);
+    const bool is_showing = ImGui::CollapsingHeader("", ImGuiTreeNodeFlags_AllowOverlap);
     ImGui::SameLine(header_text_offset_x);
     if (icon) {
         ImGui::TextUnformatted(icon);
@@ -583,7 +630,6 @@ bool SettingsWindow::DrawSettingsSection(const char* section)
         ImGui::SetScrollHereY(0.0f);
     }
 
-    ImGui::PushID(section);
     size_t i = 0;
     if (is_showing) ImGui::Indent();
     for (const auto& setting_callback : settings_section->second) {

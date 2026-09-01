@@ -163,7 +163,6 @@ namespace {
 
     void TargetVipers()
     {
-        // target best vipers target (closest)
         GW::AgentArray* agents = GW::Agents::GetAgentArray();
         const GW::Agent* me = agents ? GW::Agents::GetControlledCharacter() : nullptr;
         if (me == nullptr) {
@@ -559,7 +558,6 @@ namespace {
     {
         const auto pref = static_cast<GW::UI::NumberPreference>(pref_id);
 
-        // Find value and set preference
         uint32_t value = 0xff;
         if (argc > 2 && TextUtils::ParseUInt(argv[2], &value)) {
             GW::GameThread::Enqueue([pref, value, pref_str = std::wstring(argv[1])] {
@@ -570,7 +568,6 @@ namespace {
             return;
         }
 
-        // Print current value
         if (argc < 3) {
             Log::InfoW(L"%s 的当前偏好值为 %d", argv[1], GetPreference(pref));
         }
@@ -583,7 +580,6 @@ namespace {
     {
         const auto pref = static_cast<GW::UI::EnumPreference>(pref_id);
 
-        // Find value and set preference
         uint32_t value = 0xff;
         if (argc > 2 && TextUtils::ParseUInt(argv[2], &value)) {
             GW::GameThread::Enqueue([pref, value, pref_str = std::wstring(argv[1])] {
@@ -594,12 +590,10 @@ namespace {
             return;
         }
 
-        // Print current value
         if (argc < 3) {
             Log::InfoW(L"%s 的当前偏好值为 %d", argv[1], GetPreference(pref));
         }
 
-        // Got this far; print out available values for this preference.
         uint32_t* values = nullptr;
         const auto available = GetPreferenceOptions(pref, &values);
         wchar_t available_vals_buffer[120];
@@ -618,7 +612,6 @@ namespace {
         const auto pref = static_cast<GW::UI::FlagPreference>(pref_id);
 
         if (argc > 2) {
-            // Setting value
             if (wcscmp(argv[2], L"toggle") == 0) {
                 SetPreference(pref, !GetPreference(pref));
                 return;
@@ -629,8 +622,7 @@ namespace {
             }
             return;
         }
-        // Print current value
-        Log::InfoW(L"%s 的当前偏好值为 %d", argv[1], GetPreference(pref));
+        Log::InfoW(L"Current preference value for %s is %d", argv[1], GetPreference(pref));
     }
 
     // Reduce a preference name to a comparable slug so user input matches the label regardless of case, spacing or punctuation.
@@ -805,7 +797,6 @@ namespace {
 
         // Searching by name; offload this to decode agent names first.
         if (TextUtils::ParseUInt(model_id_or_name, &model_id)) {
-            // check if there's an index component
             if (const wchar_t* rest = GetRemainingArgsWstr(model_id_or_name, 1)) {
                 TextUtils::ParseUInt(rest, &index);
             }
@@ -817,7 +808,6 @@ namespace {
             }
         }
 
-        // target nearest agent
         const auto agents = GW::Agents::GetAgentArray();
         const auto me = agents ? GW::Agents::GetControlledCharacter() : nullptr;
         if (me == nullptr) {
@@ -832,7 +822,6 @@ namespace {
             if (agent == me || !GW::Agents::GetAgentMatchesFlags(agent, type)) continue;
             if (model_id && GetAgentModelId(agent) != model_id) continue;
             if (index == 0) {
-                // target closest
                 const float new_distance = GetSquareDistance(me->pos, agent->pos);
                 if (new_distance < distance) {
                     closest = agent->agent_id;
@@ -840,7 +829,6 @@ namespace {
                 }
             }
             else {
-                // target based on id
                 ++count;
                 if (count == index) {
                     closest = agent->agent_id;
@@ -872,7 +860,6 @@ namespace {
         GW::WorldContext* w = GW::GetWorldContext();
         GW::HeroFlagArray* flags = w ? &w->hero_flags : nullptr;
         if (!flags) return;
-        // Argument validation
         if (argc < 2) {
             return Log::Warning(CmdHeroBehaviour_syntax);
         }
@@ -887,7 +874,6 @@ namespace {
             effective_argc--;
         }
 
-        // set behavior based on command message
         auto behaviour = 0xff;
         const std::wstring arg1 = TextUtils::ToLower(argv[1]);
         if (arg1 == L"avoid") {
@@ -2084,11 +2070,8 @@ void ChatCommands::Update(const float delta)
     if (title_names.empty()) {
         const auto* titles = GetTitles();
         for (size_t i = 0; titles && i < titles->size(); i++) {
-            switch (static_cast<GW::Constants::TitleID>(i)) {
-                case GW::Constants::TitleID::Deprecated_SkillHunter:
-                case GW::Constants::TitleID::Deprecated_TreasureHunter:
-                case GW::Constants::TitleID::Deprecated_Wisdom:
-                    continue;
+            if (GW::PlayerMgr::IsDeprecatedTitle(static_cast<GW::Constants::TitleID>(i))) {
+                continue;
             }
             auto dtn = new DecodedTitleName(static_cast<GW::Constants::TitleID>(i));
             title_names.push_back(dtn);
@@ -2196,7 +2179,6 @@ void SearchAgent::Update()
             return; // Not all decoded yet
         }
     }
-    // Do search
     float distance = GW::Constants::SqrRange::Compass;
     size_t closest = 0;
     const auto me = GW::Agents::GetControlledCharacter();
@@ -2390,7 +2372,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdDialog)
     if (!DialogModule::GetDialogAgent()) {
         const auto* target = GW::Agents::GetTargetAsAgentLiving();
         const auto* me = GW::Agents::GetControlledCharacter();
-        if (target && target->allegiance == GW::Constants::Allegiance::Npc_Minipet && GetDistance(me->pos, target->pos) < GW::Constants::Range::Area) {
+        if (target && me && target->allegiance == GW::Constants::Allegiance::Npc_Minipet && GetDistance(me->pos, target->pos) < GW::Constants::Range::Area) {
             GW::Agents::InteractAgent(target);
         }
     }
@@ -2650,7 +2632,6 @@ void CHAT_CMD_FUNC(ChatCommands::CmdToggle)
     }
     if (equipment_slot != GW::EquipmentType::Unknown) {
         GW::EquipmentStatus state = GW::Items::GetEquipmentVisibility(equipment_slot);
-        // Toggling visibility of equipment
         switch (action) {
             case On:
                 state = GW::EquipmentStatus::AlwaysShow;
@@ -2666,10 +2647,6 @@ void CHAT_CMD_FUNC(ChatCommands::CmdToggle)
         return;
     }
     const std::vector<ToolboxUIElement*> windows = MatchingWindows(status, message, ignore_last_arg ? argc - 1 : argc, argv);
-    /*if (windows.empty()) {
-        Log::Error("找不到窗口或命令 '%ls'", argc > 1 ? argv[1] : L"");
-        return;
-    }*/
     for (ToolboxUIElement* window : windows) {
         switch (action) {
             case On:
@@ -2770,7 +2747,6 @@ void CHAT_CMD_FUNC(ChatCommands::CmdPingBuild)
         std::string content;
         if (!Resources::ReadFile(build_file, content)) return;
 
-        // If template file does not exist, skip
         GW::SkillbarMgr::SkillTemplate skill_template{};
         if (!DecodeSkillTemplate(skill_template, content.c_str())) {
             continue;

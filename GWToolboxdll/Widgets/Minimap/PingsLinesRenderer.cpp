@@ -175,7 +175,7 @@ void PingsLinesRenderer::Initialize(IDirect3DDevice9* device)
 
     vertices = nullptr;
 
-    const HRESULT hr = device->CreateVertexBuffer(sizeof(D3DVertex) * vertices_max, 0,
+    const HRESULT hr = device->CreateVertexBuffer(sizeof(D3DVertex) * vertices_max, D3DUSAGE_WRITEONLY,
                                                   D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, nullptr);
     if (FAILED(hr)) {
         printf("设置 PingsLinesRenderer 顶点缓冲区时出错：HRESULT: 0x%lX\n", hr);
@@ -191,9 +191,17 @@ void PingsLinesRenderer::Render(IDirect3DDevice9* device)
     DrawShadowstepMarker(device);
 
     vertices_count = 0;
-    const HRESULT res = buffer->Lock(0, sizeof(D3DVertex) * vertices_max, reinterpret_cast<void**>(&vertices), D3DLOCK_DISCARD);
+    const auto i = DirectX::XMMatrixIdentity();
+    device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&i));
+
+    if (!HasPendingLines()) {
+        return;
+    }
+
+    const HRESULT res = buffer->Lock(0, sizeof(D3DVertex) * vertices_max, reinterpret_cast<void**>(&vertices), 0);
     if (FAILED(res)) {
-        printf("PingsLinesRenderer Lock() 错误：HRESULT 0x%lX\n", res);
+        printf("PingsLinesRenderer Lock() error: HRESULT 0x%lX\n", res);
+        return;
     }
 
     DrawShadowstepLine(device);
@@ -201,9 +209,6 @@ void PingsLinesRenderer::Render(IDirect3DDevice9* device)
     DrawRecallLine(device);
 
     DrawDrawings(device);
-
-    const auto i = DirectX::XMMatrixIdentity();
-    device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&i));
 
     buffer->Unlock();
     if (vertices_count != 0) {
@@ -213,10 +218,37 @@ void PingsLinesRenderer::Render(IDirect3DDevice9* device)
     }
 }
 
+bool PingsLinesRenderer::HasPendingLines() const
+{
+    if ((color_shadowstep_line & IM_COL32_A_MASK) != 0) {
+        const GW::Vec2f& shadowstep_location = Minimap::Instance().ShadowstepLocation();
+        if (shadowstep_location.x != 0.0f || shadowstep_location.y != 0.0f || recall_target != 0) {
+            return true;
+        }
+    }
+    return std::ranges::any_of(drawings, [](const auto& drawing) {
+        return drawing.second.player != 0 && !drawing.second.lines.empty();
+    });
+}
+
 void PingsLinesRenderer::DrawPings(IDirect3DDevice9* device)
 {
     for (const Ping* ping : pings) {
-        if (ping->GetScale() == 0) {
+        float px = 0.f, py = 0.f, ping_scale = 0.f;
+        if (const DWORD agent_id = ping->GetAgentID()) {
+            const GW::Agent* agent = GW::Agents::GetAgentByID(agent_id);
+            if (agent) {
+                px = agent->pos.x;
+                py = agent->pos.y;
+                ping_scale = 1.0f;
+            }
+        }
+        else {
+            px = ping->GetX();
+            py = ping->GetY();
+            ping_scale = ping->GetScale();
+        }
+        if (ping_scale == 0) {
             continue;
         }
         if (TIMER_DIFF(ping->start) > ping->duration) {
@@ -224,7 +256,7 @@ void PingsLinesRenderer::DrawPings(IDirect3DDevice9* device)
         }
 
         DirectX::XMMATRIX scale, world;
-        const auto translate = DirectX::XMMatrixTranslation(ping->GetX(), ping->GetY(), 0.0f);
+        const auto translate = DirectX::XMMatrixTranslation(px, py, 0.0f);
 
         if (ping->ShowInner()) {
             scale = DirectX::XMMatrixScaling(drawing_scale, drawing_scale, 1.0f);
@@ -238,7 +270,7 @@ void PingsLinesRenderer::DrawPings(IDirect3DDevice9* device)
         diff = diff % 1000;
         diff *= first_loop ? 2 : 1;
 
-        scale = DirectX::XMMatrixScaling(diff * ping->GetScale(), diff * ping->GetScale(), 1.0f);
+        scale = DirectX::XMMatrixScaling(diff * ping_scale, diff * ping_scale, 1.0f);
         world = scale * translate;
         device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&world));
         ping_circle.Render(device);
@@ -486,7 +518,6 @@ bool PingsLinesRenderer::OnMouseMove(const float x, const float y)
 
     drawings[my_player_id].player = my_player_id;
     if (!mouse_moved) {
-        // 第一次
         mouse_moved = true;
         BumpSessionID();
         drawings[my_player_id].session = static_cast<DWORD>(session_id);

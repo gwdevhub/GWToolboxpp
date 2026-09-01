@@ -22,7 +22,7 @@ namespace GW {
             None, Warrior, Ranger, Monk, Necromancer, Mesmer,
             Elementalist, Assassin, Ritualist, Paragon, Dervish
         };
-        static const char* GetProfessionAcronym(Profession prof) {
+        inline const char* GetProfessionAcronym(Profession prof) {
             switch (prof) {
             case GW::Constants::Profession::None: return "X";
             case GW::Constants::Profession::Warrior: return "W";
@@ -38,7 +38,7 @@ namespace GW {
             default: return "";
             }
         }
-        static const wchar_t* GetWProfessionAcronym(Profession prof) {
+        inline const wchar_t* GetWProfessionAcronym(Profession prof) {
             switch (prof) {
             case GW::Constants::Profession::None: return L"X";
             case GW::Constants::Profession::Warrior: return L"W";
@@ -234,7 +234,7 @@ namespace GW {
             constexpr float Earshot = 1012.0f;
             constexpr float Spellcast = 1248.0f;
             constexpr float Spirit = 2512.0f;
-            constexpr float SpiritExtended = 3500.0f;
+            constexpr float SpiritExtended = 3000.0f;
             constexpr float Compass = 5000.0f;
         };
 

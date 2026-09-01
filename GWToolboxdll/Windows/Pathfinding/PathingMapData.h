@@ -118,6 +118,9 @@ namespace Pathing {
     struct PortalProp {
         Vec2f pos;              // game coordinates (x, y)
         uint32_t model_file_id; // model file ID for portal type identification
+        // Horizontal extent in world units, from the model's collision cylinder. The doorway
+        // blocks as a disc of this radius. Zero when it is not known.
+        float radius = 0.f;
     };
 
     // Complete pathing map data

@@ -63,8 +63,6 @@ namespace {
         return it != hero_build_groups.end() ? it->second.sort_order : SIZE_MAX;
     }
 
-    // 如果组不存在则创建，赋予一个临时的 sort_order（等于当前组数量，以保持首次出现的顺序）。
-    // 返回组（已存在或新建）。
     HerobuildGroup& UpsertGroup(const std::string& name)
     {
         if (!hero_build_groups.contains(name)) {
@@ -92,9 +90,6 @@ namespace {
 
     using GW::Constants::HeroID;
 
-    // hero index 是一个任意的索引。
-    // 我们旨在与 GW 客户端的顺序保持一致。
-    // Razah 排在幻术师后面，因为所有没有雇佣兵的玩家都将其设置为幻术师。
     constexpr std::array HeroIndexToID = {
         HeroID::NoHero,
         HeroID::Goren,
@@ -304,59 +299,76 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
             const float btn_width = 60.0f * ImGui::FontScale();
             const float& item_spacing = ImGui::GetStyle().ItemInnerSpacing.x;
 
-            // 收集过滤后的构建，保持顺序
-            std::vector<TeamBuild*> filtered;
-            for (TeamBuild& tbuild : teambuilds) {
-                if (settings.filter_by_profession && player_profession != GW::Constants::Profession::None) {
-                    if (!tbuild.builds.empty()) {
-                        const auto& player_code = tbuild.builds[0].code;
-                        if (!player_code.empty()) {
-                            GW::SkillbarMgr::SkillTemplate t{};
-                            if (GW::SkillbarMgr::DecodeSkillTemplate(t, player_code.c_str()) && t.primary != player_profession) {
-                                continue;
+            size_t signature = reinterpret_cast<size_t>(teambuilds.data());
+            const auto mix_signature = [&signature](size_t v) {
+                signature ^= v + 0x9e3779b97f4a7c15 + (signature << 6) + (signature >> 2);
+            };
+            mix_signature(teambuilds.size());
+            mix_signature(settings.filter_by_profession);
+            mix_signature(static_cast<size_t>(player_profession));
+            for (const auto& tbuild : teambuilds) {
+                mix_signature(std::hash<std::string>()(tbuild.group));
+                mix_signature(std::hash<std::string>()(tbuild.name));
+                mix_signature(tbuild.builds.empty() ? 0 : std::hash<std::string>()(tbuild.builds.front().code));
+            }
+
+            if (!grouping_cache.valid || builds_changed || grouping_cache.signature != signature) {
+                grouping_cache.valid = true;
+                grouping_cache.signature = signature;
+                builds_changed = false;
+
+                auto& filtered = grouping_cache.filtered;
+                filtered.clear();
+                for (TeamBuild& tbuild : teambuilds) {
+                    if (settings.filter_by_profession && player_profession != GW::Constants::Profession::None) {
+                        if (!tbuild.builds.empty()) {
+                            const auto& player_code = tbuild.builds[0].code;
+                            if (!player_code.empty()) {
+                                GW::SkillbarMgr::SkillTemplate t{};
+                                if (GW::SkillbarMgr::DecodeSkillTemplate(t, player_code.c_str()) && t.primary != player_profession) {
+                                    continue;
+                                }
                             }
                         }
                     }
+                    filtered.push_back(&tbuild);
                 }
-                filtered.push_back(&tbuild);
+
+                auto& by_group = grouping_cache.by_group;
+                by_group.clear();
+                for (TeamBuild* tbuild : filtered) {
+                    by_group[tbuild->group].push_back(tbuild);
+                }
+
+                for (const auto& [gname, _] : by_group) {
+                    if (!gname.empty() && !hero_build_groups.contains(gname)) {
+                        UpsertGroup(gname);
+                    }
+                }
+
+                auto& group_order = grouping_cache.group_order;
+                group_order.clear();
+                {
+                    std::vector<const HerobuildGroup*> sorted_grps;
+                    for (const auto& [name, grp] : hero_build_groups) {
+                        if (by_group.contains(name)) {
+                            sorted_grps.push_back(&grp);
+                        }
+                    }
+                    std::ranges::sort(sorted_grps, [](const HerobuildGroup* a, const HerobuildGroup* b) {
+                        return a->sort_order < b->sort_order;
+                    });
+                    for (const auto* grp : sorted_grps) {
+                        group_order.push_back(grp->name);
+                    }
+                }
+                if (by_group.contains("")) {
+                    group_order.push_back("");
+                }
             }
 
             bool vector_invalidated = false;
-
-            // 按组名分组构建
-            std::unordered_map<std::string, std::vector<TeamBuild*>> by_group;
-            for (TeamBuild* tbuild : filtered) {
-                by_group[std::string(tbuild->group)].push_back(tbuild);
-            }
-
-            // 自动注册在“分组”字段中输入但尚未写入文件的组（因此没有 herobuildgroup 条目）。
-            for (const auto& [gname, _] : by_group) {
-                if (!gname.empty() && !hero_build_groups.contains(gname)) {
-                    UpsertGroup(gname);
-                }
-            }
-
-
-
-            // 按 sort_order 对命名组排序；未分组的构建显示在最后。
-            std::vector<std::string> group_order;
-            {
-                std::vector<const HerobuildGroup*> sorted_grps;
-                for (const auto& [name, grp] : hero_build_groups) {
-                    if (by_group.contains(name)) {
-                        sorted_grps.push_back(&grp);
-                    }
-                }
-                std::ranges::sort(sorted_grps, [](const HerobuildGroup* a, const HerobuildGroup* b) {
-                    return a->sort_order < b->sort_order;
-                });
-                for (const auto* grp : sorted_grps) {
-                    group_order.push_back(grp->name);
-                }
-            }
-            if (by_group.contains("")) {
-                group_order.push_back("");
-            }
+            const auto& group_order = grouping_cache.group_order;
 
             auto draw_teambuild_row = [&](TeamBuild& tbuild) {
                 ImGui::PushID(tbuild.ui_id.c_str());
@@ -405,7 +417,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
 
             for (size_t gi = 0; gi < group_order.size() && !vector_invalidated; gi++) {
                 const auto& group_name = group_order[gi];
-                auto& group_builds = by_group[group_name];
+                auto& group_builds = grouping_cache.by_group[group_name];
                 if (group_name.empty()) {
                     for (TeamBuild* tbuild : group_builds) {
                         draw_teambuild_row(*tbuild);
@@ -426,9 +438,9 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                     {
                         const float btn_sz = ImGui::GetFrameHeight();
                         const float spacing = ImGui::GetStyle().ItemSpacing.x;
-                        
+
                         float btn_x = ImGui::GetContentRegionAvail().x + ImGui::GetCursorPosX();
-                        
+
 
                         if (!is_last) {
                             btn_x -= btn_sz;
@@ -476,7 +488,6 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
         ImGui::End();
     }
 
-    // 使用统一的 DrawEditWindow 为每个打开的团队构建绘制编辑窗口
     for (size_t i = 0; i < teambuilds.size(); i++) {
         if (!teambuilds[i].edit_open) continue;
         if (!teambuilds[i].DrawEditWindow(i, teambuilds, builds_changed)) {
@@ -736,6 +747,7 @@ void HeroBuildsWindow::LoadFromFile()
     }
 
     builds_changed = false;
+    grouping_cache.valid = false;
 }
 
 void HeroBuildsWindow::SaveToFile() const

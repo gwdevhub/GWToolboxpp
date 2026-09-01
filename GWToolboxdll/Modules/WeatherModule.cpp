@@ -49,10 +49,6 @@ namespace weather_module {
     constexpr int kDecalAuto = -1;     // 未设置：从类型派生（雨 -> 溅射，雪 -> 沉积）
     constexpr float kDriftAuto = -1.f; // 漂移未设置：从类型派生（雪横向飘动，雨不飘动）
 
-    // 天气条件上的可选云层：填充玩家上方高度带的柔和云团（相对于玩家，因此跟随您，
-    // 并通过深度测试被地形遮挡），水平漂移。当 top > base 时激活。
-    // 这就是产生头顶雨云、地面雾、低空吹沙尘暴等效果的原因——可与上方下落粒子组合使用
-    //（例如暴风雪 = 大雪 + 雾层）。
     struct CloudCover {
         float base = 0.f;                // 云带底部，玩家上方 gwinch 数
         float top = 0.f;                 // 云带顶部；仅当 top > base 时激活
@@ -103,8 +99,6 @@ namespace weather_module {
         None
     };
 
-    // 自动天气，与条件本身分开定义：在一个气候内，引用一个条件（按名称）及其被选中的概率。
-    // 气候条目中剩余的概率为“晴朗”（无天气）。两者都是普通聚合体，因此 glaze 像反射条件列表一样反射它们。
     struct ClimateWeather {
         std::string condition; // WeatherCondition 的名称
         float weight = 0.3f;   // 0..1 每次天气滚动时此条件被选中的概率
@@ -215,18 +209,16 @@ namespace {
     }
     std::vector<WeatherCondition> conditions = DefaultConditions();
 
-    // 默认气候->天气表，引用上述默认条件名称。每个气候的剩余概率为晴朗天气。
-    // Arid 和 Desertous 有意省略：默认干燥，但在选择器中提供以便编辑。
     std::vector<ClimateProfile> DefaultClimateProfiles()
     {
         const auto p = [](const Climate c, std::vector<ClimateWeather> e) { return ClimateProfile{c, std::move(e)}; };
         return {
-            p(Climate::Temperate, {{"小雨", 0.1f}, {"大雨", 0.05f}, {"雾", 0.02f}}),
-            p(Climate::Tropical, {{"大雨", 0.2f}, {"小雨", 0.1f}, {"雾", 0.05f}}),
-            p(Climate::Arid, {{"小雨", 0.1f}}),
-            p(Climate::Desertous, {{"小雨", 0.05f}, {"沙尘暴", 0.15f}}),
-            p(Climate::Mountainous, {{"雪", 0.4f}, {"暴风雪", 0.15f}}),
-            p(Climate::Volcanic, {{"灰烬", 0.4f}, {"雾", 0.05f}}),
+            p(Climate::Temperate, {{"Light Rain", 0.01f}, {"Heavy Rain", 0.005f}, {"Fog", 0.002f}}),
+            p(Climate::Tropical, {{"Heavy Rain", 0.02f}, {"Light Rain", 0.01f}, {"Fog", 0.005f}}),
+            p(Climate::Arid, {{"Light Rain", 0.01f}}),
+            p(Climate::Desertous, {{"Light Rain", 0.005f}, {"Sandstorm", 0.015f}}),
+            p(Climate::Mountainous, {{"Snow", 0.04f}, {"Blizzard", 0.015f}}),
+            p(Climate::Volcanic, {{"Ashfall", 0.04f}, {"Fog", 0.005f}}),
         };
     }
     std::vector<ClimateProfile> climate_profiles = DefaultClimateProfiles();
@@ -239,8 +231,8 @@ namespace {
     float ambient_strength = 0.f;             // 活动条件的缓动聚合变暗（运行时，不保存）
     float weather_intensity = 0.f;            // 缓动 0..1 显示条件的交叉淡入淡出（运行时）：1 = 完全，0 = 淡出
 
-    bool auto_weather = true;    // 从气候->天气表驱动哪些条件激活
-    float auto_change_min = 2.f; // 自动天气滚动之间的分钟数（在 [min, max] 内随机）
+    bool auto_weather = false;    // drive which conditions are active from the climate->weather table
+    float auto_change_min = 2.f; // minutes between automatic weather rolls (random in [min, max])
     float auto_change_max = 5.f;
     Climate auto_climate = Climate::Temperate; // 上次自动天气滚动时的气候（运行时）
     float auto_timer = -1.f;                   // 直到下次自动滚动的分钟数；<0 = 下次更新时滚动（运行时）
@@ -270,7 +262,6 @@ namespace {
         return false;
     }
 
-    // 特定地图的气候。
     Climate ClimateForMap(const GW::Constants::MapID map_id)
     {
         // @增强功能：我们可通过检查与地图匹配的 DAT 文件中的纹理并计数沙、雪等来处理边缘情况，但目前过于复杂。
@@ -342,8 +333,6 @@ namespace {
         std::vector<CloudPuff> clouds; // 云层云团（与下落粒子分开）
         float sound_timer = -1.f;      // 直到下一个音效的秒数；<0 = 尚未安排
     };
-    // 每次只运行一个条件（在每个切换点强制执行），因此单个实时粒子集就足够了，
-    // 而不是每个条件一个——在高粒子数下大幅节省内存。active_condition 是当前驱动它的索引，-1 = 晴朗。
     Particles active_particles;
     int active_condition = -1;
     float active_wind_dir = 0.f; // 条件激活时在全圆上滚动的风向（度）
@@ -351,9 +340,6 @@ namespace {
                                  // 仍能跟踪玩家的高度
     bool reset_requested = false;     // 由 WeatherModule::Reset() 设置；在下次更新时消费
 
-    // GPU 实例化记录：每个粒子一个——仅世界中心 + alpha，由 weather_instanced_vs 扩展为四边形。
-    // 公告板轴和色调是每个绘制的着色器常量（每次只有一个条件激活，
-    // 因此一次绘制的粒子共享它们）；每实例 alpha 变化（雪花为 1，沉积为淡出）。
     struct WeatherInstance {
         float cx, cy, cz;
         float alpha; // 色调常量的每实例 alpha 乘数
@@ -424,8 +410,6 @@ namespace {
         }
     }
 
-    // 单位下落方向：垂直向下（世界向上为 -z，因此为 +z），从方向角 dir_deg 向倾斜角 tilt_deg。
-    // 速度 = 此值乘以 fall_speed，因此风仅设置方向。dir_deg 是激活时在条件 [wind_dir_min, wind_dir_max] 范围内的滚动值。
     void WindDir(const float dir_deg, const float tilt_deg, float out[3])
     {
         constexpr float kDeg2Rad = 0.01745329f;
@@ -506,8 +490,6 @@ namespace {
         p.sound_timer = frand(c.sound_min_interval, c.sound_max_interval);
     }
 
-    // 从区域配置文件中按概率选一个条件（或晴朗），并精确设置该条件激活。
-    // 条目权重之和以外的概率为晴朗天气；如果条目权重之和超过 1，则在它们之间归一化（无晴朗）。
     void RerollAutoWeather(const Climate climate)
     {
         const ClimateProfile* prof = nullptr;
@@ -560,10 +542,6 @@ namespace {
         return std::max(1, static_cast<int>(std::ceil(std::sqrt(static_cast<float>(std::max(1, count))))));
     }
 
-    // 粒子将着陆的地形：沿风向从 (x, y, top) 投影到地面，因此回收地面匹配的是顺风方向的实际着陆点，
-    // 而非生成柱的位置。当风倾斜时，粒子在下降过程中横向漂移，因此在斜坡上，
-    // 生成位置的地面高度不是正确的着陆高度。近水平天气（vz ~ 0）几乎不下降，只是横向飘移，
-    // 因此使用本地地面高度。
     float LandingGroundZ(const WeatherCondition& c, const float x, const float y, const float top, const float vx, const float vy, const float vz, const float cz)
     {
         const float fallback = cz + recycle_below;
@@ -575,9 +553,6 @@ namespace {
         return GroundZAt(x + hx, y + hy, fallback);
     }
 
-    // 柱的初始填充。分层放置：每个粒子占据一个网格单元，在其中抖动，使体积均匀分布在以玩家为中心的区域上，
-    // 而不是聚集在一起。柱始终以玩家为中心；风只让粒子在其中漂移（UpdateCondition 在气泡边缘将它们环绕），
-    // 因此原点不随风向移动。
     void seed_drop(Raindrop& d, const WeatherCondition& c, const float cx, const float cy, const float cz, const int index, const int grid, const float vx, const float vy, const float vz)
     {
         const float top_z = cz - ColumnHeight(c); // 下落柱顶部（有上限，防止从过高处开始）
@@ -639,22 +614,11 @@ namespace {
             }
             d.x += (vx + sway_x) * dt;
             d.y += (vy + sway_y) * dt;
-            // 保持体积以玩家为中心：被吹过气泡边缘的粒子环绕到对侧边缘，
-            // 因此风只决定粒子如何流过固定的、以玩家为中心的柱。只有 x/y 在此处移动——
-            // 回收地面在粒子生成时已固定，因此环绕不会伪造着陆。
             if (const float rx = d.x - cx; rx > c.spread_radius) d.x -= diameter; else if (rx < -c.spread_radius) d.x += diameter;
             if (const float ry = d.y - cy; ry > c.spread_radius) d.y -= diameter; else if (ry < -c.spread_radius) d.y += diameter;
             if (d.z >= d.ground_z) {
-                // 运行完成（粒子到达其投影着陆点）：留下贴花，然后将此粒子在柱 TOP 处重新启动并投影其下一个地面。
-                // 在顶部（而非散布高度，如完整重新播种那样）重新启动是防止粒子在同一帧重新着陆并每帧重新播种的原因——
-                // 即随粒子数缩放的每帧成本。GroundZAt 按网格记忆化，因此此处的地面重新计算是廉价的缓存命中，
-                // 且上述环绕只移动 x/y，不会产生虚假着陆。
                 if (splash && frand(0.f, 1.f) < c.splash_chance && static_cast<int>(p.splashes.size()) < max_splashes) p.splashes.push_back({d.x, d.y, GroundZAt(d.x, d.y, d.ground_z), 0.f});
                 if (settle && frand(0.f, 1.f) < c.splash_chance && static_cast<int>(p.settled.size()) < max_settled) p.settled.push_back({d.x, d.y, GroundZAt(d.x, d.y, d.ground_z), 0.f});
-                // 在气泡内的新随机 x/y 处重新启动——跨回收保持 x/y 会保留分层种子模式
-                //（漂移将其作为整体移动；摆动仅使其晃动），因此每个粒子沿风的平行“层”路径移动，
-                // 在高密度时最差。随机放置打破了这一点。z 在顶部附近重新启动，带有子步抖动（无 z 层，无即时重新着陆/震荡）。
-                // 为新柱重新投影地面。
                 d.x = cx - c.spread_radius + frand(0.f, 2.f * c.spread_radius);
                 d.y = cy - c.spread_radius + frand(0.f, 2.f * c.spread_radius);
                 d.z = top_z + frand(0.f, std::max(1.f, vz * dt));
@@ -698,17 +662,11 @@ namespace {
         out.insert(out.end(), {c00, c10, c11, c01});
     }
 
-    // 仅当粒子中心在近平面之前时才值得构建几何体。屏幕外的粒子无论如何都会被 GPU 裁剪，
-    // 但在此跳过相机后的粒子可节省 CPU 构建 + 上传（密集的全向体积如沙尘暴的一大部分）。
-    // FOV 侧面留给 GPU；将其收紧到完整视锥可节省更多，但有可能使风暴在屏幕边缘变薄，因此保持保守。
     bool InFront(const Raindrop& d, const float eye[3], const float fwd[3])
     {
         return (d.x - eye[0]) * fwd[0] + (d.y - eye[1]) * fwd[1] + (d.z - eye[2]) * fwd[2] >= kZNear;
     }
 
-    // 地面标记（溅射/沉积）仅在位于相机视锥内时才值得构建。与下落粒子（我们仅裁剪近平面之后，
-    // 以便边缘粒子仍可漂入视野）不同，这些是静态的，因此更严格的裁剪是安全的。
-    // 该锥体外接屏幕矩形（+10% 余量），因此从不会裁剪实际可见的标记；GPU 裁剪穿过角落的标记。
     bool InView(const float px, const float py, const float pz, const float eye[3], const float fwd[3], const float cone_tan_sq)
     {
         const float dx = px - eye[0], dy = py - eye[1], dz = pz - eye[2];
@@ -718,9 +676,6 @@ namespace {
         return lat_sq <= depth * depth * cone_tan_sq;
     }
 
-    // 雪/灰烬/沙：相机对齐的方形公告板，像雨一样实例化（GPU 将每个 16 字节记录扩展为四边形）。
-    // 方形的轴是相机右/上向量，每次绘制恒定，因此它们进入 VS 常量（snow_axes），而非每个记录；
-    // 每实例仅中心（雪花不淡出，因此 alpha = 1）。
     void AppendSnowInstances(std::vector<WeatherInstance>& out, const WeatherCondition& c, const std::vector<Raindrop>& drops, const float right[3], const float up[3], const float eye[3], const float fwd[3])
     {
         const float h = c.drop_size * 0.5f;
@@ -730,9 +685,6 @@ namespace {
             if (InFront(d, eye, fwd)) out.push_back({d.x, d.y, d.z, 1.f});
     }
 
-    // 云层：水平漂移云团（方向 = 条件的风向，速度 = cloud.speed）
-    // 并在以玩家为中心的气泡中环绕。带内高度对每个云团固定；世界 z 在绘制时从实时玩家高度派生，
-    // 因此整个层跟随玩家，无需任何地形查询。
     void UpdateCloudCover(const WeatherCondition& c, Particles& p, const float dt, const float cx, const float cy, const float wind_dir)
     {
         const int count = CloudCount(c);
@@ -754,9 +706,6 @@ namespace {
         }
     }
 
-    // 云层云团：位于 (x, y, cz - h) 的大柔和面向相机的公告板，即玩家上方的带。
-    // 每个云团的 alpha 使云带顶部和底部羽化，使层具有柔和边缘；整体不透明度为云色调的 alpha。
-    // 地形遮挡由深度测试处理（山内的云团被隐藏）。
     void AppendCloudCoverInstances(std::vector<WeatherInstance>& out, const WeatherCondition& c, const std::vector<CloudPuff>& puffs, const float right[3], const float up[3], const float eye[3], const float fwd[3], const float cz)
     {
         const float hs = c.cloud.size * 0.5f;
@@ -773,8 +722,6 @@ namespace {
         }
     }
 
-    // 雨：每个粒子一条 16 字节记录（中心 + alpha）。雨滴轴（沿下落速度的长轴，面向相机的宽度轴）
-    // 每次绘制恒定，因此进入 VS 常量（rain_axes）。实例化 VS 应用 V 翻转以保持纹理直立。
     void AppendRainInstances(std::vector<WeatherInstance>& out, const WeatherCondition& c, const std::vector<Raindrop>& drops, const float right[3], const float fwd[3], const float wind_dir, const float eye[3])
     {
         const float h = c.drop_size * 0.5f;
@@ -816,8 +763,6 @@ namespace {
     }
 
 
-    // 平躺在地面上的四边形（世界 XY 平面），使用雪花纹理绘制。其轴为世界 X/Y（不像雪花那样相机对齐），
-    // 因此它是雪缓冲区的单独子绘制，具有自己的常量（settle_axes）。保持全色调，然后在生命周期尾部通过每实例 alpha 淡出。
     void AppendSettledInstances(std::vector<WeatherInstance>& out, const std::vector<Settle>& s, const float eye[3], const float fwd[3], const float cone_tan_sq)
     {
         const float hs = snow_settle_size * 0.5f;
@@ -924,10 +869,6 @@ namespace {
         if (!weather_vs && device->CreateVertexShader(reinterpret_cast<const DWORD*>(&weather_billboard_vs), &weather_vs) != D3D_OK) return false;
         if (!weather_ps && device->CreatePixelShader(reinterpret_cast<const DWORD*>(&weather_billboard_ps), &weather_ps) != D3D_OK) return false;
 
-        // 实例化管线：流 0 = 单位四边形（POSITION = 角符号，TEXCOORD0 = uv）；流 1 =
-        // 每粒子实例记录（TEXCOORD1 = 中心，TEXCOORD2/3 = 两个半轴，TEXCOORD4 = alpha）。
-        // 流 1（每实例）现在仅为世界中心 + alpha；公告板轴移至 VS 常量 c10/c11（每次绘制恒定），
-        // 因此每条记录为 16 字节而非 40。
         constexpr D3DVERTEXELEMENT9 inst_decl[] = {{0, 0, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 0}, {0, 8, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 0},
                                                    {1, 0, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 1}, {1, 12, D3DDECLTYPE_FLOAT1, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 2}, D3DDECL_END()};
         if (!weather_inst_decl && device->CreateVertexDeclaration(inst_decl, &weather_inst_decl) != D3D_OK) return false;
@@ -943,9 +884,8 @@ namespace {
         return true;
     }
 
-    // 推进每个活动条件并累积其几何体，然后每帧上传一次。
-    // 在运行时构建柔和的圆形云团纹理（无 .dat 资源）：白色 RGB，径向 alpha 平滑衰减，
-    // 使重叠的云公告板混合为连续的雾层，而非显示硬四边形边缘。
+    // Build a soft round puff texture at runtime (no .dat asset): white RGB with a smooth radial alpha falloff,
+    // so overlapping cloud billboards blend into a continuous fog bank instead of showing hard quad edges.
     bool BuildCloudTexture(IDirect3DDevice9* device)
     {
         if (cloud_tex) return true;
@@ -1144,8 +1084,7 @@ namespace {
         };
         const ColVtx q[6] = {corner(-1, -1), corner(1, -1), corner(1, 1), corner(-1, -1), corner(1, 1), corner(-1, 1)};
 
-        IDirect3DStateBlock9* sb = nullptr;
-        if (device->CreateStateBlock(D3DSBT_ALL, &sb) != D3D_OK) return;
+        const D3DStateGuard state_guard(device);
         if (GameWorldCompositor::SetupPipeline(device, false, kZFar, 0.f)) {
             device->SetRenderState(D3DRS_ZENABLE, FALSE);
             device->SetRenderState(D3DRS_ZWRITEENABLE, FALSE); // 绝不能触碰深度缓冲，否则会裁剪场景/粒子
@@ -1154,8 +1093,6 @@ namespace {
             device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ZERO);
             device->DrawPrimitiveUP(D3DPT_TRIANGLELIST, 2, q, sizeof(ColVtx));
         }
-        sb->Apply();
-        sb->Release();
     }
 
     // 开启自动天气，跟随当前地图的气候（清除任何强制气候）。由 /weather auto 和 /climate auto 共享。
@@ -1196,8 +1133,6 @@ namespace {
             Log::Info("用法：/weather <条件> [on|off|toggle] | /weather [auto|off|clear]");
             return;
         }
-        // 单独的 'auto'/'off'/'clear' 控制自动天气整体（与 /climate 相同），或清除当前条件；
-        // 其他任何内容都是条件名称。（'off' 作为裸参数在此处不能是条件状态——没有条件可应用。）
         if (argc == 2) {
             const std::string only = TextUtils::ToLower(TextUtils::WStringToString(argv[1]));
             if (only == "auto") return EnableAutoWeatherFollowMap();
@@ -1309,8 +1244,7 @@ void WeatherModule::DrawInWorld(IDirect3DDevice9* device)
 #endif
     if (!have_any || !EnsureShaders(device)) return;
 
-    IDirect3DStateBlock9* state_block = nullptr; // 退出时恢复，以免 GW 自身渲染被破坏
-    if (device->CreateStateBlock(D3DSBT_ALL, &state_block) != D3D_OK) return;
+    const D3DStateGuard state_guard(device); // restored on exit so GW's own rendering isn't corrupted
     if (device->SetPixelShader(weather_ps) == D3D_OK && GameWorldCompositor::SetWorldViewProj(device)) {
         GameWorldCompositor::SetWorldRenderStates(device, GameWorldRenderer::GetOccludeBehindTerrain());
         GameWorldCompositor::SetDistanceFog(device, render_max_distance, fog_factor);
@@ -1327,9 +1261,6 @@ void WeatherModule::DrawInWorld(IDirect3DDevice9* device)
             device->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, static_cast<UINT>(splash_vertices.size()), 0, static_cast<UINT>(splash_vertices.size() / 2));
         }
 
-        // 实例化绘制：雨、雪/灰烬+沉积，以及云层。每条记录在 GPU 上扩展为四边形
-        //（流 0 = 单位四边形，流 1 = 每粒子数据）。雨翻转纹理 V（雨滴沿速度方向延伸）；
-        // 雪和云不翻转。色调是每次绘制的常量，因此云层可携带自己的色调。
         if (ib_ok && (have_rain || have_snow || have_cloud) && device->SetVertexShader(weather_inst_vs) == D3D_OK && device->SetVertexDeclaration(weather_inst_decl) == D3D_OK && device->SetStreamSource(0, quad_geom_vb, 0, sizeof(GeomVert)) == D3D_OK &&
             device->SetStreamSourceFreq(1, D3DSTREAMSOURCE_INSTANCEDATA | 1u) == D3D_OK) {
             // first = 起始实例（允许雪缓冲区绘制为两个子范围：相机对齐的雪花，然后是地面平铺的沉积），
@@ -1374,8 +1305,6 @@ void WeatherModule::DrawInWorld(IDirect3DDevice9* device)
         }
 #endif
     }
-    state_block->Apply();
-    state_block->Release();
 }
 
 void WeatherModule::RegisterSettings(ToolboxModule* module)
@@ -1632,7 +1561,11 @@ void WeatherModule::DrawSettings()
                 }
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth(110.f);
-                ImGui::DragFloat("##weight", &cp.entries[e].weight, 0.01f, 0.f, 1.f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+                // Shown as a 0-100% chance, but stored as the 0..1 fraction it has always been (existing configs load unchanged).
+                float weight_pct = cp.entries[e].weight * 100.f;
+                if (ImGui::DragFloat("##weight", &weight_pct, 0.1f, 0.f, 100.f, "%.1f%%", ImGuiSliderFlags_AlwaysClamp))
+                    cp.entries[e].weight = std::clamp(weight_pct / 100.f, 0.f, 1.f);
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip("Chance this condition is picked for the climate on each weather roll.");
                 ImGui::SameLine();
                 if (ImGui::SmallButton("移除##ent")) ent_remove = e;
                 ImGui::PopID();
@@ -1641,8 +1574,8 @@ void WeatherModule::DrawSettings()
             if (ImGui::SmallButton("添加条件##ent")) cp.entries.push_back({conditions.empty() ? "" : conditions.front().name, 0.3f});
             float sum = 0.f;
             for (const auto& e : cp.entries) sum += std::max(0.f, e.weight);
-            ImGui::Text("晴朗天气：%.0f%%", std::max(0.f, 1.f - sum) * 100.f);
-            if (ImGui::Button("移除气候")) climate_remove = i;
+            ImGui::Text("Clear weather: %.1f%%", std::max(0.f, 1.f - sum) * 100.f);
+            if (ImGui::Button("Remove climate")) climate_remove = i;
         }
         ImGui::PopID();
     }

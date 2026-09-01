@@ -49,13 +49,8 @@ public:
     // so "IsCompleted" will return false.
     void Clear();
 
-    // The setters from HttpRequest are not thread-safe and must not be
-    // touched while a request is in flight. "Wait", "IsPending" and "Abort"
-    // are thread-safe.
-    //
-    // You need to guarantee that between a call to "ExecuteAsync" until
-    // "IsPending" returns false (or "Wait" returns true) or until "Abort"
-    // is called the options are not changed.
+    // "Wait", "IsPending" and "Abort" are thread-safe; the inherited setters are not
+    // and must not be touched between "ExecuteAsync" and the request finishing.
     void Wait() const;
     bool Wait(uint32_t TimeoutMs) const;
 

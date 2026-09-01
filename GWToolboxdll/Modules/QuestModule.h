@@ -17,11 +17,9 @@ namespace GuiUtils {
 struct QuestObjective {
     QuestObjective(GW::Constants::QuestID quest_id, const wchar_t* objective_enc, bool is_completed);
     ~QuestObjective() = default;
-    // copy not allowed
     QuestObjective(const QuestObjective& other) = delete;
     QuestObjective(QuestObjective&& other) noexcept = default;
 
-    // copy not allowed
     QuestObjective& operator=(const QuestObjective& other) = delete;
     QuestObjective& operator=(QuestObjective&& other) noexcept = default;
 
@@ -64,9 +62,6 @@ public:
     static void FetchMissingQuestInfo();
 
     static const GW::Quest* GetCustomQuestMarker();
-    // If `quest_id` is the custom marker quest and a marker is set, fills `out` with its
-    // exact world-map position and returns true. Lets the world map plot the real spot
-    // instead of falling back to the destination map's label.
     static bool GetCustomQuestMarkerWorldPos(GW::Constants::QuestID quest_id, GW::Vec2f& out);
 
     static void SetCustomQuestMarker(const GW::Vec2f& world_pos, bool set_active = false);

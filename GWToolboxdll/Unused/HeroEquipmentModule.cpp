@@ -24,7 +24,6 @@ namespace {
     std::map<uint32_t, GW::UI::FramePosition> frame_layouts_by_child_id;
 
     IDirect3DTexture9** icon_texture = nullptr;
-    // Precompute UV coordinates for each state
     ImVec2 uv_normal[2], uv_hover[2], uv_active[2];
 
     constexpr char hero_index_max = 7;
@@ -359,16 +358,13 @@ void HeroEquipmentModule::Initialize()
         GW::UI::RegisterUIMessageCallback(&ChatCmdEntry, message_id, OnPostUIMessage, 0x4000);
     }
 
-    // Calculate icon uv coords
     icon_texture = GwDatModule::LoadTextureFromFileId(0x231a5);
     constexpr float icon_uv_size = 23.5f / 256.f; // An icon is 23px of the 256px texture
 
-    // Define the indices for button states
     constexpr int normal_index = 4; // Normal state (image 4)
     constexpr int hover_index = 5;  // Hovered state (image 5)
     constexpr int active_index = 6; // Clicked/Active state (image 6)
 
-    // Helper function to calculate UV coordinates for an icon index
     auto calcUV = [icon_uv_size](int index, ImVec2* uv) {
         int row = index / 10;
         int col = index % 10;
@@ -445,7 +441,6 @@ void HeroEquipmentModule::Draw(IDirect3DDevice9*)
     char btn_label[] = "##HeroEquipBtn0";
     wchar_t inventory_window_label[] = L"HeroInventory_0";
 
-    // Load the texture once outside the loop
 
     if (!(icon_texture && *icon_texture)) return;
 
@@ -473,21 +468,18 @@ void HeroEquipmentModule::Draw(IDirect3DDevice9*)
 
         ImVec2 btn_size = ImVec2(btn_height, btn_height);
 
-        // Adjust window position
         ImGui::SetNextWindowPos({content_bottom_right.x - btn_height * 2.f, top_left.y + frame_height * .1f});
         ImGui::SetNextWindowSize(btn_size);
 
         if (!ImGui::Begin(window_label, nullptr, GetWinFlags() | ImGuiWindowFlags_AlwaysAutoResize)) continue;
         ImVec2 btn_pos = ImGui::GetCursorScreenPos();
 
-        // Create invisible button for interaction
         if (ImGui::InvisibleButton(btn_label, btn_size)) {
             ToggleHeroInventoryWindow(i + 1);
         }
         bool hovered = ImGui::IsItemHovered();
         bool active = ImGui::IsItemActive();
 
-        // Determine which texture to use based on button state
         auto uv_min = &uv_normal[0];
         auto uv_max = &uv_normal[1];
 
@@ -500,7 +492,6 @@ void HeroEquipmentModule::Draw(IDirect3DDevice9*)
             uv_max = &uv_hover[1];
         }
 
-        // Draw the button texture
         ImGui::SetCursorScreenPos(btn_pos);
         ImGui::Image(*icon_texture, btn_size, *uv_min, *uv_max);
 

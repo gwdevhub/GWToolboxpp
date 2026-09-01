@@ -21,6 +21,7 @@
 #include <GWCA/Managers/UIMgr.h>
 
 #include <Utils/GuiUtils.h>
+#include <Widgets/CartographerWidget.h>
 #include <Modules/Resources.h>
 #include <Windows/DailyQuestsWindow.h>
 #include <Windows/TravelWindow.h>
@@ -87,7 +88,6 @@ namespace {
             }
             if (enc_name->IsDecoding())
                 return nullptr;
-            // 为搜索而净化：移除标点等
             const auto sanitised = SanitiseForSearch(enc_name->wstring());
             name = new char[sanitised.length() + 1];
             strcpy(name, sanitised.c_str());
@@ -238,32 +238,6 @@ namespace {
 
     IDirect3DTexture9** scroll_texture = nullptr;
 
-    /* 未使用，但保留以供参考！
-    enum error_message_ids {
-    error_B29 = 52,
-    error_B30,
-    error_B31,
-    error_B32,
-    error_B33,
-    error_B34,
-    error_B35,
-    error_B36,
-    error_B37,
-    error_B38
-    };
-    enum error_message_trans_codes {
-    error_B29 = 0xB29, // 目标队伍中有成员未达到此任务的等级要求。
-    error_B30, // 你不能进入那个前哨站
-    error_B31, // 你的队伍队长必须是该公会的成员。该公会的官员也必须在队伍中。
-    error_B32, // 你必须是队伍队长才能执行此操作。
-    error_B33, // 你必须是队伍成员才能执行此操作。
-    error_B34, // 你的队伍已在等待前往其他地方。
-    error_B35, // 你的队伍已在该公会大厅中。
-    error_B36, // 你的队伍已在该区域中。
-    error_B37, // 你的队伍已在活跃区域中。
-    error_B38, // 合并后的队伍会太大。
-    };  */
-
     void OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessage message_id, void* wparam, void*)
     {
         switch (message_id) {
@@ -335,7 +309,6 @@ namespace {
             }
         }
 
-        // 辅助函数
         auto FindMatchingMap = [](const char* compare, const char* const* map_names, const GW::Constants::MapID* map_ids, const size_t map_count) -> GW::Constants::MapID {
             const char* bestMatchMapName = nullptr;
             auto bestMatchMapID = GW::Constants::MapID::None;
@@ -362,7 +335,6 @@ namespace {
             }
             return bestMatchMapID;
         };
-        // 辅助函数
         auto FindMatchingMapVec = [](const char* compare, std::vector<SearchableArea*>& maps) -> GW::Constants::MapID {
             const char* bestMatchMapName = nullptr;
             auto bestMatchMapID = GW::Constants::MapID::None;
@@ -429,7 +401,6 @@ namespace {
 
     void CHAT_CMD_FUNC(CmdTP)
     {
-        // 无参数错误
         if (argc == 1) {
             Log::Error("[错误] 请提供参数");
             return;
@@ -444,7 +415,6 @@ namespace {
             pending_map_travel.map_id = GW::Constants::MapID::None;
             return;
         }
-        // 公会大厅
         if (argOutpost == L"gh") {
             if (IsInGH()) {
                 GW::GuildMgr::LeaveGH();
@@ -483,6 +453,15 @@ namespace {
             if (quest && quest->map_to != GW::Constants::MapID::None) {
                 instance.TravelNearest(quest->map_to);
             }
+            return;
+        }
+        if (argOutpost == L"carto") {
+            GW::Vec2f target_wm;
+            if (!CartographerWidget::GetCurrentTargetWorldPos(target_wm)) {
+                Log::Error("[Error] The cartographer helper has no current target");
+                return;
+            }
+            instance.TravelNearest(WorldMapWidget::GetMapIdForLocation(target_wm));
             return;
         }
         if (argOutpost.size() > 2 && argOutpost.compare(0, 3, L"fav", 3) == 0) {
@@ -853,8 +832,6 @@ GW::Constants::MapID TravelWindow::GetNearestOutpost(const GW::Constants::MapID 
     if (IsValidOutpost(map_to) && GW::Map::GetIsMapUnlocked(map_to))
         return map_to;
 
-    // 在地图邻接图上进行 BFS，找到最近的已解锁前哨站。
-    // 当在同一 BFS 深度找到多个前哨站时，使用世界地图上的欧几里得距离作为平局判定。
     using MapID = GW::Constants::MapID;
     std::vector<MapID> queue;
     std::vector<uint32_t> depth(static_cast<size_t>(MapID::Count), UINT32_MAX);
@@ -1180,13 +1157,11 @@ void TravelWindow::DrawSettingsInternal()
 
             ImGui::TableNextRow();
 
-            // 别名字段
             ImGui::TableSetColumnIndex(0);
             ImGui::SetNextItemWidth(-1);
             if (ImGui::InputText("##alias", entry.alias, 32))
                 aliases_changed = true;
 
-            // 地图下拉
             ImGui::TableSetColumnIndex(1);
             ImGui::SetNextItemWidth(-1);
             auto map_idx = OutpostIDToIndex(entry.map_id);
@@ -1195,7 +1170,6 @@ void TravelWindow::DrawSettingsInternal()
                 aliases_changed = true;
             }
 
-            // 区域下拉
             ImGui::TableSetColumnIndex(2);
             ImGui::SetNextItemWidth(-1);
             auto dist_idx = DistrictToAliasIndex(entry.district);
@@ -1204,7 +1178,6 @@ void TravelWindow::DrawSettingsInternal()
                 aliases_changed = true;
             }
 
-            // 区域编号
             ImGui::TableSetColumnIndex(3);
             ImGui::SetNextItemWidth(-1);
             auto dist_num = static_cast<int>(entry.district_number);
@@ -1213,7 +1186,6 @@ void TravelWindow::DrawSettingsInternal()
                 aliases_changed = true;
             }
 
-            // 删除按钮
             ImGui::TableSetColumnIndex(4);
             if (ImGui::ButtonWithHint(ICON_FA_TRASH, "删除别名", ImVec2(btn_w, 0))) {
                 user_aliases.erase(user_aliases.begin() + i);

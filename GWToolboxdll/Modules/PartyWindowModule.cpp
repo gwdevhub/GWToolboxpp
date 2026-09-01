@@ -100,6 +100,9 @@ namespace {
     GW::HookEntry Summon_AgentAdd_Entry;
     GW::HookEntry Summon_GameThreadCallback_Entry;
 
+    // Names are round-tripped through AgentName packets, so every copy has to fit that field.
+    constexpr size_t agent_enc_name_len = sizeof(GW::Packet::StoC::AgentName::name_enc) / sizeof(wchar_t);
+
     std::vector<uint32_t> allies_added_to_party;
     std::vector<PendingAddToParty> pending_add;
     std::queue<uint32_t> pending_remove;
@@ -176,7 +179,8 @@ namespace {
         GW::Packet::StoC::AgentName packet;
         packet.header = GW::Packet::StoC::AgentName::STATIC_HEADER;
         packet.agent_id = agent_id;
-        wcscpy(packet.name_enc, name);
+        wcsncpy(packet.name_enc, name, _countof(packet.name_enc) - 1);
+        packet.name_enc[_countof(packet.name_enc) - 1] = 0;
         GW::StoC::EmulatePacket(&packet);
         return true;
     }
@@ -377,11 +381,12 @@ namespace {
         packet.agent_id = agent_id;
 
         const auto* a = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(agent_id));
-        wchar_t prev_name[8] = {0};
+        wchar_t prev_name[agent_enc_name_len] = {0};
         if (a) {
-            wcscpy(prev_name, GW::Agents::GetAgentEncName(a));
+            if (const auto* enc_name = GW::Agents::GetAgentEncName(a)) {
+                wcsncpy(prev_name, enc_name, _countof(prev_name) - 1);
+            }
         }
-        // 1. 从窗口移除NPC
         GW::StoC::EmulatePacket(&packet);
         SetAgentName(agent_id, prev_name);
         const auto it = std::ranges::find(allies_added_to_party, agent_id);
@@ -399,8 +404,10 @@ namespace {
         if (!a || a->GetIsDead() || a->GetIsDeadByTypeMap()) {
             return;
         }
-        wchar_t prev_name[8] = {0};
-        wcscpy(prev_name, GW::Agents::GetAgentEncName(a));
+        wchar_t prev_name[agent_enc_name_len] = {0};
+        if (const auto* enc_name = GW::Agents::GetAgentEncName(a)) {
+            wcsncpy(prev_name, enc_name, _countof(prev_name) - 1);
+        }
         GW::Packet::StoC::PartyAllyAdd packet;
 
         packet.header = GW::Packet::StoC::PartyAllyAdd::STATIC_HEADER;
@@ -408,7 +415,6 @@ namespace {
         packet.agent_type = p.player_number | 0x20000000;
         packet.allegiance_bits = 1886151033;
 
-        // 1. 从窗口移除NPC
         GW::StoC::EmulatePacket(&packet);
         SetAgentName(p.agent_id, prev_name);
 
@@ -471,19 +477,16 @@ namespace {
                     match_quality++; // 副职业匹配价值1分
                 }
 
-                // 如果匹配度更高，或匹配度相同但位置更靠前，则选择此位置
                 if (match_quality > *match_quality_out || (match_quality == *match_quality_out && i < *sort_pos_out)) {
                     *sort_pos_out = i;
                     *match_quality_out = match_quality;
                 }
             }
         };
-        // 为第一位玩家寻找最佳匹配
         size_t p1_sort_pos = SIZE_MAX;
         int p1_match_quality = -1; // 越大匹配越好
         CalcSortPos(p1, &p1_sort_pos, &p1_match_quality);
 
-        // 为第二位玩家寻找最佳匹配
         size_t p2_sort_pos = SIZE_MAX;
         int p2_match_quality = -1;
         CalcSortPos(p2, &p2_sort_pos, &p2_match_quality);
@@ -663,8 +666,7 @@ namespace {
             auto& sorting = party_sortings[i];
             ImGui::PushID(static_cast<int>(i));
 
-            // 地图名称
-            const char* map_name = "任意地图";
+            const char* map_name = "Any Map";
             if (sorting.map_id != GW::Constants::MapID::None) {
                 auto* enc_name = Resources::GetMapName(sorting.map_id);
                 if (enc_name && enc_name->string().size()) {
@@ -679,7 +681,6 @@ namespace {
             ImGui::TextUnformatted(map_name);
             ImGui::SameLine(sort_cols[0]);
 
-            // 队伍大小
             if (sorting.party_size == 0) {
                 ImGui::Text("任意");
             }
@@ -688,7 +689,6 @@ namespace {
             }
             ImGui::SameLine(sort_cols[1]);
 
-            // 排序顺序显示
             std::string sort_display;
             for (size_t j = 0; j < sorting.sorting_by_profession.size(); j++) {
                 if (j > 0) sort_display += " -> ";
@@ -700,8 +700,7 @@ namespace {
 
             ImGui::SameLine(sort_cols[2]);
 
-            // 编辑按钮
-            if (ImGui::Button("编辑")) {
+            if (ImGui::Button("Edit")) {
                 edit_sorting_index = i;
                 edit_map_id = static_cast<int>(sorting.map_id);
                 edit_party_size = static_cast<int>(sorting.party_size);
@@ -709,8 +708,7 @@ namespace {
             }
             ImGui::SameLine();
 
-            // 删除按钮
-            if (ImGui::Button("删除")) {
+            if (ImGui::Button("Delete")) {
                 party_sortings.erase(party_sortings.begin() + i);
                 if (chosen_sorting_vector == &sorting) {
                     chosen_sorting_vector = nullptr;
@@ -729,12 +727,10 @@ namespace {
 
 
 
-        // 添加/编辑队伍排序
         const bool is_editing = (edit_sorting_index >= 0);
         ImGui::Text(is_editing ? "编辑队伍排序：" : "添加新队伍排序：");
 
-        // 地图选择
-        ImGui::Text("地图ID (0 = 任意)：");
+        ImGui::Text("Map ID (0 = Any):");
         ImGui::SameLine(200.0f * fontScale);
         ImGui::SetNextItemWidth(100.0f * fontScale);
         ImGui::InputInt("##map_id", &edit_map_id);
@@ -742,16 +738,14 @@ namespace {
             ImGui::SameLine();
             ImGui::TextDisabled(Resources::GetMapName((GW::Constants::MapID)edit_map_id)->string().c_str());
         }
-        // 队伍大小
-        ImGui::Text("队伍大小 (0 = 任意)：");
+        ImGui::Text("Party Size (0 = Any):");
         ImGui::SameLine(200.0f * fontScale);
         ImGui::SetNextItemWidth(100.0f * fontScale);
         ImGui::InputInt("##party_size", &edit_party_size);
         if (edit_party_size < 0) edit_party_size = 0;
         if (edit_party_size > 12) edit_party_size = 12;
 
-        // 职业顺序
-        ImGui::Text("职业顺序：");
+        ImGui::Text("Profession Order:");
         ImGui::BeginChild("profession_order_edit", ImVec2(0, 150.0f), true);
 
         for (size_t i = 0; i < edit_profession_order.size(); i++) {
@@ -763,7 +757,6 @@ namespace {
             ImGui::Text("%zu.", i + 1);
             ImGui::SameLine();
 
-            // 主职业下拉
             ImGui::SetNextItemWidth(120.0f * fontScale);
             if (ImGui::BeginCombo("##primary", ToolboxUtils::GetProfessionAcronym(static_cast<GW::Constants::Profession>(primary))->string().c_str())) {
                 for (uint8_t prof = 0; prof <= 10; prof++) {
@@ -780,7 +773,6 @@ namespace {
             ImGui::Text("/");
             ImGui::SameLine();
 
-            // 副职业下拉
             ImGui::SetNextItemWidth(120.0f * fontScale);
             if (ImGui::BeginCombo("##secondary", ToolboxUtils::GetProfessionAcronym(static_cast<GW::Constants::Profession>(secondary))->string().c_str())) {
                 for (uint8_t prof = 0; prof <= 10; prof++) {
@@ -795,7 +787,6 @@ namespace {
 
             
 
-            // 上移按钮
             ImGui::SameLine();
             if (ImGui::Button(ICON_FA_ARROW_UP) && i > 0) 
                 std::swap(edit_profession_order[i], edit_profession_order[i - 1]);
@@ -805,8 +796,7 @@ namespace {
                 std::swap(edit_profession_order[i], edit_profession_order[i + 1]);
 
             ImGui::SameLine();
-            // 移除按钮
-            if (ImGui::Button("移除")) {
+            if (ImGui::Button("Remove")) {
                 edit_profession_order.erase(edit_profession_order.begin() + i);
                 ImGui::PopID();
                 break;
@@ -816,15 +806,13 @@ namespace {
         }
         ImGui::EndChild();
 
-        // 添加职业按钮
-        if (ImGui::Button("添加职业")) {
-            edit_profession_order.push_back(0); // 任意/任意
+        if (ImGui::Button("Add Profession")) {
+            edit_profession_order.push_back(0); // Any/Any
         }
 
         ImGui::SameLine();
 
-        // 保存按钮
-        if (ImGui::Button(is_editing ? "保存更改" : "添加排序")) {
+        if (ImGui::Button(is_editing ? "Save Changes" : "Add Sorting")) {
             if (edit_profession_order.empty()) {
                 Log::Error("至少需要一个职业条目");
             }
@@ -844,7 +832,6 @@ namespace {
                     Log::Flash("已添加新队伍排序");
                 }
 
-                // 清空编辑状态
                 edit_map_id = 0;
                 edit_party_size = 0;
                 edit_profession_order.clear();
@@ -1112,7 +1099,6 @@ void PartyWindowModule::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
         }
     }
     else if (legacy) {
-        // 获取节中的所有键
         TNamesDepend keys;
         legacy->GetAllKeys(Name(), keys);
         if (keys.empty()) {
@@ -1161,7 +1147,6 @@ void PartyWindowModule::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
         }
     }
     else if (legacy) {
-        // 加载队伍排序配置
         party_sortings.clear();
         long sorting_count = legacy->GetLongValue(Name(), "party_sorting_count", 0);
 
@@ -1170,11 +1155,9 @@ void PartyWindowModule::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 
             PartySorting sorting;
 
-            // 加载地图ID和队伍大小
             sorting.map_id = static_cast<GW::Constants::MapID>(legacy->GetLongValue(Name(), (prefix + "map_id").c_str(), 0));
             sorting.party_size = static_cast<uint32_t>(legacy->GetLongValue(Name(), (prefix + "party_size").c_str(), 0));
 
-            // 加载职业顺序
             long profession_count = legacy->GetLongValue(Name(), (prefix + "profession_count").c_str(), 0);
             sorting.sorting_by_profession.reserve(profession_count);
 
@@ -1184,7 +1167,6 @@ void PartyWindowModule::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
                 sorting.sorting_by_profession.push_back(profession_combo);
             }
 
-            // 仅当至少有一个职业条目时才添加
             if (!sorting.sorting_by_profession.empty()) {
                 party_sortings.push_back(sorting);
             }

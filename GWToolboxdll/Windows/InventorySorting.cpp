@@ -24,7 +24,6 @@
 
 
 namespace {
-// 宏：等待游戏线程任务完成，带超时和取消检查
 #define WAIT_FOR_GAME_THREAD_TASK(task_done_flag, timeout_ms, error_message)               \
     for (size_t i = 0; i < (timeout_ms) && !(task_done_flag) && !pending_cancel; i += 5) { \
         Sleep(5);                                                                          \
@@ -42,7 +41,6 @@ namespace {
         return false;                                                                      \
     }
 
-    // 辅助函数：检查地图是否就绪
     bool IsMapReady()
     {
         return GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading && !GW::Map::GetIsObserving() && GW::MemoryMgr::GetGWWindowHandle() == GetActiveWindow();
@@ -53,13 +51,11 @@ namespace {
     const ImVec4 ItemPurple = ImColor(187, 137, 237).Value;
     const ImVec4 ItemGold = ImColor(255, 204, 86).Value;
 
-    // 状态变量
     bool show_sort_popup = false;
     bool is_sorting = false;
     bool pending_cancel = false;
     size_t items_sorted_count = 0;
 
-    // 聊天命令钩子条目
     GW::HookEntry sort_inventory_cmd_entry;
     GW::HookEntry sort_storage_cmd_entry;
 
@@ -67,7 +63,6 @@ namespace {
     bool pending_sortinventory_confirm = false;
     bool pending_sortstorage_confirm = false;
 
-    // 排序顺序配置
     std::vector<GW::Constants::ItemType> sort_order;
     InventorySorting::Settings settings;
 
@@ -102,10 +97,6 @@ namespace {
         return (static_cast<uint32_t>(priority_by_type & 0xFF) << 24) | secondary;
     }
 
-    /**
-     * 比较两个物品以用于排序。
-     * 如果 item_a 应该排在 item_b 前面，返回 true。
-     */
     bool ShouldItemComeFirst(GW::Item* item_a, GW::Item* item_b)
     {
         if (!item_a || !item_b) return false;
@@ -126,14 +117,8 @@ namespace {
         pending_sortstorage_confirm = true;
     }
 
-    /**
-     * 绘制库存排序进度弹窗，包含取消按钮。
-     */
     void DrawSortInventoryPopup();
 
-    /**
-     * 将排序顺序重置为默认值。
-     */
     void ResetSortOrder()
     {
         sort_order = {GW::Constants::ItemType::Salvage,    GW::Constants::ItemType::Materials_Zcoins,
@@ -158,7 +143,6 @@ namespace {
 
         if (ImGui::BeginPopupModal("排序库存", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
             if (!is_sorting) {
-                // 排序已完成，关闭弹窗
                 ImGui::CloseCurrentPopup();
                 ImGui::EndPopup();
                 return;
@@ -189,7 +173,6 @@ namespace {
         }
     }
 
-    // 辅助：遍历指定包范围内的所有槽位
     template <typename Fn>
     void ForEachItemInBags(GW::Constants::Bag start, GW::Constants::Bag end, Fn&& fn)
     {
@@ -215,7 +198,6 @@ namespace {
         ItemId,   // expected_value 是 item_id
     };
 
-    // 辅助：等待所有槽位期望满足
     bool WaitForExpectations(const std::vector<SlotExpectation>& expectations, ExpectationMode mode, uint32_t timeout_ms)
     {
         for (size_t t = 0; t < timeout_ms && !pending_cancel; t += 50) {
@@ -312,7 +294,6 @@ void InventorySorting::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
         }
     }
 
-    // 如果加载失败或没有自定义顺序，使用默认值
     if (sort_order.empty()) {
         ResetSortOrder();
     }
@@ -379,7 +360,6 @@ void InventorySorting::DrawSettingsInternal()
 {
     ImGui::PushID("inventory_sorting_settings");
 
-    // 角色库存排序
     {
         bool sort_char_inv = false;
         if (ImGui::ConfirmButton("排序角色库存！", &sort_char_inv)) {
@@ -413,7 +393,6 @@ void InventorySorting::DrawSettingsInternal()
         ImGui::TextDisabled("拖拽项目以重新排序优先级（上方 = 更高优先级）");
         ImGui::Spacing();
 
-        // 拖拽重新排序
         for (size_t i = 0; i < sort_order.size(); i++) {
             const auto type = sort_order[i];
             const char* type_name = GW::Items::GetItemTypeName(type);
@@ -421,18 +400,15 @@ void InventorySorting::DrawSettingsInternal()
             ImGui::PushID(static_cast<int>(i));
             ImGui::Selectable(type_name, false, ImGuiSelectableFlags_None);
 
-            // 拖拽源
             if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
                 ImGui::SetDragDropPayload("SORT_ORDER_ITEM", &i, sizeof(i));
                 ImGui::TextUnformatted(type_name);
                 ImGui::EndDragDropSource();
             }
 
-            // 拖拽目标
             if (ImGui::BeginDragDropTarget()) {
                 if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("SORT_ORDER_ITEM")) {
                     const size_t payload_i = *static_cast<const size_t*>(payload->Data);
-                    // 交换
                     if (payload_i != i && payload_i < sort_order.size()) {
                         std::swap(sort_order[payload_i], sort_order[i]);
                     }

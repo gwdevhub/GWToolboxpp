@@ -58,7 +58,6 @@ public:
     // check this first, as the render resources don't exist while the module is off.
     static bool IsEnabled();
 
-    // Setup projection matrix for a given context
     static void RenderSetupProjection(IDirect3DDevice9* device, const MinimapRenderContext& context);
 
     // Current runtime render context (colours etc.) for surfaces reusing the pipeline
@@ -105,7 +104,6 @@ private:
     static void RegisterRenderer(MinimapRenderer* renderer);
     static void UnregisterRenderer(MinimapRenderer* renderer);
     [[nodiscard]] bool IsInside(int x, int y) const;
-    // returns true if the map is visible, valid, not loading, etc
 
     static size_t GetPlayerHeroes(const GW::PartyInfo* party, std::vector<GW::AgentID>& _player_heroes, bool* has_flags = nullptr);
 

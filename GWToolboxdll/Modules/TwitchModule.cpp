@@ -206,7 +206,6 @@ namespace {
     int OnConnected(const char* params, irc_reply_data*, void* wparam)
     {
         const auto conn = static_cast<IRC*>(wparam);
-        // 将用户名设置为连接名称。
         settings.irc_username = params;
         settings.irc_username.erase(settings.irc_username.find_first_of(' '));
         // 频道 == 用户名。可以更改为连接其他 Twitch 频道/IRC 频道。
@@ -360,11 +359,6 @@ bool TwitchModule::Connect()
     if (settings.irc_password == "oauth:<your_token_here>") {
         return false;
     }
-    /*if(irc_username.empty()) {
-        printf("用户名无效！\n");
-        return false;
-    }*/
-    // 将字符串规范化为小写
     std::ranges::transform(
         settings.irc_server, settings.irc_server.begin(),
         [](const char c) -> char {
@@ -443,7 +437,7 @@ void TwitchModule::DrawSettingsInternal()
 
         const float width = ImGui::GetContentRegionAvail().x / 2;
         ImGui::PushItemWidth(width);
-        ImGui::InputText("Twitch Oauth 令牌", settings.irc_password, 255, show_irc_password ? 0 : ImGuiInputTextFlags_Password);
+        ImGui::InputText("Twitch Oauth Token", settings.irc_password, 255, show_irc_password ? 0 : ImGuiInputTextFlags_Password);
         ImGui::PopItemWidth();
         ImGui::ShowHelp("用于连接 Twitch。\n例如 oauth:3fplxiscsq1550zdkf8z2kh1jk7mqs");
         ImGui::SameLine();

@@ -8,13 +8,14 @@
 #include <ToolboxModule.h>
 
 enum class DEFAULT_NAMETAG_COLOR : Color {
-    NPC             = 0xFFA0FF00,
-    PLAYER_SELF     = 0xFF40FF40,
-    PLAYER_OTHER    = 0xFF9BBEFF,
-    PLAYER_IN_PARTY = 0xFF6060FF,
-    GADGET          = 0xFFFFFF00,
-    ENEMY           = 0xFFFF0000,
-    ITEM            = 0x0,
+    NPC                 = 0xFFA0FF00,
+    PLAYER_SELF         = 0xFF40FF40,
+    PLAYER_OTHER        = 0xFF9BBEFF,
+    PLAYER_IN_PARTY     = 0xFF6060FF,
+    PLAYER_IN_MY_PARTY  = 0xFF6060FF,
+    GADGET              = 0xFFFFFF00,
+    ENEMY               = 0xFFFF0000,
+    ITEM                = 0x0,
 };
 
 namespace GW {
@@ -68,6 +69,9 @@ public:
 
         // When entering a mission you've completed, check whether you should be doing it in HM/NM instead
         bool check_and_prompt_if_mission_already_completed = true;
+
+        // Work around the client losing the legacy Enter Mission button when party leadership changes
+        bool fix_legacy_enter_mission_button = true;
 
         unsigned int last_online_status = 1; // GW::FriendStatus::Online
         bool remember_online_status = true;
@@ -157,6 +161,9 @@ public:
         Colors::SettingColor nametag_color_player_self = static_cast<Color>(DEFAULT_NAMETAG_COLOR::PLAYER_SELF);
         Colors::SettingColor nametag_color_player_other = static_cast<Color>(DEFAULT_NAMETAG_COLOR::PLAYER_OTHER);
         Colors::SettingColor nametag_color_player_in_party = static_cast<Color>(DEFAULT_NAMETAG_COLOR::PLAYER_IN_PARTY);
+        Colors::SettingColor nametag_color_player_in_my_party = static_cast<Color>(DEFAULT_NAMETAG_COLOR::PLAYER_IN_MY_PARTY);
+        Colors::SettingColor nametag_color_friends = 0xFF60FF60;
+        Colors::SettingColor nametag_color_guild_members = 0xFFFFD060;
         Colors::SettingColor nametag_color_gadget = static_cast<Color>(DEFAULT_NAMETAG_COLOR::GADGET);
         Colors::SettingColor nametag_color_enemy = static_cast<Color>(DEFAULT_NAMETAG_COLOR::ENEMY);
         Colors::SettingColor nametag_color_item = static_cast<Color>(DEFAULT_NAMETAG_COLOR::ITEM);
@@ -176,7 +183,6 @@ public:
     void Update(float delta) override;
     bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam) override;
 
-    // callback functions
     static void OnPingWeaponSet(GW::HookStatus*, GW::UI::UIMessage, void*, void*);
     static void OnAgentLoopingAnimation(GW::HookStatus*, const GW::Packet::StoC::GenericValue*);
     static void OnAgentMarker(GW::HookStatus* status, GW::Packet::StoC::GenericValue* pak);
@@ -218,6 +224,7 @@ private:
     GW::HookEntry PartyPlayerAdd_Entry;
     GW::HookEntry PartyPlayerReady_Entry;
     GW::HookEntry PartyPlayerRemove_Entry;
+    GW::HookEntry PartyLeaderChanged_Entry;
     GW::HookEntry GameSrvTransfer_Entry;
     GW::HookEntry CinematicPlay_Entry;
     GW::HookEntry PlayerJoinInstance_Entry;

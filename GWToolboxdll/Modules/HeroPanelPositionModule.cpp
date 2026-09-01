@@ -8,6 +8,7 @@
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <ImGuiAddons.h>
 #include <Modules/HeroPanelPositionModule.h>
+#include <Timer.h>
 #include <Utils/SettingsDoc.h>
 #include <Utils/ToolboxUtils.h>
 
@@ -28,6 +29,10 @@ namespace {
     std::map<uint32_t, GW::UI::FramePosition> saved_positions_by_index;
 
     GW::HookEntry ui_message_entry;
+
+    bool save_pending = false;
+    clock_t last_move_at = 0;
+    constexpr clock_t save_quiet_period_ms = 150;
 
     // Visible hero command panel for the given index; fills the panel's hero id (0 if unknown).
     GW::UI::Frame* GetCommanderFrame(uint32_t commander_index, uint32_t* hero_id_out)
@@ -111,7 +116,8 @@ namespace {
         switch (message_id) {
             case GW::UI::UIMessage::kFloatingWindowMoved:
                 // NB: *wparam is supposed to be frame_id, and it is, but its bollocks.
-                GW::GameThread::Enqueue(SavePanelPositions, true);
+                save_pending = true;
+                last_move_at = TIMER_INIT();
                 break;
             case GW::UI::UIMessage::kShowHeroPanel:
                 GW::GameThread::Enqueue(RestorePanelPositions, true);
@@ -136,7 +142,18 @@ void HeroPanelPositionModule::Initialize()
 
 void HeroPanelPositionModule::SignalTerminate()
 {
+    if (save_pending) {
+        save_pending = false;
+        SavePanelPositions();
+    }
     GW::UI::RemoveUIMessageCallback(&ui_message_entry);
+}
+
+void HeroPanelPositionModule::Update(float)
+{
+    if (!save_pending || TIMER_DIFF(last_move_at) < save_quiet_period_ms) return;
+    save_pending = false;
+    SavePanelPositions();
 }
 
 void HeroPanelPositionModule::RegisterSettingsContent()

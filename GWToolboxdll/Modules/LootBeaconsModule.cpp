@@ -7,22 +7,35 @@
 #include <GWCA/GameEntities/Item.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/CameraMgr.h>
+#include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/ItemMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 
 #include <Color.h>
+#include <D3DContainers.h>
+#include <Defines.h>
 #include <ImGuiAddons.h>
 #include <Modules/GwDatModule.h>
 #include <Modules/LootBeaconsModule.h>
 #include <Modules/PriceCheckerModule.h>
+#include <Utils/EncString.h>
 #include <Utils/GameWorldCompositor.h>
 #include <Utils/SettingsRegistry.h>
 #include <Utils/TerrainDrape.h>
+#include <Utils/TextUtils.h>
 #include <Utils/ToolboxUtils.h>
 
 // 由 CMake（fxc）从共享着色器目录中的 .hlsl 生成。
 #include "Widgets/Minimap/Shaders/loot_beacon_ring_ps.h"
 #include "Widgets/Minimap/Shaders/loot_beacon_ring_vs.h"
+
+// User-defined rules matched against the decoded item name. Must be at file scope (not anonymous
+// namespace) so glaze's reflection can create the required external-linkage template specialisation.
+struct NameBeacon {
+    std::string match;
+    Colors::SettingColor color = Colors::ARGB(170, 0, 255, 255);
+    bool enabled = true;
+};
 
 namespace {
     constexpr int kMaxBuildsPerFrame = 4;   // 每帧地形高度场构建次数上限
@@ -31,13 +44,14 @@ namespace {
     constexpr uint32_t kScanIntervalMs = 250; // 物品单位不会移动；分类只需粗粒度轮询
     constexpr uint32_t kRingTextureFileId = 0x2381; // GW dat 中脉冲环精灵的纹理
 
-    // 非用户可配置。
-    constexpr float kRingSpacing = 4.f;    // 两个环与真实直径的起始距离
-    constexpr float kRingDiameter = 90.f;  // 两个环脉动朝向/远离的真实直径
-    constexpr float kFieldRadius = kRingDiameter * 0.5f + kRingSpacing; // 覆盖范围半宽 = 最大环半径
-    constexpr float kBeamWidth = 35.f;     // 光束宽度
-    constexpr float kBeamOpacity = 1.f;    // 光束无脉动，始终以全透明度绘制
-    constexpr float kPulseInterval = 0.85f; // 两个环从分开到在中间汇合所需秒数
+    // Not user-configurable.
+    constexpr float kRingSpacing = 4.f;    // gwinches, how far the two rings start from the true diameter
+    constexpr float kRingDiameter = 90.f;  // the true diameter the two rings pulse toward/away from
+    constexpr float kTrueRingRadius = kRingDiameter * 0.5f;
+    constexpr float kFieldRadius = kRingDiameter * 0.5f + kRingSpacing; // footprint half-extent = the largest ring radius
+    constexpr float kBeamWidth = 35.f;     // beam width
+    constexpr float kBeamOpacity = 1.f;    // beam is unpulsed and always drawn at full opacity
+    constexpr float kPulseInterval = 0.85f; // seconds for the two rings to go from spread apart to meeting in the middle
     constexpr float kNoDistanceLimit = 1e9f;
 
     float beam_height = 225.f;
@@ -55,13 +69,79 @@ namespace {
     struct RarityBeacon {
         const char* label;
         bool enabled;
-        Color color;
     };
-    RarityBeacon rarity_white = {"白色物品", false, Colors::ARGB(170, 255, 255, 255)};
-    RarityBeacon rarity_blue = {"蓝色物品", false, Colors::ARGB(170, 80, 160, 255)};
-    RarityBeacon rarity_purple = {"紫色物品", true, Colors::ARGB(170, 180, 80, 250)};
-    RarityBeacon rarity_gold = {"金色物品", true, Colors::ARGB(170, 255, 210, 60)};
-    RarityBeacon rarity_green = {"绿色物品", true, Colors::ARGB(170, 40, 220, 40)};
+    RarityBeacon rarity_white = {"White items", false};
+    RarityBeacon rarity_blue = {"Blue items", false};
+    RarityBeacon rarity_purple = {"Purple items", true};
+    RarityBeacon rarity_gold = {"Gold items", true};
+    RarityBeacon rarity_green = {"Green items", true};
+
+    std::vector<NameBeacon> name_beacons;
+
+    struct CachedName {
+        GuiUtils::EncString enc;
+        std::wstring decoded;
+    };
+    std::map<std::wstring, CachedName> decoded_item_names; // keyed by the encoded name
+
+    // Decoded item name, or nullptr while the async decode is still pending (a scan tick or two).
+    const std::wstring* DecodedItemName(const GW::Item& item)
+    {
+        const wchar_t* name_enc = nullptr;
+        if (item.single_item_name && *item.single_item_name) name_enc = item.single_item_name;
+        else if (item.name_enc && *item.name_enc) name_enc = item.name_enc;
+        if (!name_enc) return nullptr;
+        auto& cached = decoded_item_names[name_enc];
+        if (cached.decoded.empty()) {
+            cached.decoded = cached.enc.reset(name_enc)->wstring();
+            if (cached.decoded.empty()) return nullptr;
+        }
+        return &cached.decoded;
+    }
+
+    // Parsed form of the enabled rules; rebuilt only when the list changes, since building a regex isn't free.
+    struct CompiledNameBeacon {
+        TextUtils::SearchPattern<wchar_t> pattern;
+        Color color = 0;
+    };
+    std::vector<CompiledNameBeacon> compiled_name_beacons;
+    std::vector<size_t> invalid_name_beacons; // rules whose regex didn't parse, flagged in the settings panel
+    bool name_beacons_dirty = true;
+
+    void CompileNameBeacons()
+    {
+        name_beacons_dirty = false;
+        compiled_name_beacons.clear();
+        invalid_name_beacons.clear();
+        for (size_t i = 0; i < name_beacons.size(); i++) {
+            const auto& name_beacon = name_beacons[i];
+            if (!name_beacon.enabled || name_beacon.match.empty()) continue;
+            TextUtils::SearchPattern<wchar_t> pattern(TextUtils::StringToWString(name_beacon.match));
+            if (!pattern.IsValid()) {
+                invalid_name_beacons.push_back(i);
+                continue;
+            }
+            compiled_name_beacons.emplace_back(std::move(pattern), name_beacon.color.value);
+        }
+    }
+
+    constexpr int kRarityBeaconAlpha = 170; // beam/ring alpha; the palette itself is opaque (0xFF)
+
+    // A rarity beacon isn't user-colourable: it always takes the exact hue the client paints the
+    // item's name (GW::Chat::TextColor), so the beacon matches the nametag drawn for that drop.
+    Color RarityBeaconColor(const GW::Constants::Rarity rarity)
+    {
+        uint32_t argb; // palette entries are 0xAARRGGBB
+        switch (rarity) {
+            case GW::Constants::Rarity::White: argb = GW::Chat::TextColor::ColorItemCommon; break;
+            case GW::Constants::Rarity::Blue: argb = GW::Chat::TextColor::ColorItemEnhance; break;
+            case GW::Constants::Rarity::Purple: argb = GW::Chat::TextColor::ColorItemUncommon; break;
+            case GW::Constants::Rarity::Gold: argb = GW::Chat::TextColor::ColorItemRare; break;
+            case GW::Constants::Rarity::Green: argb = GW::Chat::TextColor::ColorItemUnique; break;
+            default: return 0;
+        }
+        return Colors::ARGB(kRarityBeaconAlpha, (argb >> 16) & 0xFF, (argb >> 8) & 0xFF, argb & 0xFF);
+    }
 
     struct BeaconVertex {
         float x, y, z;
@@ -82,9 +162,11 @@ namespace {
         Color color = 0;
         bool draw = false;
         bool dimmed = false;
-        bool draped = false; // 高度场已解析一次（物品不会移动），然后每帧采样
+        bool draped = false; // heightfield resolved once (items don't move), then sampled every frame
+        bool ring_cached = false;
         uint32_t seen = 0;
-        float field[kDrapeGrid + 1][kDrapeGrid + 1] = {}; // 在 pos +/- kFieldRadius 范围内采样的地形高度
+        float field[kDrapeGrid + 1][kDrapeGrid + 1] = {}; // terrain z sampled across pos +/- kFieldRadius
+        std::vector<RingVertex> ring_outer, ring_inner;
     };
 
     std::unordered_map<uint32_t, Beacon> beacons;
@@ -183,6 +265,25 @@ namespace {
         }
     }
 
+    void BuildRingCache(Beacon& beacon)
+    {
+        constexpr DWORD placeholder_col = 0xFFFFFFFF;
+        EmitDrapedRing(beacon.ring_outer, beacon, kTrueRingRadius, placeholder_col);
+        EmitDrapedRing(beacon.ring_inner, beacon, kTrueRingRadius, placeholder_col);
+        beacon.ring_cached = true;
+    }
+
+    void EmitCachedRing(std::vector<RingVertex>& out, const std::vector<RingVertex>& cache, const Beacon& beacon, const float radius, const DWORD col)
+    {
+        const float factor = radius / kTrueRingRadius;
+        for (const RingVertex& v : cache) {
+            out.push_back({beacon.pos.x + (v.x - beacon.pos.x) * factor,
+                           beacon.pos.y + (v.y - beacon.pos.y) * factor,
+                           beacon.z + (v.z - beacon.z) * factor,
+                           col, v.u, v.v});
+        }
+    }
+
     void Classify(const GW::AgentItem& agent_item, const GW::Item& item, const uint32_t my_agent_id, Beacon& beacon)
     {
         const bool mine = !agent_item.owner || agent_item.owner == my_agent_id;
@@ -190,6 +291,16 @@ namespace {
         Color color = 0;
         bool draw = false;
         if (mine || show_reserved_for_others) {
+            // Name rules outrank value and rarity, and the first one that matches wins - so the user
+            // can order the list by priority.
+            if (const auto* item_name = compiled_name_beacons.empty() ? nullptr : DecodedItemName(item)) {
+                for (const auto& name_beacon : compiled_name_beacons) {
+                    if (!name_beacon.pattern.Matches(*item_name)) continue;
+                    beacon.color = name_beacon.color;
+                    beacon.draw = true;
+                    return;
+                }
+            }
             const uint32_t price = PriceCheckerModule::GetPriceByItem(&item);
             const ValueBeacon* by_value = nullptr;
             for (const auto* value : {&value_low, &value_high}) {
@@ -202,8 +313,9 @@ namespace {
                 draw = true;
             }
             else {
+                const auto rarity = GW::Items::GetRarity(&item);
                 const RarityBeacon* by_rarity = nullptr;
-                switch (GW::Items::GetRarity(&item)) {
+                switch (rarity) {
                     case GW::Constants::Rarity::White: by_rarity = &rarity_white; break;
                     case GW::Constants::Rarity::Blue: by_rarity = &rarity_blue; break;
                     case GW::Constants::Rarity::Purple: by_rarity = &rarity_purple; break;
@@ -212,7 +324,7 @@ namespace {
                     default: break;
                 }
                 if (by_rarity && by_rarity->enabled) {
-                    color = by_rarity->color;
+                    color = RarityBeaconColor(rarity);
                     draw = true;
                 }
             }
@@ -230,6 +342,7 @@ namespace {
             return;
         }
         const auto my_agent_id = GW::Agents::GetControlledCharacterId();
+        if (name_beacons_dirty) CompileNameBeacons();
         for (const auto* agent : *agents) {
             const auto* agent_item = agent ? agent->GetAsAgentItem() : nullptr;
             if (!agent_item) continue;
@@ -247,11 +360,6 @@ namespace {
 
     constexpr float kBeamSolidFraction = 0.25f; // 光束底部保持完全不透明的部分
 
-    // 追加一个垂直立于地面、面向摄像机的四边形 - `right_x`/`right_y` 是
-    // 水平轴（来自 GetCameraRight），因此四边形始终面向观察者而非边缘，
-    // 不同于固定的交叉四边形。细分为 3x3 网格（4 个四边形）以便光束在
-    // 靠近物品处保持实体，向上渐隐，并且左右边缘也渐隐为透明，
-    // 而不是简单的硬边矩形和从顶到底的均匀渐变。
     void EmitBeamQuad(std::vector<BeaconVertex>& out, const GW::Vec2f& pos, const float ground_z, const float right_x, const float right_y, const Color base_color, const float base_alpha)
     {
         const float half = kBeamWidth * 0.5f;
@@ -348,60 +456,60 @@ void LootBeaconsModule::DrawInWorld(IDirect3DDevice9* device)
     float right_x, right_y;
     GetCameraRight(right_x, right_y);
 
+    const auto* cam = GW::CameraMgr::GetCamera();
+    const float focus_x = cam ? cam->look_at_target.x : 0.f;
+    const float focus_y = cam ? cam->look_at_target.y : 0.f;
+
     scratch.clear();
     ring_scratch.clear();
     int builds = 0;
     for (auto& [id, beacon] : beacons) {
         if (!beacon.draw) continue;
+        const float focus_dx = beacon.pos.x - focus_x;
+        const float focus_dy = beacon.pos.y - focus_y;
+        if (cam && focus_dx * focus_dx + focus_dy * focus_dy > GW::Constants::SqrRange::Compass) continue;
         if (!beacon.draped) {
             if (!n_planes || builds >= kMaxBuildsPerFrame) continue;
             ++builds;
             BuildDrape(beacon, n_planes);
         }
+        if (!beacon.ring_cached) BuildRingCache(beacon);
         EmitBeamQuad(scratch, beacon.pos, beacon.z, right_x, right_y, beacon.color, beacon.dimmed ? kBeamOpacity * 0.4f : kBeamOpacity);
 
         // 环透明度直接来自信标颜色的 alpha 通道；变暗（保留给其他队伍成员）是唯一的例外，与光束相同。
         const DWORD ring_col = beacon.dimmed ? WithAlpha(beacon.color, 0.4f) : beacon.color;
-        EmitDrapedRing(ring_scratch, beacon, r_outer, ring_col);
-        EmitDrapedRing(ring_scratch, beacon, r_inner, ring_col);
+        EmitCachedRing(ring_scratch, beacon.ring_outer, beacon, r_outer, ring_col);
+        EmitCachedRing(ring_scratch, beacon.ring_inner, beacon, r_inner, ring_col);
     }
 
     if (!scratch.empty()) {
-        IDirect3DStateBlock9* state_block = nullptr;
-        if (device->CreateStateBlock(D3DSBT_ALL, &state_block) == D3D_OK) {
-            // 静态深度使墙壁/道具遮挡叠加层；单位在 GW 的后续通道中绘制。
-            if (GameWorldCompositor::SetupPipeline(device, true, kNoDistanceLimit, 0.f)) {
-                constexpr BOOL dotted_off[1] = {FALSE};
-                device->SetPixelShaderConstantB(0, dotted_off, 1);
-                device->DrawPrimitiveUP(D3DPT_TRIANGLELIST, static_cast<UINT>(scratch.size() / 3), scratch.data(), sizeof(BeaconVertex));
-            }
-            state_block->Apply();
-            state_block->Release();
+        const D3DStateGuard state_guard(device);
+        // Static depth keeps walls/props occluding overlays; agents draw later in GW's pass.
+        if (GameWorldCompositor::SetupPipeline(device, true, kNoDistanceLimit, 0.f)) {
+            constexpr BOOL dotted_off[1] = {FALSE};
+            device->SetPixelShaderConstantB(0, dotted_off, 1);
+            device->DrawPrimitiveUP(D3DPT_TRIANGLELIST, static_cast<UINT>(scratch.size() / 3), scratch.data(), sizeof(BeaconVertex));
         }
     }
 
     IDirect3DTexture9* ring_tex = ring_tex_pp ? *ring_tex_pp : nullptr;
     if (!ring_scratch.empty() && ring_tex && EnsureRingShaders(device)) {
-        IDirect3DStateBlock9* state_block = nullptr;
-        if (device->CreateStateBlock(D3DSBT_ALL, &state_block) == D3D_OK) {
-            if (device->SetVertexShader(ring_vs) == D3D_OK && device->SetPixelShader(ring_ps) == D3D_OK && device->SetVertexDeclaration(ring_decl) == D3D_OK &&
-                GameWorldCompositor::SetWorldViewProj(device)) {
-                // 静态深度使墙壁/道具遮挡叠加层；单位在 GW 的后续通道中绘制。
-                GameWorldCompositor::SetWorldRenderStates(device, true);
-                constexpr float slope_bias = -1.5f;
-                constexpr float const_bias = -1e-5f;
-                device->SetRenderState(D3DRS_SLOPESCALEDEPTHBIAS, *reinterpret_cast<const DWORD*>(&slope_bias));
-                device->SetRenderState(D3DRS_DEPTHBIAS, *reinterpret_cast<const DWORD*>(&const_bias));
-                GameWorldCompositor::SetDistanceFog(device, kNoDistanceLimit, 0.f);
-                device->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
-                device->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
-                device->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
-                device->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
-                device->SetTexture(0, ring_tex);
-                device->DrawPrimitiveUP(D3DPT_TRIANGLELIST, static_cast<UINT>(ring_scratch.size() / 3), ring_scratch.data(), sizeof(RingVertex));
-            }
-            state_block->Apply();
-            state_block->Release();
+        const D3DStateGuard state_guard(device);
+        if (device->SetVertexShader(ring_vs) == D3D_OK && device->SetPixelShader(ring_ps) == D3D_OK && device->SetVertexDeclaration(ring_decl) == D3D_OK &&
+            GameWorldCompositor::SetWorldViewProj(device)) {
+            // Static depth keeps walls/props occluding overlays; agents draw later in GW's pass.
+            GameWorldCompositor::SetWorldRenderStates(device, true);
+            constexpr float slope_bias = -1.5f;
+            constexpr float const_bias = -1e-5f;
+            device->SetRenderState(D3DRS_SLOPESCALEDEPTHBIAS, *reinterpret_cast<const DWORD*>(&slope_bias));
+            device->SetRenderState(D3DRS_DEPTHBIAS, *reinterpret_cast<const DWORD*>(&const_bias));
+            GameWorldCompositor::SetDistanceFog(device, kNoDistanceLimit, 0.f);
+            device->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+            device->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
+            device->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
+            device->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
+            device->SetTexture(0, ring_tex);
+            device->DrawPrimitiveUP(D3DPT_TRIANGLELIST, static_cast<UINT>(ring_scratch.size() / 3), ring_scratch.data(), sizeof(RingVertex));
         }
     }
 }
@@ -417,15 +525,10 @@ void LootBeaconsModule::RegisterSettings(ToolboxModule* module)
     SettingsRegistry::RegisterField(module, "value_high_threshold", &value_high.threshold);
     SettingsRegistry::RegisterField(module, "value_high_color", &value_high.color);
     SettingsRegistry::RegisterField(module, "white_enabled", &rarity_white.enabled);
-    SettingsRegistry::RegisterField(module, "white_color", &rarity_white.color);
     SettingsRegistry::RegisterField(module, "blue_enabled", &rarity_blue.enabled);
-    SettingsRegistry::RegisterField(module, "blue_color", &rarity_blue.color);
     SettingsRegistry::RegisterField(module, "purple_enabled", &rarity_purple.enabled);
-    SettingsRegistry::RegisterField(module, "purple_color", &rarity_purple.color);
     SettingsRegistry::RegisterField(module, "gold_enabled", &rarity_gold.enabled);
-    SettingsRegistry::RegisterField(module, "gold_color", &rarity_gold.color);
     SettingsRegistry::RegisterField(module, "green_enabled", &rarity_green.enabled);
-    SettingsRegistry::RegisterField(module, "green_color", &rarity_green.color);
 }
 
 void LootBeaconsModule::Initialize()
@@ -442,12 +545,21 @@ void LootBeaconsModule::SignalTerminate()
         compositor_token = 0;
     }
     beacons.clear();
+    decoded_item_names.clear();
 }
 
 void LootBeaconsModule::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
     ToolboxModule::LoadSettings(doc, legacy);
+    doc.Get(Name(), VAR_NAME(name_beacons), name_beacons);
     beacons_dirty = true;
+    name_beacons_dirty = true;
+}
+
+void LootBeaconsModule::SaveSettings(SettingsDoc& doc)
+{
+    ToolboxModule::SaveSettings(doc);
+    doc.Set(Name(), VAR_NAME(name_beacons), name_beacons);
 }
 
 void LootBeaconsModule::DrawSettingsInternal()
@@ -456,8 +568,8 @@ void LootBeaconsModule::DrawSettingsInternal()
     if (!GameWorldCompositor::IsActive())
         ImGui::TextColored(red, GameWorldCompositor::HasFailed() ? "世界内合成器安装失败。" : "世界内合成器：尚未安装。");
 
-    ImGui::TextUnformatted("按金币价值显示信标");
-    ImGui::ShowHelp("任何 Kamadan 交易价格达到阈值的掉落物都会显示信标，\n无论稀有度如何 - 包括幻化精华、宝石、染料和其他白色稀有度的贵重物品。\n达到两个阈值的物品使用较高级别的颜色。");
+    ImGui::TextUnformatted("Beacon by gold value");
+    ImGui::ShowHelp("Any drop whose trader price (Kamadan, or presearing.com's price sheet while pre-searing) meets a threshold gets a beacon,\nregardless of rarity - catches ectos, gemstones, dyes and other white-rarity valuables.\nAn item that clears both thresholds uses the higher tier's colour.");
     for (auto* value : {&value_low, &value_high}) {
         ImGui::PushID(value->label);
         if (ImGui::Checkbox("##enabled", &value->enabled)) beacons_dirty = true;
@@ -469,13 +581,52 @@ void LootBeaconsModule::DrawSettingsInternal()
         ImGui::PopID();
     }
     ImGui::Separator();
-    ImGui::TextUnformatted("按稀有度显示信标");
-    for (auto* rarity : {&rarity_gold, &rarity_green, &rarity_purple, &rarity_blue, &rarity_white}) {
-        ImGui::PushID(rarity->label);
-        if (ImGui::Checkbox(rarity->label, &rarity->enabled)) beacons_dirty = true;
-        ImGui::SameLine(180.f);
-        Colors::DrawSettingHueWheel("##color", &rarity->color);
+    ImGui::TextUnformatted("Beacon by item name");
+    ImGui::ShowHelp("Any drop whose name contains the text gets a beacon in the colour next to it, whatever its rarity or value.\n"
+                    "Matching ignores case and uses the item name as it's shown in-game, e.g. \"scroll\" or \"glob of ectoplasm\".\n"
+                    "Text wrapped in slashes is a regular expression instead, e.g. /^Superb Charr Carving$/ - add flags after\n"
+                    "the closing slash as in the chat filter (I turns case sensitivity back on).\n"
+                    "Name rules are checked first; the first matching rule in this list wins.");
+    if (name_beacons_dirty) CompileNameBeacons();
+    for (size_t i = 0; i < name_beacons.size(); i++) {
+        auto& name_beacon = name_beacons[i];
+        ImGui::PushID(static_cast<int>(i));
+        bool changed = ImGui::Checkbox("##enabled", &name_beacon.enabled);
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(160.f);
+        changed |= ImGui::InputText("##match", name_beacon.match, 64);
+        ImGui::SameLine(240.f);
+        changed |= Colors::DrawSettingHueWheel("##color", &name_beacon.color.value);
+        ImGui::SameLine();
+        const bool remove = ImGui::Button("x##delete");
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Delete");
+        if (std::ranges::contains(invalid_name_beacons, i)) {
+            ImGui::SameLine();
+            ImGui::TextColored(red, "Invalid regex");
+        }
         ImGui::PopID();
+        if (changed) {
+            beacons_dirty = true;
+            name_beacons_dirty = true;
+        }
+        if (remove) {
+            name_beacons.erase(name_beacons.begin() + static_cast<int>(i));
+            beacons_dirty = true;
+            name_beacons_dirty = true;
+            break;
+        }
+    }
+    if (ImGui::Button("Add item name")) {
+        name_beacons.emplace_back();
+        beacons_dirty = true;
+        name_beacons_dirty = true;
+    }
+
+    ImGui::Separator();
+    ImGui::TextUnformatted("Beacon by rarity");
+    ImGui::ShowHelp("The beacon colour always matches the item's name tag, so it can't be changed here.");
+    for (auto* rarity : {&rarity_gold, &rarity_green, &rarity_purple, &rarity_blue, &rarity_white}) {
+        if (ImGui::Checkbox(rarity->label, &rarity->enabled)) beacons_dirty = true;
     }
     if (ImGui::Checkbox("在保留给其他队伍成员的物品上显示信标", &show_reserved_for_others)) beacons_dirty = true;
     ImGui::ShowHelp("以变暗方式绘制。关闭：仅显示未保留的掉落物和分配给您自己的掉落物。");

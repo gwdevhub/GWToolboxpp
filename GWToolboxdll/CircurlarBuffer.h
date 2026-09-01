@@ -45,7 +45,6 @@ struct CircularBuffer {
         return *this;
     }
 
-    // Iterator class for range-based for loops
     class Iterator {
     public:
         Iterator(CircularBuffer* buf, size_t index) : buffer(buf), current_index(index) {}
@@ -76,7 +75,6 @@ struct CircularBuffer {
         size_t current_index;
     };
 
-    // Const iterator class
     class ConstIterator {
     public:
         ConstIterator(const CircularBuffer* buf, size_t index) : buffer(buf), current_index(index) {}
@@ -107,7 +105,6 @@ struct CircularBuffer {
         size_t current_index;
     };
 
-    // Iterator access methods
     Iterator begin() { return Iterator(this, 0); }
 
     Iterator end() { return Iterator(this, count); }

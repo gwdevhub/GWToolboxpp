@@ -15,6 +15,8 @@
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 
+#include <Defines.h>
+
 #include <Logger.h>
 #include <Utils/GuiUtils.h>
 
@@ -23,6 +25,7 @@
 
 #include <GWToolbox.h>
 #include <Utils/TextUtils.h>
+#include <Utils/TextUtils_Time.h>
 #include <Utils/ToolboxUtils.h>
 
 namespace packetlogger_export {
@@ -183,6 +186,7 @@ namespace {
     StoCHandlerArray* GetStoCHandlerArray() {
 
         uintptr_t address = GW::Scanner::Find("\x75\x04\x33\xC0\x5D\xC3\x8B\x41\x08\xA8\x01\x75", "xxxxxxxxxxxx", -6);
+        DEBUG_ASSERT(address);
         const uintptr_t StoCHandler_Addr = *(uintptr_t*)address;
 
         struct GameServer {
@@ -595,13 +599,12 @@ std::string PacketLoggerWindow::PrefixTimestamp(std::string message) const
 
     switch (settings.timestamp_type) {
         case TimestampType_Local: {
-            SYSTEMTIME time;
-            GetLocalTime(&time);
+            const auto time = TextUtils::Time::GetCurrentSystemTime();
             bool prependColon = false;
             char t[4];
             std::string time_s = "[";
             if (settings.timestamp_show_hours) {
-                snprintf(t, 4, "%02d", time.wHour);
+                snprintf(t, 4, "%02d", time.hour);
                 time_s.append(t);
                 prependColon = true;
             }
@@ -609,7 +612,7 @@ std::string PacketLoggerWindow::PrefixTimestamp(std::string message) const
                 if (prependColon) {
                     time_s.append(":");
                 }
-                snprintf(t, 4, "%02d", time.wMinute);
+                snprintf(t, 4, "%02d", time.minute);
                 time_s.append(t);
                 prependColon = true;
             }
@@ -617,7 +620,7 @@ std::string PacketLoggerWindow::PrefixTimestamp(std::string message) const
                 if (prependColon) {
                     time_s.append(":");
                 }
-                snprintf(t, 4, "%02d", time.wSecond);
+                snprintf(t, 4, "%02d", time.second);
                 time_s.append(t);
                 prependColon = true;
             }
@@ -625,7 +628,7 @@ std::string PacketLoggerWindow::PrefixTimestamp(std::string message) const
                 if (prependColon) {
                     time_s.append(".");
                 }
-                snprintf(t, 4, "%03d", time.wMilliseconds);
+                snprintf(t, 4, "%03d", time.millisecond);
                 time_s.append(t);
             }
             return time_s + "] " + message;
@@ -689,7 +692,6 @@ void PacketLoggerWindow::SaveMessageLog() const
     const auto filename = Resources::GetPath(L"message_log.csv");
     std::wofstream my_file(filename);
 
-    // 将列名写入流
     for (const auto& it : message_log) {
         if (!it.second || !it.second->length()) {
             continue;
@@ -699,7 +701,6 @@ void PacketLoggerWindow::SaveMessageLog() const
         my_file << it.second->c_str();
         my_file << "\n";
     }
-    // 关闭文件
     my_file.close();
 }
 
@@ -736,20 +737,10 @@ void PacketLoggerWindow::Draw(IDirect3DDevice9*)
     ImGui::SameLine();
     ImGui::Checkbox("记录数据包内容", &log_packet_content);
     ImGui::SameLine();
-    ImGui::CheckboxWithHelp("自动忽略传入数据包", &auto_ignore_packets, "勾选后，接收到的任何 StoC 数据包将被添加到忽略列表中。");
-    /*if ( ImGui::Button("导出地图信息")) {
-        if (maps.empty()) {
-            FetchMapInfo();
-        }
-        else {
-            ExportMapInfo();
-        }
-    }
-    ImGui::ShowHelp("将当前地图信息导出到磁盘");
-    */
-    ImGui::CheckboxWithHelp("记录 NPC 对话", &log_npc_dialogs, "将加密字符串及其译文输出到调试控制台");
-    if (ImGui::CollapsingHeader("已忽略的数据包")) {
-        if (ImGui::Button("全选")) {
+    ImGui::CheckboxWithHelp("Auto ignore incoming packets", &auto_ignore_packets, "While ticked, any StoC packets received will be added to the ignore list.");
+    ImGui::CheckboxWithHelp("Log NPC Dialogs", &log_npc_dialogs, "Log encoded strings and their translated output to debug console");
+    if (ImGui::CollapsingHeader("Ignored Packets")) {
+        if (ImGui::Button("Select All")) {
             for (size_t i = 0; i < game_server_handler.size(); i++) {
                 ignored_packets[i] = true;
             }

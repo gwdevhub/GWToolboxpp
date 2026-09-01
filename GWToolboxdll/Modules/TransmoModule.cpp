@@ -195,9 +195,6 @@ namespace {
             if (!npc_model_file_id) {
                 return;
             }
-            // 需要创建 NPC。
-            // 这两个数据包（P074 和 P075）用于创建新模型，例如当我们想要“使用”一个变形药水时。
-            // 我们需要找到 NPC 结构中的数据并将它们提供给这两个数据包。
             GW::NPC npc = {0};
             npc.model_file_id = npc_model_file_id;
             npc.npc_flags = flags;

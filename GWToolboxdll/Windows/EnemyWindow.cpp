@@ -29,10 +29,11 @@ namespace {
     std::string& GetAgentName(uint32_t agent_id)
     {
         const auto enc_name = GW::Agents::GetAgentEncName(agent_id);
-        if (!agent_names_by_id.contains(agent_id)) {
-            agent_names_by_id[agent_id] = std::make_unique<GuiUtils::EncString>();
+        auto& entry = agent_names_by_id[agent_id];
+        if (!entry) {
+            entry = std::make_unique<GuiUtils::EncString>();
         }
-        auto* enc_string = agent_names_by_id[agent_id].get();
+        auto* enc_string = entry.get();
         enc_string->reset(enc_name);
         return enc_string->string();
     }

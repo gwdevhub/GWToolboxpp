@@ -1,5 +1,9 @@
 #include "stdafx.h"
 
+#include <csignal>
+#include <cstdlib>
+#include <exception>
+
 #include <GWCA/Managers/UIMgr.h>
 
 #include <GWCA/Utilities/Hooker.h>
@@ -14,9 +18,13 @@
 #include <Defender.h>
 #include <Path.h>
 #include <Utils/TextUtils.h>
+#include <Utils/TextUtils_Time.h>
 
 namespace {
     char* tb_exception_message = nullptr;
+
+    // Set once a dump has actually landed on disk, so a second entry into Crash() doesn't report a write failure.
+    wchar_t written_dump_path[MAX_PATH] = {};
 
     // If Defender quarantined/blocked the crash file in the last few seconds, surface the event text.
     std::wstring RecentDefenderBlock(const std::wstring& needle)
@@ -79,17 +87,25 @@ namespace {
 
         auto pContext = reinterpret_cast<PCONTEXT>(param_4);
 
-        // Create EXCEPTION_POINTERS structure
         EXCEPTION_RECORD exceptionRecord = {0};
         EXCEPTION_POINTERS exceptionPointers = {nullptr};
 
-        // Fill in exception record with info from CONTEXT
-        exceptionRecord.ExceptionCode = EXCEPTION_BREAKPOINT; // Or appropriate code
+        // GW has already written "Exception: <code>" into its own crash text; recover the real code from
+        // there, otherwise every dump is stamped EXCEPTION_BREAKPOINT and debuggers chase a phantom int3.
+        DWORD exception_code = EXCEPTION_BREAKPOINT;
+        if (message_buffer && message_buffer->buffer) {
+            unsigned int parsed = 0;
+            if (const auto exception_line = strstr(message_buffer->buffer, "Exception: ");
+                exception_line && sscanf(&exception_line[11], "%8x", &parsed) == 1 && parsed) {
+                exception_code = parsed;
+            }
+        }
+
+        exceptionRecord.ExceptionCode = exception_code;
         exceptionRecord.ExceptionFlags = EXCEPTION_NONCONTINUABLE;
         exceptionRecord.ExceptionAddress = reinterpret_cast<PVOID>(pContext->Eip);
         exceptionRecord.NumberParameters = 0;
 
-        // Set up exception pointers
         exceptionPointers.ExceptionRecord = &exceptionRecord;
         exceptionPointers.ContextRecord = pContext;
 
@@ -115,8 +131,108 @@ namespace {
         return 1;
     }
 
+    // The CRT kills the process for these without ever raising an SEH exception, so they never reach
+    // TopLevelExceptionFilter. Route them into Crash() with a context captured at the point of failure.
+    constexpr DWORD EXCEPTION_TOOLBOX_CRT_FAILURE = 0xE0435254;
+
+    _invalid_parameter_handler previous_invalid_parameter_handler = nullptr;
+    _purecall_handler previous_purecall_handler = nullptr;
+    std::terminate_handler previous_terminate_handler = nullptr;
+    void(__cdecl* previous_sigabrt_handler)(int) = SIG_DFL;
+    bool crt_handlers_installed = false;
+
+    void CrashFromCrtHandler(const char* message)
+    {
+        // Crash() keeps this pointer for the dump's comment stream, and the process dies before it could be reused.
+        static char crt_failure_message[512];
+        strncpy_s(crt_failure_message, message && *message ? message : "Unknown CRT failure", _TRUNCATE);
+
+        CONTEXT context{};
+        RtlCaptureContext(&context);
+
+        EXCEPTION_RECORD record{};
+        record.ExceptionCode = EXCEPTION_TOOLBOX_CRT_FAILURE;
+        record.ExceptionFlags = EXCEPTION_NONCONTINUABLE;
+        record.ExceptionAddress = reinterpret_cast<PVOID>(context.Eip);
+
+        EXCEPTION_POINTERS pointers{&record, &context};
+        CrashHandler::Crash(&pointers, crt_failure_message);
+
+        // Crash() doesn't return, but don't let the CRT carry on if it somehow did.
+        TerminateProcess(GetCurrentProcess(), 1);
+    }
+
+    // Release CRTs pass null for everything but the line number, hence the placeholders.
+    void __cdecl OnInvalidParameter(const wchar_t* expression, const wchar_t* function, const wchar_t* file, const unsigned int line, uintptr_t)
+    {
+        char message[512];
+        snprintf(message, _countof(message), "Invalid parameter: '%S' in '%S', '%S' line %u",
+                 expression ? expression : L"<no expression>",
+                 function ? function : L"<unknown function>",
+                 file ? file : L"<unknown file>",
+                 line);
+        CrashFromCrtHandler(message);
+    }
+
+    void __cdecl OnPureCall()
+    {
+        CrashFromCrtHandler("Pure virtual function call");
+    }
+
+    void OnTerminate()
+    {
+        char message[512];
+        const char* description = "std::terminate called";
+
+        if (std::current_exception()) {
+            try {
+                std::rethrow_exception(std::current_exception());
+            }
+            catch (const std::exception& e) {
+                snprintf(message, _countof(message), "Unhandled C++ exception: %s", e.what());
+                description = message;
+            }
+            catch (...) {
+                description = "Unhandled C++ exception (not derived from std::exception)";
+            }
+        }
+
+        CrashFromCrtHandler(description);
+    }
+
+    void __cdecl OnAbortSignal(int)
+    {
+        CrashFromCrtHandler("abort() called");
+    }
+
+    void InstallCrtHandlers()
+    {
+        if (crt_handlers_installed) return;
+        crt_handlers_installed = true;
+
+        previous_invalid_parameter_handler = _set_invalid_parameter_handler(OnInvalidParameter);
+        previous_purecall_handler = _set_purecall_handler(OnPureCall);
+        previous_terminate_handler = std::set_terminate(OnTerminate);
+        previous_sigabrt_handler = signal(SIGABRT, OnAbortSignal);
+        // Stop the CRT showing its own abort dialog or handing the fault to WER if our handler ever returns.
+        _set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
+    }
+
+    void RemoveCrtHandlers()
+    {
+        if (!crt_handlers_installed) return;
+        crt_handlers_installed = false;
+
+        // Leaving these pointing into an unloaded toolbox dll would be worse than no handler at all.
+        _set_invalid_parameter_handler(previous_invalid_parameter_handler);
+        _set_purecall_handler(previous_purecall_handler);
+        std::set_terminate(previous_terminate_handler);
+        signal(SIGABRT, previous_sigabrt_handler);
+    }
+
     void Cleanup()
     {
+        RemoveCrtHandlers();
         if (AppendStackTraceToCrashMessage_Func) {
             GW::Hook::RemoveHook(AppendStackTraceToCrashMessage_Func);
             AppendStackTraceToCrashMessage_Func = nullptr;
@@ -153,8 +269,7 @@ void CrashHandler::FatalAssert(const char* expr, const char* file, const unsigne
 
         throw std::runtime_error(tb_exception_message);
     } __except (EXCEPT_EXPRESSION_ENTRY) {
-        // The Crash() function should have terminated the process
-        // If we somehow get here, force termination
+        // Crash() should already have terminated the process; force it if not.
         TerminateProcess(GetCurrentProcess(), 1);
     }
 
@@ -167,6 +282,11 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const ch
     // A crash while handling a crash (e.g. resolving the blocked crash folder asserts again) must not recurse.
     static volatile LONG crashing = 0;
     if (InterlockedExchange(&crashing, 1) != 0) {
+        // The first entry may already have written a good dump; a second crash on top of it isn't a dump failure.
+        if (written_dump_path[0]) {
+            TerminateProcess(GetCurrentProcess(), 1);
+            return EXCEPTION_EXECUTE_HANDLER;
+        }
         std::wstring error =
             L"Guild Wars 崩溃了，GWToolbox 在尝试写入崩溃转储时再次崩溃。\n\n"
             L"这几乎总是意味着有东西阻止了对 Documents\\GWToolboxpp 文件夹的访问 -\n"
@@ -236,12 +356,11 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const ch
     const DWORD ProcessId = GetCurrentProcessId();
     const DWORD ThreadId = GetCurrentThreadId();
 
-    SYSTEMTIME stLocalTime;
-    GetLocalTime(&stLocalTime);
+    const auto stLocalTime = TextUtils::Time::GetCurrentSystemTime();
     wchar_t szFileName[MAX_PATH];
     const auto fn_print = swprintf(
-        szFileName, MAX_PATH, L"%s\\%S%S-%04d%02d%02d-%02d%02d%02d-%ld-%ld.dmp", crash_folder.c_str(), GWTOOLBOXDLL_VERSION, GWTOOLBOXDLL_VERSION_BETA, stLocalTime.wYear, stLocalTime.wMonth, stLocalTime.wDay, stLocalTime.wHour, stLocalTime.wMinute,
-        stLocalTime.wSecond, ProcessId, ThreadId
+        szFileName, MAX_PATH, L"%s\\%S%S-%04d%02d%02d-%02d%02d%02d-%ld-%ld.dmp", crash_folder.c_str(), GWTOOLBOXDLL_VERSION, GWTOOLBOXDLL_VERSION_BETA, stLocalTime.year, stLocalTime.month, stLocalTime.day, stLocalTime.hour, stLocalTime.minute,
+        stLocalTime.second, ProcessId, ThreadId
     );
 
     if (fn_print < 0) {
@@ -335,7 +454,8 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const ch
         error_info += OriginalError(extra_info);
     }
     else {
-        error_info = L"Guild Wars 崩溃了！\n\n";
+        wcsncpy_s(written_dump_path, szFileName, _TRUNCATE);
+        error_info = L"Guild Wars crashed!\n\n";
 
         if (tb_exception_message && *tb_exception_message) {
             error_info += std::format(L"{}\n\n", TextUtils::StringToWString(tb_exception_message));
@@ -363,6 +483,8 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const ch
     if (IsDebuggerPresent()) {
         __debugbreak();
     }
+    // abort() raises SIGABRT, which our own OnAbortSignal would route straight back into Crash().
+    RemoveCrtHandlers();
     abort();
     #else
     TerminateProcess(GetCurrentProcess(), 1);
@@ -399,6 +521,7 @@ void CrashHandler::Initialize()
     }
 
     SetUnhandledExceptionFilter(TopLevelExceptionFilter);
+    InstallCrtHandlers();
     GW::RegisterPanicHandler(GWCAPanicHandler, nullptr);
 
     AppendStackTraceToCrashMessage_Func = (AppendStackTraceToCrashMessage_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindUseOfString("%p  %08x %08x %08x %08x "), 0xfff);

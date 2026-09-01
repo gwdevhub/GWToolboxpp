@@ -5,6 +5,7 @@
 #include <GWCA/Managers/MapMgr.h>
 
 #include <Color.h>
+#include <D3DContainers.h>
 #include <ImGuiAddons.h>
 #include <Modules/DangerRingsModule.h>
 #include <Timer.h>
@@ -12,6 +13,8 @@
 #include <Utils/GameWorldCompositor.h>
 #include <Utils/SettingsRegistry.h>
 #include <Utils/TerrainDrape.h>
+
+#include "Widgets/Minimap/Shaders/game_world_renderer_dotted_alpha_ps.h"
 
 namespace {
     constexpr int kMinSegments = 64;
@@ -39,9 +42,21 @@ namespace {
 
     std::unordered_map<uint64_t, RingMesh> meshes;
     std::vector<AoeEffects::ActiveEffect> effects_snapshot;
-    std::vector<RingVertex> scratch;
+    struct PendingRingDraw {
+        const RingMesh* mesh;
+        float env;
+    };
+    std::vector<PendingRingDraw> pending_draws;
     bool meshes_dirty = false;
     int compositor_token = 0;
+
+    IDirect3DPixelShader9* dotted_alpha_ps = nullptr;
+
+    bool EnsureDottedAlphaPixelShader(IDirect3DDevice9* device)
+    {
+        if (dotted_alpha_ps) return true;
+        return device->CreatePixelShader(reinterpret_cast<const DWORD*>(&game_world_renderer_dotted_alpha_ps), &dotted_alpha_ps) == D3D_OK;
+    }
 
     int RingSegments(const float radius)
     {
@@ -139,7 +154,7 @@ void DangerRingsModule::DrawInWorld(IDirect3DDevice9* device)
     });
 
     const float t_seconds = static_cast<float>(GetTickCount64() % 3600000) / 1000.f;
-    scratch.clear();
+    pending_draws.clear();
     int builds = 0;
     for (const auto& effect : effects_snapshot) {
         if ((effect.color >> IM_COL32_A_SHIFT) == 0) continue; // this side is hidden (colour alpha 0)
@@ -151,25 +166,23 @@ void DangerRingsModule::DrawInWorld(IDirect3DDevice9* device)
         }
         const float env = AlphaEnvelope(effect, t_seconds);
         if (env <= 0.f) continue;
-        for (const auto& v : mesh.verts) {
-            RingVertex out = v;
-            const auto a = static_cast<DWORD>(static_cast<float>((v.color >> IM_COL32_A_SHIFT) & 0xFF) * env);
-            out.color = (v.color & ~(0xFFu << IM_COL32_A_SHIFT)) | (a << IM_COL32_A_SHIFT);
-            scratch.push_back(out);
-        }
+        pending_draws.push_back({&mesh, env});
     }
-    if (scratch.empty()) return;
+    if (pending_draws.empty()) return;
 
-    IDirect3DStateBlock9* state_block = nullptr;
-    if (device->CreateStateBlock(D3DSBT_ALL, &state_block) != D3D_OK) return;
+    const D3DStateGuard state_guard(device);
+    if (!EnsureDottedAlphaPixelShader(device)) return;
     // Static depth keeps walls/props occluding overlays; agents draw later in GW's pass.
     if (GameWorldCompositor::SetupPipeline(device, true, render_max_distance, fog_factor)) {
+        device->SetPixelShader(dotted_alpha_ps);
         constexpr BOOL dotted_off[1] = {FALSE};
         device->SetPixelShaderConstantB(0, dotted_off, 1);
-        device->DrawPrimitiveUP(D3DPT_TRIANGLELIST, static_cast<UINT>(scratch.size() / 3), scratch.data(), sizeof(RingVertex));
+        for (const auto& draw : pending_draws) {
+            const float tint[4] = {0.f, 0.f, 0.f, draw.env};
+            device->SetPixelShaderConstantF(3, tint, 1);
+            device->DrawPrimitiveUP(D3DPT_TRIANGLELIST, static_cast<UINT>(draw.mesh->verts.size() / 3), draw.mesh->verts.data(), sizeof(RingVertex));
+        }
     }
-    state_block->Apply();
-    state_block->Release();
 }
 
 void DangerRingsModule::RegisterSettings(ToolboxModule* module)
@@ -196,6 +209,10 @@ void DangerRingsModule::SignalTerminate()
     if (compositor_token) {
         GameWorldCompositor::UnregisterDraw(compositor_token);
         compositor_token = 0;
+    }
+    if (dotted_alpha_ps) {
+        dotted_alpha_ps->Release();
+        dotted_alpha_ps = nullptr;
     }
     meshes.clear();
 }

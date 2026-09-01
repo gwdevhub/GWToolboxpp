@@ -76,7 +76,6 @@ namespace {
     GW::UI::UIInteractionCallback OnCompassFrame_UICallback_Ret = nullptr, OnCompassFrame_UICallback_Func = nullptr;
     bool compass_position_dirty = true;
 
-    // 终止小地图时标记
     bool terminating = false;
     bool cardinal_upright = false;
 
@@ -89,12 +88,8 @@ namespace {
 
     Vec2i drag_start;
 
-    // 小地图移动变量
     clock_t last_moved = 0;
 
-    /**
-     * 将运行时变量包装在 MinimapRenderContext 中 — 作为内部设置引用暴露它们
-     */
     MinimapRenderContext default_minimap_context{
         .background_color = 0,
         .foreground_color = 0xFF999999,
@@ -141,13 +136,6 @@ namespace {
     float cardinal_offset = 0.0f;     // 从罗盘边缘的游戏单位偏移；正 = 向外
     float cardinal_font_size = 13.0f; // 屏幕空间字体大小（像素）
 
-    // 将游戏世界位置投影到 ImGui 屏幕像素，使用与 Minimap::Render / RenderSetupProjection 相同的变换链。
-    //
-    // 视图链（Minimap::Render）：
-    //   translate(-me->pos) * rotateZ(-rotation + PI/2) * scale(zoom) * translate(pan)
-    // 投影（RenderSetupProjection）：
-    //   正交：±5000 游戏单位 → ±1 NDC
-    //   视口：通过 base_scale 和 anchor_point 将 NDC → 像素
     ImVec2 WorldToScreen(const GW::Vec2f& world_pos, const MinimapRenderContext& ctx, const GW::Vec2f& me_pos)
     {
         GW::Vec2f v = world_pos - me_pos; // 平移使玩家在原点
@@ -235,19 +223,15 @@ namespace {
         constexpr float w = 5000.0f;
         v *= 2.0f * w / size.x;
 
-        // 按相机平移
         v -= translation;
 
-        // 按相机缩放
         v /= scale;
 
-        // 按当前相机旋转旋转
         const float angle = default_minimap_context.rotation - DirectX::XM_PIDIV2;
         const float x1 = v.x * std::cos(angle) - v.y * std::sin(angle);
         const float y1 = v.x * std::sin(angle) + v.y * std::cos(angle);
         v = GW::Vec2f(x1, y1);
 
-        // 按角色位置平移
         v += me->pos;
 
         return v;
@@ -558,7 +542,6 @@ namespace {
     }
 
 
-    // 回调
     void OnKeydown(GW::HookStatus*, const uint32_t key)
     {
         if (key == GW::UI::ControlAction_ReverseCamera) {
@@ -612,18 +595,12 @@ namespace {
     {
         if ((context.cardinal_color & IM_COL32_A_MASK) == 0) return;
         // -------------------------------------------------------------------------
-        // 方向标签（北 / 南 / 东 / 西）— ImGui 背景绘制列表
-        //
-        // 字体通过 ImGui 1.92 的动态字体图集动态缩放。
-        //
-        // 两种模式由 cardinal_upright 控制：
-        //   true  — 标签始终相对于屏幕保持正立（默认）。
-        //   false — 标签随小地图旋转；每个字母从罗盘中心向外指向，
-        //           因此当地图旋转时文字可正确阅读。
+        // Cardinal direction labels (N / S / E / W) — ImGui background draw list.
+        // cardinal_upright: true = labels always read upright on screen (default);
+        // false = labels rotate with the map, each letter facing outward from the centre.
         // -------------------------------------------------------------------------
         ImDrawList* draw_list = ImGui::GetBackgroundDrawList();
 
-        // 单一字体，动态缩放到所需方向尺寸
         ImFont* font = FontLoader::GetFont();
         const float render_size = cardinal_font_size;
         ImFontBaked* baked = font->GetFontBaked(render_size);
@@ -634,14 +611,8 @@ namespace {
         const ImU32 label_col = context.cardinal_color;
         const ImU32 shadow_col = IM_COL32(0, 0, 0, (context.cardinal_color >> 24) & 0xFF);
 
-        // GW 世界轴：+X = 东，+Y = 北。
-        // label_angle：此标签顶部在旋转模式下应指向的角度（屏幕空间，从向上顺时针）。
-        //   N 指向地图上方 → 基础地图角度
-        //   E 指向地图右方 → 基础 + PI/2
-        //   S 指向地图下方 → 基础 + PI
-        //   W 指向地图左方 → 基础 + 3*PI/2
-        //
-        // 在正立模式下 label_angle 不使用。
+        // GW world axes: +X = east, +Y = north. label_angle is the screen-space angle (CW from up)
+        // the label's top points toward in rotated mode (N = map angle, E/S/W offset by PI/2 each); unused when upright.
         const float map_angle = context.rotation - DirectX::XM_PIDIV2;
 
         struct Cardinal {
@@ -684,7 +655,6 @@ namespace {
                 const float ca = std::cos(angle);
                 const float sa = std::sin(angle);
 
-                // 围绕 pivot 旋转局部偏移 (ox, oy)
                 auto rot = [&](float ox, float oy) -> ImVec2 {
                     return {pivot.x + ox * ca - oy * sa, pivot.y + ox * sa + oy * ca};
                 };
@@ -836,6 +806,7 @@ void Minimap::Initialize()
     }
 
     uintptr_t address = GW::Scanner::Find("\x8b\x46\x40\x85\xc0\x74\x0c", "xxxxx?x", 0x5);
+    DEBUG_ASSERT(address);
     if (address) {
         hide_flagging_controls_patch.SetPatch(address, "\xeb", 1);
     }
@@ -911,7 +882,7 @@ void Minimap::OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessage msgid,
         } break;
         case GW::UI::UIMessage::kSkillActivated: {
             const auto packet = static_cast<GW::UI::UIPacket::kAgentSkillPacket*>(wParam);
-            ASSERT(packet && packet->skill_id < GW::Constants::SkillID::Count && packet->agent_id);
+            ASSERT(packet && (uint32_t)packet->skill_id < GW::SkillbarMgr::GetSkillCount() && packet->agent_id);
             if (packet->agent_id == GW::Agents::GetControlledCharacterId()) {
                 if (packet->skill_id == GW::Constants::SkillID::Shadow_of_Haste || packet->skill_id == GW::Constants::SkillID::Shadow_Walk) {
                     shadowstep_location = GW::Agents::GetControlledCharacter()->pos;
@@ -1325,7 +1296,6 @@ void Minimap::Draw(IDirect3DDevice9* device)
         return;
     }
 
-    // 检查暗影步位置
     if (shadowstep_location.x != 0.0f || shadowstep_location.y != 0.0f) {
         GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
         if (!effects) {
@@ -1513,13 +1483,8 @@ void Minimap::Render(IDirect3DDevice9* device, const MinimapRenderContext& conte
         return;
     }
 
-    // 备份 DX9 状态
-    IDirect3DStateBlock9* d3d9_state_block = nullptr;
-    if (device->CreateStateBlock(D3DSBT_ALL, &d3d9_state_block) < 0) {
-        return;
-    }
+    const D3DStateGuard state_guard(device);
 
-    // 备份 DX9 变换
     D3DMATRIX reset_world;
     D3DMATRIX reset_view;
     D3DMATRIX reset_projection;
@@ -1567,17 +1532,13 @@ void Minimap::Render(IDirect3DDevice9* device, const MinimapRenderContext& conte
         device->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, res, vertices, sizeof(D3DVertex));
     };
 
-    // 使用上下文而非 RenderSetupProjection()
     RenderSetupProjection(device, context);
 
-    // 使用上下文背景色（若为 0 则使用 pmap_renderer 的）
     auto& instance = Instance();
-    // 使用上下文裁剪矩形而非全局
     const auto rect = context.rect();
     device->SetScissorRect(&rect);
     device->SetRenderState(D3DRS_SCISSORTESTENABLE, true);
 
-    // 使用 context.circular_map 而非全局
     if (context.draw_background) {
         if (context.circular_map) {
             device->SetRenderState(D3DRS_STENCILENABLE, true);
@@ -1603,13 +1564,10 @@ void Minimap::Render(IDirect3DDevice9* device, const MinimapRenderContext& conte
 
     auto translate_char = DirectX::XMMatrixTranslation(-me->pos.x, -me->pos.y, 0);
 
-    // 使用 context.rotation 而非 GetMapRotation()
     const auto rotate_char = DirectX::XMMatrixRotationZ(-context.rotation + DirectX::XM_PIDIV2);
 
-    // 使用 context.zoom_scale 而非全局 scale
     const auto scaleM = DirectX::XMMatrixScaling(context.zoom_scale, context.zoom_scale, 1.0f);
 
-    // 使用 context.translation 而非全局 translation
     const auto translationM = DirectX::XMMatrixTranslation(context.translation.x, context.translation.y, 0);
 
     const auto view = translate_char * rotate_char * scaleM * translationM;
@@ -1637,7 +1595,6 @@ void Minimap::Render(IDirect3DDevice9* device, const MinimapRenderContext& conte
     }
 
 
-    // 使用 context.draw_center_marker 或检查 context.translation
     if (context.draw_center_marker || context.translation.x) {
         const auto view2 = scaleM;
         device->SetTransform(D3DTS_VIEW, reinterpret_cast<const D3DMATRIX*>(&view2));
@@ -1666,14 +1623,9 @@ void Minimap::Render(IDirect3DDevice9* device, const MinimapRenderContext& conte
         device->SetRenderState(D3DRS_STENCILENABLE, false);
     }
 
-    // 恢复 DX9 变换
     device->SetTransform(D3DTS_WORLD, &reset_world);
     device->SetTransform(D3DTS_VIEW, &reset_view);
     device->SetTransform(D3DTS_PROJECTION, &reset_projection);
-
-    // 恢复 DX9 状态
-    d3d9_state_block->Apply();
-    d3d9_state_block->Release();
 }
 
 const MinimapRenderContext& Minimap::GetRenderContext()
@@ -1918,7 +1870,6 @@ bool Minimap::OnMouseWheel(const UINT, const WPARAM wParam, const LPARAM)
 
 bool Minimap::IsInside(const int x, const int y) const
 {
-    // 如果在小地图窗口矩形外，返回 false
     const auto& tl = default_minimap_context.top_left;
     const auto& br = default_minimap_context.bottom_right;
     if (static_cast<float>(x) < tl.x || static_cast<float>(x) > br.x ||
@@ -1963,9 +1914,6 @@ void Minimap::RenderSetupProjection(IDirect3DDevice9* device, const MinimapRende
     const float xscale = context.base_scale / width_f;
     const float yscale = context.base_scale / height_f;
 
-    // anchor_point 是世界 (0,0) 映射到屏幕的位置。
-    // 在视图变换后，玩家就在世界 (0,0)，
-    // 因此这控制玩家在屏幕上的位置。
     const float xtrans = (context.anchor_point.x * 2.0f) / width_f - 1.0f;
     const float ytrans = -(context.anchor_point.y * 2.0f) / height_f + 1.0f;
 

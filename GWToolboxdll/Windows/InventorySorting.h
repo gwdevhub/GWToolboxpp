@@ -40,15 +40,8 @@ public:
 
     static bool StoreMaterials(GW::Constants::Bag start, GW::Constants::Bag end);
 
-    /**
-     * Sorts all items in inventory bags by item type according to 
-     * the configured sort order. Runs on a worker thread with progress popup.
-     */
     static bool SortInventory(GW::Constants::Bag start, GW::Constants::Bag end);
     
-    /**
-     * Cancels the current inventory sorting operation and cleans up state.
-     */
     static void CancelSort();
 
 private:

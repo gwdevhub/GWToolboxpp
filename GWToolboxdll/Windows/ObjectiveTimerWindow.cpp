@@ -164,6 +164,10 @@ namespace {
 
     bool runs_dirty = false;
 
+    // Today's date, refreshed once a second in Draw; every loaded run compares its start day against it.
+    int today_yday = -1;
+    int today_year = 0;
+
     DWORD time_point_ms()
     {
         return static_cast<DWORD>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());
@@ -292,9 +296,6 @@ void ObjectiveTimerWindow::Initialize()
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyDefeated>(
         &PartyDefeated_Entry, [this](GW::HookStatus*, GW::Packet::StoC::PartyDefeated*) { StopObjectives(); });
 
-    // 注意：服务器可能不会按我们期望的顺序发送包
-    // 例如 InstanceLoadInfo 在 ExamplePlugin 之前到达，这意味着运行开始时间被破坏
-    // 跟踪这些包，仅在需要的包到达时触发相关事件。
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(
         &InstanceLoadInfo_Entry,
         [this](GW::HookStatus*, const GW::Packet::StoC::InstanceLoadInfo* packet) {
@@ -605,6 +606,7 @@ void ObjectiveTimerWindow::AddObjectiveSet(ObjectiveSet* os)
         cos.second->need_to_collapse = true;
     }
     objective_sets.emplace(os->system_time, os);
+    display_order_dirty = true;
     if (os->active) {
         current_objective_set = os;
     }
@@ -765,20 +767,6 @@ void ObjectiveTimerWindow::AddDoAObjectiveSet(const GW::Vec2f spawn)
 
 void ObjectiveTimerWindow::AddUrgozObjectiveSet()
 {
-    // 区域 1，虚弱 = 开始时已开启
-    // 区域 2，生命吸取 = 门 45420 开启时开始
-    // 区域 3，杠杆 = 门 11692 开启时开始
-    // 区域 4，桥梁 = 门 54552 开启时开始
-    // 区域 5，狼群 = 门 1760 开启时开始
-    // 区域 6，能量吸取 = 门 40330 开启时开始
-    // 区域 7，力竭 = 门 29537 开启时开始 60114? 54756?
-    // 区域 8，支柱 = 门 37191 开启时开始
-    // 区域 9，血饮者 = 门 35500 开启时开始
-    // 区域 10，Jons 失败房间 = 门 34278 开启时开始
-    // 区域 11，乌尔戈兹 = 门 15529 开启时开始
-    // 乌尔戈兹 = 3750
-    // 乌尔戈兹目标 = 357
-
     const auto os = new ObjectiveSet;
     os->name = Resources::GetMapName(GW::Constants::MapID::Urgozs_Warren)->string();
     os->AddObjective(new Objective("区域 1 | 虚弱"))->SetStarted();
@@ -943,7 +931,20 @@ void ObjectiveTimerWindow::Draw(IDirect3DDevice9*)
     if (loading) {
         return;
     }
-    // 主目标计时器窗口
+    static DWORD today_refreshed_at = 0;
+    if (const DWORD tick = GetTickCount(); today_yday < 0 || tick - today_refreshed_at >= 1000) {
+        today_refreshed_at = tick;
+        const time_t now = time(nullptr);
+        const tm* nowinfo = localtime(&now);
+        today_yday = nowinfo->tm_yday;
+        today_year = nowinfo->tm_year;
+    }
+    if (clear_cached_times) {
+        for (const auto& [_, os] : objective_sets) {
+            os->InvalidateCachedStrings();
+        }
+        clear_cached_times = false;
+    }
     if (visible && !loading) {
         ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiCond_FirstUseEver);
@@ -952,23 +953,50 @@ void ObjectiveTimerWindow::Draw(IDirect3DDevice9*)
                 ImGui::Text("进入痛苦领域、火岛、地下世界、深渊、乌尔戈兹或地城以开始计时");
             }
             else {
-                for (auto it = objective_sets.rbegin(); it != objective_sets.rend(); ++it) {
-                    auto* os = it->second;
-                    const bool show = os->Draw();
-                    if (!show) {
+                if (display_order_dirty) {
+                    display_order.assign(objective_sets.size(), nullptr);
+                    size_t n = display_order.size();
+                    for (const auto& [_, os] : objective_sets) {
+                        display_order[--n] = os;
+                    }
+                    display_order_dirty = false;
+                }
+
+                const float row_height = ImGui::GetFrameHeight();
+                const float spacing = ImGui::GetStyle().ItemSpacing.y;
+                float skipped_height = 0.f;
+                const auto flush_skipped = [&skipped_height] {
+                    if (skipped_height > 0.f) {
+                        ImGui::Dummy(ImVec2(1.f, skipped_height));
+                        skipped_height = 0.f;
+                    }
+                };
+                for (size_t i = 0; i < display_order.size(); i++) {
+                    auto* os = display_order[i];
+                    if (os->IsFilteredOut()) {
+                        continue;
+                    }
+                    if (os->IsCollapsedRow()) {
+                        const float y = ImGui::GetCursorScreenPos().y + (skipped_height > 0.f ? skipped_height + spacing : 0.f);
+                        if (!ImGui::IsRectVisible({0.f, y}, {1.f, y + row_height})) {
+                            skipped_height = skipped_height > 0.f ? skipped_height + spacing + row_height : row_height;
+                            continue;
+                        }
+                    }
+                    flush_skipped();
+                    if (!os->Draw()) {
+                        objective_sets.erase(os->system_time);
                         delete os;
-                        objective_sets.erase(--it.base());
-                        break;
-                        // 迭代器会混乱，不要费心，我们跳过一帧。没关系。
-                        // 如果你真的想绘制其余部分，请确保对此进行充分测试。
+                        display_order_dirty = true;
+                        break; // we're skipping the rest of this frame; NBD
                     }
                 }
+                flush_skipped();
             }
         }
         ImGui::End();
     }
 
-    // 当前运行的独立目标集窗口
     if (settings.show_current_run_window && current_objective_set) {
         ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiCond_FirstUseEver);
@@ -1003,7 +1031,8 @@ void ObjectiveTimerWindow::DrawSettingsInternal()
     ImGui::Separator();
     ImGui::StartSpacedElements(275.f);
     ImGui::NextSpacedElement();
-    clear_cached_times = ImGui::Checkbox("显示秒数小数位", &settings.show_decimal);
+    // Latched, not assigned: Draw consumes it, and it may run before this settings pass.
+    clear_cached_times |= ImGui::Checkbox("Show second decimal", &settings.show_decimal);
     ImGui::NextSpacedElement();
     ImGui::Checkbox("显示“开始”列", &settings.show_start_column);
     ImGui::NextSpacedElement();
@@ -1016,7 +1045,7 @@ void ObjectiveTimerWindow::DrawSettingsInternal()
     ImGui::CheckboxWithHelp("调试：记录事件", &show_debug_events,
         "将在聊天中输出目标计时器使用的事件。\n用于调试和请求添加更多内容");
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("显示记录开始日期/时间", &settings.show_start_date_time);
+    clear_cached_times |= ImGui::Checkbox("Show run start date/time", &settings.show_start_date_time);
     ImGui::NextSpacedElement();
     ImGui::CheckboxWithHelp("在独立窗口中显示当前记录", &settings.show_current_run_window, "通过聊天切换：/tb_setting show_current_run_window");
     ImGui::NextSpacedElement();
@@ -1043,8 +1072,7 @@ void ObjectiveTimerWindow::DrawSettingsInternal()
             EnableWebsocketServer(false);
             EnableWebsocketServer(enable_websocket_server);
         }
-        // 显示 WebSocket 服务器状态
-        ImGui::Text("LiveSplit 服务器状态: %s", websocket_app && websocket_server ? "运行中" : "已停止");
+        ImGui::Text("LiveSplit Server status: %s", websocket_app && websocket_server ? "Running" : "Stopped");
         if (websocket_app && websocket_server) {
             ImGui::SameLine();
             ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "(端口 %d)", settings.websocket_server_port);
@@ -1111,7 +1139,6 @@ void ObjectiveTimerWindow::LoadRuns()
         }
         FindClose(hFind);
 
-        // 输出找到的文件名列表
         for (auto it = obj_timer_files.rbegin(); it != obj_timer_files.rend() && instance.objective_sets.size() < max_objectives_in_memory; ++it) {
             try {
                 std::ifstream file;
@@ -1133,6 +1160,7 @@ void ObjectiveTimerWindow::LoadRuns()
                             os->need_to_collapse = true;
                             os->from_disk = true;
                             instance.objective_sets.emplace(os->system_time, os);
+                            instance.display_order_dirty = true;
                         }
                     }
                     file.close();
@@ -1199,6 +1227,8 @@ void ObjectiveTimerWindow::ClearObjectiveSets()
         delete os.second;
     }
     objective_sets.clear();
+    display_order.clear();
+    display_order_dirty = true;
 }
 
 void ObjectiveTimerWindow::StopObjectives()
@@ -1352,6 +1382,14 @@ void ObjectiveTimerWindow::Objective::Update()
     // 缓存时间等移至 Draw 和 GetDuration 函数
 }
 
+void ObjectiveTimerWindow::Objective::InvalidateCachedStrings()
+{
+    cached_start[0] = cached_done[0] = cached_duration[0] = '\0';
+    for (Objective* child : children) {
+        child->InvalidateCachedStrings();
+    }
+}
+
 void ObjectiveTimerWindow::Objective::Draw()
 {
     switch (status) {
@@ -1391,7 +1429,7 @@ void ObjectiveTimerWindow::Objective::Draw()
     ImGui::PushItemWidth(ts_width);
     if (settings.show_start_column) {
         ImGui::SameLine(offset);
-        ImGui::Text(GetStartTimeStr());
+        ImGui::TextUnformatted(GetStartTimeStr());
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("开始");
         }
@@ -1399,7 +1437,7 @@ void ObjectiveTimerWindow::Objective::Draw()
     }
     if (settings.show_end_column) {
         ImGui::SameLine(offset);
-        ImGui::Text(GetEndTimeStr());
+        ImGui::TextUnformatted(GetEndTimeStr());
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("结束");
         }
@@ -1407,7 +1445,7 @@ void ObjectiveTimerWindow::Objective::Draw()
     }
     if (settings.show_time_column) {
         ImGui::SameLine(offset);
-        ImGui::Text(GetDurationStr());
+        ImGui::TextUnformatted(GetDurationStr());
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("用时");
         }
@@ -1651,31 +1689,41 @@ const char* ObjectiveTimerWindow::ObjectiveSet::GetDurationStr()
     return cached_time;
 }
 
-bool ObjectiveTimerWindow::ObjectiveSet::Draw()
+bool ObjectiveTimerWindow::ObjectiveSet::IsFilteredOut()
 {
-    char buf[256];
-    if (!settings.show_past_runs && from_disk) {
+    if (settings.show_past_runs || !from_disk) {
+        return false;
+    }
+    if (start_yday < 0) {
         tm timeinfo{};
         GetStartTime(&timeinfo);
-        const time_t now = time(nullptr);
-        const tm* nowinfo = localtime(&now);
-        if (timeinfo.tm_yday != nowinfo->tm_yday || timeinfo.tm_year != nowinfo->tm_year) {
-            return true; // 隐藏此目标集；来自之前日期
+        start_yday = timeinfo.tm_yday;
+        start_year = timeinfo.tm_year;
+    }
+    return start_yday != today_yday || start_year != today_year;
+}
+
+bool ObjectiveTimerWindow::ObjectiveSet::Draw()
+{
+    if (IsFilteredOut()) {
+        return true;
+    }
+
+    if (!cached_header[0] || active) {
+        if (settings.show_start_date_time) {
+            snprintf(cached_header, sizeof(cached_header), "%s - %s - %s%s###header%u", GetStartTimeStr(), name.c_str(), GetDurationStr(), failed ? " [Failed]" : "", ui_id);
         }
-    }
-    if (settings.show_start_date_time) {
-        sprintf(buf, "%s - %s - %s%s###header%u", GetStartTimeStr(), name.c_str(), GetDurationStr(), failed ? " [失败]" : "", ui_id);
-    }
-    else {
-        sprintf(buf, "%s - %s%s###header%u", name.c_str(), GetDurationStr(), failed ? " [失败]" : "", ui_id);
+        else {
+            snprintf(cached_header, sizeof(cached_header), "%s - %s%s###header%u", name.c_str(), GetDurationStr(), failed ? " [Failed]" : "", ui_id);
+        }
     }
 
     bool is_open = true;
-    const bool is_collapsed = !ImGui::CollapsingHeader(buf, &is_open, ImGuiTreeNodeFlags_DefaultOpen);
+    drawn_expanded = ImGui::CollapsingHeader(cached_header, &is_open, ImGuiTreeNodeFlags_DefaultOpen);
     if (!is_open) {
         return false;
     }
-    if (!is_collapsed) {
+    if (drawn_expanded) {
         ImGui::PushID(static_cast<int>(ui_id));
         for (Objective* objective : objectives) {
             objective->Draw();
@@ -1683,10 +1731,19 @@ bool ObjectiveTimerWindow::ObjectiveSet::Draw()
         ImGui::PopID();
     }
     if (need_to_collapse) {
-        ImGui::GetCurrentWindow()->DC.StateStorage->SetInt(ImGui::GetID(buf), 0);
+        ImGui::GetCurrentWindow()->DC.StateStorage->SetInt(ImGui::GetID(cached_header), 0);
         need_to_collapse = false;
+        drawn_expanded = false;
     }
     return true;
+}
+
+void ObjectiveTimerWindow::ObjectiveSet::InvalidateCachedStrings()
+{
+    cached_start[0] = cached_time[0] = cached_header[0] = '\0';
+    for (Objective* objective : objectives) {
+        objective->InvalidateCachedStrings();
+    }
 }
 
 void ObjectiveTimerWindow::ObjectiveSet::GetStartTime(tm* timeinfo) const

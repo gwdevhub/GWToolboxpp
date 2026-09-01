@@ -2,9 +2,6 @@
 
 #include <cstdint>
 
-// Prop-surface height oracle (tasks/prop-height-oracle-plan.md): every map prop's world-space collision triangles ('mgrg' meshes from MapProp+0x58) baked once per map into a uniform XY grid.
-// Main-thread snapshot -> Resources-worker build -> immutable index published by atomic pointer swap; queries are pure math (no game call, no allocation, thousands/frame).
-// Queries return false until the bake lands / after a map change (caller falls back to walkable-plane draping); unlike the pathing planes this covers NON-walkable props (railings, fences, statues).
 namespace PropSurface {
     // "No covering prop surface" sentinel (up is -z; real surfaces are finite, usually negative).
     inline constexpr float kNoData = 3.402823466e+38f;

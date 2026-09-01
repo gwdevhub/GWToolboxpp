@@ -27,7 +27,10 @@
 #include <Windows/FriendListWindow.h>
 #include <Windows/TradeWindow.h>
 #include <GWToolbox.h>
+#include <Timer.h>
 #include <Utils/TextUtils.h>
+
+#include <atomic>
 
 namespace tradechat_api {
     struct SearchRequest {
@@ -55,9 +58,6 @@ namespace tradechat_api {
 
 namespace {
     GW::HookEntry ChatCmd_HookEntry;
-    // 每次连接消耗 30 秒。
-    // 你有 2 次尝试机会。
-    // 之后，每 30 秒可以尝试一次。
     constexpr uint32_t COST_PER_CONNECTION_MS = 30 * 1000;
     constexpr uint32_t COST_PER_CONNECTION_MAX_MS = 60 * 1000;
     static const char* months[] = {"一月", "二月", "三月", "四月", "五月", "六月", "七月", "八月", "九月", "十月", "十一月", "十二月"};
@@ -79,6 +79,8 @@ namespace {
         uint32_t timestamp = 0;
         std::string name;
         std::string message;
+        clock_t relative_time_updated = 0;
+        char relative_time[64] = {0};
     };
 
     GW::HookEntry OnPartySearch_Entry;
@@ -107,12 +109,12 @@ namespace {
 
     char search_buffer[256] = {};
 
-    std::vector<std::string> alert_words{};
-    std::vector<std::string> searched_words{};
+    std::vector<TextUtils::SearchPattern<char>> alert_words{};
+    std::vector<TextUtils::SearchPattern<char>> searched_words{};
 
     CircularBuffer<Message> messages;
 
-    bool ws_window_connecting = false;
+    std::atomic<bool> ws_window_connecting = false;
 
     easywsclient::WebSocket* ws_window = nullptr;
 
@@ -176,27 +178,10 @@ namespace {
         if (!settings.filter_alerts) {
             return true;
         }
-        std::regex word_regex;
-        std::smatch m;
-        static const auto regex_check = std::regex("^/(.*)/[a-z]?$", std::regex::ECMAScript | std::regex::icase);
+        // A word wrapped in slashes is a regex, anything else a case-insensitive substring.
         for (const auto& word : alert_words) {
-            if (std::regex_search(word, m, regex_check)) {
-                try {
-                    word_regex = std::regex(m._At(1).str(), std::regex::ECMAScript | std::regex::icase);
-                } catch (const std::exception&) {
-                    // 静默失败；无效正则表达式
-                }
-                if (std::regex_search(message, word_regex)) {
-                    return true;
-                }
-            }
-            else {
-                auto found = std::ranges::search(message, word, [](const char c1, const char c2) -> bool {
-                                 return tolower(c1) == c2;
-                             }).begin();
-                if (found != message.end()) {
-                    return true;
-                }
+            if (word.Matches(message)) {
+                return true;
             }
         }
         return false;
@@ -208,7 +193,7 @@ namespace {
 
         const wchar_t* message = nullptr;
         switch (message_id) {
-            case GW::UI::UIMessage::kPlayerChatMessage: { 
+            case GW::UI::UIMessage::kPlayerChatMessage: {
                 const auto packet = (GW::UI::UIPacket::kPlayerChatMessage*)wparam;
                 if (packet->channel != GW::Chat::Channel::CHANNEL_TRADE) break;
                 message = packet->message;
@@ -248,14 +233,21 @@ void TradeWindow::Initialize()
 
     should_stop = false;
     worker = new std::thread([this] {
-        while (!should_stop) {
-            if (thread_jobs.empty()) {
+        for (;;) {
+            std::function<void()> job;
+            {
+                std::lock_guard lock(thread_jobs_mutex);
+                if (!thread_jobs.empty()) {
+                    job = std::move(thread_jobs.front());
+                    thread_jobs.pop();
+                }
+            }
+            if (!job) {
+                if (should_stop) break;
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                continue;
             }
-            else {
-                thread_jobs.front()();
-                thread_jobs.pop();
-            }
+            job();
         }
     });
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"pc", CmdPricecheck);
@@ -288,6 +280,8 @@ void TradeWindow::Initialize()
 void TradeWindow::Terminate()
 {
     ToolboxWindow::Terminate();
+    DeleteWebSocket(ws_window);
+    ws_window = nullptr;
     should_stop = true;
     if (worker) {
         ASSERT(worker->joinable());
@@ -295,8 +289,6 @@ void TradeWindow::Terminate()
         delete worker;
         worker = nullptr;
     }
-    DeleteWebSocket(ws_window);
-    ws_window = nullptr;
     if (wsaData.wVersion) {
         WSACleanup();
         wsaData = { 0 };
@@ -360,10 +352,9 @@ void TradeWindow::fetch()
     const bool search_pending = !pending_query_sent && !pending_query_string.empty();
     if (search_pending) {
         //strcpy(search_buffer, pending_query_string.c_str());
-        // 填充 searched_words；将查询转为小写以便在 ::fetch 中方便实时搜索
-        ParseBuffer(search_buffer, searched_words);
+        // Fill searched_words for the on-the-fly search in ::fetch
+        searched_words = TextUtils::ParsePatterns<char>(search_buffer);
 
-        // 发送请求
         const tradechat_api::SearchRequest request{.query = pending_query_string};
         pending_query_sent = clock();
         ws_window->send(glz::write_json(request).value_or(std::string{}));
@@ -411,7 +402,6 @@ void TradeWindow::fetch()
             print_search_results = false;
             return;
         }
-        // 添加到消息源
         Message msg;
         const tradechat_api::RawMessage raw{.s = res.s, .m = res.m, .t = res.t};
         if (!fill_message(raw, &msg)) {
@@ -421,14 +411,9 @@ void TradeWindow::fetch()
         if (!add_to_window) {
             // 当前在窗口中显示搜索词。仅当匹配所有词时才添加。
             add_to_window = true;
-            std::string input(msg.message);
-            std::ranges::transform(input, input.begin(),
-                                   [](const char c) -> char {
-                                       return static_cast<char>(tolower(c));
-                                   });
-            for (auto& term : searched_words) {
-                if (input.find(term) != std::string::npos) {
-                    continue; // 未找到搜索词；退出
+            for (const auto& term : searched_words) {
+                if (term.Matches(msg.message)) {
+                    continue;
                 }
                 add_to_window = false;
                 break;
@@ -438,8 +423,7 @@ void TradeWindow::fetch()
             messages.add(msg);
         }
 
-        // 检查提醒
-        // 在 Kamadan AE 1 区或 Pre-Searing Ascalon AE 1 区时不显示交易聊天
+        // do not display trade chat while in kamadan AE district 1 or Pre-Searing Ascalon AE district 1
         bool print_message = ((settings.is_kamadan_chat && settings.print_game_chat && !GetInKamadanAE1()) || (!settings.is_kamadan_chat && settings.print_game_chat_asc && !GetInAscalonAE1())) && IsTradeAlert(msg.message);
 
         if (print_message) {
@@ -622,9 +606,12 @@ void TradeWindow::Draw(IDirect3DDevice9*)
 
                 ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(.7f, .7f, .7f, 1.0f));
 
-                const auto timetext = TextUtils::RelativeTime(msg.timestamp);
-                ImGui::SetCursorPosX(playername_left - innerspacing - ImGui::CalcTextSize(timetext.c_str()).x);
-                ImGui::TextUnformatted(timetext.c_str());
+                if (!msg.relative_time_updated || TIMER_DIFF(msg.relative_time_updated) > 1000) {
+                    snprintf(msg.relative_time, sizeof(msg.relative_time), "%s", TextUtils::RelativeTime(msg.timestamp).c_str());
+                    msg.relative_time_updated = TIMER_INIT();
+                }
+                ImGui::SetCursorPosX(playername_left - innerspacing - ImGui::CalcTextSize(msg.relative_time).x);
+                ImGui::TextUnformatted(msg.relative_time);
                 ImGui::PopStyleColor();
             }
 
@@ -633,7 +620,6 @@ void TradeWindow::Draw(IDirect3DDevice9*)
                 ImGui::SameLine(playername_left);
             }
             if (ImGui::Button(msg.name.c_str(), ImVec2(playernamewidth, 0))) {
-                // 向玩家打开密语
                 GW::GameThread::Enqueue([&msg] {
                     std::wstring name_ws = TextUtils::StringToWString(msg.name);
                     SendUIMessage(GW::UI::UIMessage::kOpenWhisper, name_ws.data());
@@ -686,7 +672,7 @@ void TradeWindow::DrawAlertsWindowContent(bool)
     ImGui::TextDisabled("（每行一个关键词，不区分大小写）");
     if (ImGui::InputTextMultiline("##alertfilter", alert_buf, ALERT_BUF_SIZE,
                                   ImVec2(-1.0f, 0.0f))) {
-        ParseBuffer(alert_buf, alert_words);
+        alert_words = TextUtils::ParsePatterns<char>(alert_buf);
         alertfile_dirty = true;
     }
     DrawChatSettings(true);
@@ -721,7 +707,7 @@ void TradeWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
     if (alert_file.is_open()) {
         alert_file.get(alert_buf, ALERT_BUF_SIZE, '\0');
         alert_file.close();
-        ParseBuffer(alert_buf, alert_words);
+        alert_words = TextUtils::ParsePatterns<char>(alert_buf);
     }
     alert_file.close();
     SwitchSockets();
@@ -744,31 +730,6 @@ void TradeWindow::SaveSettings(SettingsDoc& doc)
     }
 }
 
-void TradeWindow::ParseBuffer(const char* text, std::vector<std::string>& words)
-{
-    words.clear();
-    std::istringstream stream(text);
-    std::string word;
-    while (std::getline(stream, word)) {
-        for (size_t i = 0; i < word.length(); i++) {
-            word[i] = static_cast<char>(tolower(word[i]));
-        }
-        words.push_back(word);
-    }
-}
-
-void TradeWindow::ParseBuffer(std::fstream stream, std::vector<std::string>& words)
-{
-    words.clear();
-    std::string word;
-    while (std::getline(stream, word)) {
-        for (size_t i = 0; i < word.length(); i++) {
-            word[i] = static_cast<char>(tolower(word[i]));
-        }
-        words.push_back(word);
-    }
-}
-
 void TradeWindow::AsyncWindowConnect(const bool force)
 {
     if (ws_window) {
@@ -786,15 +747,22 @@ void TradeWindow::AsyncWindowConnect(const bool force)
         return;
     }
     ws_window_connecting = true;
-    thread_jobs.push([this] {
-        if ((ws_window = WebSocket::from_url(settings.is_kamadan_chat ? ws_host_kmd : ws_host_asc)) == nullptr) {
-            printf("无法连接到主机 '%s'", settings.is_kamadan_chat ? ws_host_kmd : ws_host_asc);
-        }
-        ws_window_connecting = false;
-        if (messages.size() == 0 && pending_query_string.empty()) {
-            search(""); // 初始绘制，获取最新 N 条消息
-        }
-    });
+    {
+        std::lock_guard lock(thread_jobs_mutex);
+        thread_jobs.push([this] {
+            auto new_ws = WebSocket::from_url(settings.is_kamadan_chat ? ws_host_kmd : ws_host_asc);
+            if (!new_ws) {
+                printf("Couldn't connect to the host '%s'", settings.is_kamadan_chat ? ws_host_kmd : ws_host_asc);
+            }
+            GW::GameThread::Enqueue([this, new_ws] {
+                ws_window = new_ws;
+                ws_window_connecting = false;
+                if (messages.size() == 0 && pending_query_string.empty()) {
+                    search("");
+                }
+            });
+        });
+    }
 }
 
 void TradeWindow::DeleteWebSocket(WebSocket* ws)
@@ -802,13 +770,16 @@ void TradeWindow::DeleteWebSocket(WebSocket* ws)
     if (!ws) {
         return;
     }
-    if (ws->getReadyState() == WebSocket::OPEN) {
-        ws->close();
-    }
-    while (ws->getReadyState() != WebSocket::CLOSED) {
-        ws->poll();
-    }
-    delete ws;
+    std::lock_guard lock(Instance().thread_jobs_mutex);
+    Instance().thread_jobs.push([ws] {
+        if (ws->getReadyState() == WebSocket::OPEN) {
+            ws->close();
+        }
+        while (ws->getReadyState() != WebSocket::CLOSED) {
+            ws->poll();
+        }
+        delete ws;
+    });
 }
 
 void TradeWindow::SwitchSockets()

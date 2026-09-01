@@ -1,8 +1,14 @@
 name: CMake (clang-cl)
 
 on:
+  # push covers dev/master (post-merge validation); pull_request covers PRs
+  # against dev - including from forks - so feature branches only build once
+  # a PR is open instead of on every push. See cmake.yml for the same setup.
   push:
-    paths:
+    branches:
+      - dev
+      - master
+    paths: &cmake-clang-paths
       # C/C++ source and headers
       - '**/*.cpp'
       - '**/*.c'
@@ -21,6 +27,14 @@ on:
       - 'vcpkg-overlays/**'
       # The workflow itself
       - '.github/workflows/cmake-clang.yml'
+  pull_request:
+    branches:
+      - dev
+    paths: *cmake-clang-paths
+
+concurrency:
+  group: cmake-clang-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -51,13 +65,16 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ${{ github.workspace }}/vcpkg
-        key: vcpkg-tool-${{ runner.os }}-ce613c41372b23b1f51333815feb3edd87ef8a8b
+        key: vcpkg-tool-${{ runner.os }}-2b65c20fc66eda893aa15a15a453c3cf09500b19
 
     - name: Install vcpkg
       if: steps.cache-vcpkg-tool.outputs.cache-hit != 'true'
       shell: bash
+      # Keep in sync with the default-registry baseline in vcpkg-configuration.json:
+      # this checkout provides scripts/, including the pinned msys2 package URLs that
+      # vcpkg_fixup_pkgconfig downloads. Stale pins 404 once MSYS2 rotates them out.
       env:
-        VCPKG_COMMIT: ce613c41372b23b1f51333815feb3edd87ef8a8b
+        VCPKG_COMMIT: 2b65c20fc66eda893aa15a15a453c3cf09500b19
       run: |
         git clone https://github.com/microsoft/vcpkg.git
         cd vcpkg
@@ -97,7 +114,7 @@ jobs:
     - name: Configure CMake
       shell: bash
       working-directory: ${{runner.workspace}}/GWToolboxpp/build-clang
-      run: cmake $GITHUB_WORKSPACE --preset=clang -DCMAKE_BUILD_TYPE=RelWithDebInfo
+      run: cmake $GITHUB_WORKSPACE --preset=clang -DCMAKE_BUILD_TYPE=RelWithDebInfo -DGWTOOLBOX_BUILD_EXAMPLE_PLUGIN=OFF
       env:
         VCPKG_ROOT: ${{ env.VCPKG_ROOT }}
         VCPKG_BINARY_SOURCES: "clear;files,${{ github.workspace }}/vcpkg-bincache,readwrite"
@@ -111,4 +128,8 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: GWToolbox-clang-RelWithDebInfo
-        path: ${{runner.workspace}}/GWToolboxpp/bin/
+        # GWToolboxdll.pdb.gz (compress.ps1, GWToolboxdll/CMakeLists.txt POST_BUILD) already carries the
+        # debug info the raw .pdb has - excluded so the artifact doesn't ship both.
+        path: |
+          ${{runner.workspace}}/GWToolboxpp/bin/**
+          !${{runner.workspace}}/GWToolboxpp/bin/**/GWToolboxdll.pdb

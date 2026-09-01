@@ -145,9 +145,6 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device, float zoom)
     constexpr float pi = std::numbers::pi_v<float>;
     static float tau = 0.0f;
     const float fps = ImGui::GetIO().Framerate;
-    // tau += 0.05f 在 60 fps 时效果良好，适应任何帧率
-    // 注意：帧率是最近 120 帧的移动平均值，因此不会快速适应。
-    // 当帧率大幅变化时，任务标记可能会短暂加速或减速。
     tau += 0.05f * 60.0f / std::max(fps, 1.0f);
     if (tau > 10 * pi) {
         tau -= 10 * pi;

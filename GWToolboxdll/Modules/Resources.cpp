@@ -41,6 +41,7 @@
 #include <Modules/GwDatModule.h>
 #include <Constants/EncStrings.h>
 #include <Utils/TextUtils.h>
+#include <Timer.h>
 #include <wincodec.h>
 
 #include <d3d9.h>
@@ -50,7 +51,6 @@
 
 
 namespace {
-    // 如果尚未定义则定义 IID
 
     DXGI_FORMAT ConvertD3D9FormatToDXGI(D3DFORMAT d3d9Format)
     {
@@ -160,10 +160,11 @@ namespace {
     // 在主线程中执行的任务
     std::queue<std::function<void()>> main_jobs;
 
+    constexpr clock_t dx_update_budget_ms = 2;
+
     IDirect3DTexture9* empty_texture_ptr = nullptr;
     bool should_stop = false;
 
-    // snprintf 错误消息，传递给回调作为失败信息。内部使用。
     void trigger_failure_callback(const std::function<void(bool, const std::wstring&)>& callback, const wchar_t* format, ...)
     {
         std::wstring out;
@@ -378,24 +379,17 @@ HRESULT Resources::ResolveShortcut(const std::filesystem::path& in_shortcut_path
     }
     IShellLink* psl = nullptr;
 
-    // 用于接收以 null 结尾的驱动器路径字符串的缓冲区
     TCHAR szPath[MAX_PATH];
-    // 用于接收以 null 结尾的描述字符串的缓冲区
     TCHAR szDesc[MAX_PATH];
-    // 接收快捷方式信息的结构
     WIN32_FIND_DATA wfd{};
 
-    // 获取 IShellLink 接口指针
     hRes = CoCreateInstance(CLSID_ShellLink, nullptr, CLSCTX_INPROC_SERVER, IID_IShellLink, (void**)&psl);
     if (!SUCCEEDED(hRes)) {
         return hRes;
     }
-    // 获取 IPersistFile 接口指针
     IPersistFile* ppf = nullptr;
     psl->QueryInterface(IID_IPersistFile, reinterpret_cast<void**>(&ppf));
 
-    // IPersistFile 使用 LPCOLESTR，
-    // 打开快捷方式文件并从中初始化其内容
     hRes = ppf->Load(in_shortcut_path.wstring().c_str(), STGM_READ);
     if (!SUCCEEDED(hRes)) {
         return hRes;
@@ -405,13 +399,11 @@ HRESULT Resources::ResolveShortcut(const std::filesystem::path& in_shortcut_path
     if (!SUCCEEDED(hRes)) {
         return hRes;
     }
-    // 获取快捷方式目标的路径
     hRes = psl->GetPath(szPath, MAX_PATH, &wfd, SLGP_RAWPATH);
     if (!SUCCEEDED(hRes)) {
         return hRes;
     }
 
-    // 获取目标的描述
     hRes = psl->GetDescription(szDesc, MAX_PATH);
     if (!SUCCEEDED(hRes)) {
         return hRes;
@@ -434,7 +426,7 @@ void Resources::Cleanup()
     should_stop = true;
     for (const auto worker : workers) {
         for (size_t i = 0; i < 5000; i += 10) {
-            if (!worker->is_running) 
+            if (!worker->is_running)
                 break;
             Sleep(10);
         }
@@ -612,7 +604,6 @@ void Resources::Download(const std::filesystem::path& path_to_file, const std::s
     EnqueueWorkerTask([this, path_to_file, url, callback] {
         std::wstring error_message;
         bool success = Download(path_to_file, url, error_message);
-        // 在主线程中调用回调
         if (callback) {
             EnqueueMainTask([callback, success, error_message] {
                 callback(success, error_message);
@@ -712,7 +703,6 @@ void Resources::Download(const std::string& url, AsyncLoadMbCallback callback, v
             const std::string http = "http://";
             const std::string https = "https://";
 
-            // 检查 URL 是否以 http:// 或 https:// 开头，并移除之
             if (url.substr(0, http.size()) == http) {
                 return url.substr(http.size());
             }
@@ -909,7 +899,8 @@ bool Resources::ResourceToFile(const WORD id, const std::filesystem::path& path_
 
 void Resources::DxUpdate(IDirect3DDevice9* device)
 {
-    while (true) {
+    const auto started = TIMER_INIT();
+    while (TIMER_DIFF(started) < dx_update_budget_ms) {
         dx_mutex.lock();
         if (dx_jobs.empty()) {
             dx_mutex.unlock();
@@ -1028,7 +1019,6 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
         return texture;
     }
     const auto path_to_file = std::format("{}\\{}", path.string(), filename_sanitised);
-    // 检查本地文件
     if (std::filesystem::exists(path_to_file)) {
         LoadTexture(texture, path_to_file, callback);
         return texture;
@@ -1067,7 +1057,6 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
                 }
             }
 
-            // 确保图像 URL 是绝对的
             if (!image_url.starts_with("http")) {
                 image_url = std::format("https://wiki.guildwars.com{}", image_url);
             }
@@ -1131,13 +1120,11 @@ IDirect3DTexture9** Resources::GetSkillImageFromGWW(GW::Constants::SkillID skill
         return texture;
     }
     wchar_t path_to_file[MAX_PATH];
-    // 检查本地 jpg 文件
     swprintf(path_to_file, _countof(path_to_file), L"%s\\%d.jpg", path.wstring().c_str(), skill_id);
     if (std::filesystem::exists(path_to_file)) {
         LoadTexture(texture, path_to_file, callback);
         return texture;
     }
-    // 检查本地 png 文件
     swprintf(path_to_file, _countof(path_to_file), L"%s\\%d.png", path.wstring().c_str(), skill_id);
     if (std::filesystem::exists(path_to_file)) {
         LoadTexture(texture, path_to_file, callback);
@@ -1364,10 +1351,6 @@ IDirect3DTexture9** Resources::GetItemImage(uint32_t model_file_id, uint32_t int
     if (!model_file_id)
         return nullptr;
 
-    // 组合物品（护甲/符文）：模拟客户端自身的 CICompositePlayer::GetCompositeGeometry
-    // 槽顺序 - file_ids[10] 是共享几何/图标槽，无论性别如何都首先尝试；
-    // 仅当该槽不存在时，才回退到性别槽（file_ids[5] 女性，[0] 男性）。
-    // 其他槽是 3D 穿戴模型的皮肤/纹理纹理，而非图标。
     if (interaction & 4) {
         const auto model_file_info = GW::Items::GetCompositeModelInfo(model_file_id);
         if (model_file_info) {
@@ -1424,7 +1407,6 @@ IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name)
     ASSERT(EnsureFolderExists(path));
 
     wchar_t path_to_file[MAX_PATH];
-    // 检查本地 png 图像
     swprintf(path_to_file, _countof(path_to_file), L"%s\\%s.png", path.c_str(), item_name.c_str());
     if (std::filesystem::exists(path_to_file)) {
         LoadTexture(texture, path_to_file, callback);
@@ -1466,11 +1448,9 @@ IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name)
         swprintf(path_to_file, _countof(path_to_file), L"%s\\%s%S", path.c_str(), item_name.c_str(), image_extension.c_str());
         char url[128];
         if (strncmp(image_path.c_str(), "http", 4) == 0) {
-            // 图像 URL 是绝对的
             snprintf(url, _countof(url), "%s%s", image_path.c_str(), image_extension.c_str());
         }
         else {
-            // 图像 URL 相对于域
             snprintf(url, _countof(url), "https://wiki.guildwars.com%s%s", image_path.c_str(), image_extension.c_str());
         }
         LoadTexture(texture, path_to_file, url, callback);
@@ -1496,7 +1476,6 @@ bool Resources::SaveTextureToFile(IDirect3DTexture9* texture, const std::filesys
     std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
 
     if (ext == ".dds") {
-        // 原始 DDS 路径
         D3DLOCKED_RECT lockedRect;
         hr = texture->LockRect(0, &lockedRect, nullptr, D3DLOCK_READONLY);
         if (FAILED(hr)) {
@@ -1521,7 +1500,6 @@ bool Resources::SaveTextureToFile(IDirect3DTexture9* texture, const std::filesys
         }
     }
     else if (ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".bmp") {
-        // 锁定纹理
         D3DLOCKED_RECT lockedRect;
         hr = texture->LockRect(0, &lockedRect, nullptr, D3DLOCK_READONLY);
         if (FAILED(hr)) {
@@ -1545,12 +1523,10 @@ bool Resources::SaveTextureToFile(IDirect3DTexture9* texture, const std::filesys
 
         DirectX::ScratchImage scratchImage;
 
-        // 检查格式是否需要解压缩
         if (DirectX::IsCompressed(srcImage.format)) {
             hr = DirectX::Decompress(srcImage, DXGI_FORMAT_R8G8B8A8_UNORM, scratchImage);
         }
         else {
-            // 仅复制图像数据
             hr = scratchImage.InitializeFromImage(srcImage);
         }
 
@@ -1561,7 +1537,6 @@ bool Resources::SaveTextureToFile(IDirect3DTexture9* texture, const std::filesys
             return false;
         }
 
-        // 确定编解码器 GUID
         GUID guid;
         if (ext == ".png") {
             guid = GUID_ContainerFormatPng;
@@ -1618,7 +1593,26 @@ bool Resources::SaveBackbufferRectToFile(IDirect3DDevice9* device, const RECT* r
     D3DSURFACE_DESC desc;
     backbuffer->GetDesc(&desc);
 
-    // GetRenderTargetData 需要相同尺寸和格式的 SYSTEMMEM 目标。我们复制整个后缓冲区，然后构造一个指向子矩形的 DirectX::Image。
+    // A multisampled back buffer can't be read with GetRenderTargetData;
+    // resolve it into a plain render target first.
+    if (desc.MultiSampleType != D3DMULTISAMPLE_NONE) {
+        IDirect3DSurface9* resolved = nullptr;
+        hr = device->CreateRenderTarget(desc.Width, desc.Height, desc.Format, D3DMULTISAMPLE_NONE, 0, FALSE, &resolved, nullptr);
+        if (FAILED(hr) || !resolved) {
+            backbuffer->Release();
+            Log::Warning("SaveBackbufferRectToFile: CreateRenderTarget (msaa resolve) failed: 0x%X", hr);
+            return false;
+        }
+        hr = device->StretchRect(backbuffer, nullptr, resolved, nullptr, D3DTEXF_NONE);
+        backbuffer->Release();
+        if (FAILED(hr)) {
+            resolved->Release();
+            Log::Warning("SaveBackbufferRectToFile: StretchRect (msaa resolve) failed: 0x%X", hr);
+            return false;
+        }
+        backbuffer = resolved;
+    }
+
     IDirect3DSurface9* sysmem = nullptr;
     hr = device->CreateOffscreenPlainSurface(desc.Width, desc.Height, desc.Format, D3DPOOL_SYSTEMMEM, &sysmem, nullptr);
     if (FAILED(hr) || !sysmem) {
@@ -1708,7 +1702,6 @@ uint32_t Resources::GetTexmodHashCube(IDirect3DCubeTexture9* cubeTexture)
     // 关键：仅对 POSITIVE_X 面进行哈希以匹配 gmod 行为！
     // gmod 的 uMod_IDirect3DCubeTexture9::GetHash() 仅对 D3DCUBEMAP_FACE_POSITIVE_X 进行哈希
     if (cubeTexture->LockRect(D3DCUBEMAP_FACE_POSITIVE_X, 0, &d3dlr, nullptr, D3DLOCK_READONLY) != D3D_OK) {
-        // 回退到通过表面级别获取
         if (cubeTexture->GetCubeMapSurface(D3DCUBEMAP_FACE_POSITIVE_X, 0, &pResolvedSurface) != D3D_OK) {
             Log::Warning("GetTexmodHashCube: 获取立方体贴图表面失败");
             return 0;
@@ -1735,10 +1728,8 @@ uint32_t Resources::GetTexmodHashCube(IDirect3DCubeTexture9* cubeTexture)
         offset += row_size;
     }
 
-    // 对紧凑数据（无 pitch 填充）进行哈希
     uint32_t hash = GetTexmodHash(reinterpret_cast<const char*>(compact_data.data()), compact_data.size());
 
-    // 清理
     if (pResolvedSurface != nullptr) {
         pResolvedSurface->UnlockRect();
         pResolvedSurface->Release();
@@ -1767,8 +1758,6 @@ static UINT DxtBlockBytes(D3DFORMAT fmt)
     }
 }
 
-// SEH 保护的行复制（无展开对象，因此允许 __try）。LockRect 可能返回已消失的存储（丢失表面、重用内存）的指针；
-// 若发生错误则退出而不是崩溃。调用者必须确保 row_bytes <= pitch。
 static bool SafeCopyRows(uint8_t* dst, const uint8_t* src, size_t rows, size_t row_bytes, size_t pitch)
 {
     __try {

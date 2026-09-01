@@ -1,0 +1,4 @@
+fileids.txt
+out/
+out_*/
+__pycache__/

@@ -42,9 +42,7 @@ namespace GW {
 
     };
 }
-// ============================================================
 // C Interop API
-// ============================================================
 extern "C" {
     GWCA_API uint32_t GetActiveQuestId();
     GWCA_API bool     SetActiveQuestId(uint32_t quest_id);

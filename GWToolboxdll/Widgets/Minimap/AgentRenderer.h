@@ -5,6 +5,7 @@
 #include <GWCA/GameContainers/GamePos.h>
 
 #include <D3DContainers.h>
+#include <Widgets/Minimap/CustomRenderer.h>
 
 
 namespace GW {
@@ -14,6 +15,9 @@ namespace GW {
 
     namespace UI {
         enum class UIMessage : uint32_t;
+    }
+    namespace Constants {
+        enum class Allegiance : uint8_t;
     }
 }
 
@@ -40,6 +44,11 @@ public:
 
     void LoadDefaultColors();
     void LoadDefaultSizes();
+
+    Color GetProfessionColor(uint32_t profession) const
+    {
+        return profession < _countof(profession_colors) ? profession_colors[profession] : 0;
+    }
 
     bool show_hidden_npcs = false;
     bool show_quest_npcs_on_minimap = false;
@@ -165,6 +174,20 @@ private:
     Color GetColor(const GW::Agent* agent, const CustomAgent* ca = nullptr) const;
     float GetSize(const GW::Agent* agent, const CustomAgent* ca = nullptr) const;
     Shape_e GetShape(const GW::Agent* agent, const CustomAgent* ca = nullptr) const;
+
+    struct CachedPolygon {
+        const CustomRenderer::CustomPolygon* polygon = nullptr;
+        float min_x = 0.f, min_y = 0.f, max_x = 0.f, max_y = 0.f;
+    };
+    struct CachedMarker {
+        const CustomRenderer::CustomMarker* marker = nullptr;
+        float radius_squared = 0.f;
+    };
+    void RefreshRelevantPolys();
+    std::vector<CachedPolygon> relevant_polygons;
+    std::vector<CachedMarker> relevant_markers;
+
+    float GetSeededDefaultSize(GW::Constants::Allegiance allegiance, float fallback) const;
 
     struct RenderPosition {
         float rotation_cos;

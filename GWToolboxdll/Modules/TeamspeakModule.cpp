@@ -285,12 +285,6 @@ namespace {
         if (!settings.enabled) {
             return failed(nullptr);
         }
-        //BOOL is_x64 = false;
-        //std::filesystem::path running_teamspeak_exe;
-        //if (!GetTeamspeakProcess(&running_teamspeak_exe, &is_x64))
-        //    return failed("查找运行中的 Teamspeak 可执行文件失败 (%04X)",GetLastError());
-        //if (running_teamspeak_exe.empty())
-        //    return failed("未找到运行中的 Teamspeak 可执行文件；Teamspeak 3 是否在运行？");
         if (settings.teamspeak3_api_key.empty()) {
             return failed("未提供 API Key；请在 Teamspeak > 工具 > 选项 > 插件 > ClientQuery > 设置 中查找");
         }
@@ -336,7 +330,6 @@ namespace {
         }
         Log::Log("Teamspeak 3 欢迎消息：\n%s", response->content.c_str());
 
-        // 发送认证消息
         const std::string to_send = std::format("auth apikey={}\r\n", settings.teamspeak3_api_key);
         response = PollSocket(to_send);
         if (!response) {

@@ -28,38 +28,39 @@ namespace SettingsRegistry {
         Type type = Type::Bool;
         void* ptr = nullptr;     // live value; Color entries point at the raw ::Color
         bool from_struct = false;
+        bool in_settings_window = true; // false when the module draws this setting in its own UI instead
     };
 
     namespace detail {
-        void AddEntry(ToolboxModule* module, std::string_view key, Type type, void* ptr, bool from_struct, std::string_view description = {});
+        void AddEntry(ToolboxModule* module, std::string_view key, Type type, void* ptr, bool from_struct, bool in_settings_window = true, std::string_view description = {});
         void LogUnsupportedMember(ToolboxModule* module, std::string_view key);
 
         template <typename M>
-        void RegisterMember(ToolboxModule* module, const std::string_view key, M& member)
+        void RegisterMember(ToolboxModule* module, const std::string_view key, M& member, const bool in_settings_window)
         {
             if constexpr (std::same_as<M, bool>) {
-                AddEntry(module, key, Type::Bool, &member, true);
+                AddEntry(module, key, Type::Bool, &member, true, in_settings_window);
             }
             else if constexpr (std::same_as<M, int>) {
-                AddEntry(module, key, Type::Int, &member, true);
+                AddEntry(module, key, Type::Int, &member, true, in_settings_window);
             }
             else if constexpr (std::same_as<M, unsigned int>) {
-                AddEntry(module, key, Type::Uint, &member, true);
+                AddEntry(module, key, Type::Uint, &member, true, in_settings_window);
             }
             else if constexpr (std::same_as<M, float>) {
-                AddEntry(module, key, Type::Float, &member, true);
+                AddEntry(module, key, Type::Float, &member, true, in_settings_window);
             }
             else if constexpr (std::same_as<M, std::string>) {
-                AddEntry(module, key, Type::String, &member, true);
+                AddEntry(module, key, Type::String, &member, true, in_settings_window);
             }
             else if constexpr (std::same_as<M, Colors::SettingColor>) {
-                AddEntry(module, key, Type::Color, &member.value, true);
+                AddEntry(module, key, Type::Color, &member.value, true, in_settings_window);
             }
             else if constexpr (std::same_as<M, std::array<float, 2>>) {
-                AddEntry(module, key, Type::Float2, &member, true);
+                AddEntry(module, key, Type::Float2, &member, true, in_settings_window);
             }
             else if constexpr (std::is_enum_v<M> && sizeof(M) == sizeof(int)) {
-                AddEntry(module, key, Type::Int, &member, true);
+                AddEntry(module, key, Type::Int, &member, true, in_settings_window);
             }
             else {
                 // Still persisted by glaze via the struct round-trip, just not searchable/chat-settable.
@@ -68,17 +69,13 @@ namespace SettingsRegistry {
         }
     }
 
-    // Struct path: registers one Entry per supported member (member name == legacy INI key) for
-    // search, chat commands and the INI fallback. Persistence is the module's job: its
-    // LoadSettings/SaveSettings overrides call doc.GetStruct/SetStruct(Name(), settings) so every
-    // module keeps a dedicated debugging point.
     template <typename T>
-    void Register(ToolboxModule* module, T& settings)
+    void Register(ToolboxModule* module, T& settings, const bool in_settings_window = true)
     {
         static_assert(glz::reflectable<T>, "Settings struct must be a plain glaze-reflectable aggregate");
         auto tie = glz::to_tie(settings);
         [&]<size_t... I>(std::index_sequence<I...>) {
-            (detail::RegisterMember(module, glz::reflect<T>::keys[I], glz::get<I>(tie)), ...);
+            (detail::RegisterMember(module, glz::reflect<T>::keys[I], glz::get<I>(tie), in_settings_window), ...);
         }(std::make_index_sequence<glz::reflect<T>::size>{});
     }
 

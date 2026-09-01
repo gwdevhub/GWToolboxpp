@@ -34,6 +34,8 @@
 #include <GWCA/Managers/ItemMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Utilities/Scanner.h>
+
+#include <Defines.h>
 #include <Modules/Resources.h>
 #include <Timer.h>
 #include <Utils/GuiUtils.h>
@@ -264,9 +266,14 @@ namespace GW {
             if (!(name && *name && IsCharSelectReady())) return false;
 
             const auto selector = GetSelectorFrame();
+            if (!(selector && selector->IsVisible())) return false;
+
             const auto ctx = (CharSelectorContext*)GW::UI::GetFrameContext(selector);
+            if (!(((uintptr_t)ctx > 0xFFFF) && ctx->frame_id == selector->frame_id)) return false;
 
             const auto panes = GW::UI::GetChildFrame(selector, 0);
+            const auto parent = GW::UI::GetParentFrame(selector);
+            if (!(panes && parent)) return false;
 
             uint32_t selected_idx = 0;
             GW::UI::SendFrameUIMessage(panes, GW::UI::UIMessage::kFrameMessage_0x4a, 0, (void*)&selected_idx);
@@ -274,6 +281,7 @@ namespace GW {
             uint32_t target_idx = 0xffff;
 
             const auto len = ctx->chars.size();
+            if (!len) return false;
 
             if (selected_idx >= len) selected_idx = 0;
 
@@ -284,10 +292,14 @@ namespace GW {
                 target_idx = i;
                 break;
             }
-            if (target_idx > len) return false;
+            if (target_idx >= len) return false;
 
 
             auto select_char = [&](size_t idx) {
+                if (idx >= ctx->chars.size()) return false;
+                const auto c = ctx->chars[idx];
+                if (!(c && c->name[0])) return false;
+
                 GW::UI::UIPacket::kMouseAction action{};
                 action.frame_id = selector->frame_id;
                 action.child_offset_id = selector->child_offset_id;
@@ -295,25 +307,24 @@ namespace GW {
                     const wchar_t* name;
                     uint32_t play;
                 };
-                button_param wparam = {ctx->chars[idx]->name, 0u};
+                button_param wparam = {c->name, 0u};
                 action.wparam = &wparam;
                 action.current_state = GW::UI::UIPacket::ActionState::MouseClick;
 
-                if (!GW::UI::SendFrameUIMessage(GW::UI::GetParentFrame(selector), GW::UI::UIMessage::kMouseClick2, &action)) return false;
+                if (!GW::UI::SendFrameUIMessage(parent, GW::UI::UIMessage::kMouseClick2, &action)) return false;
                 GW::UI::SendFrameUIMessage(panes, GW::UI::UIMessage::kFrameMessage_0x4a, 0, (void*)&selected_idx);
                 return selected_idx == idx;
             };
 
             // Navigate to target character by selecting previous/next until we reach it
             while (target_idx < selected_idx) {
-                // Need to go backwards - select the previous character
                 if (selected_idx == 0) break; // Can't go before first character
                 if (!select_char(selected_idx - 1)) return false;
             }
 
             while (target_idx > selected_idx) {
-                // Need to go forwards - select the next character
-                if (selected_idx >= ctx->chars.size() - 1) break; // Can't go past last character
+                const auto chars_size = ctx->chars.size();
+                if (!chars_size || selected_idx + 1 >= chars_size) break; // Can't go past last character
                 if (!select_char(selected_idx + 1)) return false;
             }
             chosen = selected_idx == target_idx;
@@ -417,6 +428,7 @@ namespace GW {
         {
             if (!account_uuid) {
                 auto address = GW::Scanner::Find("\x50\x6a\x18\x6a\x02\xff\x15", "xxxxxxx", 0x7);
+                DEBUG_ASSERT(address);
                 if (address && GW::Scanner::IsValidPtr(*(uintptr_t*)address, GW::ScannerSection::Section_DATA)) {
                     address = *(uintptr_t*)address;
                     account_uuid = (GUID*)(address + 0x90);
@@ -549,6 +561,18 @@ namespace GW {
         {
             const auto player = GW::Agents::GetControlledCharacter();
             return player ? &player->pos : nullptr;
+        }
+        bool IsDeprecatedTitle(GW::Constants::TitleID title_id)
+        {
+            using namespace GW::Constants;
+            switch (title_id) {
+                case TitleID::Deprecated_SkillHunter:
+                case TitleID::Deprecated_TreasureHunter:
+                case TitleID::Deprecated_Wisdom:
+                    return true;
+                default:
+                    return false;
+            }
         }
     } // namespace PlayerMgr
     namespace Agents {
@@ -745,6 +769,9 @@ namespace GW {
                 case GW::Constants::ItemID::Ricewine:
                 case GW::Constants::ItemID::ShamrockAle:
                 case GW::Constants::ItemID::Cider:
+                case GW::Constants::ItemID::BottleOfJuniberryGin:
+                case GW::Constants::ItemID::BottleOfVabbianWine:
+                case GW::Constants::ItemID::ZehtukasJug:
                     return 1;
                 case GW::Constants::ItemID::Grog:
                 case GW::Constants::ItemID::SpikedEggnog:
@@ -1004,11 +1031,6 @@ namespace ToolboxUtils {
         if (!player_number) {
             player = GW::PlayerMgr::GetPlayerByID(GW::PlayerMgr::GetPlayerNumber());
             if (!player || !player->name) {
-                // Map not loaded; try to get from character context.
-                // player_name is a fixed-size buffer that may not be populated/null-terminated
-                // yet (e.g. still on the login/char select screen); reading it unbounded via
-                // wcslen can run off into unrelated memory and produce garbled (often CJK-looking)
-                // output. Bail out to an empty string instead so callers retry later.
                 const auto c = GW::GetCharContext();
                 if (!c) {
                     return L"";
@@ -1249,6 +1271,12 @@ namespace ToolboxUtils {
         }
         const auto player = GetPlayerByAgentId(agent_id);
         return player && IsPlayerInParty(player->player_number);
+    }
+
+    // Check if agent is in player's own party (0)
+    bool IsAgentInMyParty(const uint32_t agent_id)
+    {
+        return GW::PartyMgr::IsAgentInParty(agent_id, 0);
     }
 
     float GetSkillRange(const GW::Constants::SkillID skill_id)
@@ -1546,7 +1574,6 @@ namespace ToolboxUtils {
         if (item->customized && ctre::search<dmg_plus_20_pattern>(original)) {
             // Remove "\nDamage +20%" > "\n"
             original = TextUtils::ctre_regex_replace<dmg_plus_20_pattern, L"">(original);
-            // Append "Customized"
             original += L"\x2\x102\x2\x108\x107"
                         L"Customized\x1";
         }

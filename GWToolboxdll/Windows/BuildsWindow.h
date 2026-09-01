@@ -62,29 +62,4 @@ public:
     void AddTeambuild(TeamBuild tbuild);
 
 private:
-    /*
-    // Send a teambuild
-    static void Send(const TeamBuild& tbuild);
-    // Send a specific build from a teambuild
-    static void Send(const TeamBuild& tbuild, unsigned int idx);
-    static void SendPcons(const TeamBuild& tbuild, unsigned int idx, bool include_build_name = true);
-    // Load a specific build from a teambuild (and any applicable pcons)
-    static void Load(const TeamBuild& tbuild, unsigned int idx) const;
-    // Toggle pcons for a specific build
-    static void LoadPcons(const TeamBuild& tbuild, unsigned int idx) const;
-    // View a specific build from a teambuild
-    static void View(const TeamBuild& tbuild, unsigned int idx);
-    // Load build by name or code, without specific teambuild assigned.
-    static void Load(const char* build_name);
-    // Load build by teambuild name and build name
-    static void Load(const char* tbuild_name, const char* build_name);
-
-    static bool BuildSkillTemplateString(const TeamBuild& tbuild, unsigned int idx, char* out, unsigned int out_len);
-
-    static void DrawBuildSection(TeamBuild& tbuild, unsigned int idx);
-    
-    // Attempt to add a preferred build by code and name
-    static const char* AddPreferredBuild(const char* code);
-
-    static bool GetCurrentSkillBar(char* out, size_t out_len);*/
 };

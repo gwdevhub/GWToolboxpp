@@ -88,41 +88,6 @@ namespace {
         }
     }
 
-    /*uint32_t GetPreferenceNameID(GW::UI::Preference pref_id) {
-        using namespace GW::UI;
-        switch (pref_id) {
-        case Preference_TextLanguage: return 0x561;
-        case Preference_ChatFilterLevel: return 0x562;
-        case Preference_ClockMode: return 0x13419;
-
-        case Preference_AudioLanguage: return 0xdbe2;
-
-        case Preference_DisableMouseWalking: return 0x571;
-        case Preference_InvertMouseControlOfCamera: return 0x572;
-        case Preference_InterfaceSize: return 0x573;
-        case Preference_ShadowQuality: return 0x578;
-        case Preference_CameraRotationSpeed: return 0x187b1;
-        case Preference_FieldOfView: return 0x187b0;
-        case Preference_DamageTextSize: return 0x7bc6;
-
-        case Preference_ShowTextInSkillFloaters: return 0xdbe1;
-        case Preference_DoNotShowSkillTipsOnEffectMonitor: return 0xd801;
-        case Preference_FadeDistantNameTags: return 0x13191;
-        case Preference_AlwaysShowFoeNames: return 0x5c6;
-        case Preference_AlwaysShowAllyNames: return 0x5c4;
-        case Preference_ItemRarityBorder: return 0x187bf;
-        case Preference_ShowCollapsedBags: return 0x187be;
-        case Preference_ShowChatTimestamps: return 0x187af;
-        case Preference_WhispersFromFriendsEtcOnly: return 0x187ad;
-        case Preference_ConciseSkillDescriptions: return 0x12c3f;
-        case Preference_DoNotShowSkillTipsOnSkillBars: return 0xd746;
-        case Preference_DoNotCloseWindowsOnEscape: return 0xd747;
-        case Preference_AlwaysShowNearbyNamesPvP: return 0x57d;
-        default:
-            return 0;
-        }
-    }*/
-
     struct WindowPreference {
         GW::UI::WindowID window_id;
         GW::UI::WindowPosition position;
