@@ -1,11 +1,7 @@
 #!/usr/bin/env bash
 # Build a Docker image with a clang-cl + xwin (x86 Windows) + vcpkg toolchain, then
-# configure and build GWToolboxdll inside it. No wine: clang targets i686-pc-windows-msvc
-# directly, so nothing Microsoft-built ever executes.
-#
-# Prefer this over build-wine-prefix.sh on Linux. It builds at full -j (the wine path is
-# pinned to -j 1 by a job-pipe inheritance hang) and has no wineserver/mspdbsrv to babysit.
-# The wine image remains the fallback for anything that needs real MSVC codegen.
+# configure and build GWToolboxdll inside it. clang targets i686-pc-windows-msvc directly,
+# so nothing Microsoft-built ever executes.
 #
 # You do not need Docker for this toolchain - scripts/xwin/setup-toolchain.sh provisions it
 # straight onto the host. Docker just keeps the ~800MB SDK and the vkd3d build disposable.

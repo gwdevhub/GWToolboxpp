@@ -1,4 +1,4 @@
-# Wine-free Linux cross-build image for GWToolboxdll (x86 Windows target).
+# Linux cross-build image for GWToolboxdll (x86 Windows target).
 #
 # GWToolboxdll is injected into the (32-bit) Guild Wars process, so it must be built
 # x86/Win32 against the MSVC ABI. clang targets i686-pc-windows-msvc directly, and xwin
@@ -6,10 +6,6 @@
 # manifests (the same ones Visual Studio's installer uses, under the VS Build Tools EULA)
 # -- so no Microsoft binary ever has to execute. lld-link, llvm-rc, llvm-lib and llvm-mt
 # replace link/rc/lib/mt, and vkd3d-shader replaces fxc for the SM3 shaders.
-#
-# Contrast scripts/wine-msvc/: no wine, no wineserver, no persistent explorer.exe desktop,
-# no mspdbsrv, and builds run at full -j instead of the -j 1 that wine's job-pipe
-# inheritance bug forces there.
 FROM ubuntu:24.04
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \

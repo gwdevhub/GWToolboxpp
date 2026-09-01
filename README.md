@@ -31,25 +31,34 @@ If you are here to check toolbox features or for a download link, go to [https:/
 
 ## Building on Linux
 
-Two toolchains cross-compile the x86 Windows target from Linux. Prefer the first.
-
-### clang + xwin (no Wine, recommended)
-
 `clang` targets `i686-pc-windows-msvc` directly, linking with `lld-link`, against MSVC CRT
 and Windows SDK headers/libs fetched by [xwin](https://github.com/Jake-Shadle/xwin) from
-Microsoft's official installer manifests. Nothing Microsoft-built ever executes, so there is
-no Wine, no wineserver and no `mspdbsrv` - and builds run at full `-j` instead of the `-j 1`
-the Wine path is pinned to. The twelve SM3 shaders are compiled by
-[vkd3d-shader](https://gitlab.winehq.org/wine/vkd3d) in place of `fxc.exe`.
+Microsoft's official installer manifests. Nothing Microsoft-built ever executes, so no Wine
+is involved and builds run at full `-j`. The twelve SM3 shaders are compiled by
+[vkd3d-shader](https://gitlab.winehq.org/wine/vkd3d) in place of `fxc.exe`, since `fxc` is
+the only Microsoft compiler still emitting shader model 1-3 and `dxc` dropped everything
+below SM6.
 
-**With Docker:**
+**With Docker** - the only requirement is [Docker](https://docs.docker.com/get-docker/):
 
 ```sh
 ./scripts/build-xwin.sh
 ```
 
-Same options as the Wine script (`--config`, `--target`, `--jobs`, `--shell`,
-`--rebuild-image`); output lands in `bin/`, build tree in `build-xwin/`.
+The first run builds the image (downloads the SDK headers/libs and builds vkd3d, expect it to
+take a while), then configures and builds `GWToolboxdll` into `bin/GWToolboxdll.dll`. Later
+runs reuse the cached image and only rebuild changed files.
+
+Options (see `./scripts/build-xwin.sh --help`):
+* `--target <name>` - build a different CMake target (default: `GWToolboxdll`; use `all` for everything)
+* `--config <Debug|RelWithDebInfo|Release>` - CMake config to build (default: `RelWithDebInfo`)
+* `--jobs <n>` - parallel build jobs (default: all cores)
+* `--shell` - drop into a shell in the build container instead of building
+* `--rebuild-image` - force a clean rebuild of the Docker image
+
+The container runs as root; the script hands ownership of anything it writes back to your
+user once done. Build output lives in `build-xwin/` (gitignored) - delete it for a fully
+clean reconfigure, e.g. after switching `--config` or branches.
 
 On a Windows host, `scripts\build-xwin.ps1` drives the same container through Docker Desktop
 (`-Config`, `-Target`, `-Jobs`, `-Shell`, `-RebuildImage`). Use it to reproduce a CI result or
@@ -68,32 +77,8 @@ cmake --build build-xwin -j"$(nproc)"
 ```
 
 Caveats: vkd3d-shader has no SM1-3 optimiser, so the shader bytecode is longer than `fxc`'s
-(register allocation is unaffected). Release builds are still cut with MSVC - validate
+(register allocation is unaffected). Releases are still cut on Windows with MSVC - validate
 rendering changes in-game before shipping a clang-built DLL.
-
-### Docker + Wine
-
-Runs a real MSVC toolchain under Wine in a Docker image. Slower and more fragile, but it is
-genuine MSVC codegen, so it stays as the fallback.
-
-#### Requirements
-* [Docker](https://docs.docker.com/get-docker/)
-
-#### Steps
-1. Clone the repository and `cd` into it.
-2. Build: `./scripts/build-wine-prefix.sh`
-
-The first run builds the Docker image (downloads MSVC + Windows SDK, expect it to take a while), then configures and builds `GWToolboxdll` into `bin/GWToolboxdll.dll`. Later runs reuse the cached image and only rebuild changed files.
-
-Useful options (see `./scripts/build-wine-prefix.sh --help`):
-* `--target <name>` - build a different CMake target (default: `GWToolboxdll`; use `all` for everything)
-* `--config <Debug|RelWithDebInfo|Release>` - CMake config to build (default: `RelWithDebInfo`)
-* `--shell` - drop into a shell in the build container instead of building
-* `--rebuild-image` - force a clean rebuild of the Docker image
-
-Notes:
-* The container runs as root; the script hands ownership of any files it writes back to your user once done.
-* Build output lives in `build-wine/` (gitignored). Delete it for a fully clean reconfigure, e.g. after switching `--config` or branches.
 
 ## Notes
 * GWToolbox compiles as a DLL (`GWToolboxdll.dll`) and EXE (`GWToolbox.exe`). The exe lets you select a Guild Wars Client and injects the dll, but you can also use other dll injectors of your choice.

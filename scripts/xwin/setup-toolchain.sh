@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Provision the wine-free Linux cross-toolchain: MSVC/Windows SDK headers+libs via xwin,
+# Provision the Linux cross-toolchain: MSVC/Windows SDK headers+libs via xwin,
 # plus vkd3d-compiler as the fxc stand-in for the SM3 shaders (see tools/hlsl_compile.py).
 #
 # Everything lands under $TOOLCHAIN_ROOT (default ./.xwin-toolchain, gitignored). Re-running
@@ -32,7 +32,7 @@ fi
 
 # The SDK ships each header under its canonical casing plus an all-lowercase alias, but the
 # codebase (and vendored GWCA) spell some of them a third way -- <Shlobj.h>, <ShellApi.h>,
-# <DelayImp.h>. Wine's case-insensitive VFS hides this; a native Linux clang does not.
+# <DelayImp.h>. Windows resolves those case-insensitively; a native Linux clang does not.
 # Link every spelling the sources actually use, skipping any name that already resolves.
 echo "==> linking SDK headers for the casings the sources use"
 INCLUDE_DIRS=(crt/include sdk/include/ucrt sdk/include/um sdk/include/shared sdk/include/winrt)
@@ -55,8 +55,8 @@ grep -rhoP '(?<=#include <)[A-Za-z0-9_./\\-]+(?=>)' \
 
 if [ ! -x "vkd3d-${VKD3D_VERSION}/vkd3d-compiler" ]; then
     echo "==> building vkd3d-compiler ${VKD3D_VERSION}"
-    # The release tarball, not git: the git tree generates headers with widl, which comes
-    # from wine -- the one thing this toolchain exists to avoid.
+    # The release tarball, not git: the git tree generates headers with widl, which ships
+    # with wine and would drag the whole thing back in as a build dependency.
     [ -d "vkd3d-${VKD3D_VERSION}" ] || curl -fsSL "https://dl.winehq.org/vkd3d/source/vkd3d-${VKD3D_VERSION}.tar.xz" | tar -xJ
     [ -d SPIRV-Headers ] || git clone --depth 1 https://github.com/KhronosGroup/SPIRV-Headers.git SPIRV-Headers
     (

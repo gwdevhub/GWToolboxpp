@@ -4,4 +4,3 @@
 # which fails as `bad interpreter: No such file or directory`.
 *.sh text eol=lf
 Dockerfile text eol=lf
-scripts/wine-msvc/fxc text eol=lf

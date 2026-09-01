@@ -374,7 +374,7 @@ add_custom_target(compile_shaders DEPENDS ${SHADER_OUTPUTS})
 add_dependencies(GWToolboxdll compile_shaders) 
 
 # compress.ps1 needs PowerShell, which isn't available when configuring from a non-Windows
-# host (e.g. the wine cross-build in scripts/build-wine-prefix.sh); gzip is a POSIX
+# host (e.g. the clang/xwin cross-build in scripts/build-xwin.sh); gzip is a POSIX
 # equivalent for the RelWithDebInfo-only PDB compression it does.
 if(CMAKE_HOST_WIN32)
     add_custom_command(TARGET GWToolboxdll POST_BUILD

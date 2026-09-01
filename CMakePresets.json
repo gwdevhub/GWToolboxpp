@@ -31,28 +31,6 @@
       }
     },
     {
-      "name": "wine",
-      "inherits": "vcpkg",
-      "displayName": "Real MSVC under Wine (Ninja, headless Linux build)",
-      "generator": "Ninja",
-      "architecture": {
-        "value": "Win32",
-        "strategy": "external"
-      },
-      "binaryDir": "${sourceDir}/build-wine",
-      "cacheVariables": {
-        "CMAKE_SYSTEM_NAME": "Windows",
-        "CMAKE_SYSTEM_PROCESSOR": "x86",
-        "CMAKE_C_COMPILER": "cl",
-        "CMAKE_CXX_COMPILER": "cl",
-        "CMAKE_RC_COMPILER": "rc",
-        "CMAKE_JOB_POOL_COMPILE": "console",
-        "CMAKE_JOB_POOL_LINK": "console",
-        "FXC": "/opt/msvc/bin/x86/fxc",
-        "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/scripts/wine-msvc/vcpkg-triplets;${sourceDir}/vcpkg-overlays/triplets"
-      }
-    },
-    {
       "name": "xwin",
       "inherits": "vcpkg",
       "displayName": "clang-cl + xwin (Ninja, native Linux build, no wine)",

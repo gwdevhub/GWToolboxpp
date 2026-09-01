@@ -1,9 +1,5 @@
 #!/usr/bin/env bash
 # Configure + build inside the clang/xwin container (see Dockerfile).
-#
-# Deliberately boring, and that is the point: the wine equivalent needs a persistent
-# explorer.exe desktop, a pre-started mspdbsrv, ninja's console job pool and -j 1 to dodge
-# wine's job-pipe inheritance hang. None of that applies when nothing runs under wine.
 set -euo pipefail
 
 CONFIG=${CONFIG:-RelWithDebInfo}

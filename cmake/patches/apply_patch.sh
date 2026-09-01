@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 # POSIX equivalent of apply_patch.bat, used when configuring from a non-Windows host
-# (e.g. cross-compiling via scripts/build-wine-prefix.sh), where .bat scripts can't run.
+# (e.g. cross-compiling via scripts/build-xwin.sh), where .bat scripts cannot run.
 set -e
 dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 patch_file="$dir/$1"
