@@ -65,7 +65,7 @@
 #include <Utils/TextUtils.h>
 
 #pragma warning(disable : 6011)
-#pragma comment(lib, "Version.lib")
+#pragma comment(lib, "version.lib")
 
 using namespace GuiUtils;
 using namespace ToolboxUtils;

@@ -51,7 +51,6 @@
 #include <Utils/TextUtils.h>
 #include <Windows/Pathfinding/PathfindingWindow.h>
 #include <Windows/Pathfinding/PathingMapDataLoader.h>
-#include <corecrt_math_defines.h>
 
 
 
@@ -600,7 +599,7 @@ namespace {
 
         constexpr float FULL_ROTATION_TIME = 16.0f;
         const float elapsed_seconds = static_cast<float>(TIMER_INIT()) / CLOCKS_PER_SEC;
-        quest_star_rotation_angle = 2.0f * (float)M_PI * fmod(elapsed_seconds, FULL_ROTATION_TIME) / FULL_ROTATION_TIME;
+        quest_star_rotation_angle = 2.0f * DirectX::XM_PI * fmod(elapsed_seconds, FULL_ROTATION_TIME) / FULL_ROTATION_TIME;
 
         return true;
     }

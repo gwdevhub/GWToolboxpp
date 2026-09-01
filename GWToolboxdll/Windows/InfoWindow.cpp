@@ -52,7 +52,7 @@
 #include <Widgets/Minimap/Minimap.h>
 #include <Widgets/PartyDamage.h>
 #include <Windows/InfoWindow.h>
-#include <Windows/NotepadWindow.h>
+#include <Windows/NotePadWindow.h>
 
 #include <Modules/DialogModule.h>
 #include <Modules/GwDatModule.h>
