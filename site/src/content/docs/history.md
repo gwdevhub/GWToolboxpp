@@ -7,6 +7,9 @@ section: meta
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
+## Version 8.34
+* [Fix] Automatic title selection (`/title` and the Reapply Title hotkey) now uses Lightbringer instead of Sunspear in Turai's Procession, Jennur's Horde, Nundu Bay, Dzagonur Bastion, Yatendi Canyons, Vehtendi Valley, Forum Highlands and The Mirror of Lyss, where Margonites make Lightbringer the useful title.
+
 ## Version 8.33
 * [New] Cartographer widget: helps you finish the Cartographer titles. It shades the parts of the world map you still have to uncover, and — using the game's own cartography rules — marks the exact squares you need to *stand in* to clear them, rather than just the fog itself. Reachability is derived from real pathing (travel portals count as walls, so it won't suggest a square you can only reach by zoning), the whole continent is shown rather than just your current map, and hovering a fog patch names the map you have to travel to in order to uncover it. Squares you can get close to but still can't uncover are drawn in grey.
 * [New] Armory: 830 additional weapon models, found by scanning `Gw.dat`, are now available to preview. **NOTE: There are loads of unnamed weapons/items now - not all of them are actually weapons, and might be in the wrong place, but I've left them in so the community can help label them/filter them for us**
