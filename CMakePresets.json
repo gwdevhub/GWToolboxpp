@@ -53,6 +53,25 @@
       }
     },
     {
+      "name": "xwin",
+      "inherits": "vcpkg",
+      "displayName": "clang-cl + xwin (Ninja, native Linux build, no wine)",
+      "description": "Cross-compiles the x86 Windows target on Linux with clang-cl/lld-link against an xwin-supplied MSVC + Windows SDK. Needs XWIN_SDK (and VKD3D_COMPILER, the fxc stand-in for the SM3 shaders) in the environment -- see scripts/xwin/setup-toolchain.sh.",
+      "generator": "Ninja",
+      "architecture": {
+        "value": "Win32",
+        "strategy": "external"
+      },
+      "binaryDir": "${sourceDir}/build-xwin",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+        "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/scripts/xwin/vcpkg-triplets/xwin-toolchain.cmake",
+        "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/scripts/xwin/vcpkg-triplets",
+        "VCPKG_TARGET_TRIPLET": "x86-windows-mixed",
+        "XWIN_SDK": "$env{XWIN_SDK}"
+      }
+    },
+    {
       "name": "wasm",
       "displayName": "GWToolboxdll.wasm (Emscripten, MVP scaffold)",
       "description": "Builds the wasm MVP scaffold only (GWToolboxdll/Wasm/*) -- not the real product; see GWToolboxdll/Wasm/main_wasm.cpp for scope. Needs EMSDK set. Not inherited from `vcpkg`: none of the Win32/VS/vcpkg-triplet settings apply cross-compiling for wasm.",

@@ -29,14 +29,52 @@ If you are here to check toolbox features or for a download link, go to [https:/
 
 7. Run.
 
-## Building on Linux (Docker + Wine)
+## Building on Linux
 
-GWToolboxdll can also be cross-compiled from Linux using a real MSVC toolchain running under Wine, packaged in a Docker image.
+Two toolchains cross-compile the x86 Windows target from Linux. Prefer the first.
 
-### Requirements
+### clang + xwin (no Wine, recommended)
+
+`clang` targets `i686-pc-windows-msvc` directly, linking with `lld-link`, against MSVC CRT
+and Windows SDK headers/libs fetched by [xwin](https://github.com/Jake-Shadle/xwin) from
+Microsoft's official installer manifests. Nothing Microsoft-built ever executes, so there is
+no Wine, no wineserver and no `mspdbsrv` - and builds run at full `-j` instead of the `-j 1`
+the Wine path is pinned to. The twelve SM3 shaders are compiled by
+[vkd3d-shader](https://gitlab.winehq.org/wine/vkd3d) in place of `fxc.exe`.
+
+**With Docker:**
+
+```sh
+./scripts/build-xwin.sh
+```
+
+Same options as the Wine script (`--config`, `--target`, `--jobs`, `--shell`,
+`--rebuild-image`); output lands in `bin/`, build tree in `build-xwin/`.
+
+**Directly on the host** - needs `clang`, `lld`, `llvm` (for `llvm-rc`/`llvm-lib`/`llvm-mt`),
+`cmake` >= 3.29, `ninja`, `python3`, and a bootstrapped `vcpkg` in `$VCPKG_ROOT`:
+
+```sh
+./scripts/xwin/setup-toolchain.sh          # one-off: SDK (~800MB) + vkd3d-compiler
+export XWIN_SDK="$PWD/.xwin-toolchain/xwin-sdk"
+export VKD3D_COMPILER="$PWD/.xwin-toolchain/vkd3d-1.19/vkd3d-compiler"
+cmake --preset xwin -DCMAKE_BUILD_TYPE=RelWithDebInfo
+cmake --build build-xwin -j"$(nproc)"
+```
+
+Caveats: vkd3d-shader has no SM1-3 optimiser, so the shader bytecode is longer than `fxc`'s
+(register allocation is unaffected). Release builds are still cut with MSVC - validate
+rendering changes in-game before shipping a clang-built DLL.
+
+### Docker + Wine
+
+Runs a real MSVC toolchain under Wine in a Docker image. Slower and more fragile, but it is
+genuine MSVC codegen, so it stays as the fallback.
+
+#### Requirements
 * [Docker](https://docs.docker.com/get-docker/)
 
-### Steps
+#### Steps
 1. Clone the repository and `cd` into it.
 2. Build: `./scripts/build-wine-prefix.sh`
 
