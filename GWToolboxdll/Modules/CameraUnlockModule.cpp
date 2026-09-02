@@ -9,6 +9,7 @@
 #include "CameraUnlockModule.h"
 #include <Defines.h>
 #include <Keys.h>
+#include <Utils/GuiUtils.h>
 #include <Utils/TextUtils.h>
 #include <GWCA/Utilities/Hooker.h>
 #include <GWCA/Utilities/Scanner.h>
