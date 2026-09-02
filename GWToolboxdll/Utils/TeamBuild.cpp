@@ -233,29 +233,55 @@ namespace {
         HeroID::GhostOfAlthea
     };
 
+    // Cached mercenary professions — refreshed only on instance transitions or after a timeout.
+    static std::array<GW::Constants::Profession, 8> s_cached_merc_profs{};
+    static GW::Constants::InstanceType s_merc_prof_instance = GW::Constants::InstanceType::Loading;
+    static clock_t s_merc_prof_timer = 0;
+    static constexpr int kMercRefreshTimeout = 30000; // ms
+
     // Look up live mercenary professions from game memory, populating the output array.
-    static void LookupMercProfessions(std::array<GW::Constants::Profession, 8>& out_profs)
+    static void RefreshMercProfessions()
     {
         const auto* w = GW::GetWorldContext();
-        if (!w) return;
+        if (!w || !w->hero_info.size()) return;
         for (size_t i = 0; i < 8; i++) {
             const auto merc_id = static_cast<HeroID>(static_cast<int>(HeroID::Merc1) + static_cast<int>(i));
             for (const auto& info : w->hero_info) {
                 if (info.hero_id == merc_id) {
-                    out_profs[i] = info.primary;
+                    s_cached_merc_profs[i] = info.primary;
                     break;
                 }
             }
         }
     }
 
-    // Return true if any mercenary profession differs from the cached values.
-    static bool AreMercProfessionsChanged(GW::Constants::InstanceType instance, const std::array<GW::Constants::Profession, 8>& last_profs)
+    // Return true if merc professions should be re-read from game memory.
+    static bool ShouldRefreshMercProfessions()
     {
-        if (instance != GW::Constants::InstanceType::Outpost) return false;
+        const auto instance = GW::Map::GetInstanceType();
+        // Refresh on instance change (e.g., entering an outpost) or after timeout
+        if (instance != s_merc_prof_instance) return true;
+        if (TIMER_DIFF(s_merc_prof_timer) > kMercRefreshTimeout) return true;
+        return false;
+    }
+
+    // Return true if any mercenary profession differs from the cached values.
+    static bool AreMercProfessionsChanged()
+    {
+        if (!ShouldRefreshMercProfessions()) return false;
         std::array<GW::Constants::Profession, 8> current{};
-        LookupMercProfessions(current);
-        return current != last_profs;
+        const auto* w = GW::GetWorldContext();
+        if (!w || !w->hero_info.size()) return false;
+        for (size_t i = 0; i < 8; i++) {
+            const auto merc_id = static_cast<HeroID>(static_cast<int>(HeroID::Merc1) + static_cast<int>(i));
+            for (const auto& info : w->hero_info) {
+                if (info.hero_id == merc_id) {
+                    current[i] = info.primary;
+                    break;
+                }
+            }
+        }
+        return current != s_cached_merc_profs;
     }
 
     static bool HeroSortByName(HeroID a, HeroID b)
@@ -279,23 +305,18 @@ namespace {
 
     // Returns hero IDs sorted by profession (when enabled) or alphabetically.
     // Mercenaries are sorted by their live profession from game memory, then name.
-    // Re-sorts each frame until all names are decoded; merc order updates when
-    // entering an outpost or when merc professions change.
+    // Re-sorts each frame until all names are decoded; merc order updates on
+    // instance transitions or when merc professions actually change (throttled to 30s).
     const std::vector<HeroID>& SortedHeroIDs()
     {
         static std::vector<HeroID> sorted;
         static bool is_sorted = false;  /* true once all hero names are decoded; re-sorts each frame until then */
-        static GW::Constants::InstanceType last_instance = GW::Constants::InstanceType::Loading;
         static bool last_sort_by_prof = false;
-        // Track which mercs have known professions to detect changes
-        static std::array<GW::Constants::Profession, 8> last_merc_profs{};
 
-        const auto instance = GW::Map::GetInstanceType();
         const bool sort_by_prof = HeroBuildsWindow::SortByProfession();
-        const bool mercs_changed = AreMercProfessionsChanged(instance, last_merc_profs);
+        const bool mercs_changed = AreMercProfessionsChanged();
 
-        if (!is_sorted || instance != last_instance || sort_by_prof != last_sort_by_prof || mercs_changed) {
-            last_instance = instance;
+        if (!is_sorted || sort_by_prof != last_sort_by_prof || mercs_changed) {
             last_sort_by_prof = sort_by_prof;
             sorted.assign(HeroIndexToID.begin() + 1, HeroIndexToID.end());
             bool all_decoded = true;
@@ -306,9 +327,11 @@ namespace {
                 }
             }
             std::ranges::sort(sorted, sort_by_prof ? &HeroSortByProfession : &HeroSortByName);
-            // Cache merc professions for change detection
-            if (instance == GW::Constants::InstanceType::Outpost) {
-                LookupMercProfessions(last_merc_profs);
+            // Update cache and timer on instance transition or timeout
+            if (ShouldRefreshMercProfessions()) {
+                RefreshMercProfessions();
+                s_merc_prof_instance = GW::Map::GetInstanceType();
+                s_merc_prof_timer = TIMER_INIT();
             }
             is_sorted = all_decoded;
         }

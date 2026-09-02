@@ -1266,7 +1266,7 @@ GW::Constants::Profession Resources::GetHeroProfession(const GW::Constants::Hero
         case HeroID::Merc8:
         {
             const auto* w = GW::GetWorldContext();
-            if (w) {
+            if (w && w->hero_info.size()) {
                 for (const auto& info : w->hero_info) {
                     if (info.hero_id == hero_id) {
                         return info.primary;

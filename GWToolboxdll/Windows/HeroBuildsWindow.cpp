@@ -90,8 +90,11 @@ namespace {
     IDirect3DTexture9** skill_toggle_sprite = nullptr;
 
     // Per-frame cache of mercenary display names, indexed by (HeroID - Merc1).
-    // Populated by RefreshMercDisplayNames() at the start of Draw().
+    // Populated by RefreshMercDisplayNames() — throttled to instance transitions / 30s.
     std::array<std::string, 8> s_merc_display_names{};
+    GW::Constants::InstanceType s_merc_name_instance = GW::Constants::InstanceType::Loading;
+    clock_t s_merc_name_timer = 0;
+    static constexpr int kMercNameRefreshTimeout = 30000; // ms
 
     using GW::Constants::HeroID;
 
@@ -272,13 +275,19 @@ GW::HeroPartyMember* HeroBuildsWindow::GetPartyHeroByID(const GW::Constants::Her
 
 // Refreshes mercenary display names from HeroInfo (read from game memory).
 // Falls back to default "Mercenary X" names when game memory is unavailable.
+// Throttled to instance transitions or every 30s — merc names rarely change.
 void HeroBuildsWindow::RefreshMercDisplayNames()
 {
+    const auto instance = GW::Map::GetInstanceType();
+    const bool should_refresh = instance != s_merc_name_instance
+        || TIMER_DIFF(s_merc_name_timer) > kMercNameRefreshTimeout;
+    if (!should_refresh) return;
+
     const auto* w = GW::GetWorldContext();
     for (size_t i = 0; i < 8; i++) {
         const auto merc_id = static_cast<GW::Constants::HeroID>(static_cast<int>(GW::Constants::HeroID::Merc1) + static_cast<int>(i));
         // Try game memory first (actual mercenary name)
-        if (w) {
+        if (w && w->hero_info.size()) {
             for (const auto& info : w->hero_info) {
                 if (info.hero_id == merc_id && info.name[0] != L'\0') {
                     s_merc_display_names[i] = TextUtils::WStringToString(info.name);
@@ -290,6 +299,8 @@ void HeroBuildsWindow::RefreshMercDisplayNames()
         s_merc_display_names[i] = Resources::GetHeroName(merc_id)->string();
     next_merc:;
     }
+    s_merc_name_instance = instance;
+    s_merc_name_timer = TIMER_INIT();
 }
 
 const char* HeroBuildsWindow::GetMercDisplayName(const GW::Constants::HeroID hero_id)
@@ -304,7 +315,7 @@ const char* HeroBuildsWindow::GetMercDisplayName(const GW::Constants::HeroID her
 GW::Constants::Profession HeroBuildsWindow::GetMercProfession(const GW::Constants::HeroID hero_id)
 {
     const auto* w = GW::GetWorldContext();
-    if (w && hero_id >= GW::Constants::HeroID::Merc1 && hero_id <= GW::Constants::HeroID::Merc8) {
+    if (w && w->hero_info.size() && hero_id >= GW::Constants::HeroID::Merc1 && hero_id <= GW::Constants::HeroID::Merc8) {
         for (const auto& info : w->hero_info) {
             if (info.hero_id == hero_id) return info.primary;
         }
