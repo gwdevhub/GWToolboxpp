@@ -86,7 +86,9 @@ namespace Carto {
     bool show_grid = false;
     bool using_bec = false;
     bool set_quest_marker = true;
+#ifndef _DEBUG
     constexpr auto kBirdsEyeView = static_cast<GW::Constants::SkillID>(3439);
+#endif
 
     std::map<GW::Constants::MapID, MapProbe> probe_cache;
     // A different character's fog makes different tiles worth probing, though the terrain has not moved.
@@ -1670,7 +1672,17 @@ namespace Carto {
          "\ncount as ordinary fog instead. Applies to the baked table and the live overlay alike, so the two"
          "\nkeep agreeing."},
         {"show_unexpected", "Show unexpected explored squares", &show_unexpected, nullptr,
-         "Draws every square you have already uncovered that the baked map data says has no standable ground within reveal range - not even ground only a gate glitch reaches - so nothing should have been able to credit it. Either the bake is missing that ground, or it was uncovered from somewhere the bake does not model. The reveal range automatically follows Bird's Eye View."},
+         "Draws every square you have already uncovered that the baked map data says has no standable ground within reveal range - not even ground only a gate glitch reaches - so nothing should have been able to credit it. Either the bake is missing that ground, or it was uncovered from somewhere the bake does not model. The reveal range follows Bird's Eye View."},
+#ifdef _DEBUG
+        {"using_bec", "Using a Bird's Eye Compass", &using_bec,
+         [] {
+             for (auto& [map_id, cached] : probe_cache) cached.complete = false;
+             owner_cache.clear();
+             owner_query = {};
+             coverage_stale = true;
+         },
+         "Standing in a tile credits it and the 8 tiles around it (Chebyshev distance, so a square block - not a circle, which is why the nearest-looking spot often is not the right one). A Bird's Eye Compass widens that to 3 tiles in each direction. Where inside the tile you stand makes no difference. Rescans the map."},
+#endif
         {"set_quest_marker", "Set a quest marker to fog points", &set_quest_marker, [] { SyncQuestMarker(); },
          "Placing a fog point puts a custom quest marker on the square you need to stand in to uncover it, so the usual quest path walks you there. It clears itself once the point is reached or removed, and clearing the marker by hand leaves it cleared. Suggested squares never touch the marker."},
     };
@@ -1747,6 +1759,7 @@ void CartographerWidget::Update(float)
     const auto player = GW::Agents::GetControlledCharacter();
     if (!player) return;
 
+#ifndef _DEBUG
     const auto has_birds_eye_view = GW::Effects::GetPlayerEffectBySkillId(kBirdsEyeView) != nullptr;
     if (using_bec != has_birds_eye_view) {
         using_bec = has_birds_eye_view;
@@ -1755,6 +1768,7 @@ void CartographerWidget::Update(float)
         owner_query = {};
         coverage_stale = true;
     }
+#endif
 
     if (TIMER_DIFF(last_scan) < 1000) return;
     last_scan = TIMER_INIT();
