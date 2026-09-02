@@ -1805,16 +1805,22 @@ void CartographerWidget::Update(float)
     }
     if (!changed.empty()) Log::FlushFile();
 #endif
-    if (coverage_stale || sweeping) {
-        // Rebuilding from scratch supersedes any pending diff, so re-baseline the snapshot.
+    const bool sweep_finished = sweeping && probe->complete;
+    const bool rebuild_all = coverage_stale || sweep_finished;
+    if (rebuild_all) {
         if (grid.bits && grid.dword_count) carto_snapshot.assign(grid.bits, grid.bits + grid.dword_count);
         RecomputeCoverage(grid, map_info);
     }
-    else if (!changed.empty()) {
-        RescoreAround(grid, changed);
-        RebuildFog(grid, map_info);
+    else {
+        if (sweeping) {
+            for (auto& [cell, sc] : probe->cells) ScoreStandCell(grid, cell, sc);
+        }
+        else if (!changed.empty()) {
+            RescoreAround(grid, changed);
+        }
+        if (!changed.empty()) RebuildFog(grid, map_info);
     }
-    if (coverage_stale || sweeping || !changed.empty()) RecountExploration(grid);
+    if (rebuild_all || !changed.empty()) RecountExploration(grid);
     carto_dirty = false;
     coverage_stale = false;
     PruneUncoveredPoints(grid);
