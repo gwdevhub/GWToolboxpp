@@ -1769,7 +1769,7 @@ void CartographerWidget::Update(float)
     const auto has_birds_eye_view = GW::Effects::GetPlayerEffectBySkillId(kBirdsEyeView) != nullptr;
     if (using_bec != has_birds_eye_view) {
         using_bec = has_birds_eye_view;
-        for (auto& [map_id, cached] : probe_cache) cached.complete = false;
+        for (auto& entry : probe_cache) entry.second.complete = false;
         owner_cache.clear();
         owner_query = {};
         coverage_stale = true;
