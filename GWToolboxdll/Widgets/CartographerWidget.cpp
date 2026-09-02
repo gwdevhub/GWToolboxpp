@@ -86,6 +86,7 @@ namespace Carto {
     bool show_grid = false;
     bool using_bec = false;
     bool set_quest_marker = true;
+    bool fog_covers_continent = false;
 #ifndef _DEBUG
     constexpr auto kBirdsEyeView = static_cast<GW::Constants::SkillID>(3439);
 #endif
@@ -719,6 +720,11 @@ namespace Carto {
         }
     }
 
+    bool ShouldBuildContinentFog()
+    {
+        return show_whole_continent && !continent_mask.Empty() && GW::UI::GetIsWorldMapShowing();
+    }
+
     void RebuildFog(const CartoGrid& grid, GW::AreaInfo* map_info)
     {
         unreachable_fog_cells = 0;
@@ -733,8 +739,8 @@ namespace Carto {
         int y1 = static_cast<int>(ceilf(bounds.Max.y / kWorldMapUnitsPerCell));
         map_cell_min = {x0, y0};
         map_cell_max = {x1, y1};
-        // The bake answers for the whole continent, so the world map shows everything worth walking to.
-        if (show_whole_continent && !continent_mask.Empty()) {
+        fog_covers_continent = ShouldBuildContinentFog();
+        if (fog_covers_continent) {
             x0 = continent_mask.x0;
             y0 = continent_mask.y0;
             x1 = continent_mask.x0 + continent_mask.w;
@@ -1770,7 +1776,10 @@ void CartographerWidget::Update(float)
     }
 #endif
 
-    if (TIMER_DIFF(last_scan) < 1000) return;
+    BuildContinentMask(static_cast<int>(map_info->continent));
+    const bool fog_scope_changed = fog_covers_continent != ShouldBuildContinentFog();
+    if (fog_scope_changed) coverage_stale = true;
+    if (!fog_scope_changed && TIMER_DIFF(last_scan) < 1000) return;
     last_scan = TIMER_INIT();
 
     CartoGrid grid;
@@ -1785,7 +1794,6 @@ void CartographerWidget::Update(float)
     GW::Vec2f player_wm;
     if (!WorldMapWidget::GamePosToWorldMap(player->pos, player_wm)) return;
     player_wm_cached = player_wm;
-    BuildContinentMask(static_cast<int>(map_info->continent));
     // A completing sweep still needs one last full pass, so the flag is read before the sweep.
     DropProbeIfGatesMoved();
     const bool sweeping = !probe->complete;
