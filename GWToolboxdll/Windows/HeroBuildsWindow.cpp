@@ -78,10 +78,9 @@ namespace {
 
     void SortTeambuilds(std::vector<TeamBuild>& teambuilds)
     {
-        std::stable_sort(teambuilds.begin(), teambuilds.end(),
-            [](const TeamBuild& a, const TeamBuild& b) {
-                return GetGroupSortOrder(a.group) < GetGroupSortOrder(b.group);
-            });
+        std::stable_sort(teambuilds.begin(), teambuilds.end(), [](const TeamBuild& a, const TeamBuild& b) {
+            return GetGroupSortOrder(a.group) < GetGroupSortOrder(b.group);
+        });
     }
 
     // ----------------------------------------------------------------
@@ -89,6 +88,10 @@ namespace {
     // GW file 0x268f6: 2x2 sprite sheet (tick/cross overlays)
     // Bottom-left sprite (col 0, row 1) = semi-transparent cross = "disabled" overlay
     IDirect3DTexture9** skill_toggle_sprite = nullptr;
+
+    // Per-frame cache of mercenary display names, indexed by (HeroID - Merc1).
+    // Populated by RefreshMercDisplayNames() at the start of Draw().
+    std::array<std::string, 8> s_merc_display_names{};
 
     using GW::Constants::HeroID;
 
@@ -142,8 +145,7 @@ namespace {
     {
         const auto packet = (GW::UI::UIPacket::kAddCustomChatLink*)wparam;
 
-        if (!(packet && packet->url && *packet->url && TeamBuildEncoder::IsEncodedTeamBuild(packet->url)))
-            return;
+        if (!(packet && packet->url && *packet->url && TeamBuildEncoder::IsEncodedTeamBuild(packet->url))) return;
 
         TeamBuild tbuild("", TextUtils::WStringToString(packet->url).c_str());
         if (!TeamBuildEncoder::EncodedToTeamBuild(packet->url, tbuild)) return;
@@ -184,8 +186,9 @@ namespace {
         detached_pool.push_back(std::move(tbuild));
     }
 
-    TeamBuild FromCurrentTeam() {
-        TeamBuild tb(std::format("{}'s Teambuild, {}", TextUtils::WStringToString(GW::AccountMgr::GetCurrentPlayerName()),TextUtils::GetFormattedDateTime()));
+    TeamBuild FromCurrentTeam()
+    {
+        TeamBuild tb(std::format("{}'s Teambuild, {}", TextUtils::WStringToString(GW::AccountMgr::GetCurrentPlayerName()), TextUtils::GetFormattedDateTime()));
         tb.has_hero_slots = true;
         tb.edit_open = true;
         GW::SkillbarMgr::SkillTemplate skill_template;
@@ -266,6 +269,54 @@ GW::HeroPartyMember* HeroBuildsWindow::GetPartyHeroByID(const GW::Constants::Her
     }
     return nullptr;
 }
+
+// Refreshes mercenary display names from HeroInfo (read from game memory).
+// Falls back to default "Mercenary X" names when game memory is unavailable.
+void HeroBuildsWindow::RefreshMercDisplayNames()
+{
+    const auto* w = GW::GetWorldContext();
+    for (size_t i = 0; i < 8; i++) {
+        const auto merc_id = static_cast<GW::Constants::HeroID>(static_cast<int>(GW::Constants::HeroID::Merc1) + static_cast<int>(i));
+        // Try game memory first (actual mercenary name)
+        if (w) {
+            for (const auto& info : w->hero_info) {
+                if (info.hero_id == merc_id && info.name[0] != L'\0') {
+                    s_merc_display_names[i] = TextUtils::WStringToString(info.name);
+                    goto next_merc;
+                }
+            }
+        }
+        // Fall back to default
+        s_merc_display_names[i] = Resources::GetHeroName(merc_id)->string();
+    next_merc:;
+    }
+}
+
+const char* HeroBuildsWindow::GetMercDisplayName(const GW::Constants::HeroID hero_id)
+{
+    if (hero_id >= GW::Constants::HeroID::Merc1 && hero_id <= GW::Constants::HeroID::Merc8) {
+        size_t idx = static_cast<size_t>(hero_id) - static_cast<size_t>(GW::Constants::HeroID::Merc1);
+        if (idx < s_merc_display_names.size()) return s_merc_display_names[idx].c_str();
+    }
+    return Resources::GetHeroName(hero_id)->string().c_str();
+}
+
+GW::Constants::Profession HeroBuildsWindow::GetMercProfession(const GW::Constants::HeroID hero_id)
+{
+    const auto* w = GW::GetWorldContext();
+    if (w && hero_id >= GW::Constants::HeroID::Merc1 && hero_id <= GW::Constants::HeroID::Merc8) {
+        for (const auto& info : w->hero_info) {
+            if (info.hero_id == hero_id) return info.primary;
+        }
+    }
+    return GW::Constants::Profession::None;
+}
+
+bool HeroBuildsWindow::SortByProfession()
+{
+    return settings.sort_by_profession;
+}
+
 void HeroBuildsWindow::Initialize()
 {
     ToolboxWindow::Initialize();
@@ -291,6 +342,7 @@ void HeroBuildsWindow::Terminate()
 void HeroBuildsWindow::Draw(IDirect3DDevice9*)
 {
     if (visible) {
+        RefreshMercDisplayNames();
         ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowSize(ImVec2(300, 250), ImGuiCond_FirstUseEver);
         if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
@@ -427,16 +479,15 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                     {
                         const float btn_sz = ImGui::GetFrameHeight();
                         const float spacing = ImGui::GetStyle().ItemSpacing.x;
-                        
+
                         float btn_x = ImGui::GetContentRegionAvail().x + ImGui::GetCursorPosX();
-                        
+
 
                         if (!is_last) {
                             btn_x -= btn_sz;
                             ImGui::SetCursorPos({btn_x, btn_y});
                             if (ImGui::Button(ICON_FA_ARROW_DOWN "##gd", ImVec2(btn_sz, btn_sz))) {
-                                std::swap(hero_build_groups[group_name].sort_order,
-                                          hero_build_groups[group_order[gi + 1]].sort_order);
+                                std::swap(hero_build_groups[group_name].sort_order, hero_build_groups[group_order[gi + 1]].sort_order);
                                 SortTeambuilds(teambuilds);
                                 builds_changed = true;
                             }
@@ -447,8 +498,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                             btn_x -= btn_sz;
                             ImGui::SetCursorPos({btn_x, btn_y});
                             if (ImGui::Button(ICON_FA_ARROW_UP "##gu", ImVec2(btn_sz, btn_sz))) {
-                                std::swap(hero_build_groups[group_name].sort_order,
-                                          hero_build_groups[group_order[gi - 1]].sort_order);
+                                std::swap(hero_build_groups[group_name].sort_order, hero_build_groups[group_order[gi - 1]].sort_order);
                                 SortTeambuilds(teambuilds);
                                 builds_changed = true;
                             }
@@ -472,7 +522,6 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                 builds_changed = true;
                 teambuilds.push_back(std::move(tb));
             }
-
         }
         ImGui::End();
     }
@@ -507,8 +556,7 @@ const char* HeroBuildsWindow::BuildName(const size_t idx) const
 
 void HeroBuildsWindow::Load(const size_t idx)
 {
-    if (idx < teambuilds.size())
-        teambuilds[idx].Load();
+    if (idx < teambuilds.size()) teambuilds[idx].Load();
 }
 
 void HeroBuildsWindow::Update(float)
@@ -516,7 +564,8 @@ void HeroBuildsWindow::Update(float)
     const GW::Constants::InstanceType instance_type = GW::Map::GetInstanceType();
     if (instance_type != last_instance_type) {
         if (settings.hide_when_entering_explorable && instance_type == GW::Constants::InstanceType::Explorable) {
-            for (auto& hb : teambuilds) hb.edit_open = false;
+            for (auto& hb : teambuilds)
+                hb.edit_open = false;
             visible = false;
         }
         last_instance_type = instance_type;
@@ -530,12 +579,15 @@ void HeroBuildsWindow::Update(float)
     // if we open the window, load from file. If we close the window, save to file.
     static bool old_visible = false;
     bool cur_visible = visible;
-    for (const TeamBuild& tbuild : teambuilds) cur_visible |= tbuild.edit_open;
+    for (const TeamBuild& tbuild : teambuilds)
+        cur_visible |= tbuild.edit_open;
 
     if (cur_visible != old_visible) {
         old_visible = cur_visible;
-        if (cur_visible) LoadFromFile();
-        else             SaveToFile();
+        if (cur_visible)
+            LoadFromFile();
+        else
+            SaveToFile();
     }
 }
 
@@ -603,6 +655,7 @@ void HeroBuildsWindow::DrawSettingsInternal()
 {
     ImGui::Checkbox("Hide Hero Build windows when entering explorable area", &settings.hide_when_entering_explorable);
     ImGui::CheckboxWithHelp("Only show one teambuild window at a time", &settings.one_teambuild_at_a_time, "Close other teambuild windows when you open a new one");
+    ImGui::CheckboxWithHelp("Sort heroes by profession", &settings.sort_by_profession, "Group heroes by profession in the hero selector dropdown. When disabled, heroes are sorted alphabetically.");
 }
 
 void HeroBuildsWindow::SaveSettings(SettingsDoc& doc)
@@ -734,8 +787,7 @@ void HeroBuildsWindow::LoadFromFile()
     // don't collide with the persisted ones.
     for (const auto& tb : teambuilds) {
         uint32_t numeric_id = 0;
-        if (std::from_chars(tb.ui_id.data(), tb.ui_id.data() + tb.ui_id.size(), numeric_id).ec == std::errc{})
-            TeamBuild::s_cur_ui_id = std::max(TeamBuild::s_cur_ui_id, numeric_id);
+        if (std::from_chars(tb.ui_id.data(), tb.ui_id.data() + tb.ui_id.size(), numeric_id).ec == std::errc{}) TeamBuild::s_cur_ui_id = std::max(TeamBuild::s_cur_ui_id, numeric_id);
     }
 
     builds_changed = false;

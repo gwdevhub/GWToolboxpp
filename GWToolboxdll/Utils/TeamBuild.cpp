@@ -26,6 +26,7 @@
 #include <Utils/GuiUtils.h>
 #include <Utils/TextUtils.h>
 #include <Windows/BuildsWindow.h>
+#include <Windows/HeroBuildsWindow.h>
 #include <Windows/PconsWindow.h>
 #include <Windows/RerollWindow.h>
 #include "TeamBuildEncoder.h"
@@ -232,16 +233,71 @@ namespace {
         HeroID::GhostOfAlthea
     };
 
-    // Returns hero IDs sorted by name; re-sorts each frame until all names are decoded.
+    // Look up live mercenary professions from game memory, populating the output array.
+    static void LookupMercProfessions(std::array<GW::Constants::Profession, 8>& out_profs)
+    {
+        const auto* w = GW::GetWorldContext();
+        if (!w) return;
+        for (size_t i = 0; i < 8; i++) {
+            const auto merc_id = static_cast<HeroID>(static_cast<int>(HeroID::Merc1) + static_cast<int>(i));
+            for (const auto& info : w->hero_info) {
+                if (info.hero_id == merc_id) {
+                    out_profs[i] = info.primary;
+                    break;
+                }
+            }
+        }
+    }
+
+    // Return true if any mercenary profession differs from the cached values.
+    static bool AreMercProfessionsChanged(GW::Constants::InstanceType instance, const std::array<GW::Constants::Profession, 8>& last_profs)
+    {
+        if (instance != GW::Constants::InstanceType::Outpost) return false;
+        std::array<GW::Constants::Profession, 8> current{};
+        LookupMercProfessions(current);
+        return current != last_profs;
+    }
+
+    static bool HeroSortByName(HeroID a, HeroID b)
+    {
+        return _stricmp(Resources::GetHeroName(a)->string().c_str(), Resources::GetHeroName(b)->string().c_str()) < 0;
+    }
+
+    static bool HeroSortByProfession(HeroID a, HeroID b)
+    {
+        auto profA = Resources::GetHeroProfession(a);
+        auto profB = Resources::GetHeroProfession(b);
+
+        // Heroes with unknown profession sort to the end
+        if (profA == GW::Constants::Profession::None) return false;
+        if (profB == GW::Constants::Profession::None) return true;
+
+        // Sort by profession, then alphabetically within each profession
+        if (profA != profB) return profA < profB;
+        return HeroSortByName(a, b);
+    }
+
+    // Returns hero IDs sorted by profession (when enabled) or alphabetically.
+    // Mercenaries are sorted by their live profession from game memory, then name.
+    // Re-sorts each frame until all names are decoded; merc order updates when
+    // entering an outpost or when merc professions change.
     const std::vector<HeroID>& SortedHeroIDs()
     {
         static std::vector<HeroID> sorted;
-        static bool is_sorted = false;
-        if (!is_sorted) {
-            sorted.clear();
-            for (const auto id : HeroIndexToID) {
-                if (id != HeroID::NoHero) sorted.push_back(id);
-            }
+        static bool is_sorted = false;  /* true once all hero names are decoded; re-sorts each frame until then */
+        static GW::Constants::InstanceType last_instance = GW::Constants::InstanceType::Loading;
+        static bool last_sort_by_prof = false;
+        // Track which mercs have known professions to detect changes
+        static std::array<GW::Constants::Profession, 8> last_merc_profs{};
+
+        const auto instance = GW::Map::GetInstanceType();
+        const bool sort_by_prof = HeroBuildsWindow::SortByProfession();
+        const bool mercs_changed = AreMercProfessionsChanged(instance, last_merc_profs);
+
+        if (!is_sorted || instance != last_instance || sort_by_prof != last_sort_by_prof || mercs_changed) {
+            last_instance = instance;
+            last_sort_by_prof = sort_by_prof;
+            sorted.assign(HeroIndexToID.begin() + 1, HeroIndexToID.end());
             bool all_decoded = true;
             for (const auto id : sorted) {
                 if (Resources::GetHeroName(id)->string().empty()) {
@@ -249,9 +305,11 @@ namespace {
                     break;
                 }
             }
-            std::ranges::sort(sorted, [](const HeroID a, const HeroID b) {
-                return _stricmp(Resources::GetHeroName(a)->string().c_str(), Resources::GetHeroName(b)->string().c_str()) < 0;
-            });
+            std::ranges::sort(sorted, sort_by_prof ? &HeroSortByProfession : &HeroSortByName);
+            // Cache merc professions for change detection
+            if (instance == GW::Constants::InstanceType::Outpost) {
+                LookupMercProfessions(last_merc_profs);
+            }
             is_sorted = all_decoded;
         }
         return sorted;
@@ -280,9 +338,9 @@ Build::Build(std::string_view n, std::string_view c, GW::Constants::HeroID hero_
     : name(n), code(c), hero_id(hero_id_), behavior(behavior_), show_panel(show_panel_ != 0), disabled_skills(disabled_skills_)
 {}
 
-Build::~Build() {
-    if (pending_reroll_build == this) 
-        pending_reroll_build = 0;
+Build::~Build()
+{
+    if (pending_reroll_build == this) pending_reroll_build = 0;
 }
 
 std::string Build::GetFallbackBuildName()
@@ -352,7 +410,8 @@ std::string Build::DisplayName()
     return gen_name;
 }
 
-std::string Build::GetChatBuildCode() {
+std::string Build::GetChatBuildCode()
+{
     constexpr size_t kMaxLen = 120;
     const auto gen = DisplayName();
 
@@ -415,8 +474,7 @@ void Build::Update()
         return;
     }
 
-    if (pending_reroll_build && TIMER_DIFF(pending_reroll_timer) > 10000) 
-        pending_reroll_build = 0;
+    if (pending_reroll_build && TIMER_DIFF(pending_reroll_timer) > 10000) pending_reroll_build = 0;
 
     if (pending_reroll_build && !RerollWindow::IsRerolling()) {
         if (pending_reroll_character != GW::AccountMgr::GetCurrentPlayerName()) {
@@ -927,8 +985,7 @@ void TeamBuild::DrawHeroBuildsContent(bool& builds_modified, bool editable)
                     if (no_space) ImGui::BeginDisabled();
                     if (GuiUtils::IconButton("Load##load", GuiUtils::GwButtonIcon::LoadFromTemplate, icon_btn_size)) build.Load();
                     if (no_space) ImGui::EndDisabled();
-                    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-                        ImGui::SetTooltip(no_space ? "No space in the party to load the hero" : "Load build on hero");
+                    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip(no_space ? "No space in the party to load the hero" : "Load build on hero");
                 }
                 else {
                     ImGui::Dummy(icon_btn_size);
@@ -954,7 +1011,6 @@ void TeamBuild::DrawHeroBuildsContent(bool& builds_modified, bool editable)
             if (ImGui::MenuItem(ICON_FA_EYE "  View build")) build.View();
             if (ImGui::MenuItem(ICON_FA_COPY "  Copy build code")) build.Copy();
             if (editable) {
-
                 if (!is_player) {
                     const bool prev_is_player = j > 0 && j - 1 == player_idx;
                     const bool next_is_player = j + 1 < builds.size() && j + 1 == player_idx;
@@ -1007,23 +1063,33 @@ void TeamBuild::DrawHeroBuildsContent(bool& builds_modified, bool editable)
         // ---- Expanded edit section ----
         if (editing) {
             if (!is_player) {
-                // Hero selector
+                // Hero selector — manual combo to render profession icons
                 const auto& sorted_heroes = SortedHeroIDs();
                 const auto hero_it = std::ranges::find(sorted_heroes, build.hero_id);
                 int combo_idx = hero_it != sorted_heroes.end() ? static_cast<int>(std::distance(sorted_heroes.begin(), hero_it)) : -1;
+                const char* preview = combo_idx >= 0 ? HeroBuildsWindow::GetMercDisplayName(sorted_heroes[combo_idx]) : "Choose Hero";
                 ImGui::PushItemWidth(name_width);
-                if (ImGui::MyCombo(
-                        "###heroid", "Choose Hero", &combo_idx,
-                        [](void*, const int idx, const char** out_text) -> bool {
-                            const auto& heroes = SortedHeroIDs();
-                            if (idx < 0 || idx >= static_cast<int>(heroes.size())) return false;
-                            *out_text = Resources::GetHeroName(heroes[idx])->string().c_str();
-                            return true;
-                        },
-                        nullptr, static_cast<int>(sorted_heroes.size())
-                    )) {
-                    build.hero_id = (combo_idx >= 0 && combo_idx < static_cast<int>(sorted_heroes.size())) ? sorted_heroes[combo_idx] : HeroID::NoHero;
-                    ResetEncodedCache();
+                if (ImGui::BeginCombo("###heroid", preview)) {
+                    const ImVec2 icon_size{ImGui::GetFrameHeight() * 0.8f, ImGui::GetFrameHeight() * 0.8f};
+                    for (int i = 0; i < static_cast<int>(sorted_heroes.size()); i++) {
+                        const bool is_selected = (i == combo_idx);
+                        const auto hero_id = sorted_heroes[i];
+                        // Show profession icon — live for mercs, static for others
+                        GW::Constants::Profession prof = Resources::GetHeroProfession(hero_id);
+                        if (prof != GW::Constants::Profession::None) {
+                            ImGui::Image(*Resources::GetProfessionIcon(prof), icon_size);
+                            ImGui::SameLine();
+                        }
+                        // Use in-game merc names if available, fall back to default
+                        const char* hero_name = HeroBuildsWindow::GetMercDisplayName(hero_id);
+                        if (ImGui::Selectable(hero_name, is_selected)) {
+                            combo_idx = i;
+                            build.hero_id = hero_id;
+                            ResetEncodedCache();
+                        }
+                        if (is_selected) ImGui::SetItemDefaultFocus();
+                    }
+                    ImGui::EndCombo();
                 }
                 ImGui::PopItemWidth();
 

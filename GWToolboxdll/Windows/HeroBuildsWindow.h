@@ -5,17 +5,16 @@
 #include <vector>
 
 #include <GWCA/Constants/Constants.h>
-#include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Hero.h>
+#include <GWCA/GameEntities/Party.h>
 #include <GWCA/Managers/UIMgr.h>
 
+#include <Defines.h>
 #include <Timer.h>
 #include <ToolboxWindow.h>
-#include <Defines.h>
 #include <Utils/TeamBuildEncoder.h>
 
 class HeroBuildsWindow : public ToolboxWindow {
-
     HeroBuildsWindow();
 
     ~HeroBuildsWindow();
@@ -36,6 +35,7 @@ public:
         bool hide_when_entering_explorable = false;
         bool one_teambuild_at_a_time = false;
         bool filter_by_profession = false;
+        bool sort_by_profession = false;
     };
 
     // On-disk schema of herobuilds.json
@@ -92,7 +92,18 @@ public:
 
     static GW::HeroPartyMember* GetPartyHeroByID(const GW::Constants::HeroID hero_id, size_t* out_hero_index);
 
+    // Returns the mercenary's in-game name (from HeroInfo) or the default name.
+    // Names are cached per-frame — call RefreshMercDisplayNames() first.
+    static const char* GetMercDisplayName(const GW::Constants::HeroID hero_id);
+    // Returns the mercenary's current profession from game memory, or Profession::None.
+    static GW::Constants::Profession GetMercProfession(const GW::Constants::HeroID hero_id);
+    // Returns whether the "sort by profession" setting is enabled.
+    static bool SortByProfession();
+
 private:
+    // Refreshes the per-frame mercenary display name cache from HeroInfo.
+    void RefreshMercDisplayNames();
+
     TeamBuild* GetTeambuildByName(const std::string& argBuildname);
 
     // Encode a teambuild into a Daybreak party loadout base64 string (header=15, type=1, version=1).

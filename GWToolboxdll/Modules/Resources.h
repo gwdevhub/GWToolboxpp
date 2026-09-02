@@ -14,8 +14,8 @@ namespace GW {
         enum class SkillID : uint32_t;
         enum class Language;
         enum HeroID : uint32_t;
-    }
-}
+    } // namespace Constants
+} // namespace GW
 
 class Resources : public ToolboxModule {
     friend class GWToolbox;
@@ -135,6 +135,9 @@ public:
 
     // Guaranteed to return a pointer, but may not yet be decoded.
     static GuiUtils::EncString* GetHeroName(GW::Constants::HeroID hero_id);
+
+    // Returns the primary profession of a hero (static game data; does not require hero unlock).
+    static GW::Constants::Profession GetHeroProfession(GW::Constants::HeroID hero_id);
 
     // Guaranteed to return a pointer, but may not yet be decoded. Does the region->name lookup.
     static GuiUtils::EncString* GetRegionName(GW::Region region);

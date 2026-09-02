@@ -1,21 +1,23 @@
 #include "stdafx.h"
 
-#include <DirectXTex.h>
 #include <DDSTextureLoader/DDSTextureLoader9.h>
+#include <DirectXTex.h>
 #include <WICTextureLoader/WICTextureLoader9.h>
 
-#include <GWCA/GameEntities/Map.h>
-#include <GWCA/GameEntities/Item.h>
-#include <GWCA/GameEntities/Skill.h>
-#include <GWCA/GameEntities/Hero.h>
 #include <GWCA/GameEntities/Agent.h>
+#include <GWCA/GameEntities/Hero.h>
+#include <GWCA/GameEntities/Item.h>
+#include <GWCA/GameEntities/Map.h>
+#include <GWCA/GameEntities/Skill.h>
 
-#include <GWCA/Managers/SkillbarMgr.h>
-#include <GWCA/Managers/MapMgr.h>
-#include <GWCA/Managers/UIMgr.h>
-#include <GWCA/Managers/ItemMgr.h>
-#include <GWCA/Managers/PartyMgr.h>
+#include <GWCA/Context/WorldContext.h>
+
 #include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/ItemMgr.h>
+#include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/PartyMgr.h>
+#include <GWCA/Managers/SkillbarMgr.h>
+#include <GWCA/Managers/UIMgr.h>
 
 #include <EmbeddedResource.h>
 #include <GWToolbox.h>
@@ -28,18 +30,18 @@
 #include <Modules/Resources.h>
 #include <Utils/GuiUtils.h>
 
-#pragma warning(push) // Save current warning state
+#pragma warning(push)           // Save current warning state
 #pragma warning(disable : 4189) // local variable is initialized but not referenced
 #include <include/nfd.h>
 #include <nfd_common.c>
 #include <nfd_win.cpp>
 #pragma warning(pop)
-#include <dxgiformat.h>
 #include <bcrypt.h>
+#include <dxgiformat.h>
 #pragma comment(lib, "bcrypt.lib")
 
-#include <Modules/GwDatModule.h>
 #include <Constants/EncStrings.h>
+#include <Modules/GwDatModule.h>
 #include <Utils/TextUtils.h>
 #include <wincodec.h>
 
@@ -217,10 +219,7 @@ namespace {
             });
         }
 
-        ~WorkerThread()
-        {
-            ASSERT(!is_running);
-        }
+        ~WorkerThread() { ASSERT(!is_running); }
     };
 
     std::vector<WorkerThread*> workers;
@@ -242,11 +241,7 @@ namespace {
     {
         constexpr DWORD kSha256Size = 32;
         BYTE hash[kSha256Size] = {};
-        BCryptHash(BCRYPT_SHA256_ALG_HANDLE,
-                   nullptr, 0,
-                   reinterpret_cast<PUCHAR>(const_cast<char*>(str.data())),
-                   static_cast<ULONG>(str.size()),
-                   hash, kSha256Size);
+        BCryptHash(BCRYPT_SHA256_ALG_HANDLE, nullptr, 0, reinterpret_cast<PUCHAR>(const_cast<char*>(str.data())), static_cast<ULONG>(str.size()), hash, kSha256Size);
         std::stringstream hexstream;
         hexstream << std::hex << std::setfill('0');
         for (BYTE b : hash) {
@@ -437,15 +432,14 @@ void Resources::Cleanup()
     should_stop = true;
     for (const auto worker : workers) {
         for (size_t i = 0; i < 5000; i += 10) {
-            if (!worker->is_running) 
-                break;
+            if (!worker->is_running) break;
             Sleep(10);
         }
         delete worker; // Will trigger assertion
     }
     workers.clear();
     for (const auto& tex : skill_images | std::views::values) {
-        if(tex && *tex) (*tex)->Release();
+        if (tex && *tex) (*tex)->Release();
         delete tex;
     }
     skill_images.clear();
@@ -456,7 +450,7 @@ void Resources::Cleanup()
     item_images.clear();
     profession_icons.clear();
     damagetype_icons.clear();
-    map_names.clear(); // NB: pointers to encoded_string_ids, no need to free memory
+    map_names.clear();   // NB: pointers to encoded_string_ids, no need to free memory
     skill_names.clear(); // NB: pointers to encoded_string_ids, no need to free memory
     hero_names.clear();
     region_names.clear(); // owns its EncStrings (built from raw encoded strings, not encoded_string_ids)
@@ -470,8 +464,7 @@ void Resources::Terminate()
     GW::UI::RemoveUIMessageCallback(&OnUIMessage_Hook);
 
     Cleanup();
-    if (initialised_curl)
-        ShutdownCurl();
+    if (initialised_curl) ShutdownCurl();
     initialised_curl = false;
     if (co_initialized) {
         CoUninitialize();
@@ -481,8 +474,7 @@ void Resources::Terminate()
 bool Resources::CanTerminate()
 {
     for (const auto worker : workers) {
-        if (worker->is_running)
-            return false;
+        if (worker->is_running) return false;
     }
     return true;
 }
@@ -588,12 +580,11 @@ bool Resources::EnsureFolderExists(const std::filesystem::path& path, std::wstri
     std::error_code ec;
     if (create_directories(path, ec)) return true;
 
-    error_description = std::format(L"Failed to create folder:\n{}\n\nReason: {} (code {})\n\n{}",
-                                    path.wstring(), FormatWindowsError(ec.value()), ec.value(), PathDiagnoseWritability(path.parent_path()));
+    error_description = std::format(L"Failed to create folder:\n{}\n\nReason: {} (code {})\n\n{}", path.wstring(), FormatWindowsError(ec.value()), ec.value(), PathDiagnoseWritability(path.parent_path()));
     // ERROR_ACCESS_DENIED / ERROR_VIRUS_INFECTED / ERROR_VIRUS_DELETED are what antivirus and Controlled Folder Access return when blocking the write
     if (ec.value() == ERROR_ACCESS_DENIED || ec.value() == ERROR_VIRUS_INFECTED || ec.value() == ERROR_VIRUS_DELETED) {
         error_description += L"\n\nIf this is your Documents folder, Windows Defender Controlled Folder Access "
-            L"may be the cause - try allowing Guild Wars, or turning Controlled Folder Access off.";
+                             L"may be the cause - try allowing Guild Wars, or turning Controlled Folder Access off.";
     }
     return false;
 }
@@ -629,11 +620,9 @@ void Resources::Download(const std::filesystem::path& path_to_file, const std::s
 
 bool Resources::ReadFile(const std::filesystem::path& path, std::string& response)
 {
-    if (!std::filesystem::exists(path))
-        return false;
+    if (!std::filesystem::exists(path)) return false;
     std::ifstream file(path);
-    if (!file.is_open())
-        return false;
+    if (!file.is_open()) return false;
     std::stringstream ss;
     ss << file.rdbuf();
     response = ss.str();
@@ -642,11 +631,9 @@ bool Resources::ReadFile(const std::filesystem::path& path, std::string& respons
 
 bool Resources::ReadFile(const std::filesystem::path& path, std::wstring& response)
 {
-    if (!std::filesystem::exists(path))
-        return false;
+    if (!std::filesystem::exists(path)) return false;
     std::ifstream file(path);
-    if (!file.is_open())
-        return false;
+    if (!file.is_open()) return false;
     std::wstringstream ss;
     ss << file.rdbuf();
     response = ss.str();
@@ -728,7 +715,7 @@ void Resources::Download(const std::string& url, AsyncLoadMbCallback callback, v
         const auto expiration = get_cache_modified_time(cache_path);
         if (expiration.has_value() && expiration.value() - std::chrono::file_clock::now() < cache_duration) {
             std::string response;
-            if (ReadFile(cache_path,response)) {
+            if (ReadFile(cache_path, response)) {
                 EnqueueMainTask([callback, context, response] {
                     callback(true, response, context);
                 });
@@ -1057,12 +1044,7 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
                 static constexpr ctll::fixed_string thumb_pattern = R"(/images/(.*)/([^/]+)$)";
 
                 if (auto m2 = ctre::search<thumb_pattern>(image_url)) {
-                    image_url = std::format(
-                        "/images/thumb/{}/{}/{}px-{}",
-                        m2.get<1>().to_string(),
-                        m2.get<2>().to_string(),
-                        width,
-                        m2.get<2>().to_string());
+                    image_url = std::format("/images/thumb/{}/{}/{}px-{}", m2.get<1>().to_string(), m2.get<2>().to_string(), width, m2.get<2>().to_string());
                 }
                 else {
                     trigger_failure_callback(callback, L"Regex failed evaluating GWW thumbnail from %S", image_url.c_str());
@@ -1155,14 +1137,10 @@ IDirect3DTexture9** Resources::GetSkillImageFromGWW(GW::Constants::SkillID skill
             return; // Already logged whatever errors
         }
 
-        static constexpr ctll::fixed_string skill_image_regex =
-            R"(class="skill-image"[\s\S]*?<img[^>]+src=['"]([^"']+)([.](png|jpg)))";
-        static constexpr ctll::fixed_string condition_image_regex =
-            R"(<blockquote[\s\S]*?<img[^>]+src=['"]([^"']+)([.](png|jpg)))";
-        static constexpr ctll::fixed_string blessing_image_regex =
-            R"(class="blessing-infobox"[\s\S]*?<img[^>]+src=['"]([^"']+)([.](png|jpg)))";
-        static constexpr ctll::fixed_string bounty_image_regex =
-            R"(class="bounty-infobox"[\s\S]*?<img[^>]+src=['"]([^"']+)([.](png|jpg)))";
+        static constexpr ctll::fixed_string skill_image_regex = R"(class="skill-image"[\s\S]*?<img[^>]+src=['"]([^"']+)([.](png|jpg)))";
+        static constexpr ctll::fixed_string condition_image_regex = R"(<blockquote[\s\S]*?<img[^>]+src=['"]([^"']+)([.](png|jpg)))";
+        static constexpr ctll::fixed_string blessing_image_regex = R"(class="blessing-infobox"[\s\S]*?<img[^>]+src=['"]([^"']+)([.](png|jpg)))";
+        static constexpr ctll::fixed_string bounty_image_regex = R"(class="bounty-infobox"[\s\S]*?<img[^>]+src=['"]([^"']+)([.](png|jpg)))";
 
         std::string image_path, image_extension;
 
@@ -1221,6 +1199,88 @@ GuiUtils::EncString* Resources::GetHeroName(const GW::Constants::HeroID hero_id)
     return hero_names[hero_id];
 }
 
+GW::Constants::Profession Resources::GetHeroProfession(const GW::Constants::HeroID hero_id)
+{
+    using GW::Constants::HeroID;
+    using GW::Constants::Profession;
+
+    switch (hero_id) {
+        // Warriors
+        case HeroID::Goren:
+        case HeroID::Jora:
+        case HeroID::Koss:
+        case HeroID::Devona:
+            return Profession::Warrior;
+        // Rangers
+        case HeroID::PyreFierceshot:
+        case HeroID::MargridTheSly:
+        case HeroID::AcolyteJin:
+            return Profession::Ranger;
+        // Monks
+        case HeroID::Tahlkora:
+        case HeroID::Ogden:
+        case HeroID::Dunkoro:
+            return Profession::Monk;
+        // Necromancers
+        case HeroID::Livia:
+        case HeroID::MasterOfWhispers:
+        case HeroID::Olias:
+            return Profession::Necromancer;
+        // Mesmers
+        case HeroID::Norgu:
+        case HeroID::GhostOfAlthea:
+        case HeroID::Gwen:
+            return Profession::Mesmer;
+        // Elementalists
+        case HeroID::Vekk:
+        case HeroID::ZhedShadowhoof:
+        case HeroID::AcolyteSousuke:
+            return Profession::Elementalist;
+        // Assassins
+        case HeroID::Zenmai:
+        case HeroID::Anton:
+        case HeroID::Miku:
+            return Profession::Assassin;
+        // Ritualists
+        case HeroID::Xandra:
+        case HeroID::ZeiRi:
+            return Profession::Ritualist;
+        // Dervishes
+        case HeroID::Kahmu:
+        case HeroID::Melonni:
+        case HeroID::MOX:
+            return Profession::Dervish;
+        // Paragons
+        case HeroID::Hayda:
+        case HeroID::GeneralMorgahn:
+        case HeroID::KeiranThackeray:
+            return Profession::Paragon;
+        // Auto-id for Mercenaries
+        case HeroID::Merc1:
+        case HeroID::Merc2:
+        case HeroID::Merc3:
+        case HeroID::Merc4:
+        case HeroID::Merc5:
+        case HeroID::Merc6:
+        case HeroID::Merc7:
+        case HeroID::Merc8:
+        {
+            const auto* w = GW::GetWorldContext();
+            if (w) {
+                for (const auto& info : w->hero_info) {
+                    if (info.hero_id == hero_id) {
+                        return info.primary;
+                    }
+                }
+            }
+            return Profession::None;         
+        }
+        case HeroID::Razah:
+        default:
+            return Profession::None;
+    }
+}
+
 GuiUtils::EncString* Resources::GetMapName(const GW::Constants::MapID map_id)
 {
     const auto found = map_names.find(map_id);
@@ -1242,8 +1302,7 @@ GuiUtils::EncString* Resources::GetMapName(const GW::Constants::MapID map_id)
 
 GuiUtils::EncString* Resources::GetRegionName(const GW::Region region)
 {
-    if (const auto found = region_names.find(region); found != region_names.end())
-        return found->second.get();
+    if (const auto found = region_names.find(region); found != region_names.end()) return found->second.get();
 
     const wchar_t* enc;
     switch (region) {
@@ -1334,13 +1393,11 @@ GuiUtils::EncString* Resources::GetRegionName(const GW::Constants::MapID map_id)
 
 GuiUtils::EncString* Resources::DecodeStringId(const uint32_t enc_str_id, GW::Constants::Language language)
 {
-    if (language == (GW::Constants::Language)0xff)
-        language = GW::UI::GetTextLanguage();
+    if (language == (GW::Constants::Language)0xff) language = GW::UI::GetTextLanguage();
     const auto by_language = encoded_string_ids.find(language);
     if (by_language != encoded_string_ids.end()) {
         const auto found = by_language->second.find(enc_str_id);
-        if (found != by_language->second.end())
-            return found->second.get();
+        if (found != by_language->second.end()) return found->second.get();
     }
     auto enc_string = std::make_unique<GuiUtils::EncString>(enc_str_id, false);
     const auto raw = enc_string.get();
@@ -1353,19 +1410,14 @@ namespace {
     // combines up to four dyes) into the icon's colour. 0 when the item is undyed.
     uint32_t ItemDyes(GW::Item* item)
     {
-        return static_cast<uint32_t>(item->dye.dye1)
-            | (static_cast<uint32_t>(item->dye.dye2) << 8)
-            | (static_cast<uint32_t>(item->dye.dye3) << 16)
-            | (static_cast<uint32_t>(item->dye.dye4) << 24);
+        return static_cast<uint32_t>(item->dye.dye1) | (static_cast<uint32_t>(item->dye.dye2) << 8) | (static_cast<uint32_t>(item->dye.dye3) << 16) | (static_cast<uint32_t>(item->dye.dye4) << 24);
     }
-}
+} // namespace
 
 IDirect3DTexture9** Resources::GetItemImage(uint32_t model_file_id, uint32_t interaction, uint32_t dyes, bool is_female, bool* failed_out)
 {
-    if (failed_out)
-        *failed_out = false;
-    if (!model_file_id)
-        return nullptr;
+    if (failed_out) *failed_out = false;
+    if (!model_file_id) return nullptr;
 
     // Composite items (armor/runes): mirrors the client's own CICompositePlayer::GetCompositeGeometry
     // slot order - file_ids[10] is the shared geometry/icon slot, tried first regardless of gender;
@@ -1379,15 +1431,12 @@ IDirect3DTexture9** Resources::GetItemImage(uint32_t model_file_id, uint32_t int
             IDirect3DTexture9** result = &null_tex;
             for (const size_t i : slots_to_try) {
                 const uint32_t slot_id = model_file_info->file_ids[i];
-                if (!slot_id)
-                    continue;
+                if (!slot_id) continue;
                 bool slot_failed = false;
                 result = GwDatModule::LoadItemImage(slot_id, dyes, &slot_failed);
-                if (*result || !slot_failed)
-                    return result; // succeeded, or still resolving - stop here either way
+                if (*result || !slot_failed) return result; // succeeded, or still resolving - stop here either way
             }
-            if (failed_out)
-                *failed_out = true;
+            if (failed_out) *failed_out = true;
             return result;
         }
     }
@@ -1397,8 +1446,7 @@ IDirect3DTexture9** Resources::GetItemImage(uint32_t model_file_id, uint32_t int
 
 IDirect3DTexture9** Resources::GetItemImage(GW::Item* item)
 {
-    if (!(item && item->model_file_id))
-        return nullptr;
+    if (!(item && item->model_file_id)) return nullptr;
     const auto player = GW::Agents::GetControlledCharacter();
     const bool is_female = player && player->GetIsFemale();
     return GetItemImage(item->model_file_id, item->interaction, ItemDyes(item), is_female);
@@ -1604,9 +1652,12 @@ bool Resources::SaveBackbufferRectToFile(IDirect3DDevice9* device, const RECT* r
     auto ext = file_path.extension().string();
     std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
     GUID codec_guid;
-    if (ext == ".png")  codec_guid = GUID_ContainerFormatPng;
-    else if (ext == ".jpg" || ext == ".jpeg") codec_guid = GUID_ContainerFormatJpeg;
-    else if (ext == ".bmp") codec_guid = GUID_ContainerFormatBmp;
+    if (ext == ".png")
+        codec_guid = GUID_ContainerFormatPng;
+    else if (ext == ".jpg" || ext == ".jpeg")
+        codec_guid = GUID_ContainerFormatJpeg;
+    else if (ext == ".bmp")
+        codec_guid = GUID_ContainerFormatBmp;
     else {
         Log::Warning("SaveBackbufferRectToFile: unsupported file format: %s", ext.c_str());
         return false;
@@ -1655,7 +1706,7 @@ bool Resources::SaveBackbufferRectToFile(IDirect3DDevice9* device, const RECT* r
     if (region) {
         x = std::max<LONG>(0, region->left);
         y = std::max<LONG>(0, region->top);
-        w = std::min<LONG>(static_cast<LONG>(desc.Width)  - x, region->right  - region->left);
+        w = std::min<LONG>(static_cast<LONG>(desc.Width) - x, region->right - region->left);
         h = std::min<LONG>(static_cast<LONG>(desc.Height) - y, region->bottom - region->top);
     }
     if (w <= 0 || h <= 0) {
@@ -1676,10 +1727,10 @@ bool Resources::SaveBackbufferRectToFile(IDirect3DDevice9* device, const RECT* r
     uint8_t* base = static_cast<uint8_t*>(locked.pBits) + static_cast<size_t>(y) * locked.Pitch + static_cast<size_t>(x) * bpp;
 
     DirectX::Image img = {};
-    img.width  = static_cast<size_t>(w);
+    img.width = static_cast<size_t>(w);
     img.height = static_cast<size_t>(h);
     img.format = dxgi;
-    img.rowPitch   = static_cast<size_t>(locked.Pitch);
+    img.rowPitch = static_cast<size_t>(locked.Pitch);
     img.slicePitch = static_cast<size_t>(locked.Pitch) * static_cast<size_t>(h);
     img.pixels = base;
 
@@ -1783,8 +1834,7 @@ static bool SafeCopyRows(uint8_t* dst, const uint8_t* src, size_t rows, size_t r
             memcpy(dst + y * row_bytes, src + y * pitch, row_bytes);
         }
         return true;
-    }
-    __except (EXCEPTION_EXECUTE_HANDLER) {
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
         return false;
     }
 }
