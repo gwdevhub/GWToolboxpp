@@ -16,6 +16,8 @@
 namespace {
     const float default_cam_speed = 1000.f;            // 600 units per sec
     const float rotation_speed = DirectX::XM_PI / 3.f; // 6 seconds for full rotation
+    const float translation_smoothing_rate = 10.f;
+    const float rotation_smoothing_rate = 6.f;
 
     const float default_max_distance = 900.f;
 
@@ -133,6 +135,12 @@ namespace {
         cam->look_at_target = newPos;
         return true;
     }
+
+    float SmoothMovement(const float current, const float target, const float delta, const float interpolation_rate)
+    {
+        return current + (target - current) * std::clamp(delta * interpolation_rate, 0.f, 1.f);
+    }
+
     void CHAT_CMD_FUNC(CmdCamera)
     {
         std::wstring arg1;
@@ -254,6 +262,7 @@ void CameraUnlockModule::DrawSettingsInternal()
     ImGui::Text("'/cam unlock' options");
     ImGui::Indent();
     ImGui::Checkbox("Fix height when moving forward", &settings.forward_fix_z);
+    ImGui::CheckboxWithHelp("Camera movement smoothing", &settings.camera_smoothing, "Smooths camera acceleration and deceleration using Guild Wars' native camera interpolation rate.");
     ImGui::InputFloat("Camera speed", &settings.cam_speed);
     ImGui::Unindent();
     if (ImGui::InputFloat("Camera max distance", &settings.cam_max_distance, 100.f, 100.f, "%.f")) {
@@ -300,6 +309,11 @@ bool CameraUnlockModule::WndProc(const UINT Message, const WPARAM wParam, const 
 }
 
 void CameraUnlockModule::Update(float delta) {
+    static float smoothed_forward = 0.f;
+    static float smoothed_vertical = 0.f;
+    static float smoothed_rotate = 0.f;
+    static float smoothed_side = 0.f;
+
     if (delta == 0.f) {
         return;
     }
@@ -348,10 +362,33 @@ void CameraUnlockModule::Update(float delta) {
             rotate = 0.f;
         }
 
+        if (settings.camera_smoothing) {
+            smoothed_forward = SmoothMovement(smoothed_forward, forward, delta, translation_smoothing_rate);
+            smoothed_vertical = SmoothMovement(smoothed_vertical, vertical, delta, translation_smoothing_rate);
+            smoothed_rotate = SmoothMovement(smoothed_rotate, rotate, delta, rotation_smoothing_rate);
+            smoothed_side = SmoothMovement(smoothed_side, side, delta, translation_smoothing_rate);
+            forward = smoothed_forward;
+            vertical = smoothed_vertical;
+            rotate = smoothed_rotate;
+            side = smoothed_side;
+        }
+        else {
+            smoothed_forward = forward;
+            smoothed_vertical = vertical;
+            smoothed_rotate = rotate;
+            smoothed_side = side;
+        }
+
         ForwardMovement(forward * delta * settings.cam_speed, !settings.forward_fix_z);
         VerticalMovement(vertical * delta * settings.cam_speed);
         RotateMovement(rotate * delta * rotation_speed);
         SideMovement(side * delta * settings.cam_speed);
         GW::CameraMgr::UpdateCameraPos();
+    }
+    else {
+        smoothed_forward = 0.f;
+        smoothed_vertical = 0.f;
+        smoothed_rotate = 0.f;
+        smoothed_side = 0.f;
     }
 }
