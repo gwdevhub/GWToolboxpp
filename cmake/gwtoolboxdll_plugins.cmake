@@ -77,6 +77,64 @@ if(GWTOOLBOX_BUILD_EXAMPLE_PLUGIN)
     add_tb_plugin(ExamplePlugin)
 endif()
 
+add_tb_plugin(DBBox)
+
+set(DBBOX_FEATURES
+    AgentPopTimer
+    ArmorSwap
+    ChestOpener
+    DeathPenaltyTimer
+    DhuumCalculator
+    Dialogs
+    HeartbeatPlugin
+    LootNotifier
+    PartyReorder
+    PitsSoulsWindow
+    ProjectileIndicator
+    ShadowstepPredictor
+    SkinChanger
+    Slowload
+    SpeedrunScriptingTools
+    TargetDetector
+    TrackerAdvanced)
+
+set(DBBOX_SOURCES
+    "${PROJECT_SOURCE_DIR}/plugins/Base/AsyncStringDecoder.cpp"
+    "${PROJECT_SOURCE_DIR}/plugins/Base/AsyncStringDecoder.h"
+    "${PROJECT_SOURCE_DIR}/plugins/Base/BackupManager.cpp"
+    "${PROJECT_SOURCE_DIR}/plugins/Base/BackupManager.h"
+    "${PROJECT_SOURCE_DIR}/plugins/Base/Pathing.cpp"
+    "${PROJECT_SOURCE_DIR}/plugins/Base/Pathing.h"
+    "${PROJECT_SOURCE_DIR}/plugins/Base/Rendering.cpp"
+    "${PROJECT_SOURCE_DIR}/plugins/Base/Rendering.h")
+
+file(GLOB SCRIPTING_SOURCES CONFIGURE_DEPENDS
+    "${PROJECT_SOURCE_DIR}/plugins/Scripting/*.h"
+    "${PROJECT_SOURCE_DIR}/plugins/Scripting/*.cpp")
+list(APPEND DBBOX_SOURCES ${SCRIPTING_SOURCES})
+
+foreach(FEATURE IN LISTS DBBOX_FEATURES)
+    file(GLOB FEATURE_SOURCES CONFIGURE_DEPENDS
+        "${PROJECT_SOURCE_DIR}/plugins/${FEATURE}/*.h"
+        "${PROJECT_SOURCE_DIR}/plugins/${FEATURE}/*.cpp")
+    list(APPEND DBBOX_SOURCES ${FEATURE_SOURCES})
+    target_include_directories(DBBox PRIVATE "${PROJECT_SOURCE_DIR}/plugins/${FEATURE}")
+endforeach()
+
+target_sources(DBBox PRIVATE ${DBBOX_SOURCES})
+find_path(DBBOX_EARCUT_INCLUDE_DIR "mapbox/earcut.hpp" REQUIRED)
+target_include_directories(DBBox PRIVATE
+    "${PROJECT_SOURCE_DIR}/plugins/Scripting"
+    "${DBBOX_EARCUT_INCLUDE_DIR}")
+target_compile_definitions(DBBox PRIVATE DBBOX_BUILD)
+target_compile_options(DBBox PRIVATE "/FI${PROJECT_SOURCE_DIR}/plugins/Base/stl.h")
+target_link_libraries(DBBox PRIVATE directxtexloader)
+
+add_custom_command(TARGET DBBox POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${PROJECT_SOURCE_DIR}/plugins/TrackerAdvanced/profiles"
+        "$<TARGET_FILE_DIR:DBBox>/TrackerAdvancedProfiles")
+
 # Bump this by hand whenever a new SCTracker build should be treated as required by the backend's
 # minimum-version check (X-Plugin-Version header, GET /plugin-version) - everything downstream of
 # this one variable (the compiled-in kPluginVersion constant and the version field of the

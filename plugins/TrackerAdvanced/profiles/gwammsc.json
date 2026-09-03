@@ -1,0 +1,5654 @@
+{
+  "schema": "trackeradvanced.profile",
+  "schema_version": 1,
+  "id": "gwammsc",
+  "name": "GWAMMSC 100% All 31 Character Titles",
+  "description": "All 31 character-specific titles, including LDOA",
+  "title_trackers": [
+    {
+      "title": "Survivor",
+      "hide_when_complete": true
+    }
+  ],
+  "actions": [
+    {
+      "id": 1,
+      "type": "travel",
+      "label": "Travel: Ascalon",
+      "destination": "ascalon"
+    },
+    {
+      "id": 2,
+      "type": "travel",
+      "label": "Travel: Piken",
+      "destination": "piken"
+    },
+    {
+      "id": 3,
+      "type": "travel",
+      "label": "Travel: LA",
+      "destination": "la"
+    },
+    {
+      "id": 4,
+      "type": "travel",
+      "label": "Travel: Heroes' Audience",
+      "destination": "heroes' audience"
+    },
+    {
+      "id": 5,
+      "type": "travel",
+      "label": "Travel: Destiny's Gorge",
+      "destination": "destiny's gorge"
+    },
+    {
+      "id": 6,
+      "type": "travel",
+      "label": "Travel: Augury Rock",
+      "destination": "augury"
+    },
+    {
+      "id": 7,
+      "type": "travel",
+      "label": "Travel: Dragon's Lair",
+      "destination": "dragon's lair"
+    },
+    {
+      "id": 8,
+      "type": "travel",
+      "label": "Travel: Iron Mines",
+      "destination": "iron mines"
+    },
+    {
+      "id": 9,
+      "type": "travel",
+      "label": "Travel: Droks",
+      "destination": "droknar"
+    },
+    {
+      "id": 10,
+      "type": "travel",
+      "label": "Travel: THK",
+      "destination": "thk"
+    },
+    {
+      "id": 11,
+      "type": "travel",
+      "label": "Travel: ToA",
+      "destination": "toa"
+    },
+    {
+      "id": 12,
+      "type": "travel",
+      "label": "Travel: Doomlore",
+      "destination": "doomlore"
+    },
+    {
+      "id": 13,
+      "type": "travel",
+      "label": "Travel: Gunnars",
+      "destination": "gunnars"
+    },
+    {
+      "id": 14,
+      "type": "travel",
+      "label": "Travel: Longeye",
+      "destination": "longeye"
+    },
+    {
+      "id": 15,
+      "type": "travel",
+      "label": "Travel: Sifhalla",
+      "destination": "sif"
+    },
+    {
+      "id": 16,
+      "type": "travel",
+      "label": "Travel: Umbral",
+      "destination": "umbral"
+    },
+    {
+      "id": 17,
+      "type": "travel",
+      "label": "Travel: Vlox",
+      "destination": "vlox"
+    },
+    {
+      "id": 18,
+      "type": "travel",
+      "label": "Travel: EotN",
+      "destination": "eotn"
+    },
+    {
+      "id": 19,
+      "type": "travel",
+      "label": "Travel: Boreal",
+      "destination": "boreal"
+    },
+    {
+      "id": 20,
+      "type": "travel",
+      "label": "Travel: Tarnished",
+      "destination": "tarnished"
+    },
+    {
+      "id": 21,
+      "type": "travel",
+      "label": "Travel: Rata",
+      "destination": "rata"
+    },
+    {
+      "id": 22,
+      "type": "travel",
+      "label": "Travel: Gadd",
+      "destination": "gadd"
+    },
+    {
+      "id": 23,
+      "type": "travel",
+      "label": "Travel: Olaf",
+      "destination": "olafstead"
+    },
+    {
+      "id": 24,
+      "type": "travel",
+      "label": "Travel: CTC",
+      "destination": "ctc"
+    },
+    {
+      "id": 25,
+      "type": "travel",
+      "label": "Travel: Kama",
+      "destination": "kama"
+    },
+    {
+      "id": 26,
+      "type": "travel",
+      "label": "Travel: Sunspear Hall",
+      "destination": "sunspear great hall"
+    },
+    {
+      "id": 27,
+      "type": "travel",
+      "label": "Travel: Champions Dawn",
+      "destination": "champions"
+    },
+    {
+      "id": 28,
+      "type": "travel",
+      "label": "Travel: Jokanur",
+      "destination": "jokanur"
+    },
+    {
+      "id": 29,
+      "type": "travel",
+      "label": "Travel: Beknur",
+      "destination": "beknur"
+    },
+    {
+      "id": 30,
+      "type": "travel",
+      "label": "Travel: Blacktide",
+      "destination": "blacktide"
+    },
+    {
+      "id": 31,
+      "type": "travel",
+      "label": "Travel: Consulate",
+      "destination": "consulate"
+    },
+    {
+      "id": 32,
+      "type": "travel",
+      "label": "Travel: Yohlon",
+      "destination": "yohlon"
+    },
+    {
+      "id": 33,
+      "type": "travel",
+      "label": "Travel: Sanctuary",
+      "destination": "sunspear sanctuary"
+    },
+    {
+      "id": 34,
+      "type": "travel",
+      "label": "Travel: Venta",
+      "destination": "venta"
+    },
+    {
+      "id": 35,
+      "type": "travel",
+      "label": "Travel: Kodonur",
+      "destination": "kodonur"
+    },
+    {
+      "id": 36,
+      "type": "travel",
+      "label": "Travel: Rilohn",
+      "destination": "rilohn"
+    },
+    {
+      "id": 37,
+      "type": "travel",
+      "label": "Travel: Grand Court",
+      "destination": "grand court"
+    },
+    {
+      "id": 38,
+      "type": "travel",
+      "label": "Travel: Tihark",
+      "destination": "tihark"
+    },
+    {
+      "id": 39,
+      "type": "travel",
+      "label": "Travel: Honur Hill",
+      "destination": "honur"
+    },
+    {
+      "id": 40,
+      "type": "travel",
+      "label": "Travel: Dzagonur",
+      "destination": "dzagonur"
+    },
+    {
+      "id": 41,
+      "type": "travel",
+      "label": "Travel: Kodash",
+      "destination": "kodash"
+    },
+    {
+      "id": 42,
+      "type": "travel",
+      "label": "Travel: Mihanu",
+      "destination": "mihanu"
+    },
+    {
+      "id": 43,
+      "type": "travel",
+      "label": "Travel: Nundu",
+      "destination": "nundu"
+    },
+    {
+      "id": 44,
+      "type": "travel",
+      "label": "Travel: Jennur",
+      "destination": "jennur"
+    },
+    {
+      "id": 45,
+      "type": "travel",
+      "label": "Travel: Gate of Deso",
+      "destination": "gate of deso"
+    },
+    {
+      "id": 46,
+      "type": "travel",
+      "label": "Travel: Sahlahja",
+      "destination": "remains of sah"
+    },
+    {
+      "id": 47,
+      "type": "travel",
+      "label": "Travel: GoP",
+      "destination": "gate of pain"
+    },
+    {
+      "id": 48,
+      "type": "travel",
+      "label": "Travel: GoM",
+      "destination": "gate of madness"
+    },
+    {
+      "id": 49,
+      "type": "travel",
+      "label": "Travel: Abaddon's Gate",
+      "destination": "abaddon's gate"
+    },
+    {
+      "id": 50,
+      "type": "travel",
+      "label": "Travel: Pogahn",
+      "destination": "pogahn"
+    },
+    {
+      "id": 51,
+      "type": "travel",
+      "label": "Travel: Dasha",
+      "destination": "dasha"
+    },
+    {
+      "id": 52,
+      "type": "travel",
+      "label": "Travel: Lair of the Forgotten",
+      "destination": "lair of the forgotten"
+    },
+    {
+      "id": 53,
+      "type": "travel",
+      "label": "Travel: Surmia",
+      "destination": "ruins of surmia"
+    },
+    {
+      "id": 54,
+      "type": "travel",
+      "label": "Travel: Borlis",
+      "destination": "borlis"
+    },
+    {
+      "id": 55,
+      "type": "travel",
+      "label": "Travel: GoK",
+      "destination": "gates of kryta"
+    },
+    {
+      "id": 56,
+      "type": "travel",
+      "label": "Travel: D'Alessio",
+      "destination": "d'alessio"
+    },
+    {
+      "id": 57,
+      "type": "travel",
+      "label": "Travel: Divinity",
+      "destination": "divinity"
+    },
+    {
+      "id": 58,
+      "type": "travel",
+      "label": "Travel: The Wilds",
+      "destination": "the wilds"
+    },
+    {
+      "id": 59,
+      "type": "travel",
+      "label": "Travel: Bloodstone",
+      "destination": "bloodstone"
+    },
+    {
+      "id": 60,
+      "type": "travel",
+      "label": "Travel: Aurora",
+      "destination": "aurora"
+    },
+    {
+      "id": 61,
+      "type": "travel",
+      "label": "Travel: Riverside",
+      "destination": "riverside"
+    },
+    {
+      "id": 62,
+      "type": "travel",
+      "label": "Travel: Sanctum",
+      "destination": "sanctum"
+    },
+    {
+      "id": 63,
+      "type": "travel",
+      "label": "Travel: Elona",
+      "destination": "elona"
+    },
+    {
+      "id": 64,
+      "type": "travel",
+      "label": "Travel: Thirsty",
+      "destination": "thirsty"
+    },
+    {
+      "id": 65,
+      "type": "travel",
+      "label": "Travel: Dunes",
+      "destination": "dunes"
+    },
+    {
+      "id": 66,
+      "type": "travel",
+      "label": "Travel: Ice Caves",
+      "destination": "ice caves"
+    },
+    {
+      "id": 67,
+      "type": "travel",
+      "label": "Travel: RoF",
+      "destination": "ring of fire"
+    },
+    {
+      "id": 68,
+      "type": "travel",
+      "label": "Travel: Abaddon's Mouth",
+      "destination": "abaddon's mouth"
+    },
+    {
+      "id": 69,
+      "type": "travel",
+      "label": "Travel: Hell",
+      "destination": "hell"
+    },
+    {
+      "id": 70,
+      "type": "travel",
+      "label": "Travel: Copperhammer",
+      "destination": "copperhammer"
+    },
+    {
+      "id": 71,
+      "type": "travel",
+      "label": "Travel: Citadel",
+      "destination": "granite"
+    },
+    {
+      "id": 72,
+      "type": "travel",
+      "label": "Travel: Vizunah",
+      "destination": "vizunah"
+    },
+    {
+      "id": 73,
+      "type": "travel",
+      "label": "Travel: Nahpui",
+      "destination": "nahpui"
+    },
+    {
+      "id": 74,
+      "type": "travel",
+      "label": "Travel: Kaineng",
+      "destination": "kaineng"
+    },
+    {
+      "id": 75,
+      "type": "travel",
+      "label": "Travel: Shadow's Passage",
+      "destination": "shadow's passage"
+    },
+    {
+      "id": 76,
+      "type": "travel",
+      "label": "Travel: Marketplace",
+      "destination": "marketplace"
+    },
+    {
+      "id": 77,
+      "type": "travel",
+      "label": "Travel: Seitung",
+      "destination": "seitung"
+    },
+    {
+      "id": 78,
+      "type": "travel",
+      "label": "Travel: SJM",
+      "destination": "shing jea monastery"
+    },
+    {
+      "id": 79,
+      "type": "travel",
+      "label": "Travel: Minister Cho",
+      "destination": "minister cho"
+    },
+    {
+      "id": 80,
+      "type": "travel",
+      "label": "Travel: Ran Musu",
+      "destination": "ran musu"
+    },
+    {
+      "id": 81,
+      "type": "travel",
+      "label": "Travel: Senji",
+      "destination": "senji"
+    },
+    {
+      "id": 82,
+      "type": "travel",
+      "label": "Travel: Zin Ku",
+      "destination": "zin ku"
+    },
+    {
+      "id": 83,
+      "type": "travel",
+      "label": "Travel: Tahnnakai",
+      "destination": "tahnnakai"
+    },
+    {
+      "id": 84,
+      "type": "travel",
+      "label": "Travel: Maatu",
+      "destination": "maatu"
+    },
+    {
+      "id": 85,
+      "type": "travel",
+      "label": "Travel: Arborstone",
+      "destination": "arborstone"
+    },
+    {
+      "id": 86,
+      "type": "travel",
+      "label": "Travel: Boreas",
+      "destination": "boreas"
+    },
+    {
+      "id": 87,
+      "type": "travel",
+      "label": "Travel: Zos Shivros",
+      "destination": "zos shivros"
+    },
+    {
+      "id": 88,
+      "type": "travel",
+      "label": "Travel: Breaker Hollow",
+      "destination": "breaker"
+    },
+    {
+      "id": 89,
+      "type": "travel",
+      "label": "Travel: Gyala",
+      "destination": "gyala"
+    },
+    {
+      "id": 90,
+      "type": "travel",
+      "label": "Travel: Leviathan Pits",
+      "destination": "leviathan"
+    },
+    {
+      "id": 91,
+      "type": "travel",
+      "label": "Travel: Seafarer",
+      "destination": "seafarer"
+    },
+    {
+      "id": 92,
+      "type": "travel",
+      "label": "Travel: Unwaking (Luxon)",
+      "destination": "unwaking waters (luxon)"
+    },
+    {
+      "id": 93,
+      "type": "travel",
+      "label": "Travel: Harvest Temple",
+      "destination": "harvest temple"
+    },
+    {
+      "id": 94,
+      "type": "travel",
+      "label": "Travel: Unwaking (Kurzick)",
+      "destination": "unwaking waters (kurzick)"
+    },
+    {
+      "id": 95,
+      "type": "travel",
+      "label": "Travel: Durheim",
+      "destination": "durheim"
+    },
+    {
+      "id": 96,
+      "type": "travel",
+      "label": "Travel: Vasburg",
+      "destination": "vasburg"
+    },
+    {
+      "id": 97,
+      "type": "travel",
+      "label": "Travel: Eternal Grove",
+      "destination": "eternal grove"
+    },
+    {
+      "id": 98,
+      "type": "travel",
+      "label": "Travel: Brauer",
+      "destination": "brauer"
+    },
+    {
+      "id": 99,
+      "type": "travel",
+      "label": "Travel: Lutgardis",
+      "destination": "lutgardis"
+    },
+    {
+      "id": 100,
+      "type": "travel",
+      "label": "Travel: HzH",
+      "destination": "hzh"
+    },
+    {
+      "id": 101,
+      "type": "travel",
+      "label": "Travel: Raisu",
+      "destination": "raisu"
+    },
+    {
+      "id": 102,
+      "type": "travel",
+      "label": "Travel: Imperial Sanctum",
+      "destination": "imperial sanctum"
+    },
+    {
+      "id": 103,
+      "type": "travel",
+      "label": "Travel: Chantry",
+      "destination": "chantry"
+    },
+    {
+      "id": 104,
+      "type": "hero_team_build",
+      "label": "Load: GWAMMSC 4 Man",
+      "name": "GWAMMSC 4 Man"
+    },
+    {
+      "id": 105,
+      "type": "hero_team_build",
+      "label": "Load: GWAMMSC 6 Man",
+      "name": "GWAMMSC 6 Man"
+    },
+    {
+      "id": 106,
+      "type": "hero_team_build",
+      "label": "Load: GWAMMSC 8 Man",
+      "name": "GWAMMSC 8 Man"
+    },
+    {
+      "id": 107,
+      "type": "player_build",
+      "label": "Load: TaO w/Cap Sig",
+      "team_build": "GWAMMSC",
+      "build": "TaO Cap Sig"
+    },
+    {
+      "id": 108,
+      "type": "player_build",
+      "label": "Load: Running",
+      "team_build": "GWAMMSC",
+      "build": "Running"
+    },
+    {
+      "id": 109,
+      "type": "player_build",
+      "label": "Load: TaO",
+      "team_build": "GWAMMSC",
+      "build": "TaO"
+    },
+    {
+      "id": 110,
+      "type": "player_build",
+      "label": "Load: TaO Augury",
+      "team_build": "GWAMMSC",
+      "build": "TaO Augury"
+    },
+    {
+      "id": 111,
+      "type": "player_build",
+      "label": "Load: Solo Dragon's Lair",
+      "team_build": "GWAMMSC",
+      "build": "Solo Dragon's Lair"
+    },
+    {
+      "id": 112,
+      "type": "player_build",
+      "label": "Load: Solo CotN",
+      "team_build": "GWAMMSC",
+      "build": "Solo CotN"
+    },
+    {
+      "id": 113,
+      "type": "player_build",
+      "label": "Load: Solo ATC",
+      "team_build": "GWAMMSC",
+      "build": "Solo ATC"
+    },
+    {
+      "id": 114,
+      "type": "hero_team_build",
+      "label": "Load: Koss 4 Man",
+      "name": "GWAMMSC Koss 4 Man"
+    },
+    {
+      "id": 115,
+      "type": "hero_team_build",
+      "label": "Load: Melonni 4 Man",
+      "name": "Melonni 4 Man"
+    },
+    {
+      "id": 116,
+      "type": "hero_team_build",
+      "label": "Load: Tahlkora 8 Man",
+      "name": "GWAMMSC Tahlkora 8 Man"
+    },
+    {
+      "id": 117,
+      "type": "hero_team_build",
+      "label": "Load: Dunkoro 8 Man",
+      "name": "GWAMMSC Dunkoro 8 Man"
+    },
+    {
+      "id": 118,
+      "type": "hero_team_build",
+      "label": "Load: Koss 8 Man",
+      "name": "GWAMMSC Koss 8 Man"
+    },
+    {
+      "id": 119,
+      "type": "hero_team_build",
+      "label": "Load: Zhed 8 Man",
+      "name": "GWAMMSC Zhed 8 Man"
+    },
+    {
+      "id": 120,
+      "type": "hero_team_build",
+      "label": "Load: Whispers 8 Man",
+      "name": "GWAMMSC Whispers 8 Man"
+    },
+    {
+      "id": 121,
+      "type": "player_build",
+      "label": "Load: TaO Tihark",
+      "team_build": "GWAMMSC",
+      "build": "TaO Tihark"
+    },
+    {
+      "id": 122,
+      "type": "hero_team_build",
+      "label": "Load: Koss Melonni 8 Man",
+      "name": "GWAMMSC Koss Melonni 8 Man"
+    },
+    {
+      "id": 123,
+      "type": "hero_team_build",
+      "label": "Load: Melonni 8 Man",
+      "name": "GWAMMSC Melonni 8 Man"
+    },
+    {
+      "id": 124,
+      "type": "hero_team_build",
+      "label": "Load: Morgahn 8 Man",
+      "name": "GWAMMSC Morgahn 8 Man"
+    },
+    {
+      "id": 125,
+      "type": "hero_team_build",
+      "label": "Load: Abaddon 8 Man",
+      "name": "GWAMMSC Abaddon 8 Man"
+    },
+    {
+      "id": 126,
+      "type": "hero_team_build",
+      "label": "Load: Margrid 8 Man",
+      "name": "GWAMMSC Margrid 8 Man"
+    },
+    {
+      "id": 127,
+      "type": "player_build",
+      "label": "Load: Solo GNW",
+      "team_build": "GWAMMSC",
+      "build": "Solo GNW"
+    },
+    {
+      "id": 128,
+      "type": "player_build",
+      "label": "Load: Solo Bloodstone Fen",
+      "team_build": "GWAMMSC",
+      "build": "Solo Bloodstone Fen"
+    },
+    {
+      "id": 129,
+      "type": "player_build",
+      "label": "Load: Mapping",
+      "team_build": "GWAMMSC",
+      "build": "Mapping"
+    },
+    {
+      "id": 130,
+      "type": "hero_team_build",
+      "label": "Load: Livia Gateclip",
+      "name": "GWAMMSC Livia Gateclip"
+    }
+  ],
+  "objectives": [
+    {
+      "id": 1,
+      "name": "LDOA",
+      "title_trackers": [
+        {
+          "title": "LDoA",
+          "hide_when_complete": false
+        }
+      ],
+      "tasks": [
+        {
+          "id": 1001,
+          "name": "Unlock Piken",
+          "expected_time_ms": 2163000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Piken Square"
+          },
+          "notes": [
+            "Take Town Crier Quest, turn in",
+            "Take War Preparations",
+            "Zone To Lakeside",
+            "[G] Trigger Althea dialog, run to Regent Valley",
+            "Take Ranger Test, turn in",
+            "Take Further Adventures",
+            "Take Adventure With An Ally, turn in",
+            "Take Gwen's Flute, turn in",
+            "Take Gifts for Althea, turn in",
+            "Take Mesmer's Burden, turn in",
+            "Get Mesmer Secondary",
+            "Take Across The Wall",
+            "[G] Zone to Regent Valley",
+            "Take Ivor's Quest, don't do it",
+            "Get Headpiece",
+            "Pop Berserker, kill all skale",
+            "[G] Zone to Lakeside",
+            "Take Hunter's Horn Quest",
+            "[G] Zone to Regent Valley",
+            "Take Pet Quest",
+            "Update Hunter's Horn",
+            "Pop Berserker, kill all skale to Foible's",
+            "Zone to Foible's",
+            "Turn in both of Aidan's quests",
+            "Travel to Ascalon",
+            "Zone to Northlands",
+            "Do Across the Wall",
+            "Zone to Lakeside",
+            "Turn in Across The Wall",
+            "Take Bastion in the North",
+            "Zone to Northlands",
+            "Pop Slayer Scroll, do Bastion in the North",
+            "Map Ascalon, turn in Bastion",
+            "Run to Piken"
+          ],
+          "action_ids": [
+            1
+          ]
+        },
+        {
+          "id": 1002,
+          "name": "Charr Farm to 14",
+          "expected_time_ms": 2589000,
+          "end_criterion": {
+            "type": "player_level",
+            "level": 14
+          },
+          "notes": [],
+          "action_ids": [
+            2
+          ],
+          "experience_tracker": {
+            "label": "Charr Tracker",
+            "arm_criterion": {
+              "type": "map_loaded",
+              "map": "Piken Square"
+            },
+            "increment_criterion": {
+              "type": "map_loaded",
+              "map": "Piken Square"
+            },
+            "goal_experience": 72800
+          }
+        },
+        {
+          "id": 1003,
+          "name": "Triple Charr to LDOA",
+          "expected_time_ms": 6720000,
+          "end_criterion": {
+            "type": "player_level",
+            "level": 20
+          },
+          "notes": [
+            "DO NOT FORGET TO MAP OUT ON BLAZE+TATE ALTS EACH RUN"
+          ],
+          "action_ids": [],
+          "experience_tracker": {
+            "label": "Vanguard Tracker",
+            "arm_criterion": {
+              "type": "map_loaded",
+              "map": "Piken Square"
+            },
+            "increment_criterion": {
+              "type": "map_loaded",
+              "map": "Piken Square"
+            },
+            "goal_experience": 140600
+          }
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Protector to LA",
+      "title_trackers": [
+        {
+          "title": "TyrianCarto",
+          "hide_when_complete": false
+        },
+        {
+          "title": "ProtectorTyria",
+          "hide_when_complete": false
+        }
+      ],
+      "tasks": [
+        {
+          "id": 1004,
+          "name": "Post Prep",
+          "expected_time_ms": 600000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "The Great Northern Wall"
+          },
+          "notes": [
+            "Buy Storage + Upgrade",
+            "Unlock Ranger Skills",
+            "All Ranger/Mesmer Elites except Quick Shot + Spike Trap",
+            "Whirling Defense, Throw Dirt, Dodge, Zojun's Haste",
+            "Sundering Attack, Penetrating Attack, Antidote Signet",
+            "Join Party w/alt as lead",
+            "Travel to GH -> Codex -> GTOB",
+            "Grab Merc",
+            "Rune out all Heroes",
+            "Travel to Ascalon",
+            "Buy 50al armor",
+            "Map Ascalon + Arena",
+            "Run to Great Northern Wall"
+          ],
+          "action_ids": [
+            1
+          ]
+        },
+        {
+          "id": 1005,
+          "name": "Great Northern Wall NM",
+          "expected_time_ms": 660000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "The Great Northern Wall",
+            "is_hard_mode": false
+          },
+          "notes": [
+            "DON'T FORGET BONUS ITEMS IN CHEST"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1006,
+          "name": "Fort Ranik NM",
+          "expected_time_ms": 360000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Fort Ranik",
+            "is_hard_mode": false
+          },
+          "notes": [],
+          "action_ids": []
+        },
+        {
+          "id": 1007,
+          "name": "Ruins of Surmia NM",
+          "expected_time_ms": 1260000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Ruins of Surmia",
+            "is_hard_mode": false
+          },
+          "notes": [],
+          "action_ids": [
+            104
+          ]
+        },
+        {
+          "id": 1008,
+          "name": "Nolani Academy NM",
+          "expected_time_ms": 865000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Nolani Academy",
+            "is_hard_mode": false
+          },
+          "notes": [],
+          "action_ids": [
+            104
+          ]
+        },
+        {
+          "id": 1009,
+          "name": "Borlis Pass NM",
+          "expected_time_ms": 1030000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Borlis Pass",
+            "is_hard_mode": false
+          },
+          "notes": [],
+          "action_ids": [
+            105
+          ]
+        },
+        {
+          "id": 1010,
+          "name": "Frost Gate NM",
+          "expected_time_ms": 1350000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "The Frost Gate",
+            "is_hard_mode": false
+          },
+          "notes": [],
+          "action_ids": [
+            105
+          ]
+        },
+        {
+          "id": 1011,
+          "name": "Gates of Kryta NM",
+          "expected_time_ms": 1200000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Gates of Kryta",
+            "is_hard_mode": false
+          },
+          "notes": [
+            "Pickup Journey's End quest on the way to GoK outpost"
+          ],
+          "action_ids": [
+            105
+          ]
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "Unlock TaO",
+      "title_trackers": [],
+      "tasks": [
+        {
+          "id": 1012,
+          "name": "LA -> Vizunah NM",
+          "expected_time_ms": 2280000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Vizunah Square",
+            "is_hard_mode": false
+          },
+          "notes": [
+            "Map LA",
+            "Take Sergio's Quest",
+            "Take Lionguard Figo's Quest",
+            "Take Len Caldoron's Quest",
+            "Do Sergio's Quest",
+            "Map the pier",
+            "Enter Kaineng",
+            "Buy Max Armor (2 sets + 1 chest, one for lightning set other for blessed set, extra chest needs blessed sup marksman)",
+            "Do Welcome to Cantha",
+            "Watch Vizunah Cutscene (turn skip cutscenes OFF)",
+            "Run from Kaineng to Marketplace, map west borders",
+            "Do Vizunah NM"
+          ],
+          "action_ids": [
+            106
+          ]
+        },
+        {
+          "id": 1013,
+          "name": "Nahpui Quarter NM",
+          "expected_time_ms": 1680000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Nahpui Quarter",
+            "is_hard_mode": false
+          },
+          "notes": [
+            "Don't forget quest to get into Nahpui"
+          ],
+          "action_ids": [
+            106
+          ]
+        },
+        {
+          "id": 1014,
+          "name": "Unlock Skills -> Go EotN",
+          "expected_time_ms": 1260000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Eye of the North"
+          },
+          "notes": [
+            "Unlock all Professions at Senji",
+            "Unlock all A/D/E/Mo/N/Rt/P/W Elites",
+            "Unlock Normal Skills",
+            "Jagged Strike, Fox Fangs, Death Blossom, Wild Strike",
+            "Death's Charge, Dark Prison, Dash, Heart of Shadow, Viper's Defense",
+            "Way of Perfection, Swap, Shadow of Haste, Deadly Paradox",
+            "Travel to LA",
+            "Do EotN Quest"
+          ],
+          "action_ids": [
+            3,
+            105
+          ]
+        },
+        {
+          "id": 1015,
+          "name": "Unlock PvE Skills",
+          "expected_time_ms": 1800000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Lion's Arch"
+          },
+          "notes": [
+            "Run to Gunnar's",
+            "Buy Signet of Capture from skills person",
+            "Run to Sifhalla",
+            "Take DStab + YMLAD quests",
+            "Zone to Drakkar Lake",
+            "Do DStab + YMLAD quests",
+            "Run to Doomlore",
+            "Pull out Proof of Legend",
+            "Cap TaO",
+            "Go LA"
+          ],
+          "action_ids": [
+            3,
+            106,
+            107
+          ]
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "Protector to Ring of Fire",
+      "title_trackers": [
+        {
+          "title": "ProtectorTyria",
+          "hide_when_complete": false
+        },
+        {
+          "title": "TyrianCarto",
+          "hide_when_complete": false
+        }
+      ],
+      "tasks": [
+        {
+          "id": 1016,
+          "name": "D'Alessio Seaboard NM",
+          "expected_time_ms": 823000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "D'Alessio Seaboard",
+            "is_hard_mode": false
+          },
+          "notes": [],
+          "action_ids": [
+            105
+          ]
+        },
+        {
+          "id": 1017,
+          "name": "Divinity Coast NM",
+          "expected_time_ms": 671000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Divinity Coast",
+            "is_hard_mode": false
+          },
+          "notes": [],
+          "action_ids": [
+            105
+          ]
+        },
+        {
+          "id": 1018,
+          "name": "Druid's Overlook -> The Wilds",
+          "expected_time_ms": 150000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "The Wilds"
+          },
+          "notes": [],
+          "action_ids": [
+            105
+          ]
+        },
+        {
+          "id": 1019,
+          "name": "The Wilds NM",
+          "expected_time_ms": 1260000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "The Wilds",
+            "is_hard_mode": false
+          },
+          "notes": [],
+          "action_ids": [
+            105
+          ]
+        },
+        {
+          "id": 1020,
+          "name": "Bloodstone Fen NM",
+          "expected_time_ms": 853000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Bloodstone Fen",
+            "is_hard_mode": false
+          },
+          "notes": [],
+          "action_ids": [
+            105,
+            108
+          ]
+        },
+        {
+          "id": 1021,
+          "name": "Quarrel Falls -> Aurora Glade",
+          "expected_time_ms": 600000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Aurora Glade"
+          },
+          "notes": [
+            "Don't forget to map the outpost's north side"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1022,
+          "name": "Aurora Glade NM",
+          "expected_time_ms": 720000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Aurora Glade",
+            "is_hard_mode": false
+          },
+          "notes": [],
+          "action_ids": []
+        },
+        {
+          "id": 1023,
+          "name": "HoD -> Riverside",
+          "expected_time_ms": 420000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Riverside Province"
+          },
+          "notes": [
+            "Map Henge of Denravi",
+            "Run to Shadow to go to Riverside (map eastern edge)"
+          ],
+          "action_ids": [
+            105
+          ]
+        },
+        {
+          "id": 1024,
+          "name": "Riverside Province NM",
+          "expected_time_ms": 1215000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Riverside Province",
+            "is_hard_mode": false
+          },
+          "notes": [],
+          "action_ids": [
+            105
+          ]
+        },
+        {
+          "id": 1025,
+          "name": "Sanctum Cay NM",
+          "expected_time_ms": 970000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Sanctum Cay",
+            "is_hard_mode": false
+          },
+          "notes": [],
+          "action_ids": [
+            105
+          ]
+        },
+        {
+          "id": 1026,
+          "name": "To Elona Reach",
+          "expected_time_ms": 900000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Elona Reach"
+          },
+          "notes": [
+            "Map Amnoon",
+            "Run to Seeker's Passage (map edges)",
+            "Map all edges of Diviner's Ascent",
+            "Zone into Elona Reach when done"
+          ],
+          "action_ids": [
+            105,
+            108
+          ]
+        },
+        {
+          "id": 1027,
+          "name": "Elona Reach NM",
+          "expected_time_ms": 240000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Elona Reach",
+            "is_hard_mode": false
+          },
+          "notes": [],
+          "action_ids": [
+            105,
+            108
+          ]
+        },
+        {
+          "id": 1028,
+          "name": "To Thirsty River",
+          "expected_time_ms": 508000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Thirsty River"
+          },
+          "notes": [],
+          "action_ids": [
+            105,
+            108
+          ]
+        },
+        {
+          "id": 1029,
+          "name": "Thirsty River NM",
+          "expected_time_ms": 340000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Thirsty River",
+            "is_hard_mode": false
+          },
+          "notes": [],
+          "action_ids": [
+            105,
+            109
+          ]
+        },
+        {
+          "id": 1030,
+          "name": "To Dunes",
+          "expected_time_ms": 434000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Dunes of Despair"
+          },
+          "notes": [],
+          "action_ids": [
+            105,
+            108
+          ]
+        },
+        {
+          "id": 1031,
+          "name": "Dunes of Despair NM",
+          "expected_time_ms": 1070000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Dunes of Despair",
+            "is_hard_mode": false
+          },
+          "notes": [
+            "Don't forget to map everything!"
+          ],
+          "action_ids": [
+            105,
+            109
+          ]
+        },
+        {
+          "id": 1032,
+          "name": "Augury Rock NM/HM",
+          "expected_time_ms": 92000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Augury Rock",
+            "is_hard_mode": true
+          },
+          "notes": [],
+          "action_ids": [
+            110
+          ]
+        },
+        {
+          "id": 1033,
+          "name": "1st Attribute Quest -> TOPK",
+          "expected_time_ms": 720000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "The Dragon's Lair"
+          },
+          "notes": [
+            "Travel to Heroes' Audience",
+            "Take Elementalist Path quest/turn in",
+            "Travel to Destiny's Gorge",
+            "Take The Forgotten ones",
+            "Travel to Augury Rock",
+            "Turn in at Sariss",
+            "Take/Turn in Forgotten Wisdom",
+            "Travel to Dragon's Lair",
+            "Zone to TOPK"
+          ],
+          "action_ids": [
+            4,
+            5,
+            6,
+            7,
+            108,
+            105
+          ]
+        },
+        {
+          "id": 1034,
+          "name": "Dragon's Lair NM",
+          "expected_time_ms": 700000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "The Dragon's Lair",
+            "is_hard_mode": false
+          },
+          "notes": [],
+          "action_ids": [
+            106,
+            111
+          ]
+        },
+        {
+          "id": 1035,
+          "name": "Droks -> Ice Caves",
+          "expected_time_ms": 420000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Ice Caves of Sorrow"
+          },
+          "notes": [
+            "Map Droks",
+            "Take Seeking the Seer",
+            "Take The Hero's Challenge"
+          ],
+          "action_ids": [
+            108
+          ]
+        },
+        {
+          "id": 1036,
+          "name": "Ice Caves of Sorrow NM",
+          "expected_time_ms": 1070000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Ice Caves of Sorrow",
+            "is_hard_mode": false
+          },
+          "notes": [],
+          "action_ids": [
+            106,
+            109
+          ]
+        },
+        {
+          "id": 1037,
+          "name": "Iron Mines of Moladune NM",
+          "expected_time_ms": 1040000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Iron Mines of Moladune",
+            "is_hard_mode": false
+          },
+          "notes": [
+            "Don't forget to infuse!",
+            "Map infuse route fully"
+          ],
+          "action_ids": [
+            106,
+            109
+          ]
+        },
+        {
+          "id": 1038,
+          "name": "2nd Attribute Quest -> THK NM",
+          "expected_time_ms": 1580000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Thunderhead Keep",
+            "is_hard_mode": false
+          },
+          "notes": [
+            "Travel to Iron Mines of Moladune",
+            "Run to Copperhammer Mines",
+            "Do Attribute Quest",
+            "Travel to Droknar's Forge",
+            "Turn in Attribute Quest",
+            "Travel to Thunderhead Keep",
+            "Do THK NM",
+            "Don't forget to map!"
+          ],
+          "action_ids": [
+            8,
+            9,
+            10,
+            108,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1039,
+          "name": "VQ - Perdition Rock",
+          "expected_time_ms": 1443000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Ring of Fire"
+          },
+          "notes": [
+            "Don't forget Ring of Fire quest!"
+          ],
+          "action_ids": [
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1040,
+          "name": "VQ - Witman's Folly",
+          "expected_time_ms": 691000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Port Sledge"
+          },
+          "notes": [
+            "End at Port Sledge"
+          ],
+          "action_ids": [
+            109,
+            106
+          ]
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "Prophecies VQ pt 1",
+      "title_trackers": [
+        {
+          "title": "TyrianCarto",
+          "hide_when_complete": false
+        },
+        {
+          "title": "VanquisherTyria",
+          "hide_when_complete": false
+        }
+      ],
+      "tasks": [
+        {
+          "id": 1041,
+          "name": "Watchtower Coast VQ",
+          "expected_time_ms": 1094000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Beetletun"
+          },
+          "notes": [
+            "end at Beetletun"
+          ],
+          "action_ids": [
+            109,
+            105
+          ]
+        },
+        {
+          "id": 1042,
+          "name": "ToA -> Start VQ",
+          "expected_time_ms": 840000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Talmark Wilderness"
+          },
+          "notes": [
+            "Run to Bergen Hot Springs (map it)",
+            "Run to ToA",
+            "Swap to Hard Mode",
+            "Run to Talmark Wilderness"
+          ],
+          "action_ids": [
+            108,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1043,
+          "name": "VQ - Talmark Wilderness",
+          "expected_time_ms": 1427000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Tears of the Fallen"
+          },
+          "notes": [
+            "Next -> Tears of the Fallen"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1044,
+          "name": "VQ - Tears of the Fallen",
+          "expected_time_ms": 434000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Twin Serpent Lakes"
+          },
+          "notes": [
+            "Next -> Twin Serpent Lakes"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1045,
+          "name": "VQ - Twin Serpent Lakes",
+          "expected_time_ms": 945000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Stingray Strand"
+          },
+          "notes": [
+            "Next -> Stingray Strand"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1046,
+          "name": "VQ - Stingray Strand",
+          "expected_time_ms": 1500000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Majesty's Rest"
+          },
+          "notes": [
+            "Next -> Majesty's Rest"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1047,
+          "name": "VQ - Majesty's Rest",
+          "expected_time_ms": 834000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Sage Lands"
+          },
+          "notes": [
+            "Next -> Sage Lands"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1048,
+          "name": "VQ - Sage Lands",
+          "expected_time_ms": 1713000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Mamnoon Lagoon"
+          },
+          "notes": [
+            "Next -> Mamnoon Lagoon"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1049,
+          "name": "VQ - Mamnoon Lagoon",
+          "expected_time_ms": 323000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Silverwood"
+          },
+          "notes": [
+            "Next -> Silverwood"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1050,
+          "name": "VQ - Silverwood",
+          "expected_time_ms": 1549000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Reed Bog"
+          },
+          "notes": [
+            "Next -> Reed Bog"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1051,
+          "name": "VQ - Reed Bog",
+          "expected_time_ms": 590000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "The Falls"
+          },
+          "notes": [
+            "Next -> The Falls"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1052,
+          "name": "VQ - The Falls",
+          "expected_time_ms": 1725000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Ettin's Back"
+          },
+          "notes": [
+            "Next -> Ettin's Back"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1053,
+          "name": "VQ - Ettin's Back",
+          "expected_time_ms": 1416000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Dry Top"
+          },
+          "notes": [
+            "Next -> Dry Top"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1054,
+          "name": "VQ - Dry Top",
+          "expected_time_ms": 351000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Tangle Root"
+          },
+          "notes": [
+            "Next -> Tangle Root"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1055,
+          "name": "VQ - Tangle Root",
+          "expected_time_ms": 1495000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Temple of the Ages"
+          },
+          "notes": [
+            "End at Maguuma Stade",
+            "Map Back to ToA"
+          ],
+          "action_ids": [
+            11
+          ]
+        },
+        {
+          "id": 1056,
+          "name": "VQ - The Black Curtain",
+          "expected_time_ms": 1666000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Kessex Peak"
+          },
+          "notes": [
+            "Next -> Kessex Peak"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1057,
+          "name": "VQ - Kessex Peak",
+          "expected_time_ms": 1675000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Temple of the Ages"
+          },
+          "notes": [
+            "Map Back to ToA",
+            "Run to Cursed Lands"
+          ],
+          "action_ids": [
+            11
+          ]
+        },
+        {
+          "id": 1058,
+          "name": "VQ - Cursed Lands",
+          "expected_time_ms": 455000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Nebo Terrace"
+          },
+          "notes": [
+            "Next -> Nebo Terrace"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1059,
+          "name": "VQ - Nebo Terrace",
+          "expected_time_ms": 1011000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "North Kryta Province"
+          },
+          "notes": [
+            "Next -> North Kryta Province"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1060,
+          "name": "VQ - North Kryta Province",
+          "expected_time_ms": 1163000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Scoundrel's Rise"
+          },
+          "notes": [
+            "Next -> Scoundrel's Rise"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1061,
+          "name": "VQ - Scoundrel's Rise",
+          "expected_time_ms": 378000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Griffon's Mouth"
+          },
+          "notes": [
+            "Next -> Griffon's Mouth"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1062,
+          "name": "VQ - Griffon's Mouth",
+          "expected_time_ms": 320000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Deldrimor Bowl"
+          },
+          "notes": [
+            "Next -> Deldrimor Bowl"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1063,
+          "name": "VQ - Deldrimor Bowl",
+          "expected_time_ms": 1388000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Anvil Rock"
+          },
+          "notes": [
+            "Next -> Anvil Rock"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1064,
+          "name": "VQ - Anvil Rock",
+          "expected_time_ms": 1738000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Iron Horse Mine"
+          },
+          "notes": [
+            "Next -> Iron Horse Mine"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1065,
+          "name": "VQ - Iron Horse Mine",
+          "expected_time_ms": 1546000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Traveler's Vale"
+          },
+          "notes": [
+            "Next -> Traveler's Vale"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1066,
+          "name": "VQ - Traveler's Vale",
+          "expected_time_ms": 895000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Ascalon Foothills"
+          },
+          "notes": [
+            "Next -> Ascalon Foothills"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1067,
+          "name": "VQ - Ascalon Foothills",
+          "expected_time_ms": 319000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Flame Temple Corridor"
+          },
+          "notes": [
+            "Next -> Flame Temple Corridor"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1068,
+          "name": "VQ - Flame Temple Corridor",
+          "expected_time_ms": 627000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Dragon's Gullet"
+          },
+          "notes": [
+            "Next -> Dragon's Gullet"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1069,
+          "name": "VQ - Dragon's Gullet",
+          "expected_time_ms": 1500000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Diessa Lowlands"
+          },
+          "notes": [
+            "Next -> Diessa Lowlands"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1070,
+          "name": "VQ - Diessa Lowlands",
+          "expected_time_ms": 2044000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "The Breach"
+          },
+          "notes": [
+            "Next -> The Breach"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1071,
+          "name": "VQ - The Breach",
+          "expected_time_ms": 886000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Old Ascalon"
+          },
+          "notes": [
+            "Next -> Old Ascalon"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1072,
+          "name": "VQ - Old Ascalon",
+          "expected_time_ms": 1373000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Regent Valley"
+          },
+          "notes": [
+            "Next -> Regent Valley"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1073,
+          "name": "VQ - Regent Valley",
+          "expected_time_ms": 1280000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Pockmark Flats"
+          },
+          "notes": [
+            "Next -> Pockmark Flats"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1074,
+          "name": "VQ - Pockmark Flats",
+          "expected_time_ms": 1382000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Eastern Frontier"
+          },
+          "notes": [
+            "Next -> Eastern Frontier"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1075,
+          "name": "VQ - Eastern Frontier",
+          "expected_time_ms": 1402000,
+          "end_criterion": {
+            "type": "vanquish_complete",
+            "map": "Eastern Frontier"
+          },
+          "notes": [
+            "Travel to"
+          ],
+          "action_ids": []
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "name": "Master of the North",
+      "title_trackers": [
+        {
+          "title": "MasterOfTheNorth",
+          "hide_when_complete": false
+        },
+        {
+          "title": "Vanguard",
+          "hide_when_complete": false
+        },
+        {
+          "title": "Norn",
+          "hide_when_complete": false
+        },
+        {
+          "title": "Asuran",
+          "hide_when_complete": false
+        },
+        {
+          "title": "Deldrimor",
+          "hide_when_complete": false
+        }
+      ],
+      "tasks": [
+        {
+          "id": 1076,
+          "name": "ATC NM/HM",
+          "expected_time_ms": 544000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Against the Charr",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "TURN OFF AUTO SKIP",
+            "Alt Solos"
+          ],
+          "action_ids": [
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1077,
+          "name": "Warband of Brothers NM/HM",
+          "expected_time_ms": 909000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Warband of Brothers",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Alt Runs lvl 1 and 2, solos lvl 3"
+          ],
+          "action_ids": [
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1078,
+          "name": "CoF NM/HM",
+          "expected_time_ms": 1363000,
+          "end_criterion": {
+            "type": "dungeon_complete",
+            "dungeon": "Cathedral of Flames",
+            "is_hard_mode": true
+          },
+          "notes": [],
+          "action_ids": []
+        },
+        {
+          "id": 1079,
+          "name": "Assault on the Stronghold NM/HM",
+          "expected_time_ms": 746000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Assault on the Stronghold",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "TURN OFF AUTO SKIP",
+            "Travel to Doomlore Shrine"
+          ],
+          "action_ids": [
+            12,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1080,
+          "name": "Honor Quest -> Rragar NM",
+          "expected_time_ms": 1800000,
+          "end_criterion": {
+            "type": "dungeon_complete",
+            "dungeon": "Rragar's Menagerie",
+            "is_hard_mode": false
+          },
+          "notes": [
+            "There are 2 dungeons in this sub-objective, so we need to make sure we don't split until Rragar's is completed, specifically",
+            "Bring Alt Runner"
+          ],
+          "action_ids": [
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1081,
+          "name": "Kilroy NM/HM",
+          "expected_time_ms": 760000,
+          "end_criterion": {
+            "type": "dungeon_complete",
+            "dungeon": "Fronis Irontoe's Lair",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Travel to Gunnar's Hold",
+            "DROP QUEST BETWEEN DUNGEON RUNS"
+          ],
+          "action_ids": [
+            13,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1082,
+          "name": "Ooze Pit NM/HM",
+          "expected_time_ms": 943000,
+          "end_criterion": {
+            "type": "dungeon_complete",
+            "dungeon": "Ooze Pit",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Travel to Longeye's Ledge"
+          ],
+          "action_ids": [
+            14,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1083,
+          "name": "Darkrime NM/HM",
+          "expected_time_ms": 1755000,
+          "end_criterion": {
+            "type": "dungeon_complete",
+            "dungeon": "Darkrime Delves",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Travel to Longeye's Ledge",
+            "DROP QUEST BETWEEN DUNGEON RUNS"
+          ],
+          "action_ids": [
+            14,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1084,
+          "name": "Frostmaw NM/HM",
+          "expected_time_ms": 2847000,
+          "end_criterion": {
+            "type": "dungeon_complete",
+            "dungeon": "Frostmaw's Burrows",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Travel to Sifhalla",
+            "DROP QUEST BETWEEN DUNGEON RUNS"
+          ],
+          "action_ids": [
+            15,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1085,
+          "name": "Sepulchre NM/HM",
+          "expected_time_ms": 905000,
+          "end_criterion": {
+            "type": "dungeon_complete",
+            "dungeon": "Sepulchre of Dragrimmar",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Alt runs lvl 1, heroway lvl 2",
+            "Travel to Sifhalla",
+            "DROP QUEST BETWEEN DUNGEON RUNS"
+          ],
+          "action_ids": [
+            15,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1086,
+          "name": "Curse of the Nornbear NM/HM",
+          "expected_time_ms": 829000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Curse of the Nornbear",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Travel to Sifhalla"
+          ],
+          "action_ids": [
+            15,
+            112,
+            106
+          ]
+        },
+        {
+          "id": 1087,
+          "name": "BWB NM/HM",
+          "expected_time_ms": 1197000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Blood Washes Blood",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Alt Runs w/Ursan",
+            "Travel to Longeye's Ledge",
+            "Flag Heroes at Shrine, have alt pop Dreamy",
+            "Run to Quest Giver on first time, take q while heroes are capturing shrine"
+          ],
+          "action_ids": [
+            14,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1088,
+          "name": "Run to Olafstead",
+          "expected_time_ms": 360000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Olafstead"
+          },
+          "notes": [],
+          "action_ids": [
+            108,
+            106
+          ]
+        },
+        {
+          "id": 1089,
+          "name": "A Gate Too Far NM/HM",
+          "expected_time_ms": 967000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "A Gate Too Far",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Alt Gates w/VoS level 1"
+          ],
+          "action_ids": [
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1090,
+          "name": "Raven's Point NM/HM",
+          "expected_time_ms": 2054000,
+          "end_criterion": {
+            "type": "dungeon_complete",
+            "dungeon": "Raven's Point",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Travel to Gunnar's Hold",
+            "DROP QUEST BETWEEN DUNGEON RUNS"
+          ],
+          "action_ids": [
+            13,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1091,
+          "name": "Run to Umbral Grotto",
+          "expected_time_ms": 286000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Umbral Grotto"
+          },
+          "notes": [],
+          "action_ids": [
+            108,
+            106
+          ]
+        },
+        {
+          "id": 1092,
+          "name": "Snowman NM/HM",
+          "expected_time_ms": 1088000,
+          "end_criterion": {
+            "type": "dungeon_complete",
+            "dungeon": "Secret Lair of the Snowmen",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Take Vloxen Quest",
+            "Turn in Map Quest",
+            "DROP QUEST BETWEEN DUNGEON RUNS"
+          ],
+          "action_ids": [
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1093,
+          "name": "Run to Vlox Falls",
+          "expected_time_ms": 91000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Vlox's Falls"
+          },
+          "notes": [
+            "Take all 3 Asuran Quests here"
+          ],
+          "action_ids": [
+            108,
+            106
+          ]
+        },
+        {
+          "id": 1094,
+          "name": "Vloxen Excavations NM/HM",
+          "expected_time_ms": 1923000,
+          "end_criterion": {
+            "type": "dungeon_complete",
+            "dungeon": "Vloxen Excavations",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Travel to Umbral after NM run",
+            "Map Back to Vlox Falls",
+            "DROP QUEST BETWEEN DUNGEON RUNS"
+          ],
+          "action_ids": [
+            16,
+            17,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1095,
+          "name": "Shards of Orr NM/HM",
+          "expected_time_ms": 3074000,
+          "end_criterion": {
+            "type": "dungeon_complete",
+            "dungeon": "Shards of Orr",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Normal Mode -> Alt Solos lvl 1-2, Heroway lvl 3",
+            "Hard Mode -> Alt Solos all",
+            "DROP QUEST BETWEEN DUNGEON RUNS"
+          ],
+          "action_ids": [
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1096,
+          "name": "Run to Gadd's Encampment",
+          "expected_time_ms": 360000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Gadd's Encampment"
+          },
+          "notes": [
+            "Take Cipher quest in Tarnished Haven"
+          ],
+          "action_ids": [
+            108,
+            106
+          ]
+        },
+        {
+          "id": 1097,
+          "name": "Finding the Bloodstone NM/HM",
+          "expected_time_ms": 1041000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Finding the Bloodstone",
+            "is_hard_mode": true
+          },
+          "notes": [],
+          "action_ids": [
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1098,
+          "name": "Bogroot Growths NM",
+          "expected_time_ms": 780000,
+          "end_criterion": {
+            "type": "dungeon_complete",
+            "dungeon": "Bogroot Growths",
+            "is_hard_mode": false
+          },
+          "notes": [
+            "Alt gates lvl 1"
+          ],
+          "action_ids": [
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1099,
+          "name": "Bloodstone Caves NM/HM",
+          "expected_time_ms": 1160000,
+          "end_criterion": {
+            "type": "dungeon_complete",
+            "dungeon": "Bloodstone Caves",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Heroway lvl 3"
+          ],
+          "action_ids": [
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1100,
+          "name": "Run to Rata Sum",
+          "expected_time_ms": 600000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Rata Sum"
+          },
+          "notes": [
+            "Take Cipher quest in Tarnished Haven"
+          ],
+          "action_ids": [
+            108,
+            106
+          ]
+        },
+        {
+          "id": 1101,
+          "name": "Elusive Golemancer NM/HM",
+          "expected_time_ms": 1085000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "The Elusive Golemancer",
+            "is_hard_mode": false
+          },
+          "notes": [
+            "DO HARD MODE FIRST FOR QUICK TP"
+          ],
+          "action_ids": [
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1102,
+          "name": "GOLEM NM/HM",
+          "expected_time_ms": 1411000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Genius Operated Living Enchanted Manifestation",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Flag heroes at portal for quick port",
+            "Alt triggers dialog"
+          ],
+          "action_ids": [
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1103,
+          "name": "Oola's Lab NM/HM",
+          "expected_time_ms": 1589000,
+          "end_criterion": {
+            "type": "dungeon_complete",
+            "dungeon": "Oola's Lab",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Heroway boss in Normal Mode because stupid AI spams the Unstable Pulse"
+          ],
+          "action_ids": [
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1104,
+          "name": "Arachni's Haunt NM/HM",
+          "expected_time_ms": 2791000,
+          "end_criterion": {
+            "type": "dungeon_complete",
+            "dungeon": "Arachni's Haunt",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Have fun!"
+          ],
+          "action_ids": [
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1105,
+          "name": "HotS HM",
+          "expected_time_ms": 480000,
+          "end_criterion": {
+            "type": "dungeon_complete",
+            "dungeon": "Heart of the Shiverpeaks",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Prep an alt Derv to be at this quest and run lvl 1 and 2, need quest to be able to activate kegs"
+          ],
+          "action_ids": [
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1106,
+          "name": "Destruction's Depths NM/HM",
+          "expected_time_ms": 1655000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Destruction's Depths",
+            "is_hard_mode": true
+          },
+          "notes": [],
+          "action_ids": [
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1107,
+          "name": "A Time For Heroes NM/HM",
+          "expected_time_ms": 240000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "A Time For Heroes",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Have fun!"
+          ],
+          "action_ids": [
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1108,
+          "name": "Heart of the Shiverpeaks NM",
+          "expected_time_ms": 600000,
+          "end_criterion": {
+            "type": "dungeon_complete",
+            "dungeon": "Heart of the Shiverpeaks",
+            "is_hard_mode": false
+          },
+          "notes": [
+            "Alt runs 1-2, Heroway lvl 3"
+          ],
+          "action_ids": [
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1109,
+          "name": "Slavers' Exile NM/HM",
+          "expected_time_ms": 7777000,
+          "end_criterion": {
+            "type": "dungeon_complete",
+            "dungeon": "Slavers' Exile",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Bring Solo Alt for 2nd full run",
+            "Kill 1st group in Duncan's Room (well of the profane spammers)",
+            "Heroway Normal Mode"
+          ],
+          "action_ids": [
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1110,
+          "name": "Prep for VQs",
+          "expected_time_ms": 240000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Longeye's Ledge"
+          },
+          "notes": [
+            "Travel to EotN",
+            "Turn in NM Mission book to Vanguard",
+            "Travel to Gunnar's Hold",
+            "Turn in NM Dungeon book to Delver",
+            "Travel to Longeye's Ledge"
+          ],
+          "action_ids": [
+            18,
+            13,
+            14
+          ]
+        },
+        {
+          "id": 1111,
+          "name": "VQ - Grothmar Wardowns",
+          "expected_time_ms": 1285000,
+          "end_criterion": {
+            "type": "vanquish_complete",
+            "map": "Grothmar Wardowns"
+          },
+          "notes": [],
+          "action_ids": [
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1112,
+          "name": "VQ - Dalada Uplands",
+          "expected_time_ms": 1481000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Sacnoth Valley"
+          },
+          "notes": [
+            "Zone into Sacnoth VQ on completion"
+          ],
+          "action_ids": [
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1113,
+          "name": "VQ - Sacnoth Valley",
+          "expected_time_ms": 2477000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Catacombs of Kathandrax"
+          },
+          "notes": [
+            "Zone into Kath on completion"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1114,
+          "name": "Catacombs of Kathandrax HM",
+          "expected_time_ms": 1501000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Sacnoth Valley"
+          },
+          "notes": [
+            "Zone into Rragar's Menagerie once ported out via chest timer"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1115,
+          "name": "Rragar's Menagerie HM",
+          "expected_time_ms": 1800000,
+          "end_criterion": {
+            "type": "dungeon_complete",
+            "dungeon": "Rragar's Menagerie",
+            "is_hard_mode": true
+          },
+          "notes": [],
+          "action_ids": []
+        },
+        {
+          "id": 1116,
+          "name": "VQ - Bjora Marches",
+          "expected_time_ms": 1598000,
+          "end_criterion": {
+            "type": "vanquish_complete",
+            "map": "Bjora Marches"
+          },
+          "notes": [
+            "Travel to Sifhalla"
+          ],
+          "action_ids": [
+            15,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1117,
+          "name": "VQ - Drakkar Lake",
+          "expected_time_ms": 2319000,
+          "end_criterion": {
+            "type": "vanquish_complete",
+            "map": "Drakkar Lake"
+          },
+          "notes": [
+            "Travel to Sifhalla"
+          ],
+          "action_ids": [
+            15,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1118,
+          "name": "VQ - Norrhart Domains",
+          "expected_time_ms": 1762000,
+          "end_criterion": {
+            "type": "vanquish_complete",
+            "map": "Norrhart Domains"
+          },
+          "notes": [
+            "Travel to Gunnar's Hold"
+          ],
+          "action_ids": [
+            13,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1119,
+          "name": "VQ - Ice Cliff Chasms",
+          "expected_time_ms": 1032000,
+          "end_criterion": {
+            "type": "vanquish_complete",
+            "map": "Ice Cliff Chasms"
+          },
+          "notes": [
+            "Travel to Boreal Station"
+          ],
+          "action_ids": [
+            19,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1120,
+          "name": "VQ - Alcazia Tangle",
+          "expected_time_ms": 1421000,
+          "end_criterion": {
+            "type": "vanquish_complete",
+            "map": "Alcazia Tangle"
+          },
+          "notes": [
+            "Travel to Tarnished Haven",
+            "Don't forget to do Cipher quest!"
+          ],
+          "action_ids": [
+            20,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1121,
+          "name": "VQ - Magus Stones",
+          "expected_time_ms": 1786000,
+          "end_criterion": {
+            "type": "vanquish_complete",
+            "map": "Magus Stones"
+          },
+          "notes": [
+            "Travel to Tarnished Haven",
+            "Pickup all Cipher quests",
+            "Travel to Rata Sum",
+            "Don't forget to do Cipher quest!"
+          ],
+          "action_ids": [
+            20,
+            21,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1122,
+          "name": "VQ - Riven Earth",
+          "expected_time_ms": 1602000,
+          "end_criterion": {
+            "type": "vanquish_complete",
+            "map": "Riven Earth"
+          },
+          "notes": [
+            "Travel to Rata Sum",
+            "Don't forget to do Cipher quest!"
+          ],
+          "action_ids": [
+            21,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1123,
+          "name": "VQ - Sparkfly Swamp",
+          "expected_time_ms": 1700000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Bogroot Growths"
+          },
+          "notes": [
+            "Travel to Gadd's Encampment",
+            "Don't forget to do Cipher quest!",
+            "Zone into Bogs when done with VQ"
+          ],
+          "action_ids": [
+            22,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1124,
+          "name": "Bogroot Growths HM",
+          "expected_time_ms": 780000,
+          "end_criterion": {
+            "type": "dungeon_complete",
+            "dungeon": "Bogroot Growths",
+            "is_hard_mode": true
+          },
+          "notes": [],
+          "action_ids": []
+        },
+        {
+          "id": 1125,
+          "name": "VQ - Verdant Cascades",
+          "expected_time_ms": 1423000,
+          "end_criterion": {
+            "type": "vanquish_complete",
+            "map": "Verdant Cascades"
+          },
+          "notes": [
+            "Travel to Umbral Grotto",
+            "Don't forget to do Cipher quest!"
+          ],
+          "action_ids": [
+            16,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1126,
+          "name": "Prep for final VQ",
+          "expected_time_ms": 600000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Varajar Fells"
+          },
+          "notes": [
+            "Travel to Tarnished Haven",
+            "Turn in all Cipher Quests, grab Path to Revelations",
+            "Travel to Vlox Falls",
+            "Map Arbor Bay until 785 MotN",
+            "Portal jump heroes to cipher quest location",
+            "Travel to Olafstead"
+          ],
+          "action_ids": [
+            20,
+            17,
+            23,
+            108,
+            106,
+            109
+          ]
+        },
+        {
+          "id": 1127,
+          "name": "VQ - Varajar Fells",
+          "expected_time_ms": 2298000,
+          "end_criterion": {
+            "type": "vanquish_complete",
+            "map": "Varajar Fells"
+          },
+          "notes": [],
+          "action_ids": []
+        },
+        {
+          "id": 1128,
+          "name": "Final EotN Tasks",
+          "expected_time_ms": 900000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Lion's Arch"
+          },
+          "notes": [
+            "Turn in HM books where appropriate",
+            "Hopefully VQ RNG was good else we're doing speedbooks to finish",
+            "Just incase",
+            "Travel to EotN",
+            "Grab HM Mission Books",
+            "Travel to Central Transfer Chamber",
+            "Travel to Longeye's Ledge",
+            "Travel to Sifhalla",
+            "Finish up any remaining MotN if need be",
+            "Travel to Lion's Arch when finished"
+          ],
+          "action_ids": [
+            18,
+            24,
+            14,
+            3,
+            109,
+            106,
+            113,
+            112
+          ]
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "name": "Nightfall",
+      "title_trackers": [
+        {
+          "title": "Sunspear",
+          "hide_when_complete": false
+        },
+        {
+          "title": "Lightbringer",
+          "hide_when_complete": false
+        },
+        {
+          "title": "ElonianCarto",
+          "hide_when_complete": false
+        },
+        {
+          "title": "ProtectorElona",
+          "hide_when_complete": false
+        },
+        {
+          "title": "GuardianElona",
+          "hide_when_complete": false
+        },
+        {
+          "title": "VanquisherElona",
+          "hide_when_complete": false
+        }
+      ],
+      "tasks": [
+        {
+          "id": 1129,
+          "name": "NF Beginning",
+          "expected_time_ms": 3300000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Beknur Harbor"
+          },
+          "notes": [
+            "Do Sunspears in Kryta",
+            "Map Kamadan + Arena",
+            "Progress Quest to do Command Training",
+            "Map Churrhir Fields",
+            "Do Command Training before clipping gate",
+            "Map Tutorial Area",
+            "Travel to Kamadan",
+            "Run to Chabek Village",
+            "Chabek Village NM/HM",
+            "Travel to Kamadan",
+            "Run to Sunspear Great Hall (map edges on the way)",
+            "Get Sunspear Title, Get HM Book and Young Heroes book",
+            "Run to Astralarium (map edges on the way)",
+            "VQ - Plains of Jarin",
+            "Do Securing Champions Dawn at end of VQ",
+            "Zone into Champions Dawn",
+            "Do A Land of Heroes (map southern edge)",
+            "Travel to Sunspear Great Hall",
+            "Turn in Quest",
+            "Take The Time is Nigh",
+            "Travel to Champions Dawn",
+            "Run to Beknur Harbor"
+          ],
+          "action_ids": [
+            25,
+            26,
+            27,
+            109,
+            105,
+            114
+          ]
+        },
+        {
+          "id": 1130,
+          "name": "VQ - Cliffs of Dohjok",
+          "expected_time_ms": 951000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Zehlon Reach"
+          },
+          "notes": [
+            "Zone into Zehlon when complete"
+          ],
+          "action_ids": [
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1131,
+          "name": "VQ - Zehlon Reach",
+          "expected_time_ms": 1472000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Jokanur Diggings"
+          },
+          "notes": [
+            "Zone into Jokanur Diggins when complete"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1132,
+          "name": "Jokanur Diggings NM/HM",
+          "expected_time_ms": 946000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Jokanur Diggings",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Travel to Jokanur Diggins"
+          ],
+          "action_ids": [
+            28,
+            109,
+            115
+          ]
+        },
+        {
+          "id": 1133,
+          "name": "VQ - Issnur Isles",
+          "expected_time_ms": 1975000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Kodlonu Hamlet"
+          },
+          "notes": [
+            "Travel to Beknur Harbor",
+            "Zone into Kodlonu Hamlet when complete"
+          ],
+          "action_ids": [
+            29,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1134,
+          "name": "VQ - Mehtani Keys",
+          "expected_time_ms": 1279000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Blacktide Den"
+          },
+          "notes": [
+            "Travel to Jokanur Diggings",
+            "Run to Blacktide Den"
+          ],
+          "action_ids": [
+            28,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1135,
+          "name": "Blacktide Den NM/HM",
+          "expected_time_ms": 1546000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Blacktide Den",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Travel to Blacktide Den"
+          ],
+          "action_ids": [
+            30,
+            109,
+            116
+          ]
+        },
+        {
+          "id": 1136,
+          "name": "VQ - Lahtenda Bog",
+          "expected_time_ms": 1898000,
+          "end_criterion": {
+            "type": "vanquish_complete",
+            "map": "Lahtenda Bog"
+          },
+          "notes": [
+            "Travel to Blacktide Den"
+          ],
+          "action_ids": [
+            30,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1137,
+          "name": "Consulate Docks NM/HM",
+          "expected_time_ms": 890000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Consulate Docks",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Travel to Kamadan",
+            "Finish The Time is Nigh",
+            "Take Chasing Zenmai in Consulate outpost",
+            "Travel to Consulate Docks"
+          ],
+          "action_ids": [
+            25,
+            31,
+            109,
+            117
+          ]
+        },
+        {
+          "id": 1138,
+          "name": "VQ - Marga Coast",
+          "expected_time_ms": 1920000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Dajkah Inlet"
+          },
+          "notes": [
+            "Update Main Quest",
+            "Map Yohlon",
+            "DON'T FORGET TO TALK TO ZUDASH DEJARIN",
+            "Travel to Yohlon Haven",
+            "Do the VQ",
+            "Zone into Dajkah Inlet upon completion"
+          ],
+          "action_ids": [
+            32,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1139,
+          "name": "VQ - Arkjok Ward",
+          "expected_time_ms": 1650000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Pogahn Passage"
+          },
+          "notes": [
+            "Make sure you're on The Great Escape before doing the VQ!",
+            "Don't forget to talk to Koss at the end of Great Escape!",
+            "Zone into Pogahn Passage upon completion"
+          ],
+          "action_ids": [
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1140,
+          "name": "VQ - Gandara, The Moon Fortress",
+          "expected_time_ms": 769000,
+          "end_criterion": {
+            "type": "vanquish_complete",
+            "map": "Gandara, The Moon Fortress"
+          },
+          "notes": [],
+          "action_ids": []
+        },
+        {
+          "id": 1141,
+          "name": "VQ - Sunward Marches",
+          "expected_time_ms": 2350000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Venta Cemetery"
+          },
+          "notes": [
+            "Travel to Sunspear Sanctuary",
+            "Update Main Story Quest",
+            "Finish Hero Shall Lead Them after VQ"
+          ],
+          "action_ids": [
+            33,
+            109,
+            118
+          ]
+        },
+        {
+          "id": 1142,
+          "name": "Venta Cemetery NM/HM",
+          "expected_time_ms": 1156000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Venta Cemetery",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Travel to Venta Cemetery",
+            "Do main story until Centaur Blackmail before Hard Mode"
+          ],
+          "action_ids": [
+            34,
+            109,
+            118
+          ]
+        },
+        {
+          "id": 1143,
+          "name": "VQ - Jahai Bluffs",
+          "expected_time_ms": 2100000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Kodonur Crossroads"
+          },
+          "notes": [
+            "Travel to Sunspear Sanctuary",
+            "Finish Centaur Blackmail after VQ"
+          ],
+          "action_ids": [
+            33,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1144,
+          "name": "Kodonur Crossroads NM/HM",
+          "expected_time_ms": 1801000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Kodonur Crossroads",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Travel to Kodonur Crossroads",
+            "Do Main Story until Secrets in the Shadow before HM",
+            "Travel to Sunspear Sanctuary"
+          ],
+          "action_ids": [
+            35,
+            33,
+            109,
+            119
+          ]
+        },
+        {
+          "id": 1145,
+          "name": "VQ - Dejarin Estate",
+          "expected_time_ms": 1392000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Camp Hojanu"
+          },
+          "notes": [
+            "Travel to Kodonur Crossroads",
+            "Do Secrets in the Shadow before VQ",
+            "Zone into Camp Hojanu upon completion of VQ"
+          ],
+          "action_ids": [
+            35,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1146,
+          "name": "VQ - Barbarous Shore",
+          "expected_time_ms": 1237000,
+          "end_criterion": {
+            "type": "vanquish_complete",
+            "map": "Barbarous Shore"
+          },
+          "notes": [],
+          "action_ids": [
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1147,
+          "name": "Rilohn Refuge NM/HM",
+          "expected_time_ms": 720000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Rilohn Refuge",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Travel to Kodonur Crossroads",
+            "Map West Portal/Walls while doing To Kill A Demon",
+            "Travel to Rilohn Refuge",
+            "Alt Derv runs both NM/HM"
+          ],
+          "action_ids": [
+            35,
+            36,
+            109,
+            106,
+            120
+          ]
+        },
+        {
+          "id": 1148,
+          "name": "VQ - The Floodplain of Mahnkelon",
+          "expected_time_ms": 1510000,
+          "end_criterion": {
+            "type": "vanquish_complete",
+            "map": "The Floodplain of Mahnkelon"
+          },
+          "notes": [
+            "Travel to Kodonur Crossroads"
+          ],
+          "action_ids": [
+            35,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1149,
+          "name": "Moddok Crevice NM/HM",
+          "expected_time_ms": 489000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Moddok Crevice",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Travel to Moddok Crevice"
+          ],
+          "action_ids": [
+            109,
+            117
+          ]
+        },
+        {
+          "id": 1150,
+          "name": "VQ - Bahdok Caverns",
+          "expected_time_ms": 1358000,
+          "end_criterion": {
+            "type": "vanquish_complete",
+            "map": "Bahdok Caverns"
+          },
+          "notes": [],
+          "action_ids": [
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1151,
+          "name": "VQ - Yatendi Canyons",
+          "expected_time_ms": 1094000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Vehtendi Valley"
+          },
+          "notes": [
+            "Progress Main Story",
+            "Zone into Chantry upon completion of VQ",
+            "DON'T FORGET TO GRAB LIGHTBRINGER BUFF",
+            "Progress Main Story",
+            "Run to Vehtendi Valley for next VQ"
+          ],
+          "action_ids": [
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1152,
+          "name": "VQ - Vehtendi Valley",
+          "expected_time_ms": 1600000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Yahnur Market"
+          },
+          "notes": [
+            "Zone into Yahnur Market upon completion of VQ"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1153,
+          "name": "VQ - Resplendent Makuun",
+          "expected_time_ms": 1237000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Honur Hill"
+          },
+          "notes": [
+            "Next VQ -> Wilderness of Bahdza"
+          ],
+          "action_ids": [
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1154,
+          "name": "VQ - Wilderness of Bahdza",
+          "expected_time_ms": 1165000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Dzagonur Bastion"
+          },
+          "notes": [
+            "Zone into Dzagonur Bastion upon completion of VQ"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1155,
+          "name": "VQ - The Mirror of Lyss",
+          "expected_time_ms": 1274000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Grand Court of Sebelkeh"
+          },
+          "notes": [
+            "Zone into Grant Court upon completion of VQ"
+          ],
+          "action_ids": [
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1156,
+          "name": "Vabbi Tour",
+          "expected_time_ms": 336000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "The Kodash Bazaar"
+          },
+          "notes": [
+            "Travel to Grant Court of Sebelkeh",
+            "Run to Honur Hill",
+            "Add alt w/margrid to run to Dasha Vestibule",
+            "Run to Mihanu Township",
+            "Run to Kodash Bazaar"
+          ],
+          "action_ids": [
+            37,
+            108,
+            106
+          ]
+        },
+        {
+          "id": 1157,
+          "name": "VQ - Forum Highlands",
+          "expected_time_ms": 1702000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Tihark Orchard"
+          },
+          "notes": [
+            "Finish Main Story quest at the end"
+          ],
+          "action_ids": [
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1158,
+          "name": "Tihark Orchard NM/HM",
+          "expected_time_ms": 585000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Tihark Orchard",
+            "is_hard_mode": true
+          },
+          "notes": [],
+          "action_ids": [
+            38,
+            121
+          ]
+        },
+        {
+          "id": 1159,
+          "name": "Dzagonur Bastion NM/HM",
+          "expected_time_ms": 1189000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Dzagonur Bastion",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Take All's Well That Ends Well",
+            "Travel to Grant Court of Sebelkeh",
+            "Update Quest",
+            "Travel to Honur Hill",
+            "Finish Quest",
+            "Take Warning Kehanni",
+            "Travel to Grant Court",
+            "Finish Quest",
+            "Take Calling the Order",
+            "Travel to Dzagonur Bastion",
+            "Have ferry alt trigger quest cutscene"
+          ],
+          "action_ids": [
+            37,
+            39,
+            40,
+            109,
+            106,
+            120
+          ]
+        },
+        {
+          "id": 1160,
+          "name": "VQ - Holdings of Chokhin",
+          "expected_time_ms": 1454000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Grand Court of Sebelkeh"
+          },
+          "notes": [
+            "Travel to Kodash Bazaar",
+            "Take Pledge of the Merchant Princes",
+            "Travel to Mihanu Township",
+            "Finish quest at the end of the VQ"
+          ],
+          "action_ids": [
+            41,
+            42,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1161,
+          "name": "Grand Court of Sebelkeh NM/HM",
+          "expected_time_ms": 398000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Grand Court of Sebelkeh",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Travel to Grand Court of Sebelkeh"
+          ],
+          "action_ids": [
+            37,
+            109,
+            116
+          ]
+        },
+        {
+          "id": 1162,
+          "name": "Unlock Koss and Melonni Missions",
+          "expected_time_ms": 540000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Nundu Bay"
+          },
+          "notes": [
+            "Travel to Kodash Bazaar",
+            "Take Attack at the Kodash",
+            "Do Story Quest",
+            "Take both Heart of Mind Quests",
+            "Travel to Tihark Orchard",
+            "Do Garden Quest",
+            "Travel to Sunspear Sanctuary",
+            "Do Ronjok Quest"
+          ],
+          "action_ids": [
+            41,
+            38,
+            109,
+            122
+          ]
+        },
+        {
+          "id": 1163,
+          "name": "Nundu Bay NM/HM",
+          "expected_time_ms": 1257000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Nundu Bay",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Travel to Nundu Bay",
+            "Take new story quest after NM completion in sanctuary"
+          ],
+          "action_ids": [
+            43,
+            109,
+            123
+          ]
+        },
+        {
+          "id": 1164,
+          "name": "Jennur's Horde NM/HM",
+          "expected_time_ms": 827000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Jennur's Horde",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Travel to Jennur's Hode"
+          ],
+          "action_ids": [
+            44,
+            109,
+            118
+          ]
+        },
+        {
+          "id": 1165,
+          "name": "VQ - Vehjin Mines",
+          "expected_time_ms": 1192000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Basalt Grotto"
+          },
+          "notes": [
+            "Travel to Jennur's Horde",
+            "Zone into Basalt Grotto upon completion of VQ"
+          ],
+          "action_ids": [
+            44,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1166,
+          "name": "VQ - The Hidden City of Ahdashim",
+          "expected_time_ms": 1500000,
+          "end_criterion": {
+            "type": "vanquish_complete",
+            "map": "The Hidden City of Ahdashim"
+          },
+          "notes": [
+            "Run to Dasha Vestibule w/alt w/Margrid"
+          ],
+          "action_ids": [
+            39,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1167,
+          "name": "VQ - Turai's Procession",
+          "expected_time_ms": 1644000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Gate of Desolation"
+          },
+          "notes": [
+            "Travel to Sunspear Sanctuary",
+            "Don't forget to update quest during VQ!",
+            "Zone into Gate of Desolation upon completion of VQ"
+          ],
+          "action_ids": [
+            33,
+            109,
+            119
+          ]
+        },
+        {
+          "id": 1168,
+          "name": "Gate of Desolation NM/HM",
+          "expected_time_ms": 1719000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Gate of Desolation",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Travel to Gate of Desolation",
+            "Invite ferry alt to trigger quest cutscene"
+          ],
+          "action_ids": [
+            45,
+            109,
+            119
+          ]
+        },
+        {
+          "id": 1169,
+          "name": "Unlock Bone Palace",
+          "expected_time_ms": 347000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Bone Palace"
+          },
+          "notes": [
+            "Travel to Remains of Sahlahja",
+            "Do bonus mission in Normal Mode to fully map it",
+            "Do A Deal's A Deal",
+            "Pickup Horde of Darkness"
+          ],
+          "action_ids": [
+            46,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1170,
+          "name": "VQ - Joko's Domain",
+          "expected_time_ms": 3286000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "The Shattered Ravines"
+          },
+          "notes": [
+            "Travel to Remains of Sahlahja",
+            "Zone into Shattered Ravines upon completion of VQ"
+          ],
+          "action_ids": [
+            46,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1171,
+          "name": "VQ - The Shattered Ravines",
+          "expected_time_ms": 2020000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Lair of the Forgotten"
+          },
+          "notes": [
+            "Zone into Lair of the Forgotten upon completion of VQ"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1172,
+          "name": "VQ - The Alkali Pan",
+          "expected_time_ms": 2341000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Ruins of Morah"
+          },
+          "notes": [
+            "Finish Horde of Darkness at end of vanquish"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1173,
+          "name": "Ruins of Morah NM/HM",
+          "expected_time_ms": 180000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Ruins of Morah",
+            "is_hard_mode": true
+          },
+          "notes": [],
+          "action_ids": [
+            109,
+            124
+          ]
+        },
+        {
+          "id": 1174,
+          "name": "Gate of Pain NM/HM",
+          "expected_time_ms": 1069000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Gate of Pain",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Do quest to GoP"
+          ],
+          "action_ids": [
+            47,
+            108,
+            109,
+            117
+          ]
+        },
+        {
+          "id": 1175,
+          "name": "Gate of Madness NM/HM",
+          "expected_time_ms": 1860000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Gate of Madness",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Do Kormir's Crusade",
+            "Hero portal trick on 2nd quest",
+            "Travel to Gate of Madness"
+          ],
+          "action_ids": [
+            48,
+            108,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1176,
+          "name": "Abaddon's Gate NM/HM",
+          "expected_time_ms": 300000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Abaddon's Gate",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Travel to Abaddon's Gate"
+          ],
+          "action_ids": [
+            49,
+            109,
+            125
+          ]
+        },
+        {
+          "id": 1177,
+          "name": "Pogahn Passage NM/HM",
+          "expected_time_ms": 1500000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Pogahn Passage",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Take Margrid Quest",
+            "Travel to Nundu Bay",
+            "Turn in Margrid Quest",
+            "Travel to Pogahn Passage"
+          ],
+          "action_ids": [
+            43,
+            50,
+            109,
+            126
+          ]
+        },
+        {
+          "id": 1178,
+          "name": "Dasha Vestibule NM/HM",
+          "expected_time_ms": 1440000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Dasha Vestibule",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Travel to Dasha Vestibule",
+            "Don't forget bonus items in storage!"
+          ],
+          "action_ids": [
+            51,
+            109,
+            126
+          ]
+        },
+        {
+          "id": 1179,
+          "name": "VQ - Poisoned Outcrops",
+          "expected_time_ms": 1050000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "The Ruptured Heart"
+          },
+          "notes": [
+            "Travel to Lair of the Forgotten",
+            "Next VQ -> The Ruptured Heart"
+          ],
+          "action_ids": [
+            52,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1180,
+          "name": "VQ - The Ruptured Heart",
+          "expected_time_ms": 1715000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Crystal Overlook"
+          },
+          "notes": [
+            "Next VQ -> Crystal Overlook"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1181,
+          "name": "VQ - Crystal Overlook",
+          "expected_time_ms": 1414000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "The Arid Sea"
+          },
+          "notes": [
+            "Next VQ -> The Arid Sea"
+          ],
+          "action_ids": []
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "name": "Finish Prophecies",
+      "title_trackers": [
+        {
+          "title": "TyrianCarto",
+          "hide_when_complete": false
+        },
+        {
+          "title": "VanquisherTyria",
+          "hide_when_complete": false
+        }
+      ],
+      "tasks": [
+        {
+          "id": 1182,
+          "name": "VQ - The Arid Sea",
+          "expected_time_ms": 709000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Vulture Drifts"
+          },
+          "notes": [
+            "Next VQ -> Vulture Drifts"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1183,
+          "name": "VQ - Vulture Drifts",
+          "expected_time_ms": 1645000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Prophet's Path"
+          },
+          "notes": [
+            "Next VQ -> Prophet's Path"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1184,
+          "name": "VQ - Prophet's Path",
+          "expected_time_ms": 2583000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Salt Flats"
+          },
+          "notes": [
+            "Next VQ - Salt Flats"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1185,
+          "name": "VQ - Salt Flats",
+          "expected_time_ms": 1582000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Diviner's Ascent"
+          },
+          "notes": [
+            "Next VQ -> Diviner's Ascent"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1186,
+          "name": "VQ - Diviner's Ascent",
+          "expected_time_ms": 789000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Skyward Reach"
+          },
+          "notes": [
+            "Next VQ -> The Scar"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1187,
+          "name": "VQ - The Scar",
+          "expected_time_ms": 1853000,
+          "end_criterion": {
+            "type": "vanquish_complete",
+            "map": "The Scar"
+          },
+          "notes": [],
+          "action_ids": []
+        },
+        {
+          "id": 1188,
+          "name": "Great Northern Wall HM",
+          "expected_time_ms": 390000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "The Great Northern Wall",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Don't forget bonus items in chest!"
+          ],
+          "action_ids": [
+            127
+          ]
+        },
+        {
+          "id": 1189,
+          "name": "Fort Ranik HM",
+          "expected_time_ms": 467000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Fort Ranik",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Run on alt ranger"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1190,
+          "name": "Ruins of Surmia HM",
+          "expected_time_ms": 1170000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Ruins of Surmia",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Travel to Ruins of Surmia",
+            "Have alt Derv do bonus while we progress with Mission"
+          ],
+          "action_ids": [
+            53,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1191,
+          "name": "Nolani Academy HM",
+          "expected_time_ms": 653000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Nolani Academy",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Run w/Derv alt",
+            "Kill Bonfaz with 2 heroes"
+          ],
+          "action_ids": [
+            109,
+            104
+          ]
+        },
+        {
+          "id": 1192,
+          "name": "Borlis Pass HM",
+          "expected_time_ms": 800000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Borlis Pass",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Travel to Borlis Pass"
+          ],
+          "action_ids": [
+            54,
+            109,
+            105
+          ]
+        },
+        {
+          "id": 1193,
+          "name": "Frost Gate HM",
+          "expected_time_ms": 951000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "The Frost Gate",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Travel to Borlis Pass"
+          ],
+          "action_ids": [
+            54,
+            109,
+            105
+          ]
+        },
+        {
+          "id": 1194,
+          "name": "Gates of Kryta HM",
+          "expected_time_ms": 851000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Gates of Kryta",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Travel to Gates of Kryta"
+          ],
+          "action_ids": [
+            55,
+            109,
+            105
+          ]
+        },
+        {
+          "id": 1195,
+          "name": "D'Alessio Seaboard HM",
+          "expected_time_ms": 564000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "D'Alessio Seaboard",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Travel to D'Alessio Seaboard"
+          ],
+          "action_ids": [
+            56,
+            109,
+            105
+          ]
+        },
+        {
+          "id": 1196,
+          "name": "Divinity Coast HM",
+          "expected_time_ms": 698000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Divinity Coast",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Travel to Divinity Coast"
+          ],
+          "action_ids": [
+            57,
+            109,
+            105
+          ]
+        },
+        {
+          "id": 1197,
+          "name": "The Wilds HM",
+          "expected_time_ms": 1375000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "The Wilds",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Travel to The Wilds"
+          ],
+          "action_ids": [
+            58,
+            109,
+            105
+          ]
+        },
+        {
+          "id": 1198,
+          "name": "Bloodstone Fen HM",
+          "expected_time_ms": 763000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Bloodstone Fen",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Travel to Bloodstone Fen"
+          ],
+          "action_ids": [
+            59,
+            128,
+            105
+          ]
+        },
+        {
+          "id": 1199,
+          "name": "Aurora Glade HM",
+          "expected_time_ms": 728000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Aurora Glade",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Travel to Aurora Glade"
+          ],
+          "action_ids": [
+            60,
+            109,
+            105
+          ]
+        },
+        {
+          "id": 1200,
+          "name": "Riverside Province HM",
+          "expected_time_ms": 818000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Riverside Province",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Travel to Riverside Province"
+          ],
+          "action_ids": [
+            61,
+            109,
+            105
+          ]
+        },
+        {
+          "id": 1201,
+          "name": "Sanctum Cay HM",
+          "expected_time_ms": 1015000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Sanctum Cay",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Travel to Sanctum Cay"
+          ],
+          "action_ids": [
+            62,
+            109,
+            105
+          ]
+        },
+        {
+          "id": 1202,
+          "name": "Elona Reach HM",
+          "expected_time_ms": 352000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Elona Reach",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Run it on alt Derv",
+            "Travel to Elona Reach"
+          ],
+          "action_ids": [
+            63,
+            109,
+            105
+          ]
+        },
+        {
+          "id": 1203,
+          "name": "Thirsty River HM",
+          "expected_time_ms": 393000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Thirsty River",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Travel to Thirsty River"
+          ],
+          "action_ids": [
+            64,
+            109,
+            105
+          ]
+        },
+        {
+          "id": 1204,
+          "name": "Dunes of Despair HM",
+          "expected_time_ms": 894000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Dunes of Despair",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Bring Derv alt",
+            "Travel to Dunes of Despair"
+          ],
+          "action_ids": [
+            65,
+            109,
+            105
+          ]
+        },
+        {
+          "id": 1205,
+          "name": "Dragon's Lair HM",
+          "expected_time_ms": 684000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "The Dragon's Lair",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Travel to The Dragon's Lair"
+          ],
+          "action_ids": [
+            7,
+            111,
+            106
+          ]
+        },
+        {
+          "id": 1206,
+          "name": "Ice Caves of Sorrow HM",
+          "expected_time_ms": 848000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Ice Caves of Sorrow",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Run on alt Sin",
+            "Travel to Ice Caves of Sorrow"
+          ],
+          "action_ids": [
+            66,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1207,
+          "name": "Iron Mines of Moladune HM",
+          "expected_time_ms": 649000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Iron Mines of Moladune",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Travel to Iron Mines of Moladune"
+          ],
+          "action_ids": [
+            8,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1208,
+          "name": "Thunderhead Keep HM",
+          "expected_time_ms": 1394000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Thunderhead Keep",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Travel to Thunderhead Keep"
+          ],
+          "action_ids": [
+            10,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1209,
+          "name": "Ring of Fire NM/HM",
+          "expected_time_ms": 1649000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Ring of Fire",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Map northside in NM",
+            "Run essence back on alt Derv",
+            "Travel to Ring of Fire"
+          ],
+          "action_ids": [
+            67,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1210,
+          "name": "Abaddon's Mouth NM/HM",
+          "expected_time_ms": 1631000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Abaddon's Mouth",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Travel to Abaddon's Mouth"
+          ],
+          "action_ids": [
+            68,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1211,
+          "name": "Hell's Precipice NM/HM",
+          "expected_time_ms": 1374000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Hell's Precipice",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Can Solo Bonus w/TAO",
+            "Travel to Hell's Precipice"
+          ],
+          "action_ids": [
+            69,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1212,
+          "name": "VQ - Talus Chute",
+          "expected_time_ms": 2343000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Camp Rankor"
+          },
+          "notes": [
+            "Travel to Droknar's Forge"
+          ],
+          "action_ids": [
+            9,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1213,
+          "name": "VQ - Snake Dance",
+          "expected_time_ms": 1715000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Dreadnought's Drift"
+          },
+          "notes": [
+            "Next VQ -> Dreadnought's Drift"
+          ],
+          "action_ids": [
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1214,
+          "name": "VQ - Dreadnought's Drift",
+          "expected_time_ms": 436000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Lornar's Pass"
+          },
+          "notes": [
+            "Next VQ -> Lornar's Pass"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1215,
+          "name": "VQ - Lornar's Pass",
+          "expected_time_ms": 1644000,
+          "end_criterion": {
+            "type": "vanquish_complete",
+            "map": "Lornar's Pass"
+          },
+          "notes": [],
+          "action_ids": []
+        },
+        {
+          "id": 1216,
+          "name": "VQ - Ice Floe",
+          "expected_time_ms": 1131000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Marhan's Grotto"
+          },
+          "notes": [
+            "Travel to Thunderhead Keep",
+            "Zone into Marhan's Grotto upon completion of Vanquish"
+          ],
+          "action_ids": [
+            10,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1217,
+          "name": "VQ - Frozen Forest",
+          "expected_time_ms": 1540000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Icedome"
+          },
+          "notes": [
+            "Travel to Copperhammer Mines",
+            "Zone into Icedome upon completion of Vanquish"
+          ],
+          "action_ids": [
+            70,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1218,
+          "name": "VQ - Icedome",
+          "expected_time_ms": 510000,
+          "end_criterion": {
+            "type": "vanquish_complete",
+            "map": "Icedome"
+          },
+          "notes": [],
+          "action_ids": []
+        },
+        {
+          "id": 1219,
+          "name": "VQ - Spearhead Peak",
+          "expected_time_ms": 1597000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "The Granite Citadel"
+          },
+          "notes": [
+            "Travel to Copperhammer Mines",
+            "Zone into The Granite Citadel upon completion of Vanquish"
+          ],
+          "action_ids": [
+            70,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1220,
+          "name": "VQ - Tasca's Demise",
+          "expected_time_ms": 535000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Mineral Springs"
+          },
+          "notes": [
+            "Travel to The Granite Citadel",
+            "Next VQ -> Mineral Springs"
+          ],
+          "action_ids": [
+            71,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1221,
+          "name": "VQ - Mineral Springs",
+          "expected_time_ms": 1174000,
+          "end_criterion": {
+            "type": "vanquish_complete",
+            "map": "Mineral Springs"
+          },
+          "notes": [],
+          "action_ids": []
+        },
+        {
+          "id": 1222,
+          "name": "VQ - Grenth's Footprint",
+          "expected_time_ms": 1229000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Grenth's Footprint"
+          },
+          "notes": [
+            "Travel to The Granite Citadel",
+            "Run to Grenth's Footprint and VQ"
+          ],
+          "action_ids": [
+            71,
+            109,
+            106
+          ]
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "name": "Factions",
+      "title_trackers": [
+        {
+          "title": "ProtectorCantha",
+          "hide_when_complete": false
+        },
+        {
+          "title": "GuardianCantha",
+          "hide_when_complete": false
+        },
+        {
+          "title": "CanthanCarto",
+          "hide_when_complete": false
+        },
+        {
+          "title": "VanquisherCantha",
+          "hide_when_complete": false
+        }
+      ],
+      "tasks": [
+        {
+          "id": 1223,
+          "name": "Vizunah Square HM",
+          "expected_time_ms": 1260000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Vizunah Square",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Travel to Vizunah Square (Foreign Quarter)"
+          ],
+          "action_ids": [
+            72,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1224,
+          "name": "Nahpui Quarter HM",
+          "expected_time_ms": 720000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Nahpui Quarter",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Travel to Nahpui Quarter"
+          ],
+          "action_ids": [
+            73,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1225,
+          "name": "VQ - Shadow's Passage",
+          "expected_time_ms": 360000,
+          "end_criterion": {
+            "type": "vanquish_complete",
+            "map": "Shadow's Passage"
+          },
+          "notes": [
+            "Travel to Kaineng Center",
+            "Grab The Afflicted Guard",
+            "Travel to Shadow's Passage"
+          ],
+          "action_ids": [
+            74,
+            75,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1226,
+          "name": "VQ - Wajjun Bazaar",
+          "expected_time_ms": 1018000,
+          "end_criterion": {
+            "type": "vanquish_complete",
+            "map": "Wajjun Bazaar"
+          },
+          "notes": [
+            "Travel to The Marketplace"
+          ],
+          "action_ids": [
+            76,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1227,
+          "name": "To Seitung",
+          "expected_time_ms": 300000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Jaya Bluffs"
+          },
+          "notes": [
+            "Travel to The Marketplace",
+            "Finish Mapping Bukdek Byway (if necessary)",
+            "Travel to The Marketplace",
+            "Map Kaineng Docks",
+            "Zone to Seitung Harbor",
+            "Zone to Jaya Bluffs"
+          ],
+          "action_ids": [
+            76,
+            108,
+            106,
+            109,
+            105
+          ]
+        },
+        {
+          "id": 1228,
+          "name": "VQ - Jaya Bluffs",
+          "expected_time_ms": 999000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Haiju Lagoon"
+          },
+          "notes": [
+            "Next VQ -> Haiju Lagoon"
+          ],
+          "action_ids": [
+            109,
+            105
+          ]
+        },
+        {
+          "id": 1229,
+          "name": "VQ - Haiju Lagoon",
+          "expected_time_ms": 1369000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Zen Daijun"
+          },
+          "notes": [
+            "Zone into Zen Daijun upon completion of Vanquish"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1230,
+          "name": "Zen Daijun NM/HM",
+          "expected_time_ms": 480000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Zen Daijun",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Run on alt Derv"
+          ],
+          "action_ids": [
+            109,
+            105
+          ]
+        },
+        {
+          "id": 1231,
+          "name": "VQ - Zen Daijun",
+          "expected_time_ms": 1058000,
+          "end_criterion": {
+            "type": "vanquish_complete",
+            "map": "Zen Daijun"
+          },
+          "notes": [
+            "Travel to Seitung Harbor"
+          ],
+          "action_ids": [
+            77,
+            109,
+            105
+          ]
+        },
+        {
+          "id": 1232,
+          "name": "VQ - Saoshang Trail",
+          "expected_time_ms": 360000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Shing Jea Monastery"
+          },
+          "notes": [],
+          "action_ids": [
+            77,
+            109,
+            105
+          ]
+        },
+        {
+          "id": 1233,
+          "name": "Map Shing Jea",
+          "expected_time_ms": 480000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Sunqua Vale"
+          },
+          "notes": [
+            "Travel to Shing Jea Monastery",
+            "Map SJM + Tutorial Area",
+            "Zone to Sunqua Vale when done"
+          ],
+          "action_ids": [
+            78,
+            129,
+            104,
+            109
+          ]
+        },
+        {
+          "id": 1234,
+          "name": "VQ - Sunqua Vale",
+          "expected_time_ms": 1269000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Minister Cho's Estate"
+          },
+          "notes": [
+            "Travel to Shing Jea Monastery",
+            "Zone to Minister Cho's Estate upon completion of Vanquish"
+          ],
+          "action_ids": [
+            78,
+            109,
+            104
+          ]
+        },
+        {
+          "id": 1235,
+          "name": "Minister Cho's Estate NM/HM",
+          "expected_time_ms": 854000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Minister Cho's Estate",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Travel to Minister Cho's Estate"
+          ],
+          "action_ids": [
+            79,
+            109,
+            104
+          ]
+        },
+        {
+          "id": 1236,
+          "name": "VQ - Minister Cho's Estate",
+          "expected_time_ms": 1225000,
+          "end_criterion": {
+            "type": "vanquish_complete",
+            "map": "Minister Cho's Estate"
+          },
+          "notes": [],
+          "action_ids": [
+            80,
+            109,
+            104
+          ]
+        },
+        {
+          "id": 1237,
+          "name": "VQ - Kinya Province",
+          "expected_time_ms": 1027000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Panjiang Peninsula"
+          },
+          "notes": [
+            "Travel to Ran Musu Gardens",
+            "Next VQ -> Panjiang Peninsula"
+          ],
+          "action_ids": [
+            80,
+            109,
+            104
+          ]
+        },
+        {
+          "id": 1238,
+          "name": "VQ - Panjiang Peninsula",
+          "expected_time_ms": 1215000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Tsumei Village"
+          },
+          "notes": [
+            "Zone into Tsumei Village upon completion of Vanquish"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1239,
+          "name": "VQ - Nahpui Quarter",
+          "expected_time_ms": 675000,
+          "end_criterion": {
+            "type": "vanquish_complete",
+            "map": "Nahpui Quarter"
+          },
+          "notes": [
+            "Travel to Senji's Corner"
+          ],
+          "action_ids": [
+            81,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1240,
+          "name": "VQ - Xaquang Skyway",
+          "expected_time_ms": 1005000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Shenzun Tunnels"
+          },
+          "notes": [
+            "Travel to Senji's Corner",
+            "Take To Tahnnakai Temple",
+            "Next VQ -> Shenzun Tunnels"
+          ],
+          "action_ids": [
+            81,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1241,
+          "name": "VQ - Shenzun Tunnels",
+          "expected_time_ms": 1690000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Tahnnakai Temple"
+          },
+          "notes": [
+            "Finish To Tahnnakai Temple at end of Vanquish"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1242,
+          "name": "Tahnnakai Temple NM/HM",
+          "expected_time_ms": 1952000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Tahnnakai Temple",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Take A Meeting With The Emperor after NM",
+            "Update Quest",
+            "VQ Tahnnakai Temple (Hero flag trick)",
+            "Travel to Zin Ku Corridor",
+            "Turn in Quest, take The Count's Daughter",
+            "Map Tahnnakai Temple",
+            "Travel to Zin Ku Corridor",
+            "Update Quest in Sunjiang District",
+            "Travel to Tahnnakai Temple",
+            "Run to Maatu Keep",
+            "Travel to Tahnnakai Temple",
+            "Finish HM quest"
+          ],
+          "action_ids": [
+            82,
+            83,
+            129,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1243,
+          "name": "VQ - Pongmei Valley",
+          "expected_time_ms": 1746000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Arborstone"
+          },
+          "notes": [
+            "Travel to Maatu Keep",
+            "Update The Count's Daughter",
+            "VQ Pongmei",
+            "Zone into Tanglewood Copse at end of Vanquish",
+            "Map Gondola side of Arborstone",
+            "Zone into Arborstone when done"
+          ],
+          "action_ids": [
+            84,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1244,
+          "name": "Arborstone NM/HM",
+          "expected_time_ms": 1800000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Arborstone",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Travel to Arborstone",
+            "Do NM Mission",
+            "Map Altrumm Ruins",
+            "Travel to Maatu Keep",
+            "Run to Boreas Seabed Outpost, clip in",
+            "Travel to Arborstone",
+            "Finish HM Mission"
+          ],
+          "action_ids": [
+            85,
+            109,
+            106,
+            108,
+            130
+          ]
+        },
+        {
+          "id": 1245,
+          "name": "Boreas Seabed NM/HM",
+          "expected_time_ms": 450000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Boreas Seabed",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Run on alt Derv",
+            "Travel to Boreas Seabed",
+            "Do Mission in NM",
+            "Take City Under Attack",
+            "Map Zos Shivros Mission",
+            "Travel to Boreas Seabed",
+            "Do Mission in HM"
+          ],
+          "action_ids": [
+            86,
+            109,
+            106,
+            108
+          ]
+        },
+        {
+          "id": 1246,
+          "name": "VQ - Boreas Seabed",
+          "expected_time_ms": 974000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Mount Qinkai"
+          },
+          "notes": [
+            "Travel to Zos Shivros Channel",
+            "Zone into Mount Qinkai upon completion of Vanquish"
+          ],
+          "action_ids": [
+            87,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1247,
+          "name": "VQ - Mount Qinkai",
+          "expected_time_ms": 945000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Breaker Hollow"
+          },
+          "notes": [
+            "Zone into Aspenwood Gate upon completion of Vanquish",
+            "Map Aspenwood outposts",
+            "Run to Breaker Hollow"
+          ],
+          "action_ids": [
+            108
+          ]
+        },
+        {
+          "id": 1248,
+          "name": "VQ - Archipelagos",
+          "expected_time_ms": 1200000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Maishang Hills"
+          },
+          "notes": [
+            "Travel to Breaker Hollow",
+            "Zone into Maishang Hills upon completion of Vanquish"
+          ],
+          "action_ids": [
+            88,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1249,
+          "name": "VQ - Maishang Hills",
+          "expected_time_ms": 1200000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Gyala Hatchery"
+          },
+          "notes": [
+            "DO NOT POP A SUMMON STONE",
+            "Clip into Gyala Hatchery upon completion of Vanquish"
+          ],
+          "action_ids": []
+        },
+        {
+          "id": 1250,
+          "name": "Gyala Hatchery NM/HM",
+          "expected_time_ms": 2471000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Gyala Hatchery",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Travel to Breaker Hollow",
+            "Run to Jade Flats, map Jade outposts",
+            "Run to Cavalon, map it",
+            "Run to Bai Paasu Reach, map it",
+            "Run to Eredon Terrace, map it",
+            "Travel to Gyala Hatchery",
+            "Complete NM/HM"
+          ],
+          "action_ids": [
+            88,
+            89,
+            129,
+            106
+          ]
+        },
+        {
+          "id": 1251,
+          "name": "VQ - Gyala Hatchery",
+          "expected_time_ms": 1077000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Silent Surf"
+          },
+          "notes": [
+            "Travel to Leviathan Pits",
+            "Take UW Quest"
+          ],
+          "action_ids": [
+            90,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1252,
+          "name": "VQ - Silent Surf",
+          "expected_time_ms": 1328000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Seafarer's Rest"
+          },
+          "notes": [
+            "Travel to Leviathan Pits",
+            "KEEP TOGO ALIVE!",
+            "Finish UW Quest at end of Vanquish",
+            "Travel to Leviathan Pits",
+            "Run to Seafarer's Rest"
+          ],
+          "action_ids": [
+            90,
+            109,
+            106,
+            108
+          ]
+        },
+        {
+          "id": 1253,
+          "name": "VQ - Rhea's Crater",
+          "expected_time_ms": 1288000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Unwaking Waters (Luxon)"
+          },
+          "notes": [
+            "Travel to Seafarer's Rest",
+            "Zone into Aurios Mines upon completion of Vanquish",
+            "Map Aurios Mines",
+            "Travel to Unwaking Waters (Luxon)"
+          ],
+          "action_ids": [
+            91,
+            92,
+            109,
+            106,
+            108
+          ]
+        },
+        {
+          "id": 1254,
+          "name": "Unwaking Waters NM/HM",
+          "expected_time_ms": 492000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Unwaking Waters",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Travel to Unwaking Waters (Luxon)"
+          ],
+          "action_ids": [
+            92,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1255,
+          "name": "VQ - Unwaking Waters",
+          "expected_time_ms": 1029000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Unwaking Waters (Kurzick)"
+          },
+          "notes": [
+            "Travel to Harvest Temple",
+            "Take Main Quest from Kuunavang",
+            "DO NOT POP SUMMON",
+            "Pray for good crab RNG to clip in",
+            "If not good RNG do below notes",
+            "Travel to Harvest Temple",
+            "Clip into Kurzick side on alt Derv"
+          ],
+          "action_ids": [
+            93,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1256,
+          "name": "VQ - Morostav Trail",
+          "expected_time_ms": 1446000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Durheim Archives"
+          },
+          "notes": [
+            "Travel to Unwaking Waters (Kurzick)",
+            "Zone into Durheim Archives upon completion of Vanquish"
+          ],
+          "action_ids": [
+            94,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1257,
+          "name": "VQ - Mourning Veil Falls",
+          "expected_time_ms": 1274000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Vasburg Armory"
+          },
+          "notes": [
+            "Travel to Durheim Archives",
+            "Zone into Amatz Basin upon completion of Vanquish",
+            "Map Amatz Basin",
+            "Run to Vasburg Armory"
+          ],
+          "action_ids": [
+            95,
+            109,
+            106,
+            108
+          ]
+        },
+        {
+          "id": 1258,
+          "name": "VQ - The Eternal Grove",
+          "expected_time_ms": 1761000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "The Eternal Grove"
+          },
+          "notes": [
+            "Zone into Eternal Grove upon completion of Vanquish"
+          ],
+          "action_ids": [
+            96,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1259,
+          "name": "Eternal Grove NM/HM",
+          "expected_time_ms": 1866000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "The Eternal Grove",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Travel to Eternal Grove",
+            "Bring alt Derv for Hard Mode weakside"
+          ],
+          "action_ids": [
+            97,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1260,
+          "name": "VQ - Drazach Thicket",
+          "expected_time_ms": 1272000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Brauer Academy"
+          },
+          "notes": [
+            "Zone into Brauer Academy upon completion of Vanquish"
+          ],
+          "action_ids": [
+            97,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1261,
+          "name": "VQ - Melandru's Hope",
+          "expected_time_ms": 1234000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Lutgardis Conservatory"
+          },
+          "notes": [
+            "Travel to Brauer Academy",
+            "Zone into Lutgardis Conservatory upon completion of Vanquish"
+          ],
+          "action_ids": [
+            98,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1262,
+          "name": "VQ - Ferndale",
+          "expected_time_ms": 1610000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "House zu Heltzer"
+          },
+          "notes": [
+            "Travel to Lutgardis Conservatory",
+            "Zone into House zu Heltzer upon completion of Vanquish"
+          ],
+          "action_ids": [
+            99,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1263,
+          "name": "Sunjiang District NM/HM",
+          "expected_time_ms": 1620000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Sunjiang District",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Travel to Lutgardis Conservatory",
+            "Run to Jade Flats, map Jade outposts",
+            "Travel to House zu Heltzer",
+            "Run to Aspenwood Gate, map Aspenwood outposts",
+            "Travel to House zu Heltzer",
+            "Run to Saint Anjeka's Shrine",
+            "Travel to Maatu Keep",
+            "Update City Under Attack",
+            "Travel to Kaineng Center",
+            "Turn in City Under Attack",
+            "Update Raisu quest",
+            "Travel to Maatu Keep",
+            "Do City Under Attack",
+            "Use alt Sin for NM/HM"
+          ],
+          "action_ids": [
+            99,
+            100,
+            84,
+            74,
+            108,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1264,
+          "name": "VQ - Sunjiang District",
+          "expected_time_ms": 1190000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Raisu Palace"
+          },
+          "notes": [
+            "Travel to Zin Ku Corridor",
+            "Travel to Raisu Palace after VQ done"
+          ],
+          "action_ids": [
+            82,
+            101,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1265,
+          "name": "Raisu Palace NM/HM",
+          "expected_time_ms": 1024000,
+          "end_criterion": {
+            "type": "mission_complete",
+            "mission": "Raisu Palace",
+            "is_hard_mode": true
+          },
+          "notes": [
+            "Travel to Raisu Palace"
+          ],
+          "action_ids": [
+            101,
+            109,
+            106
+          ]
+        },
+        {
+          "id": 1266,
+          "name": "VQ - Raisu Palace",
+          "expected_time_ms": 1610000,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Imperial Sanctum"
+          },
+          "notes": [
+            "Travel to Imperial Sanctum"
+          ],
+          "action_ids": [
+            102,
+            109,
+            106
+          ]
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "name": "End",
+      "title_trackers": [
+        {
+          "title": "LegendaryVanquisher",
+          "hide_when_complete": false
+        },
+        {
+          "title": "LegendaryCarto",
+          "hide_when_complete": false
+        },
+        {
+          "title": "LegendaryGuardian",
+          "hide_when_complete": false
+        },
+        {
+          "title": "LegendarySkillHunter",
+          "hide_when_complete": false
+        },
+        {
+          "title": "Sunspear",
+          "hide_when_complete": false
+        },
+        {
+          "title": "Lightbringer",
+          "hide_when_complete": false
+        },
+        {
+          "title": "Sweets",
+          "hide_when_complete": false
+        },
+        {
+          "title": "Drunkard",
+          "hide_when_complete": false
+        },
+        {
+          "title": "Party",
+          "hide_when_complete": false
+        }
+      ],
+      "tasks": [
+        {
+          "id": 1267,
+          "name": "The Final Split",
+          "expected_time_ms": 1500000,
+          "end_criterion": {
+            "type": "title_progress",
+            "title": "KoaBD",
+            "required_progress": 31
+          },
+          "notes": [
+            "Travel to Imperial Sanctum",
+            "Do Imperial Sanctum NM",
+            "Bring alt for banish, pray for good banish RNG",
+            "Travel to Shing Jea Monastery",
+            "Map Shing Jea Arena",
+            "Travel to Imperial Sanctum",
+            "Do Mission HM",
+            "Travel to Kaineng Center",
+            "VQ Bukdek Byway",
+            "Travel to Chantry of Secrets",
+            "Turn in HM Mission Book",
+            "Travel to Sunspear Great Hall",
+            "Turn in Young Heroes of Tyria",
+            "Travel to Kamadan AE1",
+            "Unlock Quick Shot and Spike Trap",
+            "Pop Drunkard, Sweet Tooth, Party Animal",
+            "Delete the character and uninstall the game for good"
+          ],
+          "action_ids": [
+            102,
+            78,
+            103,
+            26,
+            109,
+            106
+          ]
+        }
+      ]
+    }
+  ]
+}

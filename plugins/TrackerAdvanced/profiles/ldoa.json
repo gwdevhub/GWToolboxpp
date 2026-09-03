@@ -1,0 +1,139 @@
+{
+  "schema": "trackeradvanced.profile",
+  "schema_version": 1,
+  "id": "ldoa",
+  "name": "LDOA",
+  "description": "Legendary Defender of Ascalon (TAS)",
+  "title_trackers": [
+    {
+      "title": "Survivor",
+      "hide_when_complete": true
+    }
+  ],
+  "actions": [
+    {
+      "id": 1,
+      "type": "travel",
+      "label": "Travel: Ascalon",
+      "destination": "ascalon"
+    },
+    {
+      "id": 2,
+      "type": "travel",
+      "label": "Travel: Piken",
+      "destination": "piken"
+    }
+  ],
+  "objectives": [
+    {
+      "id": 1,
+      "name": "LDOA",
+      "title_trackers": [
+        {
+          "title": "LDoA",
+          "hide_when_complete": false
+        }
+      ],
+      "tasks": [
+        {
+          "id": 1001,
+          "name": "Unlock Piken",
+          "expected_time_ms": 0,
+          "end_criterion": {
+            "type": "map_loaded",
+            "map": "Piken Square"
+          },
+          "notes": [
+            "Take Town Crier Quest, turn in",
+            "Take War Preparations",
+            "Zone To Lakeside",
+            "[G] Trigger Althea dialog, run to Regent Valley",
+            "Take Ranger Test, turn in",
+            "Take Further Adventures",
+            "Take Adventure With An Ally, turn in",
+            "Take Gwen's Flute, turn in",
+            "Take Gifts for Althea, turn in",
+            "Take Mesmer's Burden, turn in",
+            "Get Mesmer Secondary",
+            "Take Across The Wall",
+            "[G] Zone to Regent Valley",
+            "Take Ivor's Quest, don't do it",
+            "Get Headpiece",
+            "Pop Berserker, kill all skale",
+            "[G] Zone to Lakeside",
+            "Take Hunter's Horn Quest",
+            "[G] Zone to Regent Valley",
+            "Take Pet Quest",
+            "Update Hunter's Horn",
+            "Pop Berserker, kill all skale to Foible's",
+            "Zone to Foible's",
+            "Turn in both of Aidan's quests",
+            "Travel to Ascalon",
+            "Zone to Northlands",
+            "Do Across the Wall",
+            "Zone to Lakeside",
+            "Turn in Across The Wall",
+            "Take Bastion in the North",
+            "Zone to Northlands",
+            "Pop Slayer Scroll, do Bastion in the North",
+            "Map Ascalon, turn in Bastion",
+            "Run to Piken"
+          ],
+          "action_ids": [
+            1
+          ]
+        },
+        {
+          "id": 1002,
+          "name": "Charr Farm to 14",
+          "expected_time_ms": 0,
+          "end_criterion": {
+            "type": "player_level",
+            "level": 14
+          },
+          "notes": [],
+          "action_ids": [
+            2
+          ],
+          "experience_tracker": {
+            "label": "Charr Tracker",
+            "arm_criterion": {
+              "type": "map_loaded",
+              "map": "Piken Square"
+            },
+            "increment_criterion": {
+              "type": "map_loaded",
+              "map": "Piken Square"
+            },
+            "goal_experience": 72800
+          }
+        },
+        {
+          "id": 1003,
+          "name": "Triple Charr to LDOA",
+          "expected_time_ms": 0,
+          "end_criterion": {
+            "type": "player_level",
+            "level": 20
+          },
+          "notes": [
+            "DO NOT FORGET TO MAP OUT ON BLAZE+TATE ALTS EACH RUN"
+          ],
+          "action_ids": [],
+          "experience_tracker": {
+            "label": "Vanguard Tracker",
+            "arm_criterion": {
+              "type": "map_loaded",
+              "map": "Piken Square"
+            },
+            "increment_criterion": {
+              "type": "map_loaded",
+              "map": "Piken Square"
+            },
+            "goal_experience": 140600
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -8,39 +8,61 @@
 
 namespace {
     GW::HookEntry pluginCmd_HookEntry;
+    std::vector<ToolboxUIPlugin*> ui_plugins;
 
     void CmdTB(GW::HookStatus* status, const wchar_t*, const int argc, const LPWSTR* argv)
     {
-        const auto instance = static_cast<ToolboxUIPlugin*>(ToolboxPluginInstance());
-        if (!instance) {
+        if (argc < 3) {
             status->blocked = false;
             return;
         }
-        if (argc < 3) {
-            status->blocked = false;
-        }
         const std::wstring arg1 = PluginUtils::ToLower(argv[1]);
-        auto pluginname = PluginUtils::ToLower(PluginUtils::StringToWString(instance->Name()));
-        pluginname.erase(std::ranges::remove_if(pluginname, [](const wchar_t x) { return std::isspace(x); }).begin(), pluginname.end());
         if (arg1.empty()) {
             status->blocked = false;
             return;
         }
-        if (!(arg1 == L"all" || arg1 == L"plugins" || pluginname.find(arg1) == 0)) {
+        const auto arg2 = PluginUtils::ToLower(argv[2]);
+        if (arg2 != L"hide" && arg2 != L"show" && arg2 != L"toggle") {
             status->blocked = false;
             return;
         }
-        const std::wstring arg2 = PluginUtils::ToLower(argv[2]);
-        if (arg2 == L"hide") {
-            *instance->GetVisiblePtr() = false;
+
+        const auto apply_to_all = arg1 == L"all" || arg1 == L"plugins";
+        auto exact_match = false;
+        std::vector<ToolboxUIPlugin*> matches;
+        for (const auto instance : ui_plugins) {
+            if (!instance || !instance->GetVisiblePtr()) {
+                continue;
+            }
+            auto plugin_name = PluginUtils::ToLower(PluginUtils::StringToWString(instance->Name()));
+            plugin_name.erase(std::ranges::remove_if(plugin_name, [](const wchar_t value) { return std::isspace(value); }).begin(), plugin_name.end());
+            if (apply_to_all) {
+                matches.push_back(instance);
+            }
+            else if (plugin_name == arg1) {
+                matches.clear();
+                matches.push_back(instance);
+                exact_match = true;
+                break;
+            }
+            else if (plugin_name.starts_with(arg1)) {
+                matches.push_back(instance);
+            }
         }
-        else if (arg2 == L"show") {
-            *instance->GetVisiblePtr() = true;
+
+        for (const auto instance : matches) {
+            auto& visible = *instance->GetVisiblePtr();
+            if (arg2 == L"hide") {
+                visible = false;
+            }
+            else if (arg2 == L"show") {
+                visible = true;
+            }
+            else {
+                visible = !visible;
+            }
         }
-        else if (arg2 == L"toggle") {
-            *instance->GetVisiblePtr() = !*instance->GetVisiblePtr();
-        }
-        if (arg1 != pluginname) {
+        if (matches.empty() || apply_to_all || !exact_match) {
             status->blocked = false;
         }
     }
@@ -59,13 +81,21 @@ bool ToolboxUIPlugin::ShowInMainMenu() const
 void ToolboxUIPlugin::Initialize(ImGuiContext* ctx, const ImGuiAllocFns allocator_fns, const HMODULE toolbox_dll)
 {
     ToolboxPlugin::Initialize(ctx, allocator_fns, toolbox_dll);
-    GW::Chat::CreateCommand(&pluginCmd_HookEntry, L"tb", CmdTB);
+    if (ui_plugins.empty()) {
+        GW::Chat::CreateCommand(&pluginCmd_HookEntry, L"tb", CmdTB);
+    }
+    if (!std::ranges::contains(ui_plugins, this)) {
+        ui_plugins.push_back(this);
+    }
 }
 
 void ToolboxUIPlugin::SignalTerminate()
 {
+    const auto removed = std::erase(ui_plugins, this);
+    if (removed && ui_plugins.empty()) {
+        GW::Chat::DeleteCommand(&pluginCmd_HookEntry, L"tb");
+    }
     ToolboxPlugin::SignalTerminate();
-    GW::Chat::DeleteCommand(&pluginCmd_HookEntry, L"tb");
 }
 
 void ToolboxUIPlugin::Terminate()

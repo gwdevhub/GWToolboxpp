@@ -220,7 +220,25 @@ std::vector<ToolboxPlugin*> PluginModule::GetPlugins()
 {
     std::vector<ToolboxPlugin*> plugins;
     for (const auto plugin : plugins_loaded) {
+        if (!plugin->instance) {
+            continue;
+        }
         plugins.push_back(plugin->instance);
+        using ToolboxPluginChildInstanceFn = ToolboxPlugin* (*)(size_t);
+        const auto child_instance_fn = reinterpret_cast<ToolboxPluginChildInstanceFn>(GetProcAddress(plugin->dll, "ToolboxPluginChildInstance"));
+        if (!child_instance_fn) {
+            continue;
+        }
+        constexpr auto max_child_plugins = size_t{64};
+        for (auto index = size_t{0}; index < max_child_plugins; ++index) {
+            const auto child = child_instance_fn(index);
+            if (!child) {
+                break;
+            }
+            if (child != plugin->instance && !std::ranges::contains(plugins, child)) {
+                plugins.push_back(child);
+            }
+        }
     }
     return plugins;
 }
