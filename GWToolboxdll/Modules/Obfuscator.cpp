@@ -839,7 +839,7 @@ void Obfuscator::Initialize()
     SettingsRegistry::Register(this, settings);
     Reset();
 
-    const auto GetCharacterSummary_Assertion = GW::Scanner::FindAssertion(R"(p:\code\gw\ui\char\uichinfo.cpp)", "!StrCmp(m_characterName, characterInfo.characterName)",0,0);
+    const auto GetCharacterSummary_Assertion = GW::Scanner::FindAssertion(R"(P:\Code\Gw\Ui\Char\UiChInfo.cpp)", "!StrCmp(m_characterName, characterInfo.characterName)",0,0);
     DEBUG_ASSERT(GetCharacterSummary_Assertion);
     if (GetCharacterSummary_Assertion) {
         // Hook to override character names on login screen
@@ -852,7 +852,7 @@ void Obfuscator::Initialize()
         GetCharacterSummary_AssertionPatch.TogglePatch(true);
     }
 
-    GetAccountData_Func = (GetAccountData_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion(R"(p:\code\gw\ui\game\vendor\vnacctnameset.cpp)", "charName", 0, 0));
+    GetAccountData_Func = (GetAccountData_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion(R"(P:\Code\Gw\Ui\Game\Vendor\VnAcctNameSet.cpp)", "charName", 0, 0));
     DEBUG_ASSERT(GetAccountData_Func);
     if (GetAccountData_Func) {
         GW::Hook::CreateHook((void**)&GetAccountData_Func, OnGetAccountInfo, reinterpret_cast<void**>(&GetAccountData_Ret));
