@@ -819,8 +819,20 @@ namespace {
         size_t count = 0;
 
         for (const GW::Agent* agent : *agents) {
-            if (agent == me || !GW::Agents::GetAgentMatchesFlags(agent, type)) continue;
-            if (model_id && GetAgentModelId(agent) != model_id) continue;
+            if (!agent || agent == me) continue;
+
+            if (model_id) {
+                if (GetAgentModelId(agent) != model_id) continue;
+
+                const auto living = agent->GetAsAgentLiving();
+                if (type == GW::TargetFilter::AnyLiving || type == (GW::TargetFilter::AnyLiving & ~GW::AgentTargetFlags::Accept_Player)) {
+                    if (!living || living->GetIsDead()) continue;
+                }
+            }
+            else {
+                if (!GW::Agents::GetAgentMatchesFlags(agent, type)) continue;
+            }
+
             if (index == 0) {
                 const float new_distance = GetSquareDistance(me->pos, agent->pos);
                 if (new_distance < distance) {
