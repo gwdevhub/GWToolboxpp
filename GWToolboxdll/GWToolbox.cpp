@@ -280,6 +280,85 @@ namespace {
         return Sha256Hex(bytes.data(), bytes.size());
     }
 
+    bool ApplyGWCAHotPatches(const HMODULE module, const std::filesystem::path& dll_path)
+    {
+        // only works with 8.32-derived GWCA, any other GWCA version or hash it will skip this patch
+        constexpr auto pinned_gwca_sha256 = "b33375229bcb06e415b71246ba317966c0ec6c76f71f284bc49f1783685e1975";
+
+        struct HotPatch {
+            const char* name;
+            uintptr_t rva;
+            std::array<BYTE, 3> expected;
+            std::array<BYTE, 3> replacement;
+            size_t size;
+            DWORD old_protection = 0;
+            bool needs_write = false;
+        };
+
+        std::array patches{
+            HotPatch{"target filter bypass", 0x1913, {0xff, 0x37, 0x00}, {0xeb, 0x3c, 0x00}, 2}
+        };
+
+        if (!module) return false;
+        if (Sha256HexFile(dll_path) != pinned_gwca_sha256) {
+            Log::Log("[LoadGWCADll] hot-patches skipped, GWCA build incompatible");
+            return true;
+        }
+
+        auto* module_bytes = reinterpret_cast<BYTE*>(module);
+        for (auto& patch : patches) {
+            const auto* instruction = module_bytes + patch.rva;
+            if (std::memcmp(instruction, patch.replacement.data(), patch.size) == 0) continue;
+            if (std::memcmp(instruction, patch.expected.data(), patch.size) != 0) {
+                Log::Log("[LoadGWCADll] %s hot-patch validation failed at RVA 0x%zx", patch.name, patch.rva);
+                return false;
+            }
+            patch.needs_write = true;
+        }
+
+        size_t protected_count = 0;
+        for (auto& patch : patches) {
+            if (!patch.needs_write) continue;
+            if (!VirtualProtect(module_bytes + patch.rva, patch.size, PAGE_EXECUTE_READWRITE, &patch.old_protection)) {
+                const auto protect_error = GetLastError();
+                for (auto previous = patches.rbegin(); previous != patches.rend(); ++previous) {
+                    if (!previous->needs_write || !previous->old_protection) continue;
+                    DWORD ignored = 0;
+                    VirtualProtect(module_bytes + previous->rva, previous->size, previous->old_protection, &ignored);
+                }
+                Log::Log("[LoadGWCADll] VirtualProtect failed for %s hot-patch: &lu", patch.name, protect_error);
+            }
+            ++protected_count;
+        }
+
+        if (!protected_count) return true;
+
+        for (const auto& patch : patches) {
+            if (!patch.needs_write) continue;
+            std::memcpy(module_bytes + patch.rva, patch.replacement.data(), patch.size);
+        }
+
+        auto finalization_succeeded = true;
+        for (auto patch = patches.rbegin(); patch != patches.rend(); ++patch) {
+            if (!patch->needs_write) continue;
+            DWORD ignored = 0;
+            if (!VirtualProtect(module_bytes + patch->rva, patch->size, patch->old_protection, &ignored)) {
+                Log::Log("[LoadGWCADll] protection restore failed for %s hot-patch: &lu", patch->name, GetLastError());
+            }
+        }
+        for (const auto& patch : patches) {
+            if (!patch.needs_write) continue;
+            if (!FlushInstructionCache(GetCurrentProcess(), module_bytes + patch.rva, patch.size)) {
+                Log::Log("[LoadGWCADll] instruction cache flush failed for %s hot-patch: %lu", patch.name, GetLastError());
+                finalization_succeeded = false;
+            }
+        }
+        if (!finalization_succeeded) return false;
+
+        Log::Log("[LoadGWCADll] applied %zu GWCA hot-patches", protected_count);
+        return true;
+    }
+
     bool IsValidGWCADll(const std::filesystem::path& dll_path_str, [[maybe_unused]] const EmbeddedResource& resource_dll)
     {
         if (!std::filesystem::exists(dll_path_str)) return false;
@@ -390,6 +469,12 @@ namespace {
             const DWORD code = GetLastError();
             Log::Log("[LoadGWCADll] LoadLibraryW fail, %lu", code);
             warn_if_antivirus(code);
+            return nullptr;
+        }
+        if (!ApplyGWCAHotPatches(gwcamodule, gwca_dll_path)) {
+            Log::Log("[LoadGWCADll] GWCA hot-patch set failed; unloading gwca.dll");
+            FreeLibrary(gwcamodule);
+            gwcamodule = nullptr;
             return nullptr;
         }
         Log::Log("[LoadGWCADll] success, module ptr %p", gwcamodule);
