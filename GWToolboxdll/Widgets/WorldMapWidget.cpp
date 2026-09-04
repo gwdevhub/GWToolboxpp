@@ -1060,7 +1060,7 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
     if (ImGui::Begin(Name(), &visible, GetWinFlags() | ImGuiWindowFlags_AlwaysAutoResize)) {
         window = ImGui::GetCurrentWindowRead();
         bool carto_enabled = CartographerWidget::GetEnabled();
-        if (ImGui::Checkbox("制图师", &carto_enabled)) {
+        if (ImGui::Checkbox("探索绘制", &carto_enabled)) {
             GW::GameThread::Enqueue([carto_enabled] {
                 CartographerWidget::SetEnabled(carto_enabled);
             });

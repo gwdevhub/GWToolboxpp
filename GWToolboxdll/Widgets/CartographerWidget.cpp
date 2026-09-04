@@ -1319,7 +1319,7 @@ namespace Carto {
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
         const ImVec2 item_size = {250.f * ImGui::FontScale(), 0.f};
         {
-            ImGui::TextColored(ImColor(kTargetColor).Value, ICON_FA_MAP_MARKED_ALT " 制图师");
+            ImGui::TextColored(ImColor(kTargetColor).Value, ICON_FA_MAP_MARKED_ALT "探索绘制");
             char status[224];
             BuildStatusText(status, sizeof(status));
             ImGui::TextDisabled("%s", status);
@@ -1993,7 +1993,7 @@ void CartographerWidget::Draw(IDirect3DDevice9*)
             GW::GameThread::Enqueue([on] { SetEnabled(on); });
         }
         if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip(visible ? "制图师已激活。点击隐藏。" : "制图师已隐藏。点击显示。");
+            ImGui::SetTooltip(visible ? "探索绘制已激活。点击隐藏。" : "探索绘制已隐藏。点击显示。");
         }
         ImGui::PopStyleColor();
     }
@@ -2009,7 +2009,7 @@ void CartographerWidget::DrawSettingsInternal()
     if (ImGui::Checkbox("启用", &on)) {
         GW::GameThread::Enqueue([on] { SetEnabled(on); });
     }
-    ImGui::ShowHelp("也可通过任务地图上的按钮或世界地图自身的制图师复选框切换。");
+    ImGui::ShowHelp("也可通过任务地图上的按钮或世界地图自身的探索绘制复选框切换。");
     DrawWorldMapOptions();
 
     ImGui::Separator();
