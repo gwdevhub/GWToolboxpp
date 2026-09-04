@@ -179,13 +179,26 @@ namespace {
                 stage = ApplySkillStates;
                 break;
             }
-            case ApplySkillStates:
-                if (TIMER_DIFF(started) < 50) break;
-                GW::PartyMgr::SetHeroSkillDisabled(hero_agent_id, skill_slot, ((build.disabled_skills >> skill_slot) & 1) != 0);
-                started = TIMER_INIT();
-                if (++skill_slot < 8) break;
+            case ApplySkillStates: {
+                const auto* skillbar = GW::SkillbarMgr::GetSkillbar(hero_agent_id);
+                if (!skillbar) break;
+                while (skill_slot < 8) {
+                    const auto desired = ((build.disabled_skills >> skill_slot) & 1) != 0;
+                    const auto current = ((skillbar->disabled >> skill_slot) & 1) != 0;
+                    if (current == desired) {
+                        skill_slot++;
+                        continue;
+                    }
+                    if (TIMER_DIFF(started) < 50) break;
+                    GW::PartyMgr::SetHeroSkillDisabled(hero_agent_id, skill_slot++, desired);
+                    started = TIMER_INIT();
+                    break;
+                }
+                if (skill_slot < 8) break;
                 stage = VerifySkillStates;
+                started = TIMER_INIT();
                 break;
+            }
             case VerifySkillStates: {
                 const auto* skillbar = GW::SkillbarMgr::GetSkillbar(hero_agent_id);
                 const auto actual = skillbar ? static_cast<uint8_t>(skillbar->disabled & 0xFF) : 0;
