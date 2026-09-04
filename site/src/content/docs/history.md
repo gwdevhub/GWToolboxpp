@@ -8,6 +8,7 @@ Previous releases are available on Github as dll files. There is no support for 
 the latest version, go to the [Home Page](./) instead.
 
 ## Version 8.34
+* [Fix] Hero Builds now applies saved disabled skill states at a controlled rate, so loading teams with more than 16 disabled hero skills no longer leaves later skills enabled.
 * [Fix] Cartographer now detects the Bird's Eye View effect automatically and adjusts its reveal range while the effect is active, replacing the manual Bird's Eye Compass setting.
 * [Fix] Cartographer now uses the current map's pathing data after transitions between missions and outposts, and no longer periodically rebuilds continent-wide fog while the mission map is open.
 * [Fix] Automatic title selection (`/title` and the Reapply Title hotkey) now uses Lightbringer instead of Sunspear in Turai's Procession, Jennur's Horde, Nundu Bay, Dzagonur Bastion, Yatendi Canyons, Vehtendi Valley, Forum Highlands and The Mirror of Lyss, where Margonites make Lightbringer the useful title.
