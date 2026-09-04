@@ -256,12 +256,14 @@ namespace {
     }
 
     // Return true if merc professions should be re-read from game memory.
+    // Skips Loading screens — merc data isn't available and shouldn't reset the timer.
     static bool ShouldRefreshMercProfessions()
     {
         const auto instance = GW::Map::GetInstanceType();
-        // Refresh on instance change (e.g., entering an outpost) or after timeout
-        if (instance != s_merc_prof_instance) return true;
-        if (TIMER_DIFF(s_merc_prof_timer) > kMercRefreshTimeout) return true;
+        if (instance != GW::Constants::InstanceType::Loading
+            && instance != s_merc_prof_instance
+            && (TIMER_DIFF(s_merc_prof_timer) > kMercRefreshTimeout)) 
+            return true;
         return false;
     }
 

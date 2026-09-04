@@ -276,23 +276,24 @@ GW::HeroPartyMember* HeroBuildsWindow::GetPartyHeroByID(const GW::Constants::Her
 // Refreshes mercenary display names from HeroInfo (read from game memory).
 // Falls back to default "Mercenary X" names when game memory is unavailable.
 // Throttled to instance transitions or every 30s — merc names rarely change.
+// Skips Loading screens entirely — no merc data available, preserves cached names.
 void HeroBuildsWindow::RefreshMercDisplayNames()
 {
     const auto instance = GW::Map::GetInstanceType();
     const bool should_refresh = instance != s_merc_name_instance
         || TIMER_DIFF(s_merc_name_timer) > kMercNameRefreshTimeout;
-    if (!should_refresh) return;
+    if (!should_refresh || instance == GW::Constants::InstanceType::Loading) return;
 
     const auto* w = GW::GetWorldContext();
+    if (!w || !w->hero_info.size()) return; // preserve cached names
+
     for (size_t i = 0; i < 8; i++) {
         const auto merc_id = static_cast<GW::Constants::HeroID>(static_cast<int>(GW::Constants::HeroID::Merc1) + static_cast<int>(i));
         // Try game memory first (actual mercenary name)
-        if (w && w->hero_info.size()) {
-            for (const auto& info : w->hero_info) {
-                if (info.hero_id == merc_id && info.name[0] != L'\0') {
-                    s_merc_display_names[i] = TextUtils::WStringToString(info.name);
-                    goto next_merc;
-                }
+        for (const auto& info : w->hero_info) {
+            if (info.hero_id == merc_id && info.name[0] != L'\0') {
+                s_merc_display_names[i] = TextUtils::WStringToString(info.name);
+                goto next_merc;
             }
         }
         // Fall back to default
@@ -307,7 +308,8 @@ const char* HeroBuildsWindow::GetMercDisplayName(const GW::Constants::HeroID her
 {
     if (hero_id >= GW::Constants::HeroID::Merc1 && hero_id <= GW::Constants::HeroID::Merc8) {
         size_t idx = static_cast<size_t>(hero_id) - static_cast<size_t>(GW::Constants::HeroID::Merc1);
-        if (idx < s_merc_display_names.size()) return s_merc_display_names[idx].c_str();
+        if (idx < s_merc_display_names.size() && !s_merc_display_names[idx].empty())
+            return s_merc_display_names[idx].c_str();
     }
     return Resources::GetHeroName(hero_id)->string().c_str();
 }
