@@ -866,6 +866,11 @@ namespace GW {
         // The full ID is 0x0f000000 | skill_id, making it deterministic and recyclable per skill.
         static constexpr uint32_t custom_effect_id_base = 0x0f000000;
 
+        bool IsCustomEffect(const uint32_t effect_id)
+        {
+            return (effect_id & 0xff000000) == custom_effect_id_base;
+        }
+
         uint32_t AddCustomEffect(const GW::Constants::SkillID skill_id, const float duration_seconds)
         {
             const auto player_effects = GW::Effects::GetPlayerEffectsArray();
@@ -893,7 +898,7 @@ namespace GW {
 
         bool RemoveCustomEffect(const uint32_t effect_id)
         {
-            if ((effect_id & 0xff000000) != custom_effect_id_base) return false;
+            if (!IsCustomEffect(effect_id)) return false;
             const auto player_effects = GW::Effects::GetPlayerEffectsArray();
             if (!player_effects) return false;
             auto& arr = player_effects->effects;
