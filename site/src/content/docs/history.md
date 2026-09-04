@@ -9,6 +9,7 @@ the latest version, go to the [Home Page](./) instead.
 
 ## Version 8.34
 * [Fix] Cartographer now detects the Bird's Eye View effect automatically and adjusts its reveal range while the effect is active, replacing the manual Bird's Eye Compass setting.
+* [Fix] Cartographer now uses the current map's pathing data after transitions between missions and outposts, and no longer periodically rebuilds continent-wide fog while the mission map is open.
 * [Fix] Automatic title selection (`/title` and the Reapply Title hotkey) now uses Lightbringer instead of Sunspear in Turai's Procession, Jennur's Horde, Nundu Bay, Dzagonur Bastion, Yatendi Canyons, Vehtendi Valley, Forum Highlands and The Mirror of Lyss, where Margonites make Lightbringer the useful title.
 * [Fix] Game Settings: in-game name tag colour overrides can now be disabled so the colours configured in Guild Wars are used instead. The overrides are off by default.
 * [Minor] Mouse Settings: disabled the "Enable cursor fix" camera-glitch workaround because an August 2026 Guild Wars update changed lookaround speed. Cursor-size scaling remains available.
