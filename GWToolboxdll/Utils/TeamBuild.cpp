@@ -45,8 +45,10 @@ namespace {
 
     struct PendingBuildLoad {
         Build build;
-        enum Stage : uint8_t { AddHero, WaitForHero, Finished } stage = AddHero;
+        enum Stage : uint8_t { AddHero, WaitForHero, ApplySkillStates, VerifySkillStates, Finished } stage = AddHero;
         size_t party_hero_index = 0xFFFFFFFF;
+        uint32_t hero_agent_id = 0;
+        uint32_t skill_slot = 0;
         clock_t started = 0;
 
         bool Process();
@@ -152,10 +154,6 @@ namespace {
             return true;
         }
 
-        // Hero build: async — add hero then wait for it to appear in party.
-        if (!started) started = TIMER_INIT();
-        if (TIMER_DIFF(started) > 1000) return true; // timeout
-
         switch (stage) {
             case AddHero:
                 if (!ToolboxUtils::IsHeroUnlocked(build.hero_id)) return true;
@@ -163,19 +161,38 @@ namespace {
                     Log::Warning("Failed to add hero %d", build.hero_id);
                     return true;
                 }
+                started = TIMER_INIT();
                 stage = WaitForHero;
                 [[fallthrough]];
             case WaitForHero: {
+                if (TIMER_DIFF(started) > 1000) return true;
                 const GW::HeroPartyMember* hero = GetPartyHeroByID(build.hero_id, &party_hero_index);
                 if (!hero) break;
                 const GW::HeroFlag* flag = GetHeroFlagInfo(build.hero_id);
                 if (!flag) break;
+                hero_agent_id = hero->agent_id;
                 if (!build.code.empty()) GW::SkillbarMgr::LoadSkillTemplate(hero->agent_id, build.code.c_str());
-                for (uint32_t k = 0; k < 8; k++)
-                    GW::PartyMgr::SetHeroSkillDisabled(hero->agent_id, k, ((build.disabled_skills >> k) & 1) != 0);
                 GW::UI::SendUIMessage(build.show_panel ? GW::UI::UIMessage::kShowHeroPanel : GW::UI::UIMessage::kHideHeroPanel, reinterpret_cast<void*>(static_cast<uintptr_t>(build.hero_id)));
                 const auto behavior = static_cast<GW::HeroBehavior>(build.behavior);
                 if (behavior <= GW::HeroBehavior::AvoidCombat && flag->hero_behavior != behavior) GW::PartyMgr::SetHeroBehavior(hero->agent_id, behavior);
+                started = TIMER_INIT();
+                stage = ApplySkillStates;
+                break;
+            }
+            case ApplySkillStates:
+                if (TIMER_DIFF(started) < 50) break;
+                GW::PartyMgr::SetHeroSkillDisabled(hero_agent_id, skill_slot, ((build.disabled_skills >> skill_slot) & 1) != 0);
+                started = TIMER_INIT();
+                if (++skill_slot < 8) break;
+                stage = VerifySkillStates;
+                break;
+            case VerifySkillStates: {
+                const auto* skillbar = GW::SkillbarMgr::GetSkillbar(hero_agent_id);
+                const auto actual = skillbar ? static_cast<uint8_t>(skillbar->disabled & 0xFF) : 0;
+                if ((!skillbar || actual != build.disabled_skills) && TIMER_DIFF(started) <= 3000) break;
+                if (!skillbar || actual != build.disabled_skills) {
+                    Log::Warning("Timed out applying disabled skills to hero %d (expected 0x%02X, got 0x%02X)", build.hero_id, build.disabled_skills, actual);
+                }
                 stage = Finished;
                 [[fallthrough]];
             }
