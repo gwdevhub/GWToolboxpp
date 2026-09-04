@@ -16,6 +16,7 @@
 #include <Defines.h>
 #include <ImGuiAddons.h>
 #include <Utils/FontLoader.h>
+#include <Utils/ToolboxUtils.h>
 #include "SkillbarWidget.h"
 #include <Modules/ChatCommands.h>
 
@@ -181,6 +182,8 @@ void SkillbarWidget::Update(float)
     }
     if (const auto* effects = want_effects ? GW::Effects::GetPlayerEffects() : nullptr) {
         for (const GW::Effect& effect : *effects) {
+            if (GW::Effects::IsCustomEffect(effect.effect_id))
+                continue;
             for (auto i = 0; i < _countof(skillbar->skills); i++) {
                 if (effect.skill_id != skillbar->skills[i].skill_id)
                     continue;
