@@ -132,7 +132,7 @@ struct MusicData {
     {
         GW::Hook::EnterHook();
         active_sound_handles.erase(handle);
-        CloseHandle_Ret(handle);
+        if (handle && handle->vtable) CloseHandle_Ret(handle);
         GW::Hook::LeaveHook();
     }
 
