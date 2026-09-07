@@ -27,6 +27,7 @@ namespace {
 
     std::map<GW::HookEntry*, PlaySoundCallback> play_sound_callbacks;
     std::map<GW::HookEntry*, PlaySoundCallback> play_music_callbacks;
+    std::unordered_set<GW::RecObject*> active_sound_handles;
 
     std::map<std::wstring, clock_t> blocked_sounds_until;
 
@@ -120,27 +121,18 @@ struct MusicData {
     GW::RecObject* OnPlaySound(wchar_t* filename, SoundProps* props)
     {
         auto handle = PlayAudioInternal(filename, props, play_sound_callbacks, PlaySound_Ret);
+        if (handle && force_play_sound) active_sound_handles.insert(handle);
         if (log_sounds && std::ranges::find(logged_sounds, filename) == logged_sounds.end()) {
             logged_sounds.push_back(filename);
         }
         return handle;
     }
 
-    int OnCloseHandleException(const DWORD code)
-    {
-        return code == EXCEPTION_ACCESS_VIOLATION || code == EXCEPTION_BREAKPOINT
-            ? EXCEPTION_EXECUTE_HANDLER
-            : EXCEPTION_CONTINUE_SEARCH;
-    }
-
     void OnCloseHandle(GW::RecObject* handle)
     {
         GW::Hook::EnterHook();
-        __try {
-            if (handle && handle->vtable) CloseHandle_Ret(handle);
-        }
-        __except (OnCloseHandleException(GetExceptionCode())) {
-        }
+        active_sound_handles.erase(handle);
+        if (handle && handle->vtable) CloseHandle_Ret(handle);
         GW::Hook::LeaveHook();
     }
 
@@ -203,11 +195,10 @@ bool AudioSettings::PlaySound(const wchar_t* filename, const GW::Vec3f* position
 }
 bool AudioSettings::StopSound(void* handle)
 {
-    // This doesn't work :(
-    if (!(StopSound_Func && CloseHandle_Func && handle)) return false;
+    if (!(StopSound_Func && handle)) return false;
     GW::GameThread::Enqueue([handle] {
+        if (!active_sound_handles.contains(static_cast<GW::RecObject*>(handle))) return;
         StopSound_Func((GW::RecObject*)handle, 0);
-        CloseHandle_Func((GW::RecObject*)handle);
     });
     return true;
 }
@@ -284,6 +275,7 @@ void AudioSettings::SignalTerminate()
     }
     logged_sounds.clear();
     logged_music.clear();
+    active_sound_handles.clear();
     GW::UI::RemoveUIMessageCallback(&OnUIMessage_HookEntry);
 }
 void AudioSettings::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
