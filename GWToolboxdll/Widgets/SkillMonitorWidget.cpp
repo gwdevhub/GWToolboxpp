@@ -104,7 +104,7 @@ namespace {
         else {
             skill_history->push_back({
                 skill_id,
-                CANCELLED,
+                COMPLETED,
                 TIMER_INIT(),
                 TIMER_INIT(),
                 casttime,
