@@ -475,7 +475,7 @@ namespace GW {
                 arr.m_buffer = new_buf;
                 arr.m_capacity++;
             }
-            arr.m_buffer[arr.m_size] = element;
+            memcpy(&arr.m_buffer[arr.m_size],&element,sizeof(T));
             return &arr.m_buffer[arr.m_size++];
         }
 
@@ -866,11 +866,26 @@ namespace GW {
         // The full ID is 0x0f000000 | skill_id, making it deterministic and recyclable per skill.
         static constexpr uint32_t custom_effect_id_base = 0x0f000000;
 
+        EffectArray* GetOrCreateAgentEffects(uint32_t agent_id)
+        {
+            auto agent_effects = GW::Effects::GetAgentEffects(agent_id);
+            if (agent_effects) return agent_effects;
+            auto effects_array = GW::Effects::GetPartyEffectsArray();
+            if (!effects_array) return 0;
+            AgentEffects e;
+            e.agent_id = agent_id;
+            memset(&e.buffs, 0, sizeof(e.buffs));
+            memset(&e.effects, 0, sizeof(e.effects));
+            GW::MemoryMgr::AddToGuildWarsArray(*effects_array, e);
+            return GW::Effects::GetAgentEffects(agent_id);
+        }
+
+
         uint32_t AddCustomEffect(const GW::Constants::SkillID skill_id, const float duration_seconds)
         {
-            const auto player_effects = GW::Effects::GetPlayerEffectsArray();
+            const auto player_effects = GW::Effects::GetOrCreateAgentEffects(GW::Agents::GetControlledCharacterId());
             if (!player_effects) return 0;
-            auto& arr = player_effects->effects;
+            auto& arr = *player_effects;
 
             const uint32_t target_id = custom_effect_id_base | static_cast<uint32_t>(skill_id);
 
