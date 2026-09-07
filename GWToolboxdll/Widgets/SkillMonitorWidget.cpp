@@ -8,7 +8,6 @@
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/SkillbarMgr.h>
 
-#include <GWCA/Packets/StoC.h>
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Utilities/Hook.h>
 
@@ -53,15 +52,6 @@ namespace {
             return settings.status_color_interrupted;
         }
         return Colors::Empty();
-    }
-
-    void CasttimeCallback(const uint32_t value_id, const uint32_t caster_id, const float value)
-    {
-        if (value_id != GW::Packet::StoC::GenericValueID::casttime) {
-            return;
-        }
-
-        casttime_map[caster_id] = value;
     }
 
     GW::HookEntry PostUIMessage_Entry;
@@ -111,7 +101,7 @@ namespace {
             });
         }
     }
-    void OnSkillCancelledOrInterrupted(uint32_t agent_id, GW::Constants::SkillID skill_id)
+    void OnSkillStopped(uint32_t agent_id, GW::Constants::SkillID skill_id, const SkillActivationStatus status)
     {
         const auto skill_history = &history[agent_id];
         if (!skill_history) {
@@ -129,13 +119,13 @@ namespace {
             if (skill) casttime = skill->activation;
         }
         if (casting != skill_history->end()) {
-            casting->status = CANCELLED;
+            casting->status = status;
             casttime_map.erase(agent_id);
         }
         else {
             skill_history->push_back({
                 skill_id,
-                CANCELLED,
+                status,
                 TIMER_INIT(),
                 TIMER_INIT(),
                 casttime,
@@ -154,9 +144,10 @@ namespace {
                 const auto packet = (GW::UI::UIPacket::kAgentSkillPacket*)wparam;
                 OnSkillCompleted(packet->agent_id, packet->skill_id);
             } break;
-            case GW::UI::UIMessage::kAgentSkillCancelled: {
+            case GW::UI::UIMessage::kAgentSkillCancelled:
+            case GW::UI::UIMessage::kAgentSkillInterrupted: {
                 const auto packet = (GW::UI::UIPacket::kAgentSkillPacket*)wparam;
-                OnSkillCancelledOrInterrupted(packet->agent_id, packet->skill_id);
+                OnSkillStopped(packet->agent_id, packet->skill_id, message_id == GW::UI::UIMessage::kAgentSkillCancelled ? CANCELLED : INTERRUPTED);
             } break;
         }
     }
@@ -167,7 +158,7 @@ void SkillMonitorWidget::Initialize()
 {
     SnapsToPartyWindow::Initialize();
     SettingsRegistry::Register(this, settings);
-    GW::UI::UIMessage ui_messages[] = {GW::UI::UIMessage::kAgentSkillActivated, GW::UI::UIMessage::kAgentSkillActivatedInstantly, GW::UI::UIMessage::kAgentSkillCancelled, GW::UI::UIMessage::kAgentSkillStartedCast};
+    GW::UI::UIMessage ui_messages[] = {GW::UI::UIMessage::kAgentSkillActivated, GW::UI::UIMessage::kAgentSkillActivatedInstantly, GW::UI::UIMessage::kAgentSkillCancelled, GW::UI::UIMessage::kAgentSkillInterrupted, GW::UI::UIMessage::kAgentSkillStartedCast};
     for (auto message_id : ui_messages) {
         RegisterUIMessageCallback(&PostUIMessage_Entry, message_id, OnPostUIMessage, 0x4000);
     }
@@ -361,5 +352,4 @@ void SkillMonitorWidget::DrawSettingsInternal()
         settings.history_timeout = 0;
     }
 }
-
 
