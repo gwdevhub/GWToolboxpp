@@ -2432,7 +2432,7 @@ void GameSettings::OnWriteChat(GW::HookStatus* status, GW::UI::UIMessage, void* 
 // Auto-drop UA when recasting
 void GameSettings::OnAgentStartCast(GW::HookStatus*, GW::UI::UIMessage, void* wParam, void*)
 {
-    const auto packet = static_cast<GW::UI::UIPacket::kAgentSkillPacket*>(wParam);
+    const auto packet = static_cast<GW::UI::UIPacket::kAgentSkillStartedCast*>(wParam);
     if (settings.drop_ua_on_cast && packet && packet->skill_id == GW::Constants::SkillID::Unyielding_Aura) {
         const auto buffs = GW::Effects::GetAgentBuffs(packet->agent_id);
         if (buffs) {
