@@ -7,11 +7,13 @@
 
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Skill.h>
+#include <GWCA/GameEntities/Title.h>
 
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/EffectMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
+#include <GWCA/Managers/PlayerMgr.h>
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
@@ -75,9 +77,23 @@ namespace {
     float GetSpiritDuration(const GW::Constants::SkillID skill_id)
     {
         const auto* skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
-        if (!(skill && skill->duration0)) return 60.f;
+        if (!skill) return 60.f;
+        if (skill_id == GW::Constants::SkillID::Shadowsong) return skill->const_effect;
+        if (!skill->duration0) return 60.f;
+
+        if (skill_id == GW::Constants::SkillID::Vampirism) {
+            constexpr auto max_effective_rank = 5u;
+            auto rank = 0u;
+            const auto* title = GW::PlayerMgr::GetTitleTrack(static_cast<GW::Constants::TitleID>(skill->title));
+            const auto* world = GW::GetWorldContext();
+            if (title && world && title->current_title_tier_index < world->title_tiers.size()) {
+                rank = std::min(world->title_tiers[title->current_title_tier_index].tier_number, max_effective_rank);
+            }
+            return std::round(skill->duration0 + (skill->duration15 - skill->duration0) * rank / static_cast<float>(max_effective_rank));
+        }
+
         const auto att = GW::SkillbarMgr::GetPlayerAttribute((GW::Constants::Attribute)skill->attribute);
-        return !att || att->level == 0 ? skill->duration0 : skill->duration0 + (skill->duration15 - skill->duration0) * att->level / 15.f;
+        return !att || att->level == 0 ? skill->duration0 : std::round(skill->duration0 + (skill->duration15 - skill->duration0) * att->level / 15.f);
     }
 
     void RemoveTrackedSpirit(const uint32_t agent_id)
