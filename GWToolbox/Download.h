@@ -10,7 +10,7 @@ struct Asset {
     std::string name{};
     size_t size = 0;
     std::string browser_download_url{};
-    std::string digest{}; // e.g. "sha256:<hex>"; absent on older releases
+    std::optional<std::string> digest{};
 };
 
 struct Release {
@@ -64,8 +64,7 @@ public:
 
 private:
     static bool DownloadDll(const std::vector<Release>& releases, std::wstring& error);
-    // Downloads `url` (expected size `file_size`) into `out_content`, pumping `window`'s message loop and progress bar as it goes.
-    static bool DownloadAssetWithProgress(DownloadWindow& window, const std::string& url, size_t file_size, std::string& out_content, std::wstring& error);
+    static bool DownloadAssetWithProgress(DownloadWindow& window, const Asset& asset, std::string& out_content, std::wstring& error);
 
     LRESULT WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) override;
 
