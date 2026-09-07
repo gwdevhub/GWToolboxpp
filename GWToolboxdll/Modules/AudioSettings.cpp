@@ -126,11 +126,21 @@ struct MusicData {
         return handle;
     }
 
-    // Avoids assertion issues when handle->h0000 is freed already e.g. by toolbox
+    int OnCloseHandleException(const DWORD code)
+    {
+        return code == EXCEPTION_ACCESS_VIOLATION || code == EXCEPTION_BREAKPOINT
+            ? EXCEPTION_EXECUTE_HANDLER
+            : EXCEPTION_CONTINUE_SEARCH;
+    }
+
     void OnCloseHandle(GW::RecObject* handle)
     {
         GW::Hook::EnterHook();
-        if (handle && handle->vtable) CloseHandle_Ret(handle);
+        __try {
+            if (handle && handle->vtable) CloseHandle_Ret(handle);
+        }
+        __except (OnCloseHandleException(GetExceptionCode())) {
+        }
         GW::Hook::LeaveHook();
     }
 
