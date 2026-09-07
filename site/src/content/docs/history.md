@@ -9,6 +9,7 @@ the latest version, go to the [Home Page](./) instead.
 
 ## Version 8.34
 * [Fix] Hero Builds now applies saved disabled skill states at a controlled rate, so loading teams with more than 16 disabled hero skills no longer leaves later skills enabled.
+* [Fix] Effects Monitor now tracks Shadowsong, Dissonance, Wanderlust, Anguish, Gaze of Fury and Vampirism after you summon them. These spirit timers also highlight their matching skill and appear in the Skillbar widget's effect monitor.
 * [Fix] Cartographer now detects the Bird's Eye View effect automatically and adjusts its reveal range while the effect is active, replacing the manual Bird's Eye Compass setting.
 * [Fix] Cartographer now uses the current map's pathing data after transitions between missions and outposts, and no longer periodically rebuilds continent-wide fog while the mission map is open.
 * [Fix] Automatic title selection (`/title` and the Reapply Title hotkey) now uses Lightbringer instead of Sunspear in Turai's Procession, Jennur's Horde, Nundu Bay, Dzagonur Bastion, Yatendi Canyons, Vehtendi Valley, Forum Highlands and The Mirror of Lyss, where Margonites make Lightbringer the useful title.
@@ -221,7 +222,7 @@ the latest version, go to the [Home Page](./) instead.
 * [New] `/transmo` NPC list is now fully user-configurable in settings — add your current target as a named entry, edit or remove existing entries, and reset to built-in defaults; also added `/transmo model NPC_ID MODEL_FILE_ID MODEL_FILE FLAGS [SCALE]` subcommand for direct model specification
 * [New] Inventory Sorting: new `/sortinventory` and `/sortstorage` chat commands to sort character or storage inventory from chat; sorting now automatically deprioritises Nicholas The Traveller collectibles until the week they are needed
 * [New] Notifications: added Team Chat as an option for toast notifications and window flash; new "Change window title on notification" option — the GW window title changes to show pending unread notifications when the game is minimised or running in the background
-* [New] Effects Monitor widget: new option to track nearby spirit effect timers (Bloodsong, Vampirism, etc.) and display their remaining duration alongside your own effects
+* [New] Effects Monitor widget: new option to track spirit effect timers for spirits you summon and display their remaining duration alongside your own effects
 * [New] Item Drops: new "Always hide items for player" and "Always hide items for party" lists — items on these lists are always hidden from the drop overlay regardless of rarity or other filter settings
 * [New] Added `/disableheroskill <hero_number> <slot_number> [0|1]` chat command to enable or disable a specific hero's skill slot from chat
 * [New] Added `/custommarker <x> <y>` chat command to place a custom quest marker at exact world coordinates; `/custommarker clear` removes it
