@@ -221,6 +221,21 @@ void ObserverModule::Initialize()
         HandleGenericPacket(value_id, caster_id, target_id, value, no_target);
     });
 
+    const auto on_agent_skill_status = [this](GW::HookStatus*, const GW::UI::UIMessage message_id, void* wparam, void*) {
+        if (!wparam || !IsActive() || !InitializeObserverSession()) {
+            return;
+        }
+        const auto packet = static_cast<GW::UI::UIPacket::kAgentSkillPacket*>(wparam);
+        if (message_id == GW::UI::UIMessage::kAgentSkillCancelled) {
+            HandleSkillCancelled(packet->agent_id);
+        }
+        else {
+            HandleInterrupted(packet->agent_id);
+        }
+    };
+    RegisterUIMessageCallback(&AgentSkillStatus_Entry, GW::UI::UIMessage::kAgentSkillCancelled, on_agent_skill_status);
+    RegisterUIMessageCallback(&AgentSkillStatus_Entry, GW::UI::UIMessage::kAgentSkillInterrupted, on_agent_skill_status);
+
     if (IsActive() && !observer_session_initialized) {
         InitializeObserverSession();
     }
@@ -358,20 +373,12 @@ void ObserverModule::HandleGenericPacket(const uint32_t value_id, const uint32_t
             break;
         }
 
-        case GW::Packet::StoC::GenericValueID::interrupted:
-            HandleInterrupted(caster_id);
-            break;
-
         case GW::Packet::StoC::GenericValueID::attack_skill_finished:
             HandleAttackSkillFinished(caster_id);
             break;
 
         case GW::Packet::StoC::GenericValueID::instant_skill_activated:
             HandleInstantSkillActivated(caster_id, target_id, static_cast<GW::Constants::SkillID>(value));
-            break;
-
-        case GW::Packet::StoC::GenericValueID::attack_skill_stopped:
-            HandleAttackSkillStopped(caster_id);
             break;
 
         case GW::Packet::StoC::GenericValueID::attack_skill_activated: {
@@ -394,10 +401,6 @@ void ObserverModule::HandleGenericPacket(const uint32_t value_id, const uint32_t
 
         case GW::Packet::StoC::GenericValueID::skill_finished:
             HandleSkillFinished(caster_id);
-            break;
-
-        case GW::Packet::StoC::GenericValueID::skill_stopped:
-            HandleSkillStopped(caster_id);
             break;
 
         case GW::Packet::StoC::GenericValueID::skill_activated: {
@@ -793,12 +796,6 @@ void ObserverModule::HandleAttackSkillFinished(const uint32_t agent_id)
 }
 
 
-void ObserverModule::HandleAttackSkillStopped(const uint32_t agent_id)
-{
-    ReduceAction(GetObservableAgentById(agent_id), ActionStage::Stopped);
-}
-
-
 void ObserverModule::HandleInstantSkillActivated(const uint32_t caster_id, const uint32_t target_id, const GW::Constants::SkillID skill_id)
 {
     // assuming there are no instant attack skills...
@@ -824,7 +821,7 @@ void ObserverModule::HandleSkillFinished(const uint32_t agent_id)
 }
 
 
-void ObserverModule::HandleSkillStopped(const uint32_t agent_id)
+void ObserverModule::HandleSkillCancelled(const uint32_t agent_id)
 {
     ReduceAction(GetObservableAgentById(agent_id), ActionStage::Stopped);
 }

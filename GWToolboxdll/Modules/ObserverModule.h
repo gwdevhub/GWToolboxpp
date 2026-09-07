@@ -657,11 +657,10 @@ private:
     void HandleInstantSkillActivated(uint32_t caster_id, uint32_t target_id, GW::Constants::SkillID skill_id);
 
     void HandleAttackSkillFinished(uint32_t agent_id);
-    void HandleAttackSkillStopped(uint32_t agent_id);
     void HandleAttackSkillStarted(uint32_t caster_id, uint32_t target_id, GW::Constants::SkillID skill_id);
 
     void HandleSkillFinished(uint32_t agent_id);
-    void HandleSkillStopped(uint32_t agent_id);
+    void HandleSkillCancelled(uint32_t agent_id);
     void HandleSkillActivated(uint32_t caster_id, uint32_t target_id, GW::Constants::SkillID skill_id);
 
     void HandleGenericPacket(uint32_t value_id, uint32_t caster_id,
@@ -724,4 +723,5 @@ private:
     GW::HookEntry GenericValueTarget_Entry;
     GW::HookEntry GenericValue_Entry;
     GW::HookEntry GenericFloat_Entry;
+    GW::HookEntry AgentSkillStatus_Entry;
 };
