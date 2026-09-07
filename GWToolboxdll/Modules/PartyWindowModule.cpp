@@ -37,27 +37,27 @@
 #include <Utils/ToolboxUtils.h>
 
 namespace {
-    std::map<uint32_t, GW::Constants::SkillID> summon_elites = {
-        {GW::Constants::ModelID::SummoningStone::ImperialCripplingSlash, GW::Constants::SkillID::Crippling_Slash},
-        {GW::Constants::ModelID::SummoningStone::ImperialTripleChop, GW::Constants::SkillID::Triple_Chop},
-        {GW::Constants::ModelID::SummoningStone::ImperialBarrage, GW::Constants::SkillID::Barrage},
-        {GW::Constants::ModelID::SummoningStone::ImperialQuiveringBlade, GW::Constants::SkillID::Quivering_Blade},
-        {GW::Constants::ModelID::SummoningStone::TenguHundredBlades, GW::Constants::SkillID::Hundred_Blades},
-        {GW::Constants::ModelID::SummoningStone::TenguBroadHeadArrow, GW::Constants::SkillID::Broad_Head_Arrow},
-        {GW::Constants::ModelID::SummoningStone::TenguPalmStrike, GW::Constants::SkillID::Palm_Strike},
-        {GW::Constants::ModelID::SummoningStone::TenguLifeSheath, GW::Constants::SkillID::Life_Sheath},
-        {GW::Constants::ModelID::SummoningStone::TenguAngchuElementalist, GW::Constants::SkillID::No_Skill},
-        {GW::Constants::ModelID::SummoningStone::TenguFeveredDreams, GW::Constants::SkillID::Fevered_Dreams},
-        {GW::Constants::ModelID::SummoningStone::TenguSpitefulSpirit, GW::Constants::SkillID::Spiteful_Spirit},
-        {GW::Constants::ModelID::SummoningStone::TenguPreservation, GW::Constants::SkillID::Preservation},
-        {GW::Constants::ModelID::SummoningStone::TenguPrimalRage, GW::Constants::SkillID::Primal_Rage},
-        {GW::Constants::ModelID::SummoningStone::TenguGlassArrows, GW::Constants::SkillID::Glass_Arrows},
-        {GW::Constants::ModelID::SummoningStone::TenguWayOftheAssassin, GW::Constants::SkillID::Way_of_the_Assassin},
-        {GW::Constants::ModelID::SummoningStone::TenguPeaceandHarmony, GW::Constants::SkillID::Peace_and_Harmony},
-        {GW::Constants::ModelID::SummoningStone::TenguSandstorm, GW::Constants::SkillID::Sandstorm},
-        {GW::Constants::ModelID::SummoningStone::TenguPanic, GW::Constants::SkillID::Panic},
-        {GW::Constants::ModelID::SummoningStone::TenguAuraOftheLich, GW::Constants::SkillID::Aura_of_the_Lich},
-        {GW::Constants::ModelID::SummoningStone::TenguDefiantWasXinrae, GW::Constants::SkillID::Defiant_Was_Xinrae},
+    std::map<std::wstring, GW::Constants::SkillID> summon_elites = {
+        {L"\x8103\x70d", GW::Constants::SkillID::Aura_of_the_Lich},
+        {L"\x8103\x705", GW::Constants::SkillID::Spiteful_Spirit},
+        {L"\x8103\x70e", GW::Constants::SkillID::Defiant_Was_Xinrae},
+        {L"\x8103\x706", GW::Constants::SkillID::Preservation},
+        {L"\x8103\x6ff", GW::Constants::SkillID::Hundred_Blades},
+        {L"\x8103\x707", GW::Constants::SkillID::Primal_Rage},
+        {L"\x8103\x704", GW::Constants::SkillID::Fevered_Dreams},
+        {L"\x8103\x70c", GW::Constants::SkillID::Panic},
+        {L"\x8103\x709", GW::Constants::SkillID::Way_of_the_Assassin},
+        {L"\x8103\x701", GW::Constants::SkillID::Palm_Strike},
+        {L"\x8103\x70a", GW::Constants::SkillID::Peace_and_Harmony},
+        {L"\x8103\x702", GW::Constants::SkillID::Life_Sheath},
+        {L"\x8103\x703", GW::Constants::SkillID::No_Skill}, // This is the Angchu Elementalist without an Elite Skill
+        {L"\x8103\x70b", GW::Constants::SkillID::Sandstorm},
+        {L"\x8103\x708", GW::Constants::SkillID::Glass_Arrows},
+        {L"\x8103\x700", GW::Constants::SkillID::Broad_Head_Arrow},
+        {L"\x8103\x6fe", GW::Constants::SkillID::Quivering_Blade},
+        {L"\x8103\x6fc", GW::Constants::SkillID::Triple_Chop},
+        {L"\x8103\x6fb", GW::Constants::SkillID::Crippling_Slash},
+        {L"\x8103\x6fd", GW::Constants::SkillID::Barrage},
     };
 
     struct PendingAddToParty {
@@ -97,7 +97,7 @@ namespace {
     GW::HookEntry GameSrvTransfer_Entry;
     GW::HookEntry GameThreadCallback_Entry;
 
-    GW::HookEntry Summon_AgentAdd_Entry;
+    GW::HookEntry Summon_AgentName_Entry;
     GW::HookEntry Summon_GameThreadCallback_Entry;
 
     // Names are round-tripped through AgentName packets, so every copy has to fit that field.
@@ -973,24 +973,20 @@ void PartyWindowModule::Initialize()
         }
     });
 
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentAdd>(
-        &Summon_AgentAdd_Entry,
-        [&](GW::HookStatus*, const GW::Packet::StoC::AgentAdd* pak) -> void {
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentName>(
+        &Summon_AgentName_Entry,
+        [&](GW::HookStatus*, const GW::Packet::StoC::AgentName* pak) -> void {
             if (!settings.add_elite_skill_to_summons) {
                 return;
             }
-            if (pak->type != 1) {
-                return; // Not a living agent.
-            }
-            const uint32_t player_number = pak->agent_type ^ 0x20000000;
-            const auto summon_elite = summon_elites.find(player_number);
+            const auto summon_elite = summon_elites.find(pak->name_enc);
             if (summon_elite == summon_elites.end()) {
                 return;
             }
             if (summon_elite->second == GW::Constants::SkillID::No_Skill) {
                 return;
             }
-            summons_pending.push({pak->agent_id, summon_elite->second});
+            summons_pending.push({ pak->agent_id, summon_elite->second });
         }
     );
 
@@ -1020,7 +1016,7 @@ void PartyWindowModule::SignalTerminate()
     GW::StoC::RemoveCallback<GW::Packet::StoC::AgentState>(&AgentState_Entry);
     GW::StoC::RemoveCallback<GW::Packet::StoC::AgentAdd>(&AgentAdd_Entry);
     GW::StoC::RemoveCallback<GW::Packet::StoC::GameSrvTransfer>(&GameSrvTransfer_Entry);
-    GW::StoC::RemoveCallback<GW::Packet::StoC::AgentAdd>(&Summon_AgentAdd_Entry);
+    GW::StoC::RemoveCallback<GW::Packet::StoC::AgentAdd>(&Summon_AgentName_Entry);
     ClearAddedAllies();
 }
 
