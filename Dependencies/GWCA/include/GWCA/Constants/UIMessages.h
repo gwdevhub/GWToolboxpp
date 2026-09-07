@@ -166,11 +166,11 @@ namespace GW {
 			kChangeTarget,                           // 0x10000020, wparam = UIPacket::kChangeTarget*
 			kMessage_0x10000021,                     // 0x10000021
 			kMessage_0x10000022,                     // 0x10000022
-			kMessage_0x10000023,                     // 0x10000023
-			kAgentSkillActivated,                    // 0x10000024, kAgentSkillPacket
-			kAgentSkillActivatedInstantly,           // 0x10000025, kAgentSkillPacket
-			kAgentSkillCancelled,                    // 0x10000026, kAgentSkillPacket
-			kAgentSkillStartedCast,                  // 0x10000027, wparam = UIPacket::kAgentStartCasting*
+			kAgentSkillCancelled,                    // 0x10000023, wparam = kAgentSkillPacket; "<agent> canceled <skill>"
+			kAgentSkillActivated,                    // 0x10000024, wparam = kAgentSkillPacket; "<agent> executed <skill>"
+			kAgentSkillActivatedInstantly,           // 0x10000025, wparam = kAgentSkillPacket; "<agent> used <skill>"
+			kAgentSkillInterrupted,                  // 0x10000026, wparam = kAgentSkillPacket; "<agent> was interrupted while using <skill>"
+			kAgentSkillStartedCast,                  // 0x10000027, wparam = UIPacket::kAgentSkillStartedCast*; "<agent> is warming up <skill>"
 			kMessage_0x10000028,                     // 0x10000028
 			kShowMapEntryMessage,                    // 0x10000029, wparam = { wchar_t* title, wchar_t* subtitle }
 			kSetCurrentPlayerData,                   // 0x1000002a, fired after setting the worldcontext player name
@@ -674,6 +674,12 @@ namespace GW {
 				uint32_t agent_id;
 				GW::Constants::SkillID skill_id;
 			};
+			struct kAgentSkillStartedCast {
+				uint32_t agent_id;
+				GW::Constants::SkillID skill_id;
+				float duration;
+				float h000c;
+			};
 			struct kLoadMapContext {
 				const wchar_t* file_name;
 				Constants::MapID map_id;
@@ -809,12 +815,6 @@ namespace GW {
 				uint32_t agent_id;
 				wchar_t* message;
 				uint32_t h0008;
-				uint32_t h000c;
-			};
-			struct kAgentSkillStartedCast {
-				uint32_t agent_id;
-				Constants::SkillID skill_id;
-				float duration;
 				uint32_t h000c;
 			};
 			struct kPreStartSalvage {
