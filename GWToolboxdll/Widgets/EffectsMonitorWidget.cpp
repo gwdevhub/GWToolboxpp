@@ -31,13 +31,17 @@ namespace {
     ImGuiViewport* viewport = nullptr;
     ImDrawList* draw_list = nullptr;
 
-    // Maps an agent's encoded name to the skill_id of the spirit it represents.
-    // TODO: @3vcloud - populate with actual encoded names for all desired tracked spirits.
-    const std::unordered_map<std::wstring, GW::Constants::SkillID> spirit_enc_name_to_skill_id = {
-        {L"\x416F\xD141\x9F0B\x5276", GW::Constants::SkillID::Disenchantment},
-        {L"\x4164\x825C\xA2F2\x1235", GW::Constants::SkillID::Pain},
-        {L"\x4171\xCD7A\xD7A6\x386D", GW::Constants::SkillID::Bloodsong},
-        {L"\x8102\x5F66\xBE02\xB9AB\x1073", GW::Constants::SkillID::Signet_of_Spirits}
+    const std::unordered_map<uint32_t, GW::Constants::SkillID> spirit_name_id_to_skill_id = {
+        {0x4063, GW::Constants::SkillID::Shadowsong},
+        {0x4064, GW::Constants::SkillID::Pain},
+        {0x406b, GW::Constants::SkillID::Dissonance},
+        {0x406f, GW::Constants::SkillID::Disenchantment},
+        {0x4071, GW::Constants::SkillID::Bloodsong},
+        {0x4072, GW::Constants::SkillID::Wanderlust},
+        {0xc537, GW::Constants::SkillID::Anguish},
+        {0xc53a, GW::Constants::SkillID::Gaze_of_Fury},
+        {0x11196, GW::Constants::SkillID::Vampirism},
+        {0x15c66, GW::Constants::SkillID::Signet_of_Spirits},
     };
 
     // Deterministic effect ID per spirit skill: high byte 0x0f avoids collision with real effects.
@@ -107,7 +111,7 @@ namespace {
             const auto* packet = static_cast<GW::UI::UIPacket::kAgentSkillPacket*>(wparam);
             if (packet->agent_id != GW::Agents::GetControlledCharacterId()) break;
             const bool is_spirit = std::any_of(
-                spirit_enc_name_to_skill_id.begin(), spirit_enc_name_to_skill_id.end(),
+                spirit_name_id_to_skill_id.begin(), spirit_name_id_to_skill_id.end(),
                 [&](const auto& kv) { return kv.second == packet->skill_id; });
             if (!is_spirit) break;
             // Agent may have already spawned before this activation message arrived.
@@ -129,8 +133,8 @@ namespace {
             if (!IsAlliedSpirit(agent)) break;
             const auto* enc_name = GW::Agents::GetAgentEncName(agent);
             if (!enc_name) break;
-            const auto name_it = spirit_enc_name_to_skill_id.find(enc_name);
-            if (name_it == spirit_enc_name_to_skill_id.end()) break;
+            const auto name_it = spirit_name_id_to_skill_id.find(GW::UI::EncStrToUInt32(enc_name));
+            if (name_it == spirit_name_id_to_skill_id.end()) break;
             if (pending_spirit_spawn.skill_id != GW::Constants::SkillID::No_Skill) {
                 // Skill activation arrived first: resolve now.
                 if (GW::MemoryMgr::GetSkillTimer() - pending_spirit_spawn.timestamp_ms > 500) {

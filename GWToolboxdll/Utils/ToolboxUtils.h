@@ -237,8 +237,6 @@ namespace GW {
         bool IsAlcohol(const GW::Item* item);
     }
     namespace Effects {
-        bool IsCustomEffect(uint32_t effect_id);
-
         uint32_t AddCustomEffect(GW::Constants::SkillID skill_id, float duration_seconds);
 
         bool RemoveCustomEffect(uint32_t effect_id);
