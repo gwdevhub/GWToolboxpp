@@ -332,8 +332,7 @@ void BountyKillTrackerWidget::Draw(IDirect3DDevice9*)
     if (!visible) return;
     if (active_bounties.empty()) return;
 
-    if (!effects_frame)
-        effects_frame = GW::UI::GetFrameByLabel(L"Effects");
+    effects_frame = GW::UI::GetFrameByLabel(L"Effects");
     if (!effects_frame) return;
 
     DummyWindow();
