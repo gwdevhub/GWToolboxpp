@@ -243,11 +243,7 @@ namespace FontLoader {
                 atlas->AddFontFromMemoryCompressedTTF(fontawesome5_compressed_data, fontawesome5_compressed_size, base_size, &cfg, fontawesome5_glyph_ranges.data());
                 if (full_font) {
                     loaded_font = full_font;
-                    ImFont* fallback = atlas->Fonts.Size > 0 ? atlas->Fonts[0] : nullptr;
-                    if (fallback && fallback != loaded_font) {
-                        atlas->RemoveFont(fallback);
-                        atlas->CompactCache();
-                    }
+                    ImGui::GetIO().FontDefault = loaded_font;
                 }
                 full_font = nullptr;
                 printf("Loaded all fonts\n");
