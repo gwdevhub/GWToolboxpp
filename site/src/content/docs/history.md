@@ -9,6 +9,7 @@ the latest version, go to the [Home Page](./) instead.
 
 ## Version 8.34
 * [Fix] Automatic title selection (`/title` and the Reapply Title hotkey) now uses Lightbringer instead of Sunspear in Turai's Procession, Jennur's Horde, Nundu Bay, Dzagonur Bastion, Yatendi Canyons, Vehtendi Valley, Forum Highlands and The Mirror of Lyss, where Margonites make Lightbringer the useful title.
+* [Fix] Fixed a crash while replacing the fallback font during Toolbox startup.
 * [Minor] Mouse Settings: disabled the "Enable cursor fix" camera-glitch workaround because an August 2026 Guild Wars update changed lookaround speed. Cursor-size scaling remains available.
 
 ## Version 8.33
