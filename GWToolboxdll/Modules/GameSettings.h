@@ -157,6 +157,7 @@ public:
         bool useful_level_progress_label = true;
         bool hide_store_page_on_char_select = false;
 
+        bool override_name_tag_colors = false;
         Colors::SettingColor nametag_color_npc = static_cast<Color>(DEFAULT_NAMETAG_COLOR::NPC);
         Colors::SettingColor nametag_color_player_self = static_cast<Color>(DEFAULT_NAMETAG_COLOR::PLAYER_SELF);
         Colors::SettingColor nametag_color_player_other = static_cast<Color>(DEFAULT_NAMETAG_COLOR::PLAYER_OTHER);

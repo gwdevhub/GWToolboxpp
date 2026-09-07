@@ -12,6 +12,7 @@
 #include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/Quest.h>
 #include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/EffectMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/UIMgr.h>
@@ -85,6 +86,10 @@ namespace Carto {
     bool show_grid = false;
     bool using_bec = false;
     bool set_quest_marker = true;
+    bool fog_covers_continent = false;
+#ifndef _DEBUG
+    constexpr auto kBirdsEyeView = static_cast<GW::Constants::SkillID>(3439);
+#endif
 
     std::map<GW::Constants::MapID, MapProbe> probe_cache;
     // A different character's fog makes different tiles worth probing, though the terrain has not moved.
@@ -715,6 +720,11 @@ namespace Carto {
         }
     }
 
+    bool ShouldBuildContinentFog()
+    {
+        return show_whole_continent && !continent_mask.Empty() && GW::UI::GetIsWorldMapShowing();
+    }
+
     void RebuildFog(const CartoGrid& grid, GW::AreaInfo* map_info)
     {
         unreachable_fog_cells = 0;
@@ -729,8 +739,8 @@ namespace Carto {
         int y1 = static_cast<int>(ceilf(bounds.Max.y / kWorldMapUnitsPerCell));
         map_cell_min = {x0, y0};
         map_cell_max = {x1, y1};
-        // The bake answers for the whole continent, so the world map shows everything worth walking to.
-        if (show_whole_continent && !continent_mask.Empty()) {
+        fog_covers_continent = ShouldBuildContinentFog();
+        if (fog_covers_continent) {
             x0 = continent_mask.x0;
             y0 = continent_mask.y0;
             x1 = continent_mask.x0 + continent_mask.w;
@@ -1668,16 +1678,17 @@ namespace Carto {
          "\ncount as ordinary fog instead. Applies to the baked table and the live overlay alike, so the two"
          "\nkeep agreeing."},
         {"show_unexpected", "Show unexpected explored squares", &show_unexpected, nullptr,
-         "Draws every square you have already uncovered that the baked map data says has no standable ground within reveal range - not even ground only a gate glitch reaches - so nothing should have been able to credit it. Either the bake is missing that ground, or it was uncovered from somewhere the bake does not model. The reveal range follows the Bird's Eye Compass setting below."},
+         "Draws every square you have already uncovered that the baked map data says has no standable ground within reveal range - not even ground only a gate glitch reaches - so nothing should have been able to credit it. Either the bake is missing that ground, or it was uncovered from somewhere the bake does not model. The reveal range follows Bird's Eye View."},
+#ifdef _DEBUG
         {"using_bec", "Using a Bird's Eye Compass", &using_bec,
          [] {
-             // The radius only widens which tiles are worth probing; `strict` is a fog-tile property and survives.
              for (auto& [map_id, cached] : probe_cache) cached.complete = false;
              owner_cache.clear();
              owner_query = {};
              coverage_stale = true;
          },
          "Standing in a tile credits it and the 8 tiles around it (Chebyshev distance, so a square block - not a circle, which is why the nearest-looking spot often is not the right one). A Bird's Eye Compass widens that to 3 tiles in each direction. Where inside the tile you stand makes no difference. Rescans the map."},
+#endif
         {"set_quest_marker", "Set a quest marker to fog points", &set_quest_marker, [] { SyncQuestMarker(); },
          "Placing a fog point puts a custom quest marker on the square you need to stand in to uncover it, so the usual quest path walks you there. It clears itself once the point is reached or removed, and clearing the marker by hand leaves it cleared. Suggested squares never touch the marker."},
     };
@@ -1754,7 +1765,21 @@ void CartographerWidget::Update(float)
     const auto player = GW::Agents::GetControlledCharacter();
     if (!player) return;
 
-    if (TIMER_DIFF(last_scan) < 1000) return;
+#ifndef _DEBUG
+    const auto has_birds_eye_view = GW::Effects::GetPlayerEffectBySkillId(kBirdsEyeView) != nullptr;
+    if (using_bec != has_birds_eye_view) {
+        using_bec = has_birds_eye_view;
+        for (auto& entry : probe_cache) entry.second.complete = false;
+        owner_cache.clear();
+        owner_query = {};
+        coverage_stale = true;
+    }
+#endif
+
+    BuildContinentMask(static_cast<int>(map_info->continent));
+    const bool fog_scope_changed = fog_covers_continent != ShouldBuildContinentFog();
+    if (fog_scope_changed) coverage_stale = true;
+    if (!fog_scope_changed && TIMER_DIFF(last_scan) < 1000) return;
     last_scan = TIMER_INIT();
 
     CartoGrid grid;
@@ -1769,7 +1794,6 @@ void CartographerWidget::Update(float)
     GW::Vec2f player_wm;
     if (!WorldMapWidget::GamePosToWorldMap(player->pos, player_wm)) return;
     player_wm_cached = player_wm;
-    BuildContinentMask(static_cast<int>(map_info->continent));
     // A completing sweep still needs one last full pass, so the flag is read before the sweep.
     DropProbeIfGatesMoved();
     const bool sweeping = !probe->complete;
@@ -1789,16 +1813,22 @@ void CartographerWidget::Update(float)
     }
     if (!changed.empty()) Log::FlushFile();
 #endif
-    if (coverage_stale || sweeping) {
-        // Rebuilding from scratch supersedes any pending diff, so re-baseline the snapshot.
+    const bool sweep_finished = sweeping && probe->complete;
+    const bool rebuild_all = coverage_stale || sweep_finished;
+    if (rebuild_all) {
         if (grid.bits && grid.dword_count) carto_snapshot.assign(grid.bits, grid.bits + grid.dword_count);
         RecomputeCoverage(grid, map_info);
     }
-    else if (!changed.empty()) {
-        RescoreAround(grid, changed);
-        RebuildFog(grid, map_info);
+    else {
+        if (sweeping) {
+            for (auto& [cell, sc] : probe->cells) ScoreStandCell(grid, cell, sc);
+        }
+        else if (!changed.empty()) {
+            RescoreAround(grid, changed);
+        }
+        if (!changed.empty()) RebuildFog(grid, map_info);
     }
-    if (coverage_stale || sweeping || !changed.empty()) RecountExploration(grid);
+    if (rebuild_all || !changed.empty()) RecountExploration(grid);
     carto_dirty = false;
     coverage_stale = false;
     PruneUncoveredPoints(grid);
