@@ -84,6 +84,18 @@ struct JsonHomSnapshot {
     uint32_t honor_points = 0;
     uint32_t valor_points = 0;
     uint32_t devotion_points = 0;
+    std::vector<bool> resilience_dedicated;
+    std::vector<bool> fellowship_dedicated;
+    std::vector<bool> honor_dedicated;
+    std::vector<bool> valor_dedicated;
+    std::vector<uint32_t> devotion_counts;
+};
+
+struct JsonFactionTotals {
+    uint32_t kurzick = 0;
+    uint32_t luxon = 0;
+    uint32_t balthazar = 0;
+    uint32_t imperial = 0;
 };
 
 struct JsonCharacter {
@@ -94,6 +106,8 @@ struct JsonCharacter {
     std::optional<bool> is_pre_searing;
     std::optional<bool> is_pvp;
     std::optional<uint32_t> experience_total;
+    std::optional<uint32_t> skill_points_earned;
+    std::optional<JsonFactionTotals> faction_totals;
     std::optional<JsonHomSnapshot> hall_of_monuments;
     std::string first_observed_at;
     std::string last_observed_at;
@@ -211,7 +225,22 @@ struct glz::meta<QuestProgress::JsonHomSnapshot> {
         "fellowshipPoints", &T::fellowship_points,
         "honorPoints", &T::honor_points,
         "valorPoints", &T::valor_points,
-        "devotionPoints", &T::devotion_points);
+        "devotionPoints", &T::devotion_points,
+        "resilienceDedicated", &T::resilience_dedicated,
+        "fellowshipDedicated", &T::fellowship_dedicated,
+        "honorDedicated", &T::honor_dedicated,
+        "valorDedicated", &T::valor_dedicated,
+        "devotionCounts", &T::devotion_counts);
+};
+
+template <>
+struct glz::meta<QuestProgress::JsonFactionTotals> {
+    using T = QuestProgress::JsonFactionTotals;
+    static constexpr auto value = object(
+        "kurzick", &T::kurzick,
+        "luxon", &T::luxon,
+        "balthazar", &T::balthazar,
+        "imperial", &T::imperial);
 };
 
 template <>
@@ -225,6 +254,8 @@ struct glz::meta<QuestProgress::JsonCharacter> {
         "isPreSearing", &T::is_pre_searing,
         "isPvp", &T::is_pvp,
         "experienceTotal", &T::experience_total,
+        "skillPointsEarned", &T::skill_points_earned,
+        "factionTotals", &T::faction_totals,
         "hallOfMonuments", &T::hall_of_monuments,
         "firstObservedAt", &T::first_observed_at,
         "lastObservedAt", &T::last_observed_at,
@@ -487,6 +518,15 @@ bool ConvertCharacter(const JsonCharacter& in, StoredCharacter& out, CodecDiagno
     out.is_pre_searing = in.is_pre_searing;
     out.is_pvp = in.is_pvp;
     out.experience_total = in.experience_total;
+    out.skill_points_earned = in.skill_points_earned;
+    if (in.faction_totals.has_value()) {
+        FactionTotalsRecord totals;
+        totals.kurzick = in.faction_totals->kurzick;
+        totals.luxon = in.faction_totals->luxon;
+        totals.balthazar = in.faction_totals->balthazar;
+        totals.imperial = in.faction_totals->imperial;
+        out.faction_totals = totals;
+    }
     if (in.hall_of_monuments.has_value()) {
         HomSnapshotRecord hom;
         hom.hom_code = in.hall_of_monuments->hom_code;
@@ -500,6 +540,19 @@ bool ConvertCharacter(const JsonCharacter& in, StoredCharacter& out, CodecDiagno
         hom.honor_points = in.hall_of_monuments->honor_points;
         hom.valor_points = in.hall_of_monuments->valor_points;
         hom.devotion_points = in.hall_of_monuments->devotion_points;
+        for (const bool dedicated : in.hall_of_monuments->resilience_dedicated) {
+            hom.resilience_dedicated.push_back(dedicated ? 1u : 0u);
+        }
+        for (const bool dedicated : in.hall_of_monuments->fellowship_dedicated) {
+            hom.fellowship_dedicated.push_back(dedicated ? 1u : 0u);
+        }
+        for (const bool dedicated : in.hall_of_monuments->honor_dedicated) {
+            hom.honor_dedicated.push_back(dedicated ? 1u : 0u);
+        }
+        for (const bool dedicated : in.hall_of_monuments->valor_dedicated) {
+            hom.valor_dedicated.push_back(dedicated ? 1u : 0u);
+        }
+        hom.devotion_counts = in.hall_of_monuments->devotion_counts;
         out.hall_of_monuments = std::move(hom);
     }
     if (!in.first_observed_at.empty() && !RequireCanonicalTs(in.first_observed_at, d, "character.firstObservedAt")) {
@@ -600,6 +653,15 @@ JsonCharacter ToJsonCharacter(const StoredCharacter& in)
     out.is_pre_searing = in.is_pre_searing;
     out.is_pvp = in.is_pvp;
     out.experience_total = in.experience_total;
+    out.skill_points_earned = in.skill_points_earned;
+    if (in.faction_totals.has_value()) {
+        JsonFactionTotals totals;
+        totals.kurzick = in.faction_totals->kurzick;
+        totals.luxon = in.faction_totals->luxon;
+        totals.balthazar = in.faction_totals->balthazar;
+        totals.imperial = in.faction_totals->imperial;
+        out.faction_totals = totals;
+    }
     if (in.hall_of_monuments.has_value()) {
         JsonHomSnapshot hom;
         hom.hom_code = in.hall_of_monuments->hom_code;
@@ -609,6 +671,19 @@ JsonCharacter ToJsonCharacter(const StoredCharacter& in)
         hom.honor_points = in.hall_of_monuments->honor_points;
         hom.valor_points = in.hall_of_monuments->valor_points;
         hom.devotion_points = in.hall_of_monuments->devotion_points;
+        for (const auto dedicated : in.hall_of_monuments->resilience_dedicated) {
+            hom.resilience_dedicated.push_back(dedicated != 0);
+        }
+        for (const auto dedicated : in.hall_of_monuments->fellowship_dedicated) {
+            hom.fellowship_dedicated.push_back(dedicated != 0);
+        }
+        for (const auto dedicated : in.hall_of_monuments->honor_dedicated) {
+            hom.honor_dedicated.push_back(dedicated != 0);
+        }
+        for (const auto dedicated : in.hall_of_monuments->valor_dedicated) {
+            hom.valor_dedicated.push_back(dedicated != 0);
+        }
+        hom.devotion_counts = in.hall_of_monuments->devotion_counts;
         out.hall_of_monuments = std::move(hom);
     }
     out.first_observed_at = in.first_observed_at;

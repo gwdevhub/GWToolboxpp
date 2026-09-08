@@ -145,10 +145,15 @@ void TestCodecJourneyRoundTrip()
     character.secondary_profession = "5";
     character.is_pvp = true;
     character.experience_total = 999;
+    character.skill_points_earned = 42;
+    FactionTotalsRecord factions;
+    factions.kurzick = 1000;
+    character.faction_totals = factions;
     HomSnapshotRecord hom;
     hom.hom_code = "homcode";
     hom.observed_at = "2026-07-25T19:59:00.000Z";
     hom.resilience_points = 1;
+    hom.resilience_dedicated = {1, 0};
     character.hall_of_monuments = hom;
     JourneyEventRecord ev;
     ev.kind = "title_tier";
@@ -175,9 +180,15 @@ void TestCodecJourneyRoundTrip()
     Expect(round.secondary_profession == "5", "codec_secondary_profession");
     Expect(round.is_pvp.has_value() && *round.is_pvp, "codec_is_pvp");
     Expect(round.experience_total.has_value() && *round.experience_total == 999, "codec_experience_total");
+    Expect(round.skill_points_earned.has_value() && *round.skill_points_earned == 42,
+        "codec_skill_points_earned");
+    Expect(round.faction_totals.has_value() && round.faction_totals->kurzick == 1000,
+        "codec_faction_totals");
     Expect(round.hall_of_monuments.has_value()
             && round.hall_of_monuments->hom_code == "homcode"
-            && round.hall_of_monuments->resilience_points == 1,
+            && round.hall_of_monuments->resilience_points == 1
+            && round.hall_of_monuments->resilience_dedicated.size() == 2
+            && round.hall_of_monuments->resilience_dedicated[0] == 1,
         "codec_hall_of_monuments");
     Expect(round.journey_events.size() == 2, "codec_journey_events_count");
     Expect(round.journey_events[0].kind == "title_tier", "codec_journey_event_kind");

@@ -138,6 +138,13 @@ There is no account envelope in Contract v1.
 - `experienceTotal` is optional. When present it MUST be a non-negative JSON
   integer snapshot of lifetime character experience at export time. It is
   **not** an append-only timeline of XP gains.
+- `level` is optional. When present it MUST be a non-negative JSON integer
+  snapshot of the character's current level.
+- `skillPointsEarned` is optional. When present it MUST be a non-negative JSON
+  integer snapshot of lifetime earned skill points (not the spendable bank).
+- `factionTotals` is optional. When present it MUST be an object with required
+  non-negative integer fields `kurzick`, `luxon`, `balthazar`, and `imperial`
+  (lifetime earned totals, not spendable banks).
 - `hallOfMonuments` is optional. When present it is a Hall of Monuments
   dedication snapshot for that character name (see
   [Hall of Monuments snapshot](#34-hall-of-monuments-snapshot)). HoM data is
@@ -401,7 +408,12 @@ Optional `character.hallOfMonuments`:
   "fellowshipPoints": 2,
   "honorPoints": 4,
   "valorPoints": 1,
-  "devotionPoints": 0
+  "devotionPoints": 0,
+  "resilienceDedicated": [true, false],
+  "fellowshipDedicated": [true],
+  "honorDedicated": [false, true],
+  "valorDedicated": [true],
+  "devotionCounts": [0, 1, 0, 0]
 }
 ```
 
@@ -409,9 +421,16 @@ Optional `character.hallOfMonuments`:
 
 - All point fields are required non-negative integers when the object is present.
 - `homCode` and `observedAt` are optional metadata.
+- Optional dedication arrays (`resilienceDedicated`, `fellowshipDedicated`,
+  `honorDedicated`, `valorDedicated`) are boolean vectors indexed by the
+  producer’s HoM detail enums. When present they MUST be JSON arrays of
+  booleans.
+- Optional `devotionCounts` is a JSON array of non-negative integers (minipet
+  dedication tallies by rarity bucket).
 - Snapshot reflects ArenaNet HoM HTTP data for the character display name;
   absence means not yet fetched / unavailable, not zero dedications.
 - Consumers MUST NOT invent dedications from missing `hallOfMonuments`.
+- Dedication bits are **statue dedications**, not full item ownership history.
 
 ---
 
@@ -657,6 +676,9 @@ Legend:
 | `isPreSearing` | O | boolean | no | **unknown** (do not invent) | no | no |
 | `isPvp` | O | boolean | no | **unknown** (do not invent) | no | no |
 | `experienceTotal` | O | integer (`>= 0`) | no | absent | no | no |
+| `level` | O | integer (`>= 0`) | no | absent | no | no |
+| `skillPointsEarned` | O | integer (`>= 0`) | no | absent | no | no |
+| `factionTotals` | O | object | no | absent | no | no |
 | `hallOfMonuments` | O | object | no | absent | no | no |
 | `quests` | R | array | no | — | no | no |
 | unknown fields | O | any | — | ignore | no | no |

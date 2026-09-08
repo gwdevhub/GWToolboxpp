@@ -53,6 +53,11 @@ struct HomSnapshotRecord {
     uint32_t honor_points = 0;
     uint32_t valor_points = 0;
     uint32_t devotion_points = 0;
+    std::vector<uint8_t> resilience_dedicated;
+    std::vector<uint8_t> fellowship_dedicated;
+    std::vector<uint8_t> honor_dedicated;
+    std::vector<uint8_t> valor_dedicated;
+    std::vector<uint32_t> devotion_counts;
 
     friend bool operator==(const HomSnapshotRecord& a, const HomSnapshotRecord& b)
     {
@@ -61,7 +66,27 @@ struct HomSnapshotRecord {
             && a.fellowship_points == b.fellowship_points
             && a.honor_points == b.honor_points
             && a.valor_points == b.valor_points
-            && a.devotion_points == b.devotion_points;
+            && a.devotion_points == b.devotion_points
+            && a.resilience_dedicated == b.resilience_dedicated
+            && a.fellowship_dedicated == b.fellowship_dedicated
+            && a.honor_dedicated == b.honor_dedicated
+            && a.valor_dedicated == b.valor_dedicated
+            && a.devotion_counts == b.devotion_counts;
+    }
+};
+
+struct FactionTotalsRecord {
+    uint32_t kurzick = 0;
+    uint32_t luxon = 0;
+    uint32_t balthazar = 0;
+    uint32_t imperial = 0;
+
+    friend bool operator==(const FactionTotalsRecord& a, const FactionTotalsRecord& b)
+    {
+        return a.kurzick == b.kurzick
+            && a.luxon == b.luxon
+            && a.balthazar == b.balthazar
+            && a.imperial == b.imperial;
     }
 };
 
@@ -70,6 +95,8 @@ struct JourneySnapshotResult {
     std::optional<uint32_t> level;
     std::optional<uint32_t> observed_map_id;
     std::optional<uint32_t> experience_total;
+    std::optional<uint32_t> skill_points_earned;
+    std::optional<FactionTotalsRecord> faction_totals;
     std::vector<JourneyEventRecord> new_events;
 };
 

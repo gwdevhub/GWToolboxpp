@@ -318,6 +318,8 @@ StoredCharacter QuestProgressService::BuildOutgoingStoredCharacter() const
         stored.last_known_level = existing->last_known_level;
         stored.last_map_id = existing->last_map_id;
         stored.experience_total = existing->experience_total;
+        stored.skill_points_earned = existing->skill_points_earned;
+        stored.faction_totals = existing->faction_totals;
         stored.hall_of_monuments = existing->hall_of_monuments;
         stored.journey_events = existing->journey_events;
     }
@@ -1221,6 +1223,16 @@ void QuestProgressService::IngestJourneySnapshot(JourneySnapshotResult snapshot)
     if (snapshot.experience_total.has_value()
         && snapshot.experience_total != stored->experience_total) {
         stored->experience_total = snapshot.experience_total;
+        changed = true;
+    }
+    if (snapshot.skill_points_earned.has_value()
+        && snapshot.skill_points_earned != stored->skill_points_earned) {
+        stored->skill_points_earned = snapshot.skill_points_earned;
+        changed = true;
+    }
+    if (snapshot.faction_totals.has_value()
+        && snapshot.faction_totals != stored->faction_totals) {
+        stored->faction_totals = snapshot.faction_totals;
         changed = true;
     }
     const auto before = stored->journey_events.size();

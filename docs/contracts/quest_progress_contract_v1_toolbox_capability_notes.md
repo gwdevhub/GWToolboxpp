@@ -47,6 +47,7 @@ Labels:
 | Primary / secondary profession | confirmed observable | `AvailableCharacterInfo::primary()` / `secondary()` via account roster; exported as `primaryProfession` / `secondaryProfession`. |
 | PvP character flag | confirmed observable | `AvailableCharacterInfo::is_pvp()` → optional Contract `isPvp` (unknown when roster row missing). |
 | Experience total snapshot | confirmed observable | `WorldContext::experience` → optional Contract `experienceTotal` (snapshot, not XP-gain timeline). |
+| Level / skill-point / faction lifetime snapshots | confirmed observable | `last_known_level` / `total_earned_skill_points` / `total_earned_{kurzick,luxon,balth,imperial}` → `level`, `skillPointsEarned`, `factionTotals`. |
 | Title tier + level journey events | confirmed observable | `WorldContext::titles`, level fields → `journeyEvents` kinds `title_tier` / `level_up`. |
 | Map enter journey events | confirmed observable | `GW::Map::GetMapID()` change while Persistent → `journeyEvents` kind `map_enter` + optional `mapId`. |
 | Vanquish area journey events | confirmed observable | `WorldContext::vanquished_areas` newly set bits → `journeyEvents` kind `vanquish_area` + optional `mapId`. First sample may catch up already-vanquished areas once. |
@@ -61,7 +62,7 @@ Labels:
 | Timed vanquish clear | confirmed observable | UI `kVanquishComplete` → `vanquish_complete` (permanent bits remain `vanquish_area`). |
 | Skill-point milestones | confirmed observable | `total_earned_skill_points` → `skill_point_threshold` + `amount`. |
 | Faction milestones | confirmed observable | `total_earned_{kurzick,luxon,balth,imperial}` → `faction_threshold` + `amount`. |
-| Hall of Monuments snapshot | confirmed observable | Async `HallOfMonumentsModule::AsyncGetAccountAchievements` → `hallOfMonuments` + `hom_points` journey when category totals increase. Not Draw/Update blocking. |
+| Hall of Monuments snapshot | confirmed observable | Async `HallOfMonumentsModule::AsyncGetAccountAchievements` → `hallOfMonuments` (point totals + dedication detail arrays) + `hom_points` journey when category totals increase. Not Draw/Update blocking. |
 
 ---
 

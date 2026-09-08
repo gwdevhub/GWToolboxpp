@@ -190,13 +190,17 @@ void QuestTrackerWindow::MaybeRefreshHallOfMonuments()
 
     if (hom_achievements_.isReady() && hom_requested_character_ == wide_name) {
         const auto fingerprint = std::format(
-            "{}:{}:{}:{}:{}:{}",
+            "{}:{}:{}:{}:{}:{}:{}:{}:{}:{}",
             hom_achievements_.hom_code,
             hom_achievements_.resilience_points_total,
             hom_achievements_.fellowship_points_total,
             hom_achievements_.honor_points_total,
             hom_achievements_.valor_points_total,
-            hom_achievements_.devotion_points_total);
+            hom_achievements_.devotion_points_total,
+            hom_achievements_.resilience_tally,
+            hom_achievements_.fellowship_tally,
+            hom_achievements_.honor_tally,
+            hom_achievements_.valor_tally);
         if (fingerprint != hom_ingested_fingerprint_) {
             QuestProgress::HomSnapshotRecord snap;
             snap.hom_code = hom_achievements_.hom_code;
@@ -206,6 +210,26 @@ void QuestTrackerWindow::MaybeRefreshHallOfMonuments()
             snap.honor_points = hom_achievements_.honor_points_total;
             snap.valor_points = hom_achievements_.valor_points_total;
             snap.devotion_points = hom_achievements_.devotion_points_total;
+            snap.resilience_dedicated.clear();
+            snap.fellowship_dedicated.clear();
+            snap.honor_dedicated.clear();
+            snap.valor_dedicated.clear();
+            snap.devotion_counts.clear();
+            for (size_t i = 0; i < static_cast<size_t>(ResilienceDetail::Count); ++i) {
+                snap.resilience_dedicated.push_back(hom_achievements_.resilience_detail[i] ? 1u : 0u);
+            }
+            for (size_t i = 0; i < static_cast<size_t>(FellowshipDetail::Count); ++i) {
+                snap.fellowship_dedicated.push_back(hom_achievements_.fellowship_detail[i] ? 1u : 0u);
+            }
+            for (size_t i = 0; i < static_cast<size_t>(HonorDetail::Count); ++i) {
+                snap.honor_dedicated.push_back(hom_achievements_.honor_detail[i] ? 1u : 0u);
+            }
+            for (size_t i = 0; i < static_cast<size_t>(ValorDetail::Count); ++i) {
+                snap.valor_dedicated.push_back(hom_achievements_.valor_detail[i] ? 1u : 0u);
+            }
+            for (size_t i = 0; i < static_cast<size_t>(DevotionDetail::Count); ++i) {
+                snap.devotion_counts.push_back(hom_achievements_.devotion_detail[i]);
+            }
             progress_.IngestHomSnapshot(std::move(snap));
             hom_ingested_fingerprint_ = fingerprint;
         }

@@ -78,6 +78,18 @@ struct ContractHomJson {
     uint32_t honor_points = 0;
     uint32_t valor_points = 0;
     uint32_t devotion_points = 0;
+    std::optional<std::vector<bool>> resilience_dedicated;
+    std::optional<std::vector<bool>> fellowship_dedicated;
+    std::optional<std::vector<bool>> honor_dedicated;
+    std::optional<std::vector<bool>> valor_dedicated;
+    std::optional<std::vector<uint32_t>> devotion_counts;
+};
+
+struct ContractFactionTotalsJson {
+    uint32_t kurzick = 0;
+    uint32_t luxon = 0;
+    uint32_t balthazar = 0;
+    uint32_t imperial = 0;
 };
 
 struct ContractCharacterJson {
@@ -86,8 +98,11 @@ struct ContractCharacterJson {
     std::optional<bool> is_pre_searing;
     std::optional<bool> is_pvp;
     std::optional<uint32_t> experience_total;
+    std::optional<uint32_t> level;
+    std::optional<uint32_t> skill_points_earned;
     std::optional<std::string> primary_profession;
     std::optional<std::string> secondary_profession;
+    std::optional<ContractFactionTotalsJson> faction_totals;
     std::optional<ContractHomJson> hall_of_monuments;
     std::vector<ContractMissionJson> missions;
     std::vector<ContractTitleJson> titles;
@@ -209,11 +224,21 @@ ContractCharacterJson MapCharacter(const StoredCharacter& in, ContractExportDiag
     out.is_pre_searing = in.is_pre_searing;
     out.is_pvp = in.is_pvp;
     out.experience_total = in.experience_total;
+    out.level = in.last_known_level;
+    out.skill_points_earned = in.skill_points_earned;
     if (!in.profession.empty()) {
         out.primary_profession = in.profession;
     }
     if (!in.secondary_profession.empty()) {
         out.secondary_profession = in.secondary_profession;
+    }
+    if (in.faction_totals.has_value()) {
+        ContractFactionTotalsJson totals;
+        totals.kurzick = in.faction_totals->kurzick;
+        totals.luxon = in.faction_totals->luxon;
+        totals.balthazar = in.faction_totals->balthazar;
+        totals.imperial = in.faction_totals->imperial;
+        out.faction_totals = totals;
     }
     if (in.hall_of_monuments.has_value()) {
         ContractHomJson hom;
@@ -228,6 +253,41 @@ ContractCharacterJson MapCharacter(const StoredCharacter& in, ContractExportDiag
         hom.honor_points = in.hall_of_monuments->honor_points;
         hom.valor_points = in.hall_of_monuments->valor_points;
         hom.devotion_points = in.hall_of_monuments->devotion_points;
+        if (!in.hall_of_monuments->resilience_dedicated.empty()) {
+            std::vector<bool> dedicated;
+            dedicated.reserve(in.hall_of_monuments->resilience_dedicated.size());
+            for (const auto bit : in.hall_of_monuments->resilience_dedicated) {
+                dedicated.push_back(bit != 0);
+            }
+            hom.resilience_dedicated = std::move(dedicated);
+        }
+        if (!in.hall_of_monuments->fellowship_dedicated.empty()) {
+            std::vector<bool> dedicated;
+            dedicated.reserve(in.hall_of_monuments->fellowship_dedicated.size());
+            for (const auto bit : in.hall_of_monuments->fellowship_dedicated) {
+                dedicated.push_back(bit != 0);
+            }
+            hom.fellowship_dedicated = std::move(dedicated);
+        }
+        if (!in.hall_of_monuments->honor_dedicated.empty()) {
+            std::vector<bool> dedicated;
+            dedicated.reserve(in.hall_of_monuments->honor_dedicated.size());
+            for (const auto bit : in.hall_of_monuments->honor_dedicated) {
+                dedicated.push_back(bit != 0);
+            }
+            hom.honor_dedicated = std::move(dedicated);
+        }
+        if (!in.hall_of_monuments->valor_dedicated.empty()) {
+            std::vector<bool> dedicated;
+            dedicated.reserve(in.hall_of_monuments->valor_dedicated.size());
+            for (const auto bit : in.hall_of_monuments->valor_dedicated) {
+                dedicated.push_back(bit != 0);
+            }
+            hom.valor_dedicated = std::move(dedicated);
+        }
+        if (!in.hall_of_monuments->devotion_counts.empty()) {
+            hom.devotion_counts = in.hall_of_monuments->devotion_counts;
+        }
         out.hall_of_monuments = std::move(hom);
     }
 
@@ -441,7 +501,22 @@ struct glz::meta<QuestProgress::ContractHomJson> {
         "fellowshipPoints", &T::fellowship_points,
         "honorPoints", &T::honor_points,
         "valorPoints", &T::valor_points,
-        "devotionPoints", &T::devotion_points);
+        "devotionPoints", &T::devotion_points,
+        "resilienceDedicated", &T::resilience_dedicated,
+        "fellowshipDedicated", &T::fellowship_dedicated,
+        "honorDedicated", &T::honor_dedicated,
+        "valorDedicated", &T::valor_dedicated,
+        "devotionCounts", &T::devotion_counts);
+};
+
+template <>
+struct glz::meta<QuestProgress::ContractFactionTotalsJson> {
+    using T = QuestProgress::ContractFactionTotalsJson;
+    static constexpr auto value = object(
+        "kurzick", &T::kurzick,
+        "luxon", &T::luxon,
+        "balthazar", &T::balthazar,
+        "imperial", &T::imperial);
 };
 
 template <>
@@ -453,8 +528,11 @@ struct glz::meta<QuestProgress::ContractCharacterJson> {
         "isPreSearing", &T::is_pre_searing,
         "isPvp", &T::is_pvp,
         "experienceTotal", &T::experience_total,
+        "level", &T::level,
+        "skillPointsEarned", &T::skill_points_earned,
         "primaryProfession", &T::primary_profession,
         "secondaryProfession", &T::secondary_profession,
+        "factionTotals", &T::faction_totals,
         "hallOfMonuments", &T::hall_of_monuments,
         "missions", &T::missions,
         "titles", &T::titles,

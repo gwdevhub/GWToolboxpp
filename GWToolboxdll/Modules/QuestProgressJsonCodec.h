@@ -41,6 +41,8 @@ struct StoredCharacter {
     std::optional<bool> is_pre_searing;
     std::optional<bool> is_pvp;
     std::optional<uint32_t> experience_total;
+    std::optional<uint32_t> skill_points_earned;
+    std::optional<FactionTotalsRecord> faction_totals;
     std::optional<HomSnapshotRecord> hall_of_monuments;
     std::string first_observed_at;
     std::string last_observed_at;

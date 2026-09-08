@@ -380,6 +380,13 @@ JourneySnapshotResult SampleLiveJourneySnapshot(
     }
 
     out.experience_total = world->experience;
+    out.skill_points_earned = world->total_earned_skill_points;
+    FactionTotalsRecord factions_snapshot;
+    factions_snapshot.kurzick = world->total_earned_kurzick;
+    factions_snapshot.luxon = world->total_earned_luxon;
+    factions_snapshot.balthazar = world->total_earned_balth;
+    factions_snapshot.imperial = world->total_earned_imperial;
+    out.faction_totals = factions_snapshot;
 
     return out;
 }

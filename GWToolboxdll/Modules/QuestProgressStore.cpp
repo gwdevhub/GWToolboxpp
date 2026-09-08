@@ -253,6 +253,31 @@ void MergeJourneyFields(StoredCharacter& out, const StoredCharacter& disk, const
         out.experience_total = disk.experience_total;
     }
 
+    if (disk.skill_points_earned.has_value() && memory.skill_points_earned.has_value()) {
+        out.skill_points_earned = std::max(*disk.skill_points_earned, *memory.skill_points_earned);
+    }
+    else if (memory.skill_points_earned.has_value()) {
+        out.skill_points_earned = memory.skill_points_earned;
+    }
+    else {
+        out.skill_points_earned = disk.skill_points_earned;
+    }
+
+    if (disk.faction_totals.has_value() && memory.faction_totals.has_value()) {
+        FactionTotalsRecord totals;
+        totals.kurzick = std::max(disk.faction_totals->kurzick, memory.faction_totals->kurzick);
+        totals.luxon = std::max(disk.faction_totals->luxon, memory.faction_totals->luxon);
+        totals.balthazar = std::max(disk.faction_totals->balthazar, memory.faction_totals->balthazar);
+        totals.imperial = std::max(disk.faction_totals->imperial, memory.faction_totals->imperial);
+        out.faction_totals = totals;
+    }
+    else if (memory.faction_totals.has_value()) {
+        out.faction_totals = memory.faction_totals;
+    }
+    else {
+        out.faction_totals = disk.faction_totals;
+    }
+
     if (disk.hall_of_monuments.has_value() && memory.hall_of_monuments.has_value()) {
         out.hall_of_monuments =
             memory.hall_of_monuments->observed_at >= disk.hall_of_monuments->observed_at
