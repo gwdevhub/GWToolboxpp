@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ToolboxWindow.h>
+#include <Modules/HallOfMonumentsModule.h>
 #include <Modules/QuestObservationService.h>
 #include <Modules/QuestProgressService.h>
 #include <Utils/EncString.h>
@@ -55,12 +56,16 @@ private:
     void ClearDecodeCache();
     void SyncDecodeCache(const LiveQuestView& view);
     void ExportContractV1();
+    void MaybeRefreshHallOfMonuments();
     GuiUtils::EncString& NameDecoder(GW::Constants::QuestID quest_id, const std::wstring& encoded);
     GuiUtils::EncString& QuestObjectiveDecoder(GW::Constants::QuestID quest_id, size_t index, const std::wstring& encoded);
     GuiUtils::EncString& MissionObjectiveDecoder(uint32_t objective_id, const std::wstring& encoded);
 
     QuestObservationService observation_;
     QuestProgress::QuestProgressService progress_;
+    HallOfMonumentsAchievements hom_achievements_;
+    std::wstring hom_requested_character_;
+    std::string hom_ingested_fingerprint_;
     uint64_t cached_revision_ = 0;
     bool terminating_ = false;
 

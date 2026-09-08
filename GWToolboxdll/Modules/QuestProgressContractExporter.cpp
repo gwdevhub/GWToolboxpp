@@ -70,12 +70,25 @@ struct ContractJourneyEventJson {
     std::optional<uint32_t> amount;
 };
 
+struct ContractHomJson {
+    std::optional<std::string> hom_code;
+    std::optional<std::string> observed_at;
+    uint32_t resilience_points = 0;
+    uint32_t fellowship_points = 0;
+    uint32_t honor_points = 0;
+    uint32_t valor_points = 0;
+    uint32_t devotion_points = 0;
+};
+
 struct ContractCharacterJson {
     std::string character_key;
     std::string display_name;
     std::optional<bool> is_pre_searing;
+    std::optional<bool> is_pvp;
+    std::optional<uint32_t> experience_total;
     std::optional<std::string> primary_profession;
     std::optional<std::string> secondary_profession;
+    std::optional<ContractHomJson> hall_of_monuments;
     std::vector<ContractMissionJson> missions;
     std::vector<ContractTitleJson> titles;
     std::vector<ContractJourneyEventJson> journey_events;
@@ -194,11 +207,28 @@ ContractCharacterJson MapCharacter(const StoredCharacter& in, ContractExportDiag
         AddDiag(diag, "displayName empty; exported as Unknown (identity is characterKey)");
     }
     out.is_pre_searing = in.is_pre_searing;
+    out.is_pvp = in.is_pvp;
+    out.experience_total = in.experience_total;
     if (!in.profession.empty()) {
         out.primary_profession = in.profession;
     }
     if (!in.secondary_profession.empty()) {
         out.secondary_profession = in.secondary_profession;
+    }
+    if (in.hall_of_monuments.has_value()) {
+        ContractHomJson hom;
+        if (!in.hall_of_monuments->hom_code.empty()) {
+            hom.hom_code = in.hall_of_monuments->hom_code;
+        }
+        if (!in.hall_of_monuments->observed_at.empty()) {
+            hom.observed_at = in.hall_of_monuments->observed_at;
+        }
+        hom.resilience_points = in.hall_of_monuments->resilience_points;
+        hom.fellowship_points = in.hall_of_monuments->fellowship_points;
+        hom.honor_points = in.hall_of_monuments->honor_points;
+        hom.valor_points = in.hall_of_monuments->valor_points;
+        hom.devotion_points = in.hall_of_monuments->devotion_points;
+        out.hall_of_monuments = std::move(hom);
     }
 
     for (const auto& [map_id, mission] : in.missions) {
@@ -402,14 +432,30 @@ struct glz::meta<QuestProgress::ContractJourneyEventJson> {
 };
 
 template <>
+struct glz::meta<QuestProgress::ContractHomJson> {
+    using T = QuestProgress::ContractHomJson;
+    static constexpr auto value = object(
+        "homCode", &T::hom_code,
+        "observedAt", &T::observed_at,
+        "resiliencePoints", &T::resilience_points,
+        "fellowshipPoints", &T::fellowship_points,
+        "honorPoints", &T::honor_points,
+        "valorPoints", &T::valor_points,
+        "devotionPoints", &T::devotion_points);
+};
+
+template <>
 struct glz::meta<QuestProgress::ContractCharacterJson> {
     using T = QuestProgress::ContractCharacterJson;
     static constexpr auto value = object(
         "characterKey", &T::character_key,
         "displayName", &T::display_name,
         "isPreSearing", &T::is_pre_searing,
+        "isPvp", &T::is_pvp,
+        "experienceTotal", &T::experience_total,
         "primaryProfession", &T::primary_profession,
         "secondaryProfession", &T::secondary_profession,
+        "hallOfMonuments", &T::hall_of_monuments,
         "missions", &T::missions,
         "titles", &T::titles,
         "journeyEvents", &T::journey_events,

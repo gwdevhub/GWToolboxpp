@@ -45,11 +45,14 @@ Labels:
 | Previous Toolbox-local progress | confirmed observable | Internal `QuestProgressStore` + Contract exporter (`ExportAccountStoreToContractV1`). |
 | Historical reconstruction while Toolbox was not running | not currently observable | No client API for remotions offline. Later snapshot diffs vs local store remain **uncertain** / unknown outcome — never auto-complete. |
 | Primary / secondary profession | confirmed observable | `AvailableCharacterInfo::primary()` / `secondary()` via account roster; exported as `primaryProfession` / `secondaryProfession`. |
+| PvP character flag | confirmed observable | `AvailableCharacterInfo::is_pvp()` → optional Contract `isPvp` (unknown when roster row missing). |
+| Experience total snapshot | confirmed observable | `WorldContext::experience` → optional Contract `experienceTotal` (snapshot, not XP-gain timeline). |
 | Title tier + level journey events | confirmed observable | `WorldContext::titles`, level fields → `journeyEvents` kinds `title_tier` / `level_up`. |
 | Map enter journey events | confirmed observable | `GW::Map::GetMapID()` change while Persistent → `journeyEvents` kind `map_enter` + optional `mapId`. |
 | Vanquish area journey events | confirmed observable | `WorldContext::vanquished_areas` newly set bits → `journeyEvents` kind `vanquish_area` + optional `mapId`. First sample may catch up already-vanquished areas once. |
 | Map unlock journey events | confirmed observable | `WorldContext::unlocked_map` → `map_unlock` (distinct from visit). |
 | Skill unlock journey events | confirmed observable | `WorldContext::unlocked_character_skills` → `skill_unlock` + `skillId`. |
+| Account skill unlock journey events | confirmed observable | `AccountContext::unlocked_account_skills` → `account_skill_unlock` + `skillId` (account-scoped; not character mastery). |
 | Hero unlock journey events | confirmed observable | `WorldContext::hero_info[].hero_id` → `hero_unlock` + `heroId`. |
 | Profession unlock journey events | confirmed observable | Player row in `party_profession_states.unlocked_professions` → `profession_unlock`. |
 | Hard Mode unlock journey event | confirmed observable | `WorldContext::is_hard_mode_unlocked` → one-shot `hard_mode_unlock`. |
@@ -58,6 +61,7 @@ Labels:
 | Timed vanquish clear | confirmed observable | UI `kVanquishComplete` → `vanquish_complete` (permanent bits remain `vanquish_area`). |
 | Skill-point milestones | confirmed observable | `total_earned_skill_points` → `skill_point_threshold` + `amount`. |
 | Faction milestones | confirmed observable | `total_earned_{kurzick,luxon,balth,imperial}` → `faction_threshold` + `amount`. |
+| Hall of Monuments snapshot | confirmed observable | Async `HallOfMonumentsModule::AsyncGetAccountAchievements` → `hallOfMonuments` + `hom_points` journey when category totals increase. Not Draw/Update blocking. |
 
 ---
 

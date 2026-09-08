@@ -2,6 +2,7 @@
 
 #include <Windows/QuestTrackerWindow.h>
 #include <Defines.h>
+#include <Modules/HallOfMonumentsModule.h>
 #include <Modules/QuestProgressContractExporter.h>
 #include <Modules/QuestProgressLive.h>
 #include <Modules/Resources.h>
@@ -13,8 +14,10 @@
 #include <GWCA/Managers/QuestMgr.h>
 
 #include <Utils/FontLoader.h>
+#include <Utils/TextUtils.h>
 
 #include <chrono>
+#include <format>
 #include <fstream>
 
 namespace {
@@ -103,8 +106,9 @@ void QuestTrackerWindow::Update(float delta)
                 character_changed ? barrier_rev : progress_.snapshot_barrier_revision(),
                 character_changed);
             if (character_changed) {
-                // Force a fresh identity-stamped observation; do not reuse pre-bind LiveQuestView.
                 observation_.RequestFullRefresh();
+                hom_requested_character_.clear();
+                hom_ingested_fingerprint_.clear();
             }
             // 8) Evidence arriving after rebind is scoped to the new identity only.
             drain_scoped_evidence();
@@ -161,11 +165,65 @@ void QuestTrackerWindow::Update(float delta)
                     }
                     progress_.IngestJourneyEvents(std::move(timed));
                 }
+
+                MaybeRefreshHallOfMonuments();
             }
         }
     }
 
     progress_.Tick(steady_now, wall_now);
+}
+
+void QuestTrackerWindow::MaybeRefreshHallOfMonuments()
+{
+    if (terminating_) {
+        return;
+    }
+    if (progress_.identity().kind != QuestProgress::IdentityKind::Persistent) {
+        return;
+    }
+    const auto display = progress_.identity().display_name;
+    if (display.empty()) {
+        return;
+    }
+    const auto wide_name = TextUtils::StringToWString(display);
+
+    if (hom_achievements_.isReady() && hom_requested_character_ == wide_name) {
+        const auto fingerprint = std::format(
+            "{}:{}:{}:{}:{}:{}",
+            hom_achievements_.hom_code,
+            hom_achievements_.resilience_points_total,
+            hom_achievements_.fellowship_points_total,
+            hom_achievements_.honor_points_total,
+            hom_achievements_.valor_points_total,
+            hom_achievements_.devotion_points_total);
+        if (fingerprint != hom_ingested_fingerprint_) {
+            QuestProgress::HomSnapshotRecord snap;
+            snap.hom_code = hom_achievements_.hom_code;
+            snap.observed_at = QuestProgress::FormatCanonicalUtc(std::chrono::system_clock::now());
+            snap.resilience_points = hom_achievements_.resilience_points_total;
+            snap.fellowship_points = hom_achievements_.fellowship_points_total;
+            snap.honor_points = hom_achievements_.honor_points_total;
+            snap.valor_points = hom_achievements_.valor_points_total;
+            snap.devotion_points = hom_achievements_.devotion_points_total;
+            progress_.IngestHomSnapshot(std::move(snap));
+            hom_ingested_fingerprint_ = fingerprint;
+        }
+        return;
+    }
+
+    if (hom_achievements_.isLoading()) {
+        return;
+    }
+    if (hom_requested_character_ == wide_name
+        && hom_achievements_.state == HallOfMonumentsAchievements::State::Error) {
+        return;
+    }
+
+    hom_requested_character_ = wide_name;
+    hom_ingested_fingerprint_.clear();
+    hom_achievements_ = HallOfMonumentsAchievements{};
+    HallOfMonumentsModule::AsyncGetAccountAchievements(wide_name, &hom_achievements_);
 }
 
 void QuestTrackerWindow::SignalTerminate()
@@ -179,6 +237,12 @@ void QuestTrackerWindow::SignalTerminate()
 void QuestTrackerWindow::Terminate()
 {
     terminating_ = true;
+    for (int i = 0; i < 500 && hom_achievements_.isLoading(); ++i) {
+        Sleep(10);
+    }
+    if (hom_achievements_.isLoading()) {
+        hom_achievements_.state = HallOfMonumentsAchievements::State::Error;
+    }
     progress_.Terminate();
     ClearDecodeCache();
     observation_.Terminate();

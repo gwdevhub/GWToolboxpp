@@ -83,6 +83,11 @@ std::string BuildHardModeSubjectKey()
     return "hard_mode";
 }
 
+std::string BuildHomPointsSubjectKey(std::string_view category)
+{
+    return std::format("hom:{}", category);
+}
+
 std::string BuildJourneyEventFingerprint(const JourneyEventRecord& event)
 {
     if (event.kind == "title_tier") {
@@ -102,6 +107,9 @@ std::string BuildJourneyEventFingerprint(const JourneyEventRecord& event)
     }
     if (event.kind == "skill_unlock") {
         return std::format("skill_unlock:{}", event.skill_id);
+    }
+    if (event.kind == "account_skill_unlock") {
+        return std::format("account_skill_unlock:{}", event.skill_id);
     }
     if (event.kind == "hero_unlock") {
         return std::format("hero_unlock:{}", event.hero_id);
@@ -124,6 +132,9 @@ std::string BuildJourneyEventFingerprint(const JourneyEventRecord& event)
     }
     if (event.kind == "faction_threshold") {
         return std::format("faction_threshold:{}", event.subject_key);
+    }
+    if (event.kind == "hom_points") {
+        return std::format("hom_points:{}:{}", event.subject_key, event.amount);
     }
     return std::format("{}:{}", event.kind, event.subject_key);
 }
@@ -392,6 +403,41 @@ std::vector<JourneyEventRecord> BuildAbsoluteThresholdEvents(
     return out;
 }
 
+std::vector<JourneyEventRecord> BuildHomPointsEvents(
+    const std::optional<HomSnapshotRecord>& previous,
+    const HomSnapshotRecord& current,
+    const std::vector<JourneyEventRecord>& existing_events,
+    std::string_view observed_at_utc)
+{
+    std::vector<JourneyEventRecord> out;
+    const struct {
+        const char* category;
+        uint32_t previous_points;
+        uint32_t current_points;
+    } rows[] = {
+        {"resilience", previous ? previous->resilience_points : 0u, current.resilience_points},
+        {"fellowship", previous ? previous->fellowship_points : 0u, current.fellowship_points},
+        {"honor", previous ? previous->honor_points : 0u, current.honor_points},
+        {"valor", previous ? previous->valor_points : 0u, current.valor_points},
+        {"devotion", previous ? previous->devotion_points : 0u, current.devotion_points},
+    };
+    for (const auto& row : rows) {
+        if (row.current_points == 0 || row.current_points <= row.previous_points) {
+            continue;
+        }
+        JourneyEventRecord ev;
+        ev.kind = "hom_points";
+        ev.amount = row.current_points;
+        ev.subject_key = BuildHomPointsSubjectKey(row.category);
+        ev.observed_at = std::string(observed_at_utc);
+        const auto fp = BuildJourneyEventFingerprint(ev);
+        if (!HasEventFingerprint(existing_events, fp)) {
+            out.push_back(std::move(ev));
+        }
+    }
+    return out;
+}
+
 uint32_t MaxCartographyPercentFromEvents(const std::vector<JourneyEventRecord>& events)
 {
     uint32_t max_pct = 0;
@@ -437,7 +483,7 @@ std::map<uint32_t, bool> PriorIdsFromJourneyEvents(
         if (kind == "vanquish_area" || kind == "map_unlock" || kind == "map_enter") {
             id = ev.map_id;
         }
-        else if (kind == "skill_unlock") {
+        else if (kind == "skill_unlock" || kind == "account_skill_unlock") {
             id = ev.skill_id;
         }
         else if (kind == "hero_unlock") {

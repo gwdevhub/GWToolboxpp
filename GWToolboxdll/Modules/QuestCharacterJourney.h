@@ -45,10 +45,31 @@ struct TitleSnapshotInput {
     uint32_t current_points = 0;
 };
 
+struct HomSnapshotRecord {
+    std::string hom_code;
+    std::string observed_at;
+    uint32_t resilience_points = 0;
+    uint32_t fellowship_points = 0;
+    uint32_t honor_points = 0;
+    uint32_t valor_points = 0;
+    uint32_t devotion_points = 0;
+
+    friend bool operator==(const HomSnapshotRecord& a, const HomSnapshotRecord& b)
+    {
+        return a.hom_code == b.hom_code
+            && a.resilience_points == b.resilience_points
+            && a.fellowship_points == b.fellowship_points
+            && a.honor_points == b.honor_points
+            && a.valor_points == b.valor_points
+            && a.devotion_points == b.devotion_points;
+    }
+};
+
 struct JourneySnapshotResult {
     std::map<uint32_t, TitleStateRecord> titles;
     std::optional<uint32_t> level;
     std::optional<uint32_t> observed_map_id;
+    std::optional<uint32_t> experience_total;
     std::vector<JourneyEventRecord> new_events;
 };
 
@@ -67,6 +88,7 @@ std::string BuildSkillSubjectKey(uint32_t skill_id);
 std::string BuildHeroSubjectKey(uint32_t hero_id);
 std::string BuildProfessionSubjectKey(uint32_t profession_id);
 std::string BuildHardModeSubjectKey();
+std::string BuildHomPointsSubjectKey(std::string_view category);
 std::string BuildJourneyEventFingerprint(const JourneyEventRecord& event);
 
 JourneySnapshotResult MergeJourneySnapshot(
@@ -128,6 +150,12 @@ std::vector<JourneyEventRecord> BuildAbsoluteThresholdEvents(
     uint32_t previous_max_amount,
     uint32_t current_amount,
     const std::vector<uint32_t>& thresholds,
+    const std::vector<JourneyEventRecord>& existing_events,
+    std::string_view observed_at_utc);
+
+std::vector<JourneyEventRecord> BuildHomPointsEvents(
+    const std::optional<HomSnapshotRecord>& previous,
+    const HomSnapshotRecord& current,
     const std::vector<JourneyEventRecord>& existing_events,
     std::string_view observed_at_utc);
 

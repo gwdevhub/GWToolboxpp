@@ -243,6 +243,29 @@ void MergeJourneyFields(StoredCharacter& out, const StoredCharacter& disk, const
         out.last_map_id = disk.last_map_id;
     }
 
+    if (disk.experience_total.has_value() && memory.experience_total.has_value()) {
+        out.experience_total = std::max(*disk.experience_total, *memory.experience_total);
+    }
+    else if (memory.experience_total.has_value()) {
+        out.experience_total = memory.experience_total;
+    }
+    else {
+        out.experience_total = disk.experience_total;
+    }
+
+    if (disk.hall_of_monuments.has_value() && memory.hall_of_monuments.has_value()) {
+        out.hall_of_monuments =
+            memory.hall_of_monuments->observed_at >= disk.hall_of_monuments->observed_at
+            ? memory.hall_of_monuments
+            : disk.hall_of_monuments;
+    }
+    else if (memory.hall_of_monuments.has_value()) {
+        out.hall_of_monuments = memory.hall_of_monuments;
+    }
+    else {
+        out.hall_of_monuments = disk.hall_of_monuments;
+    }
+
     out.journey_events = disk.journey_events;
     AppendUniqueJourneyEvents(out.journey_events, memory.journey_events);
 }
@@ -260,6 +283,7 @@ StoredCharacter MergeCharacter(const StoredCharacter& disk, const StoredCharacte
     out.profession = meta.profession;
     out.secondary_profession = meta.secondary_profession;
     out.is_pre_searing = meta.is_pre_searing;
+    out.is_pvp = meta.is_pvp;
     out.last_observed_at = meta.last_observed_at;
     if (disk.first_observed_at.empty()) {
         out.first_observed_at = memory.first_observed_at;
@@ -439,6 +463,7 @@ CoalesceCharacterResult CoalesceStoredCharactersImpl(
     out.profession = meta.profession;
     out.secondary_profession = meta.secondary_profession;
     out.is_pre_searing = meta.is_pre_searing;
+    out.is_pvp = meta.is_pvp;
     out.last_observed_at = meta.last_observed_at;
     if (existing.first_observed_at.empty()) {
         out.first_observed_at = incoming.first_observed_at;

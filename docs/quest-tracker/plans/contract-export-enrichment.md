@@ -1,21 +1,30 @@
 # Contract export enrichment — character life journey
 
 Date: 2026-09-08  
-Status: **Phase 4 complete (pending in-game verify)**
+Status: **Phase 5 complete (pending in-game verify)**
 
-## Phase 1–3 (done)
+## Phase 1–4 (done)
 
-secondaryProfession; unlocks; map/vanquish; dungeon/mission clear; cartography %.
+secondaryProfession; unlocks; map/vanquish; dungeon/mission clear; cartography %;
+vanquish_complete; skill_point_threshold; faction_threshold.
 
-## Phase 4 (this slice)
+## Phase 5 (this slice)
 
-1. `vanquish_complete` — UI `kVanquishComplete` + `mapId` (timed; `vanquish_area` stays permanent).
-2. `skill_point_threshold` — `total_earned_skill_points` crossings (+ `amount`).
-3. `faction_threshold` — `total_earned_{kurzick,luxon,balth,imperial}` (+ `amount`, subjectKey `faction:<name>:<amount>`).
-4. Codex: friendlier journey labels (hero/profession names); Contract `amount` field.
+Honesty: account-scoped signals must not be labeled as character-learned skills;
+HoM is async HTTP (never Draw/Update blocking); XP is a snapshot, not a spam
+timeline; `isPvp` is roster metadata (unknown when absent).
+
+1. `isPvp` — optional character bool from `AvailableCharacterInfo::is_pvp()`.
+2. `experienceTotal` — optional character uint snapshot from `WorldContext::experience`.
+3. `account_skill_unlock` — journey kind from `AccountContext::unlocked_account_skills`
+   (account-scoped; distinct from character `skill_unlock`).
+4. `hallOfMonuments` — optional character snapshot (homCode + category point totals)
+   via `HallOfMonumentsModule::AsyncGetAccountAchievements`; journey
+   `hom_points` when category totals increase.
+5. Codex: parse/import/labels; Contract docs mirrored.
 
 ## Deferred
 
-Festival/minipet/HoM, death spam, gold/XP spam, PvP account tallies as character journey.
+Festival hats / minipets, death spam, gold-as-progress, PvP W/L/rating as journey.
 
-## STOP after Phase 4 build/tests + push both forks.
+## STOP after Phase 5 build/tests + push both forks.

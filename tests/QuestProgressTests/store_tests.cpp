@@ -143,6 +143,13 @@ void TestCodecJourneyRoundTrip()
     character.last_known_level = 5;
     character.last_map_id = 73;
     character.secondary_profession = "5";
+    character.is_pvp = true;
+    character.experience_total = 999;
+    HomSnapshotRecord hom;
+    hom.hom_code = "homcode";
+    hom.observed_at = "2026-07-25T19:59:00.000Z";
+    hom.resilience_points = 1;
+    character.hall_of_monuments = hom;
     JourneyEventRecord ev;
     ev.kind = "title_tier";
     ev.subject_key = "title:12";
@@ -166,6 +173,12 @@ void TestCodecJourneyRoundTrip()
     Expect(round.last_known_level == 5, "codec_journey_level");
     Expect(round.last_map_id == 73, "codec_journey_last_map");
     Expect(round.secondary_profession == "5", "codec_secondary_profession");
+    Expect(round.is_pvp.has_value() && *round.is_pvp, "codec_is_pvp");
+    Expect(round.experience_total.has_value() && *round.experience_total == 999, "codec_experience_total");
+    Expect(round.hall_of_monuments.has_value()
+            && round.hall_of_monuments->hom_code == "homcode"
+            && round.hall_of_monuments->resilience_points == 1,
+        "codec_hall_of_monuments");
     Expect(round.journey_events.size() == 2, "codec_journey_events_count");
     Expect(round.journey_events[0].kind == "title_tier", "codec_journey_event_kind");
     Expect(round.journey_events[1].kind == "map_enter", "codec_map_enter_kind");

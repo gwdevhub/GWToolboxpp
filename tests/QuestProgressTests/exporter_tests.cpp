@@ -19,8 +19,16 @@ AccountProgressStore MakeSampleStore()
     character.character_key = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee/11111111-2222-3333-4444-555555555555";
     character.display_name = "Test Hero";
     character.is_pre_searing = false;
+    character.is_pvp = false;
+    character.experience_total = 12345;
     character.profession = "5";
     character.secondary_profession = "1";
+    HomSnapshotRecord hom;
+    hom.hom_code = "abc123";
+    hom.observed_at = "2026-07-25T16:00:00.000Z";
+    hom.resilience_points = 3;
+    hom.fellowship_points = 2;
+    character.hall_of_monuments = hom;
     JourneyEventRecord map_enter;
     map_enter.kind = "map_enter";
     map_enter.subject_key = "map:73";
@@ -149,6 +157,10 @@ void TestEnvelopeAndMapping()
     Expect(json.find("\"objectiveIndex\"") != std::string::npos, "export_objective_index");
     Expect(json.find("\"primaryProfession\"") != std::string::npos, "export_primary_profession");
     Expect(json.find("\"secondaryProfession\"") != std::string::npos, "export_secondary_profession");
+    Expect(json.find("\"isPvp\"") != std::string::npos, "export_is_pvp");
+    Expect(json.find("\"experienceTotal\"") != std::string::npos, "export_experience_total");
+    Expect(json.find("\"hallOfMonuments\"") != std::string::npos, "export_hall_of_monuments");
+    Expect(json.find("\"resiliencePoints\"") != std::string::npos, "export_hom_resilience");
     Expect(json.find("\"map_enter\"") != std::string::npos, "export_map_enter_kind");
     Expect(json.find("\"mapId\"") != std::string::npos, "export_mission_map_id");
     Expect(json.find("\"isCompleted\"") != std::string::npos, "export_is_completed");

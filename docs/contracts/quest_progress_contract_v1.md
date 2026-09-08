@@ -109,6 +109,8 @@ There is no account envelope in Contract v1.
   "characterKey": "opaque-stable-producer-key",
   "displayName": "Character Name",
   "isPreSearing": false,
+  "isPvp": false,
+  "experienceTotal": 12345,
   "primaryProfession": "1",
   "secondaryProfession": "5",
   "missions": [],
@@ -126,11 +128,20 @@ There is no account envelope in Contract v1.
   NOT be treated as stable identity.
 - `isPreSearing` is optional. When absent, consumers MUST treat the value as
   **unknown** and MUST NOT invent `true` or `false`.
+- `isPvp` is optional roster metadata with the same unknown-when-absent rule as
+  `isPreSearing`. It does **not** participate in character identity.
 - `primaryProfession` is optional metadata. Producers MAY emit a Guild Wars
   profession id (`"1"`–`"10"`) or a stable profession slug/name string.
   Consumers MUST treat it as display/metadata only, not identity.
 - `secondaryProfession` is optional metadata with the same rules as
   `primaryProfession`.
+- `experienceTotal` is optional. When present it MUST be a non-negative JSON
+  integer snapshot of lifetime character experience at export time. It is
+  **not** an append-only timeline of XP gains.
+- `hallOfMonuments` is optional. When present it is a Hall of Monuments
+  dedication snapshot for that character name (see
+  [Hall of Monuments snapshot](#34-hall-of-monuments-snapshot)). HoM data is
+  fetched asynchronously from ArenaNet and may lag the live session.
 - `missions` is optional and MUST be a JSON array when present (MAY be empty).
   Each element describes mission-map completion evidence from
   `mission_completion_data` (see [Mission observation record](#31-mission-observation-record)).
@@ -328,14 +339,32 @@ Optional elements of `character.journeyEvents[]`:
 }
 ```
 
+```json
+{
+  "kind": "account_skill_unlock",
+  "subjectKey": "skill:42",
+  "observedAt": "2026-07-25T20:00:00.000Z",
+  "skillId": 42
+}
+```
+
+```json
+{
+  "kind": "hom_points",
+  "subjectKey": "hom:resilience",
+  "observedAt": "2026-07-25T20:00:00.000Z",
+  "amount": 3
+}
+```
+
 #### Journey rules
 
 - `kind` is required. v1 producers MAY emit `title_tier`, `level_up`,
-  `map_enter`, `vanquish_area`, `map_unlock`, `skill_unlock`, `hero_unlock`,
-  `profession_unlock`, `hard_mode_unlock`, `dungeon_complete`,
+  `map_enter`, `vanquish_area`, `map_unlock`, `skill_unlock`, `account_skill_unlock`,
+  `hero_unlock`, `profession_unlock`, `hard_mode_unlock`, `dungeon_complete`,
   `mission_complete`, `vanquish_complete`, `cartography_threshold`,
-  `skill_point_threshold`, and `faction_threshold`. Consumers MUST tolerate
-  unknown `kind` values without rejecting the file.
+  `skill_point_threshold`, `faction_threshold`, and `hom_points`. Consumers MUST
+  tolerate unknown `kind` values without rejecting the file.
 - `subjectKey` is required opaque milestone key.
 - `observedAt` is required UTC ISO-8601.
 - Optional `titleId`, `tierIndex`, `level`, `mapId`, `skillId`, `heroId`,
@@ -345,6 +374,9 @@ Optional elements of `character.journeyEvents[]`:
   0–100 coverage; `amount` is a lifetime counter milestone).
 - `map_enter` is a visit observation; `map_unlock` is permanent travel unlock —
   producers MUST NOT treat one as the other.
+- `skill_unlock` is character-learned skill bits; `account_skill_unlock` is
+  account-scoped unlock (heroes/tomes) and MUST NOT be labeled as character
+  skill mastery.
 - `mission_complete` / `dungeon_complete` / `vanquish_complete` are timed clear
   observations; permanent mission/vanquish bits remain in `missions[]` /
   `vanquish_area`.
@@ -352,7 +384,34 @@ Optional elements of `character.journeyEvents[]`:
   100% cartography title completion).
 - `skill_point_threshold` / `faction_threshold` use lifetime earned totals, not
   current spendable bank.
+- `hom_points` records Hall of Monuments category point totals (`subjectKey`
+  `hom:resilience|fellowship|honor|valor|devotion`) when they increase; the
+  latest category totals also appear in `hallOfMonuments`.
 - Duplicate `(kind, subjectKey, observedAt)` within one character SHOULD be avoided.
+
+### 3.4 Hall of Monuments snapshot
+
+Optional `character.hallOfMonuments`:
+
+```json
+{
+  "homCode": "base64-hom-code",
+  "observedAt": "2026-07-25T20:00:00.000Z",
+  "resiliencePoints": 3,
+  "fellowshipPoints": 2,
+  "honorPoints": 4,
+  "valorPoints": 1,
+  "devotionPoints": 0
+}
+```
+
+#### HoM rules
+
+- All point fields are required non-negative integers when the object is present.
+- `homCode` and `observedAt` are optional metadata.
+- Snapshot reflects ArenaNet HoM HTTP data for the character display name;
+  absence means not yet fetched / unavailable, not zero dedications.
+- Consumers MUST NOT invent dedications from missing `hallOfMonuments`.
 
 ---
 
@@ -596,6 +655,9 @@ Legend:
 | `characterKey` | R | string (non-empty) | no | — | yes | yes |
 | `displayName` | R | string (non-empty) | no | — | no | no |
 | `isPreSearing` | O | boolean | no | **unknown** (do not invent) | no | no |
+| `isPvp` | O | boolean | no | **unknown** (do not invent) | no | no |
+| `experienceTotal` | O | integer (`>= 0`) | no | absent | no | no |
+| `hallOfMonuments` | O | object | no | absent | no | no |
 | `quests` | R | array | no | — | no | no |
 | unknown fields | O | any | — | ignore | no | no |
 

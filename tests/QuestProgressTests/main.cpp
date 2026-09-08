@@ -784,6 +784,19 @@ int main()
         Expect(skills.size() == 2, "skill_unlock_count");
         Expect(skills.at(0).skill_id == 42, "skill_unlock_id");
 
+        const auto account_skills = BuildNewlySeenIdEvents(
+            "account_skill_unlock",
+            JourneyUnlockIdKind::Skill,
+            {},
+            {7},
+            {},
+            "2026-07-25T20:05:30.000Z");
+        Expect(account_skills.size() == 1, "account_skill_unlock_count");
+        Expect(account_skills.at(0).kind == "account_skill_unlock", "account_skill_unlock_kind");
+        Expect(BuildJourneyEventFingerprint(account_skills.at(0)).find("account_skill_unlock")
+                != std::string::npos,
+            "account_skill_fingerprint");
+
         const auto heroes = BuildNewlySeenIdEvents(
             "hero_unlock",
             JourneyUnlockIdKind::Hero,
@@ -864,6 +877,20 @@ int main()
         const auto vq_clear = BuildTimedMapClearEvents(
             "vanquish_complete", 73, {}, "2026-07-25T20:16:00.000Z");
         Expect(vq_clear.size() == 1, "vanquish_complete_once");
+
+        HomSnapshotRecord hom;
+        hom.observed_at = "2026-07-25T20:17:00.000Z";
+        hom.resilience_points = 3;
+        hom.fellowship_points = 1;
+        const auto hom_events = BuildHomPointsEvents(std::nullopt, hom, {}, hom.observed_at);
+        Expect(hom_events.size() == 2, "hom_points_first_sample");
+        Expect(hom_events.at(0).kind == "hom_points", "hom_points_kind");
+        Expect(BuildHomPointsEvents(hom, hom, hom_events, "2026-07-25T20:18:00.000Z").empty(),
+            "hom_points_idempotent");
+        HomSnapshotRecord hom2 = hom;
+        hom2.resilience_points = 5;
+        const auto hom_up = BuildHomPointsEvents(hom, hom2, hom_events, "2026-07-25T20:19:00.000Z");
+        Expect(hom_up.size() == 1 && hom_up.at(0).amount == 5, "hom_points_increase");
     }
 
     RunBatch2BStoreTests();

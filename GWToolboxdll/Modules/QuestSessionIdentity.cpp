@@ -74,13 +74,15 @@ SessionIdentity MakeSessionIdentity(
     std::string_view display_name,
     std::string_view profession,
     std::optional<bool> is_pre_searing,
-    std::string_view secondary_profession)
+    std::string_view secondary_profession,
+    std::optional<bool> is_pvp)
 {
     SessionIdentity id;
     id.display_name = std::string(display_name);
     id.profession = std::string(profession);
     id.secondary_profession = std::string(secondary_profession);
     id.is_pre_searing = is_pre_searing;
+    id.is_pvp = is_pvp;
 
     const auto account = NormalizeAccountKey(account_uuid_raw);
     const auto character = NormalizeAccountKey(character_uuid_raw);

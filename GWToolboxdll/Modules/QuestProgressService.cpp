@@ -249,6 +249,9 @@ void QuestProgressService::ApplyIdentityMetadataBackfill()
             if (identity_.is_pre_searing.has_value()) {
                 stored->is_pre_searing = identity_.is_pre_searing;
             }
+            if (identity_.is_pvp.has_value()) {
+                stored->is_pvp = identity_.is_pvp;
+            }
             if (!stored->display_name.empty() && character_.display_name.empty()) {
                 character_.display_name = stored->display_name;
             }
@@ -284,6 +287,7 @@ StoredCharacter QuestProgressService::BuildOutgoingStoredCharacter() const
     stored.profession = identity_.profession;
     stored.secondary_profession = identity_.secondary_profession;
     stored.is_pre_searing = identity_.is_pre_searing;
+    stored.is_pvp = identity_.is_pvp;
     stored.quests = character_.quests;
     stored.last_observed_at = character_.last_reduced_at;
     stored.first_observed_at = character_.last_reduced_at;
@@ -300,6 +304,9 @@ StoredCharacter QuestProgressService::BuildOutgoingStoredCharacter() const
         if (!stored.is_pre_searing.has_value()) {
             stored.is_pre_searing = existing->is_pre_searing;
         }
+        if (!stored.is_pvp.has_value()) {
+            stored.is_pvp = existing->is_pvp;
+        }
         if (!existing->first_observed_at.empty()) {
             stored.first_observed_at = existing->first_observed_at;
         }
@@ -310,6 +317,8 @@ StoredCharacter QuestProgressService::BuildOutgoingStoredCharacter() const
         stored.titles = existing->titles;
         stored.last_known_level = existing->last_known_level;
         stored.last_map_id = existing->last_map_id;
+        stored.experience_total = existing->experience_total;
+        stored.hall_of_monuments = existing->hall_of_monuments;
         stored.journey_events = existing->journey_events;
     }
     return stored;
@@ -471,6 +480,9 @@ void QuestProgressService::SyncCharacterIntoAccountStore()
     if (identity_.is_pre_searing.has_value()) {
         stored->is_pre_searing = identity_.is_pre_searing;
     }
+    if (identity_.is_pvp.has_value()) {
+        stored->is_pvp = identity_.is_pvp;
+    }
     stored->quests = character_.quests;
     if (!character_.last_reduced_at.empty()) {
         stored->last_observed_at = character_.last_reduced_at;
@@ -516,6 +528,9 @@ std::optional<StoredCharacter> QuestProgressService::BuildExportCharacterSnapsho
     if (identity_.is_pre_searing.has_value()) {
         out.is_pre_searing = identity_.is_pre_searing;
     }
+    if (identity_.is_pvp.has_value()) {
+        out.is_pvp = identity_.is_pvp;
+    }
     return out;
 }
 
@@ -532,6 +547,7 @@ void QuestProgressService::EnsureCharacterRecord()
         created.profession = identity_.profession;
         created.secondary_profession = identity_.secondary_profession;
         created.is_pre_searing = identity_.is_pre_searing;
+        created.is_pvp = identity_.is_pvp;
         account_store_.characters.emplace(identity_.character_key, std::move(created));
         stored = FindCharacter(account_store_, identity_.character_key);
     }
@@ -547,6 +563,9 @@ void QuestProgressService::EnsureCharacterRecord()
         }
         if (identity_.is_pre_searing) {
             stored->is_pre_searing = identity_.is_pre_searing;
+        }
+        if (identity_.is_pvp.has_value()) {
+            stored->is_pvp = identity_.is_pvp;
         }
     }
     character_.character_key = identity_.character_key;
@@ -663,6 +682,9 @@ void QuestProgressService::BindIdentity(
         if (next.is_pre_searing.has_value()) {
             identity_.is_pre_searing = next.is_pre_searing;
         }
+        if (next.is_pvp.has_value()) {
+            identity_.is_pvp = next.is_pvp;
+        }
         ApplyIdentityMetadataBackfill();
         return;
     }
@@ -682,6 +704,9 @@ void QuestProgressService::BindIdentity(
         }
         if (next.is_pre_searing.has_value()) {
             identity_.is_pre_searing = next.is_pre_searing;
+        }
+        if (next.is_pvp.has_value()) {
+            identity_.is_pvp = next.is_pvp;
         }
         return;
     }
@@ -1193,8 +1218,54 @@ void QuestProgressService::IngestJourneySnapshot(JourneySnapshotResult snapshot)
         stored->last_map_id = snapshot.observed_map_id;
         changed = true;
     }
+    if (snapshot.experience_total.has_value()
+        && snapshot.experience_total != stored->experience_total) {
+        stored->experience_total = snapshot.experience_total;
+        changed = true;
+    }
     const auto before = stored->journey_events.size();
     AppendUniqueJourneyEvents(stored->journey_events, snapshot.new_events);
+    if (stored->journey_events.size() != before) {
+        changed = true;
+    }
+    if (!changed) {
+        return;
+    }
+
+    semantic_dirty_ = true;
+    heartbeat_pending_ = false;
+    if (!LatchBlocksAutoRetry(persist_latch_)) {
+        persist_latch_ = PersistLatch::DirtyDebouncing;
+    }
+}
+
+void QuestProgressService::IngestHomSnapshot(HomSnapshotRecord snapshot)
+{
+    if (!accept_input_) {
+        return;
+    }
+    if (identity_.kind != IdentityKind::Persistent || identity_.character_key.empty()) {
+        return;
+    }
+    if (!IsCanonicalUtcTimestamp(snapshot.observed_at)) {
+        return;
+    }
+    EnsureCharacterRecord();
+    auto* stored = FindCharacter(account_store_, identity_.character_key);
+    if (!stored) {
+        return;
+    }
+
+    bool changed = false;
+    const auto previous = stored->hall_of_monuments;
+    if (!previous.has_value() || *previous != snapshot) {
+        stored->hall_of_monuments = snapshot;
+        changed = true;
+    }
+    const auto before = stored->journey_events.size();
+    AppendUniqueJourneyEvents(
+        stored->journey_events,
+        BuildHomPointsEvents(previous, snapshot, stored->journey_events, snapshot.observed_at));
     if (stored->journey_events.size() != before) {
         changed = true;
     }

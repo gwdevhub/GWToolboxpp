@@ -146,6 +146,7 @@ public:
 
     void IngestJourneySnapshot(JourneySnapshotResult snapshot);
     void IngestJourneyEvents(std::vector<JourneyEventRecord> events);
+    void IngestHomSnapshot(HomSnapshotRecord snapshot);
 
     bool Flush(bool session_boundary);
 

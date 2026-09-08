@@ -28,6 +28,7 @@ struct SessionIdentity {
     std::string profession;      // primary profession metadata only
     std::string secondary_profession; // secondary profession metadata only
     std::optional<bool> is_pre_searing;
+    std::optional<bool> is_pvp;
 };
 
 using UuidWords = std::array<uint32_t, 4>;
@@ -50,7 +51,8 @@ SessionIdentity MakeSessionIdentity(
     std::string_view display_name,
     std::string_view profession,
     std::optional<bool> is_pre_searing,
-    std::string_view secondary_profession = {});
+    std::string_view secondary_profession = {},
+    std::optional<bool> is_pvp = std::nullopt);
 
 bool SamePersistentCharacter(const SessionIdentity& a, const SessionIdentity& b);
 bool SameAccount(const SessionIdentity& a, const SessionIdentity& b);

@@ -76,12 +76,25 @@ struct JsonJourneyEvent {
     uint32_t amount = 0;
 };
 
+struct JsonHomSnapshot {
+    std::string hom_code;
+    std::string observed_at;
+    uint32_t resilience_points = 0;
+    uint32_t fellowship_points = 0;
+    uint32_t honor_points = 0;
+    uint32_t valor_points = 0;
+    uint32_t devotion_points = 0;
+};
+
 struct JsonCharacter {
     std::string character_key;
     std::string display_name;
     std::string profession;
     std::string secondary_profession;
     std::optional<bool> is_pre_searing;
+    std::optional<bool> is_pvp;
+    std::optional<uint32_t> experience_total;
+    std::optional<JsonHomSnapshot> hall_of_monuments;
     std::string first_observed_at;
     std::string last_observed_at;
     std::vector<JsonQuest> quests;
@@ -189,6 +202,19 @@ struct glz::meta<QuestProgress::JsonJourneyEvent> {
 };
 
 template <>
+struct glz::meta<QuestProgress::JsonHomSnapshot> {
+    using T = QuestProgress::JsonHomSnapshot;
+    static constexpr auto value = object(
+        "homCode", &T::hom_code,
+        "observedAt", &T::observed_at,
+        "resiliencePoints", &T::resilience_points,
+        "fellowshipPoints", &T::fellowship_points,
+        "honorPoints", &T::honor_points,
+        "valorPoints", &T::valor_points,
+        "devotionPoints", &T::devotion_points);
+};
+
+template <>
 struct glz::meta<QuestProgress::JsonCharacter> {
     using T = QuestProgress::JsonCharacter;
     static constexpr auto value = object(
@@ -197,6 +223,9 @@ struct glz::meta<QuestProgress::JsonCharacter> {
         "profession", &T::profession,
         "secondaryProfession", &T::secondary_profession,
         "isPreSearing", &T::is_pre_searing,
+        "isPvp", &T::is_pvp,
+        "experienceTotal", &T::experience_total,
+        "hallOfMonuments", &T::hall_of_monuments,
         "firstObservedAt", &T::first_observed_at,
         "lastObservedAt", &T::last_observed_at,
         "quests", &T::quests,
@@ -456,6 +485,23 @@ bool ConvertCharacter(const JsonCharacter& in, StoredCharacter& out, CodecDiagno
     out.profession = in.profession;
     out.secondary_profession = in.secondary_profession;
     out.is_pre_searing = in.is_pre_searing;
+    out.is_pvp = in.is_pvp;
+    out.experience_total = in.experience_total;
+    if (in.hall_of_monuments.has_value()) {
+        HomSnapshotRecord hom;
+        hom.hom_code = in.hall_of_monuments->hom_code;
+        hom.observed_at = in.hall_of_monuments->observed_at;
+        if (!hom.observed_at.empty()
+            && !RequireCanonicalTs(hom.observed_at, d, "hallOfMonuments.observedAt")) {
+            return false;
+        }
+        hom.resilience_points = in.hall_of_monuments->resilience_points;
+        hom.fellowship_points = in.hall_of_monuments->fellowship_points;
+        hom.honor_points = in.hall_of_monuments->honor_points;
+        hom.valor_points = in.hall_of_monuments->valor_points;
+        hom.devotion_points = in.hall_of_monuments->devotion_points;
+        out.hall_of_monuments = std::move(hom);
+    }
     if (!in.first_observed_at.empty() && !RequireCanonicalTs(in.first_observed_at, d, "character.firstObservedAt")) {
         return false;
     }
@@ -552,6 +598,19 @@ JsonCharacter ToJsonCharacter(const StoredCharacter& in)
     out.profession = in.profession;
     out.secondary_profession = in.secondary_profession;
     out.is_pre_searing = in.is_pre_searing;
+    out.is_pvp = in.is_pvp;
+    out.experience_total = in.experience_total;
+    if (in.hall_of_monuments.has_value()) {
+        JsonHomSnapshot hom;
+        hom.hom_code = in.hall_of_monuments->hom_code;
+        hom.observed_at = in.hall_of_monuments->observed_at;
+        hom.resilience_points = in.hall_of_monuments->resilience_points;
+        hom.fellowship_points = in.hall_of_monuments->fellowship_points;
+        hom.honor_points = in.hall_of_monuments->honor_points;
+        hom.valor_points = in.hall_of_monuments->valor_points;
+        hom.devotion_points = in.hall_of_monuments->devotion_points;
+        out.hall_of_monuments = std::move(hom);
+    }
     out.first_observed_at = in.first_observed_at;
     out.last_observed_at = in.last_observed_at;
     for (const auto& [id, quest] : in.quests) {

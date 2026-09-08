@@ -6,6 +6,7 @@
 #include <Modules/QuestObservationService.h>
 
 #include <GWCA/Constants/Constants.h>
+#include <GWCA/Context/AccountContext.h>
 #include <GWCA/Context/CharContext.h>
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/WorldContext.h>
@@ -53,6 +54,7 @@ SessionIdentity SampleLiveSessionIdentity(bool world_ready)
     std::string profession;
     std::string secondary_profession;
     std::optional<bool> pre;
+    std::optional<bool> pvp;
 
     if (const auto* ctx = GW::GetCharContext()) {
         character_words = WordsFromUint32(ctx->player_uuid);
@@ -73,6 +75,7 @@ SessionIdentity SampleLiveSessionIdentity(bool world_ready)
                 secondary_profession = std::to_string(static_cast<uint32_t>(secondary));
             }
             pre = GW::Map::IsPreSearing(avail->map_id());
+            pvp = avail->is_pvp();
         }
     }
     if (!pre.has_value()) {
@@ -85,7 +88,8 @@ SessionIdentity SampleLiveSessionIdentity(bool world_ready)
         display,
         profession,
         pre,
-        secondary_profession);
+        secondary_profession,
+        pvp);
 }
 
 QuestSnapshot ToQuestSnapshot(const LiveQuestView& view)
@@ -250,6 +254,26 @@ JourneySnapshotResult SampleLiveJourneySnapshot(
             existing_events,
             observed_at));
 
+    if (const auto* account = game->account) {
+            std::vector<uint32_t> account_skill_ids;
+            account_skill_ids.reserve(account->unlocked_account_skills.size());
+            for (size_t i = 0; i < account->unlocked_account_skills.size(); ++i) {
+                const auto skill_id = account->unlocked_account_skills[i];
+                if (skill_id != 0) {
+                    account_skill_ids.push_back(skill_id);
+                }
+            }
+            AppendUniqueJourneyEvents(
+                out.new_events,
+                BuildNewlySeenIdEvents(
+                    "account_skill_unlock",
+                    JourneyUnlockIdKind::Skill,
+                    PriorIdsFromJourneyEvents(existing_events, "account_skill_unlock"),
+                    account_skill_ids,
+                    existing_events,
+                    observed_at));
+        }
+
     std::vector<uint32_t> hero_ids;
     hero_ids.reserve(world->hero_info.size());
     for (size_t i = 0; i < world->hero_info.size(); ++i) {
@@ -354,6 +378,8 @@ JourneySnapshotResult SampleLiveJourneySnapshot(
                 existing_events,
                 observed_at));
     }
+
+    out.experience_total = world->experience;
 
     return out;
 }
