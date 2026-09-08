@@ -145,6 +145,7 @@ public:
     void IngestMissionCompletion(std::map<uint32_t, MissionRecord> missions);
 
     void IngestJourneySnapshot(JourneySnapshotResult snapshot);
+    void IngestJourneyEvents(std::vector<JourneyEventRecord> events);
 
     bool Flush(bool session_boundary);
 

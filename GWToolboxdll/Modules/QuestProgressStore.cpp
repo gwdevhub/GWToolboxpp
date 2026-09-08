@@ -236,6 +236,13 @@ void MergeJourneyFields(StoredCharacter& out, const StoredCharacter& disk, const
         out.last_known_level = disk.last_known_level;
     }
 
+    if (memory.last_map_id.has_value()) {
+        out.last_map_id = memory.last_map_id;
+    }
+    else {
+        out.last_map_id = disk.last_map_id;
+    }
+
     out.journey_events = disk.journey_events;
     AppendUniqueJourneyEvents(out.journey_events, memory.journey_events);
 }
@@ -251,6 +258,7 @@ StoredCharacter MergeCharacter(const StoredCharacter& disk, const StoredCharacte
     const StoredCharacter& meta = mem_newer ? memory : disk;
     out.display_name = meta.display_name;
     out.profession = meta.profession;
+    out.secondary_profession = meta.secondary_profession;
     out.is_pre_searing = meta.is_pre_searing;
     out.last_observed_at = meta.last_observed_at;
     if (disk.first_observed_at.empty()) {
@@ -429,6 +437,7 @@ CoalesceCharacterResult CoalesceStoredCharactersImpl(
     const StoredCharacter& meta = mem_newer ? incoming : existing;
     out.display_name = meta.display_name;
     out.profession = meta.profession;
+    out.secondary_profession = meta.secondary_profession;
     out.is_pre_searing = meta.is_pre_searing;
     out.last_observed_at = meta.last_observed_at;
     if (existing.first_observed_at.empty()) {

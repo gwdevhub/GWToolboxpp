@@ -10,10 +10,11 @@
 #include <chrono>
 #include <memory>
 #include <mutex>
+#include <string>
+#include <string_view>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-#include <string>
 #include <cstdint>
 
 struct OwnedObjective {
@@ -58,6 +59,12 @@ struct QuestEvidenceStamp {
     std::chrono::steady_clock::time_point steady_at{};
 };
 
+struct JourneyMilestoneHint {
+    std::string kind;
+    uint32_t map_id = 0;
+    std::chrono::system_clock::time_point wall_at{};
+};
+
 // Game-thread observation helper; not a ToolboxModule. Publishes immutable snapshots for Draw.
 class QuestObservationService {
 public:
@@ -73,6 +80,9 @@ public:
 
     // Drain owned evidence stamps (abandon/reward/enquire). Callbacks never reduce/I/O.
     void DrainPendingEvidence(std::vector<QuestEvidenceStamp>& out);
+
+    // Drain timed map-clear journey hints (dungeon/mission complete UI).
+    void DrainPendingJourneyHints(std::vector<JourneyMilestoneHint>& out);
 
     // kLogout observed (character select / session end) — not map-load.
     bool ConsumeLogoutSignal();
@@ -103,6 +113,7 @@ private:
     void OnChatEvidenceMessage(const wchar_t* message);
     uint32_t ResolveQuestIdFromLiveLog(const wchar_t* name_argument) const;
     void PushEvidence(uint32_t quest_id, QuestProgress::EvidenceKind kind);
+    void PushJourneyMilestoneHint(std::string_view kind, uint32_t map_id);
     void ScheduleAbandonProbe(uint32_t quest_id);
     void ResolveAbandonProbes(const LiveQuestView& view, std::chrono::steady_clock::time_point now);
 
@@ -127,6 +138,7 @@ private:
 
     mutable std::mutex evidence_mutex_;
     std::vector<QuestEvidenceStamp> pending_evidence_;
+    std::vector<JourneyMilestoneHint> pending_journey_hints_;
     bool logout_pending_ = false;
 
     QuestProgress::QuestAbandonProbeTracker abandon_probes_;

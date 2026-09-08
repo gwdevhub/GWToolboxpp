@@ -5,11 +5,15 @@
 #include <Modules/QuestCharacterJourney.h>
 #include <Modules/QuestObservationService.h>
 
+#include <GWCA/Constants/Constants.h>
 #include <GWCA/Context/CharContext.h>
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/WorldContext.h>
+#include <GWCA/GameEntities/Hero.h>
+#include <GWCA/GameEntities/Player.h>
 #include <GWCA/GameEntities/Title.h>
 #include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/PlayerMgr.h>
 
 #include <Utils/TextUtils.h>
 #include <Utils/ToolboxUtils.h>
@@ -47,6 +51,7 @@ SessionIdentity SampleLiveSessionIdentity(bool world_ready)
     UuidWords character_words{};
     std::string display;
     std::string profession;
+    std::string secondary_profession;
     std::optional<bool> pre;
 
     if (const auto* ctx = GW::GetCharContext()) {
@@ -63,6 +68,10 @@ SessionIdentity SampleLiveSessionIdentity(bool world_ready)
                 character_words = WordsFromUint32(avail->uuid);
             }
             profession = std::to_string(static_cast<uint32_t>(avail->primary()));
+            const auto secondary = avail->secondary();
+            if (secondary != GW::Constants::Profession::None) {
+                secondary_profession = std::to_string(static_cast<uint32_t>(secondary));
+            }
             pre = GW::Map::IsPreSearing(avail->map_id());
         }
     }
@@ -75,7 +84,8 @@ SessionIdentity SampleLiveSessionIdentity(bool world_ready)
         FormatUuidWords(character_words),
         display,
         profession,
-        pre);
+        pre,
+        secondary_profession);
 }
 
 QuestSnapshot ToQuestSnapshot(const LiveQuestView& view)
@@ -154,6 +164,7 @@ JourneySnapshotResult SampleLiveJourneySnapshot(
     std::chrono::system_clock::time_point wall_now,
     const std::map<uint32_t, TitleStateRecord>& previous_titles,
     std::optional<uint32_t> previous_level,
+    std::optional<uint32_t> previous_map_id,
     const std::vector<JourneyEventRecord>& existing_events)
 {
     if (!GW::Map::GetIsMapLoaded()) {
@@ -185,13 +196,129 @@ JourneySnapshotResult SampleLiveJourneySnapshot(
         inputs.push_back(row);
     }
 
-    return MergeJourneySnapshot(
+    auto out = MergeJourneySnapshot(
         previous_titles,
         previous_level,
         existing_events,
         inputs,
         ReadPlayerLevel(*world),
         observed_at);
+
+    const auto current_map_id = static_cast<uint32_t>(GW::Map::GetMapID());
+    out.observed_map_id = current_map_id;
+    AppendUniqueJourneyEvents(
+        out.new_events,
+        BuildMapEnterEvents(previous_map_id, current_map_id, existing_events, observed_at));
+
+    const MissionBitsetWords vanquished{
+        world->vanquished_areas.m_buffer,
+        world->vanquished_areas.m_size,
+    };
+    AppendUniqueJourneyEvents(
+        out.new_events,
+        BuildVanquishAreaEvents(
+            PriorIdsFromJourneyEvents(existing_events, "vanquish_area"),
+            CollectSetBitMapIds(vanquished),
+            existing_events,
+            observed_at));
+
+    const MissionBitsetWords unlocked_maps{
+        world->unlocked_map.m_buffer,
+        world->unlocked_map.m_size,
+    };
+    AppendUniqueJourneyEvents(
+        out.new_events,
+        BuildNewlySeenIdEvents(
+            "map_unlock",
+            JourneyUnlockIdKind::Map,
+            PriorIdsFromJourneyEvents(existing_events, "map_unlock"),
+            CollectSetBitMapIds(unlocked_maps),
+            existing_events,
+            observed_at));
+
+    const MissionBitsetWords unlocked_skills{
+        world->unlocked_character_skills.m_buffer,
+        world->unlocked_character_skills.m_size,
+    };
+    AppendUniqueJourneyEvents(
+        out.new_events,
+        BuildNewlySeenIdEvents(
+            "skill_unlock",
+            JourneyUnlockIdKind::Skill,
+            PriorIdsFromJourneyEvents(existing_events, "skill_unlock"),
+            CollectSetBitMapIds(unlocked_skills),
+            existing_events,
+            observed_at));
+
+    std::vector<uint32_t> hero_ids;
+    hero_ids.reserve(world->hero_info.size());
+    for (size_t i = 0; i < world->hero_info.size(); ++i) {
+        const auto hero_id = static_cast<uint32_t>(world->hero_info[i].hero_id);
+        if (hero_id != 0) {
+            hero_ids.push_back(hero_id);
+        }
+    }
+    AppendUniqueJourneyEvents(
+        out.new_events,
+        BuildNewlySeenIdEvents(
+            "hero_unlock",
+            JourneyUnlockIdKind::Hero,
+            PriorIdsFromJourneyEvents(existing_events, "hero_unlock"),
+            hero_ids,
+            existing_events,
+            observed_at));
+
+    AppendUniqueJourneyEvents(
+        out.new_events,
+        BuildHardModeUnlockEvents(
+            HasJourneyKind(existing_events, "hard_mode_unlock"),
+            world->is_hard_mode_unlocked != 0,
+            existing_events,
+            observed_at));
+
+    if (const auto* player = GW::PlayerMgr::GetPlayerByID()) {
+        const GW::ProfessionState* found = nullptr;
+        for (size_t i = 0; i < world->party_profession_states.size(); ++i) {
+            if (world->party_profession_states[i].agent_id == player->agent_id) {
+                found = &world->party_profession_states[i];
+                break;
+            }
+        }
+        if (found) {
+            std::vector<uint32_t> profession_ids;
+            for (uint32_t prof = 1; prof <= 10; ++prof) {
+                if ((found->unlocked_professions >> prof & 1u) != 0) {
+                    profession_ids.push_back(prof);
+                }
+            }
+            AppendUniqueJourneyEvents(
+                out.new_events,
+                BuildNewlySeenIdEvents(
+                    "profession_unlock",
+                    JourneyUnlockIdKind::Profession,
+                    PriorIdsFromJourneyEvents(existing_events, "profession_unlock"),
+                    profession_ids,
+                    existing_events,
+                    observed_at));
+        }
+    }
+
+    const auto* carto_bits = reinterpret_cast<const uint32_t*>(world->cartographed_areas.m_buffer);
+    const auto carto_pct = ComputeCartographyCoveragePercent(
+        carto_bits,
+        world->cartographed_areas.size(),
+        world->h05B4[0],
+        world->h05B4[1]);
+    AppendUniqueJourneyEvents(
+        out.new_events,
+        BuildCartographyThresholdEvents(
+            MaxCartographyPercentFromEvents(existing_events),
+            carto_pct,
+            current_map_id,
+            existing_events,
+            observed_at));
+
+    return out;
 }
 
 } // namespace QuestProgress

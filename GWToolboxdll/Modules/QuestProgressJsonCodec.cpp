@@ -68,12 +68,18 @@ struct JsonJourneyEvent {
     uint32_t title_id = 0;
     uint32_t tier_index = 0;
     uint32_t level = 0;
+    uint32_t map_id = 0;
+    uint32_t skill_id = 0;
+    uint32_t hero_id = 0;
+    uint32_t profession_id = 0;
+    uint32_t percent = 0;
 };
 
 struct JsonCharacter {
     std::string character_key;
     std::string display_name;
     std::string profession;
+    std::string secondary_profession;
     std::optional<bool> is_pre_searing;
     std::string first_observed_at;
     std::string last_observed_at;
@@ -81,6 +87,7 @@ struct JsonCharacter {
     std::vector<JsonMission> missions;
     std::vector<JsonTitle> titles;
     std::optional<uint32_t> last_known_level;
+    std::optional<uint32_t> last_map_id;
     std::vector<JsonJourneyEvent> journey_events;
 };
 
@@ -171,7 +178,12 @@ struct glz::meta<QuestProgress::JsonJourneyEvent> {
         "observedAt", &T::observed_at,
         "titleId", &T::title_id,
         "tierIndex", &T::tier_index,
-        "level", &T::level);
+        "level", &T::level,
+        "mapId", &T::map_id,
+        "skillId", &T::skill_id,
+        "heroId", &T::hero_id,
+        "professionId", &T::profession_id,
+        "percent", &T::percent);
 };
 
 template <>
@@ -181,6 +193,7 @@ struct glz::meta<QuestProgress::JsonCharacter> {
         "characterKey", &T::character_key,
         "displayName", &T::display_name,
         "profession", &T::profession,
+        "secondaryProfession", &T::secondary_profession,
         "isPreSearing", &T::is_pre_searing,
         "firstObservedAt", &T::first_observed_at,
         "lastObservedAt", &T::last_observed_at,
@@ -188,6 +201,7 @@ struct glz::meta<QuestProgress::JsonCharacter> {
         "missions", &T::missions,
         "titles", &T::titles,
         "lastKnownLevel", &T::last_known_level,
+        "lastMapId", &T::last_map_id,
         "journeyEvents", &T::journey_events);
 };
 
@@ -438,6 +452,7 @@ bool ConvertCharacter(const JsonCharacter& in, StoredCharacter& out, CodecDiagno
     out.character_key = in.character_key;
     out.display_name = in.display_name;
     out.profession = in.profession;
+    out.secondary_profession = in.secondary_profession;
     out.is_pre_searing = in.is_pre_searing;
     if (!in.first_observed_at.empty() && !RequireCanonicalTs(in.first_observed_at, d, "character.firstObservedAt")) {
         return false;
@@ -499,6 +514,7 @@ bool ConvertCharacter(const JsonCharacter& in, StoredCharacter& out, CodecDiagno
         out.titles.emplace(title.title_id, std::move(title));
     }
     out.last_known_level = in.last_known_level;
+    out.last_map_id = in.last_map_id;
     out.journey_events.clear();
     for (const auto& je : in.journey_events) {
         JourneyEventRecord event;
@@ -507,6 +523,11 @@ bool ConvertCharacter(const JsonCharacter& in, StoredCharacter& out, CodecDiagno
         event.title_id = je.title_id;
         event.tier_index = je.tier_index;
         event.level = je.level;
+        event.map_id = je.map_id;
+        event.skill_id = je.skill_id;
+        event.hero_id = je.hero_id;
+        event.profession_id = je.profession_id;
+        event.percent = je.percent;
         if (event.kind.empty() || event.subject_key.empty()) {
             AddDiag(d, "journey event missing kind or subjectKey");
             return false;
@@ -526,6 +547,7 @@ JsonCharacter ToJsonCharacter(const StoredCharacter& in)
     out.character_key = in.character_key;
     out.display_name = in.display_name;
     out.profession = in.profession;
+    out.secondary_profession = in.secondary_profession;
     out.is_pre_searing = in.is_pre_searing;
     out.first_observed_at = in.first_observed_at;
     out.last_observed_at = in.last_observed_at;
@@ -563,6 +585,7 @@ JsonCharacter ToJsonCharacter(const StoredCharacter& in)
         return a.title_id < b.title_id;
     });
     out.last_known_level = in.last_known_level;
+    out.last_map_id = in.last_map_id;
     for (const auto& ev : in.journey_events) {
         JsonJourneyEvent je;
         je.kind = ev.kind;
@@ -571,6 +594,11 @@ JsonCharacter ToJsonCharacter(const StoredCharacter& in)
         je.title_id = ev.title_id;
         je.tier_index = ev.tier_index;
         je.level = ev.level;
+        je.map_id = ev.map_id;
+        je.skill_id = ev.skill_id;
+        je.hero_id = ev.hero_id;
+        je.profession_id = ev.profession_id;
+        je.percent = ev.percent;
         out.journey_events.push_back(je);
     }
     std::sort(out.journey_events.begin(), out.journey_events.end(),

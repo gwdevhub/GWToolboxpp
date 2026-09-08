@@ -141,6 +141,8 @@ void TestCodecJourneyRoundTrip()
     title.last_observed_at = "2026-07-25T20:00:00.000Z";
     character.titles.emplace(12, title);
     character.last_known_level = 5;
+    character.last_map_id = 73;
+    character.secondary_profession = "5";
     JourneyEventRecord ev;
     ev.kind = "title_tier";
     ev.subject_key = "title:12";
@@ -148,6 +150,12 @@ void TestCodecJourneyRoundTrip()
     ev.title_id = 12;
     ev.tier_index = 3;
     character.journey_events.push_back(ev);
+    JourneyEventRecord map_ev;
+    map_ev.kind = "map_enter";
+    map_ev.subject_key = "map:73";
+    map_ev.observed_at = "2026-07-25T20:01:00.000Z";
+    map_ev.map_id = 73;
+    character.journey_events.push_back(map_ev);
 
     const auto ser = SerializeAccountStoreJson(store);
     Expect(ser.status == CodecStatus::Ok, "codec_journey_serialize_ok");
@@ -156,8 +164,12 @@ void TestCodecJourneyRoundTrip()
     const auto& round = parsed.store.characters.begin()->second;
     Expect(round.titles.at(12).tier_index == 3, "codec_journey_title_tier");
     Expect(round.last_known_level == 5, "codec_journey_level");
-    Expect(round.journey_events.size() == 1, "codec_journey_events_count");
+    Expect(round.last_map_id == 73, "codec_journey_last_map");
+    Expect(round.secondary_profession == "5", "codec_secondary_profession");
+    Expect(round.journey_events.size() == 2, "codec_journey_events_count");
     Expect(round.journey_events[0].kind == "title_tier", "codec_journey_event_kind");
+    Expect(round.journey_events[1].kind == "map_enter", "codec_map_enter_kind");
+    Expect(round.journey_events[1].map_id == 73, "codec_map_enter_id");
 }
 
 void TestCodecOrderingIndependent()

@@ -26,6 +26,7 @@ JourneySnapshotResult SampleLiveJourneySnapshot(
     std::chrono::system_clock::time_point wall_now,
     const std::map<uint32_t, TitleStateRecord>& previous_titles,
     std::optional<uint32_t> previous_level,
+    std::optional<uint32_t> previous_map_id,
     const std::vector<JourneyEventRecord>& existing_events);
 
 } // namespace QuestProgress

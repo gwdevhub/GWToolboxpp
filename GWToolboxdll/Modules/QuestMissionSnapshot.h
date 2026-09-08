@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <map>
 #include <string_view>
+#include <vector>
 
 namespace QuestProgress {
 
@@ -17,8 +18,8 @@ struct MissionBitsetWords {
 
 bool MissionBitAt(const MissionBitsetWords& bitset, uint32_t map_id);
 
-// Builds mapId → MissionRecord for any map with a completion/bonus flag set.
-// Preserves prior lastObservedAt when flags are unchanged.
+std::vector<uint32_t> CollectSetBitMapIds(const MissionBitsetWords& bitset);
+
 std::map<uint32_t, MissionRecord> BuildMissionRecordsFromBitsets(
     const MissionBitsetWords& completed_normal,
     const MissionBitsetWords& bonus_normal,

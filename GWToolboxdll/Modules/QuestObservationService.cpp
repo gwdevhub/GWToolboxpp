@@ -56,6 +56,8 @@ void QuestObservationService::RegisterCallbacks()
         GW::UI::UIMessage::kLogout,
         GW::UI::UIMessage::kLogChatMessage,
         GW::UI::UIMessage::kWriteToChatLog,
+        GW::UI::UIMessage::kDungeonComplete,
+        GW::UI::UIMessage::kMissionComplete,
     };
 
     for (const auto message_id : messages) {
@@ -98,6 +100,7 @@ void QuestObservationService::Terminate()
     {
         std::scoped_lock lock(evidence_mutex_);
         pending_evidence_.clear();
+        pending_journey_hints_.clear();
         logout_pending_ = false;
     }
     abandon_probes_.Clear();
@@ -169,6 +172,22 @@ void QuestObservationService::PushEvidence(uint32_t quest_id, QuestProgress::Evi
     pending_evidence_.push_back(stamp);
 }
 
+void QuestObservationService::PushJourneyMilestoneHint(std::string_view kind, uint32_t map_id)
+{
+    if (terminated_ || map_id == 0) {
+        return;
+    }
+    if (kind != "dungeon_complete" && kind != "mission_complete") {
+        return;
+    }
+    JourneyMilestoneHint hint;
+    hint.kind = std::string(kind);
+    hint.map_id = map_id;
+    hint.wall_at = std::chrono::system_clock::now();
+    std::scoped_lock lock(evidence_mutex_);
+    pending_journey_hints_.push_back(std::move(hint));
+}
+
 uint32_t QuestObservationService::ResolveQuestIdFromLiveLog(const wchar_t* name_argument) const
 {
     if (!name_argument || !*name_argument) {
@@ -231,6 +250,13 @@ void QuestObservationService::DrainPendingEvidence(std::vector<QuestEvidenceStam
     std::scoped_lock lock(evidence_mutex_);
     out.insert(out.end(), pending_evidence_.begin(), pending_evidence_.end());
     pending_evidence_.clear();
+}
+
+void QuestObservationService::DrainPendingJourneyHints(std::vector<JourneyMilestoneHint>& out)
+{
+    std::scoped_lock lock(evidence_mutex_);
+    out.insert(out.end(), pending_journey_hints_.begin(), pending_journey_hints_.end());
+    pending_journey_hints_.clear();
 }
 
 bool QuestObservationService::ConsumeLogoutSignal()
@@ -541,6 +567,22 @@ void QuestObservationService::OnUIMessage(GW::HookStatus*, GW::UI::UIMessage mes
             const auto packet = static_cast<GW::UI::UIPacket::kWriteToChatLog*>(wparam);
             if (packet && packet->message) {
                 OnChatEvidenceMessage(packet->message);
+            }
+            break;
+        }
+        case GW::UI::UIMessage::kDungeonComplete: {
+            if (GW::Map::GetIsMapLoaded()) {
+                PushJourneyMilestoneHint(
+                    "dungeon_complete",
+                    static_cast<uint32_t>(GW::Map::GetMapID()));
+            }
+            break;
+        }
+        case GW::UI::UIMessage::kMissionComplete: {
+            if (GW::Map::GetIsMapLoaded()) {
+                PushJourneyMilestoneHint(
+                    "mission_complete",
+                    static_cast<uint32_t>(GW::Map::GetMapID()));
             }
             break;
         }

@@ -211,12 +211,115 @@ Optional elements of `character.journeyEvents[]`:
 }
 ```
 
+```json
+{
+  "kind": "map_enter",
+  "subjectKey": "map:73",
+  "observedAt": "2026-07-25T20:00:00.000Z",
+  "mapId": 73
+}
+```
+
+```json
+{
+  "kind": "vanquish_area",
+  "subjectKey": "vanquish:73",
+  "observedAt": "2026-07-25T20:00:00.000Z",
+  "mapId": 73
+}
+```
+
+```json
+{
+  "kind": "map_unlock",
+  "subjectKey": "map:73",
+  "observedAt": "2026-07-25T20:00:00.000Z",
+  "mapId": 73
+}
+```
+
+```json
+{
+  "kind": "skill_unlock",
+  "subjectKey": "skill:42",
+  "observedAt": "2026-07-25T20:00:00.000Z",
+  "skillId": 42
+}
+```
+
+```json
+{
+  "kind": "hero_unlock",
+  "subjectKey": "hero:1",
+  "observedAt": "2026-07-25T20:00:00.000Z",
+  "heroId": 1
+}
+```
+
+```json
+{
+  "kind": "profession_unlock",
+  "subjectKey": "profession:5",
+  "observedAt": "2026-07-25T20:00:00.000Z",
+  "professionId": 5
+}
+```
+
+```json
+{
+  "kind": "hard_mode_unlock",
+  "subjectKey": "hard_mode",
+  "observedAt": "2026-07-25T20:00:00.000Z"
+}
+```
+
+```json
+{
+  "kind": "dungeon_complete",
+  "subjectKey": "map:73",
+  "observedAt": "2026-07-25T20:00:00.000Z",
+  "mapId": 73
+}
+```
+
+```json
+{
+  "kind": "mission_complete",
+  "subjectKey": "map:73",
+  "observedAt": "2026-07-25T20:00:00.000Z",
+  "mapId": 73
+}
+```
+
+```json
+{
+  "kind": "cartography_threshold",
+  "subjectKey": "cartography:50",
+  "observedAt": "2026-07-25T20:00:00.000Z",
+  "percent": 50,
+  "mapId": 73
+}
+```
+
 #### Journey rules
 
-- `kind` is required (`title_tier` or `level_up` in v1 producers).
+- `kind` is required. v1 producers MAY emit `title_tier`, `level_up`,
+  `map_enter`, `vanquish_area`, `map_unlock`, `skill_unlock`, `hero_unlock`,
+  `profession_unlock`, `hard_mode_unlock`, `dungeon_complete`,
+  `mission_complete`, and `cartography_threshold`. Consumers MUST tolerate
+  unknown `kind` values without rejecting the file.
 - `subjectKey` is required opaque milestone key.
 - `observedAt` is required UTC ISO-8601.
-- Optional `titleId`, `tierIndex`, `level` clarify payload by kind.
+- Optional `titleId`, `tierIndex`, `level`, `mapId`, `skillId`, `heroId`,
+  `professionId`, and `percent` clarify payload by kind.
+- `mapId`, `skillId`, `heroId`, `professionId`, and `percent` when present MUST
+  be non-negative JSON integers (Guild Wars ids; `percent` is 0–100 coverage).
+- `map_enter` is a visit observation; `map_unlock` is permanent travel unlock —
+  producers MUST NOT treat one as the other.
+- `mission_complete` / `dungeon_complete` are timed clear observations; permanent
+  mission bits remain in `missions[]`.
+- `cartography_threshold` is continent fog-grid coverage (not a claim of map-local
+  100% cartography title completion).
 - Duplicate `(kind, subjectKey, observedAt)` within one character SHOULD be avoided.
 
 ---

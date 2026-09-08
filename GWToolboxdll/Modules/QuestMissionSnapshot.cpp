@@ -3,6 +3,7 @@
 #include <Modules/QuestProgressDomain.h>
 
 #include <algorithm>
+#include <vector>
 
 namespace QuestProgress {
 namespace {
@@ -46,6 +47,22 @@ bool MissionBitAt(const MissionBitsetWords& bitset, uint32_t map_id)
     }
     const auto bit_index = map_id % 32;
     return (bitset.words[word_index] & (1u << bit_index)) != 0;
+}
+
+std::vector<uint32_t> CollectSetBitMapIds(const MissionBitsetWords& bitset)
+{
+    std::vector<uint32_t> out;
+    if (!bitset.words || bitset.word_count == 0) {
+        return out;
+    }
+    const auto max_map = static_cast<uint32_t>(bitset.word_count * 32);
+    out.reserve(32);
+    for (uint32_t map_id = 0; map_id < max_map; ++map_id) {
+        if (MissionBitAt(bitset, map_id)) {
+            out.push_back(map_id);
+        }
+    }
+    return out;
 }
 
 std::map<uint32_t, MissionRecord> BuildMissionRecordsFromBitsets(

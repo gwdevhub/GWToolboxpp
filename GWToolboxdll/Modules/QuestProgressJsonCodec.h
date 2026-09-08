@@ -37,6 +37,7 @@ struct StoredCharacter {
     std::string character_key;
     std::string display_name;
     std::string profession;
+    std::string secondary_profession;
     std::optional<bool> is_pre_searing;
     std::string first_observed_at;
     std::string last_observed_at;
@@ -44,6 +45,7 @@ struct StoredCharacter {
     std::map<uint32_t, MissionRecord> missions;
     std::map<uint32_t, TitleStateRecord> titles;
     std::optional<uint32_t> last_known_level;
+    std::optional<uint32_t> last_map_id;
     std::vector<JourneyEventRecord> journey_events;
 };
 

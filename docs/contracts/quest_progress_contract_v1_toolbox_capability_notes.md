@@ -28,7 +28,7 @@ Labels:
 | Contract concept | Status | Evidence / notes |
 |------------------|--------|------------------|
 | Character display name | confirmed observable | `GW::AccountMgr::GetCurrentPlayerName()` in [`ToolboxUtils.h`](../../GWToolboxdll/Utils/ToolboxUtils.h) / [`ToolboxUtils.cpp`](../../GWToolboxdll/Utils/ToolboxUtils.cpp); `CharContext::player_name` in [`CharContext.h`](../../Dependencies/GWCA/include/GWCA/Context/CharContext.h). Display metadata only. |
-| Stable external character key | confirmed observable | Raw session identity: `CharContext::player_uuid[4]` ([`CharContext.h`](../../Dependencies/GWCA/include/GWCA/Context/CharContext.h)); account side via `GW::AccountMgr::GetAccountUuid()` ([`ToolboxUtils.h`](../../GWToolboxdll/Utils/ToolboxUtils.h)). Contract `characterKey` serialization/export is **not implemented**. |
+| Stable external character key | confirmed observable | `CharContext::player_uuid[4]` + account UUID → Contract `characterKey` via session identity + exporter. |
 | Pre-Searing status | confirmed observable | `GW::Map::IsPreSearing` / map-id overload in [`ToolboxUtils.cpp`](../../GWToolboxdll/Utils/ToolboxUtils.cpp) (`Map` helpers); used by [`CompletionWindow.cpp`](../../GWToolboxdll/Windows/CompletionWindow.cpp) (`is_pre_searing`). Current-map / character-map based, not a separate quest API. |
 | Quest log entries | confirmed observable | `GW::QuestMgr::GetQuestLog()` ([`QuestMgr.h`](../../Dependencies/GWCA/include/GWCA/Managers/QuestMgr.h)); live copy-out in [`QuestObservationService`](../../GWToolboxdll/Modules/QuestObservationService.h). Filter synthetic custom marker `0xfdd` ([`QuestModule.cpp`](../../GWToolboxdll/Modules/QuestModule.cpp)). |
 | Numeric game quest ID | confirmed observable | `GW::Quest::quest_id` ([`Quest.h`](../../Dependencies/GWCA/include/GWCA/GameEntities/Quest.h)); mirrored as `OwnedQuestEntry::quest_id`. |
@@ -42,8 +42,19 @@ Labels:
 | Ready-for-reward observation | confirmed observable | In-log `GW::Quest::IsCompleted()` / `log_state & 0x2` while entry remains in log ([`Quest.h`](../../Dependencies/GWCA/include/GWCA/GameEntities/Quest.h); `OwnedQuestEntry::in_log_completed`). Means ready-while-present — **not** permanent turn-in history. |
 | Confirmed reward / completion observation | uncertain | Dialog types `QuestDialogType::REWARD` / `ENQUIRE_REWARD` in [`DialogModule.h`](../../GWToolboxdll/Modules/DialogModule.h) may correlate with removal. Treat as **probable** pending runtime validation. Disappearance alone MUST NOT become `completed_observed` + `confirmed`. No durable completion API after the quest leaves the log. |
 | Mission completion data | confirmed observable | `WorldContext::missions_completed`, `missions_bonus`, HM variants ([`WorldContext.h`](../../Dependencies/GWCA/include/GWCA/Context/WorldContext.h)); parsed by [`CompletionWindow::ParseCompletionBuffer`](../../GWToolboxdll/Windows/CompletionWindow.cpp) (reference pattern only). Maps to Contract source `mission_completion_data` for **mission/bonus map bits**, not general quest-log turn-ins. Tracker must use an owned read, not CompletionWindow runtime coupling. |
-| Previous Toolbox-local progress | not currently observable | No quest-progress history JSON / `QuestProgressStore` yet. Phase 1 is live snapshot only. `CompletionWindow` stores mission/vanquish-style data (`character_completion.json`), not Contract quest history. |
-| Historical reconstruction while Toolbox was not running | not currently observable | No client API for remotions offline. Later snapshot diffs vs a future local store remain **uncertain** / unknown outcome — never auto-complete. |
+| Previous Toolbox-local progress | confirmed observable | Internal `QuestProgressStore` + Contract exporter (`ExportAccountStoreToContractV1`). |
+| Historical reconstruction while Toolbox was not running | not currently observable | No client API for remotions offline. Later snapshot diffs vs local store remain **uncertain** / unknown outcome — never auto-complete. |
+| Primary / secondary profession | confirmed observable | `AvailableCharacterInfo::primary()` / `secondary()` via account roster; exported as `primaryProfession` / `secondaryProfession`. |
+| Title tier + level journey events | confirmed observable | `WorldContext::titles`, level fields → `journeyEvents` kinds `title_tier` / `level_up`. |
+| Map enter journey events | confirmed observable | `GW::Map::GetMapID()` change while Persistent → `journeyEvents` kind `map_enter` + optional `mapId`. |
+| Vanquish area journey events | confirmed observable | `WorldContext::vanquished_areas` newly set bits → `journeyEvents` kind `vanquish_area` + optional `mapId`. First sample may catch up already-vanquished areas once. |
+| Map unlock journey events | confirmed observable | `WorldContext::unlocked_map` → `map_unlock` (distinct from visit). |
+| Skill unlock journey events | confirmed observable | `WorldContext::unlocked_character_skills` → `skill_unlock` + `skillId`. |
+| Hero unlock journey events | confirmed observable | `WorldContext::hero_info[].hero_id` → `hero_unlock` + `heroId`. |
+| Profession unlock journey events | confirmed observable | Player row in `party_profession_states.unlocked_professions` → `profession_unlock`. |
+| Hard Mode unlock journey event | confirmed observable | `WorldContext::is_hard_mode_unlocked` → one-shot `hard_mode_unlock`. |
+| Dungeon / mission clear journey events | confirmed observable | UI `kDungeonComplete` / `kMissionComplete` + current map → timed journey kinds (missions[] remains permanent bits). |
+| Cartography threshold journey events | confirmed observable | Continent fog grid `cartographed_areas` / `h05B4` coverage % → `cartography_threshold` at 1/10/25/50/75/90/100. Not map-local cartographer title. |
 
 ---
 

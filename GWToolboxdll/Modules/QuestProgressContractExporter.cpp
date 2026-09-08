@@ -62,6 +62,11 @@ struct ContractJourneyEventJson {
     std::optional<uint32_t> title_id;
     std::optional<uint32_t> tier_index;
     std::optional<uint32_t> level;
+    std::optional<uint32_t> map_id;
+    std::optional<uint32_t> skill_id;
+    std::optional<uint32_t> hero_id;
+    std::optional<uint32_t> profession_id;
+    std::optional<uint32_t> percent;
 };
 
 struct ContractCharacterJson {
@@ -191,6 +196,9 @@ ContractCharacterJson MapCharacter(const StoredCharacter& in, ContractExportDiag
     if (!in.profession.empty()) {
         out.primary_profession = in.profession;
     }
+    if (!in.secondary_profession.empty()) {
+        out.secondary_profession = in.secondary_profession;
+    }
 
     for (const auto& [map_id, mission] : in.missions) {
         (void)map_id;
@@ -244,6 +252,21 @@ ContractCharacterJson MapCharacter(const StoredCharacter& in, ContractExportDiag
         }
         if (ev.level != 0) {
             row.level = ev.level;
+        }
+        if (ev.map_id != 0) {
+            row.map_id = ev.map_id;
+        }
+        if (ev.skill_id != 0) {
+            row.skill_id = ev.skill_id;
+        }
+        if (ev.hero_id != 0) {
+            row.hero_id = ev.hero_id;
+        }
+        if (ev.profession_id != 0) {
+            row.profession_id = ev.profession_id;
+        }
+        if (ev.percent != 0) {
+            row.percent = ev.percent;
         }
         out.journey_events.push_back(std::move(row));
     }
@@ -365,7 +388,12 @@ struct glz::meta<QuestProgress::ContractJourneyEventJson> {
         "observedAt", &T::observed_at,
         "titleId", &T::title_id,
         "tierIndex", &T::tier_index,
-        "level", &T::level);
+        "level", &T::level,
+        "mapId", &T::map_id,
+        "skillId", &T::skill_id,
+        "heroId", &T::hero_id,
+        "professionId", &T::profession_id,
+        "percent", &T::percent);
 };
 
 template <>

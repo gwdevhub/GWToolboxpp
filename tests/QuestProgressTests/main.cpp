@@ -732,6 +732,114 @@ int main()
         Expect(again.new_events.empty(), "journey_idempotent");
     }
 
+    {
+        const auto enter = BuildMapEnterEvents(
+            std::nullopt,
+            73,
+            {},
+            "2026-07-25T20:00:00.000Z");
+        Expect(enter.size() == 1, "map_enter_first");
+        Expect(enter.at(0).kind == "map_enter", "map_enter_kind");
+        Expect(enter.at(0).map_id == 73, "map_enter_map_id");
+
+        const auto same = BuildMapEnterEvents(
+            std::optional<uint32_t>{73},
+            73,
+            enter,
+            "2026-07-25T20:01:00.000Z");
+        Expect(same.empty(), "map_enter_same_map");
+
+        const auto next = BuildMapEnterEvents(
+            std::optional<uint32_t>{73},
+            12,
+            enter,
+            "2026-07-25T20:02:00.000Z");
+        Expect(next.size() == 1, "map_enter_change");
+        Expect(next.at(0).map_id == 12, "map_enter_change_id");
+
+        std::map<uint32_t, bool> previous_vq{{10, true}};
+        const auto vq = BuildVanquishAreaEvents(
+            previous_vq,
+            {10, 22},
+            {},
+            "2026-07-25T20:03:00.000Z");
+        Expect(vq.size() == 1, "vanquish_new_only");
+        Expect(vq.at(0).kind == "vanquish_area", "vanquish_kind");
+        Expect(vq.at(0).map_id == 22, "vanquish_map_id");
+
+        const auto vq_again = BuildVanquishAreaEvents(
+            {{10, true}, {22, true}},
+            {10, 22},
+            vq,
+            "2026-07-25T20:04:00.000Z");
+        Expect(vq_again.empty(), "vanquish_idempotent");
+
+        const auto skills = BuildNewlySeenIdEvents(
+            "skill_unlock",
+            JourneyUnlockIdKind::Skill,
+            {},
+            {42, 99},
+            {},
+            "2026-07-25T20:05:00.000Z");
+        Expect(skills.size() == 2, "skill_unlock_count");
+        Expect(skills.at(0).skill_id == 42, "skill_unlock_id");
+
+        const auto heroes = BuildNewlySeenIdEvents(
+            "hero_unlock",
+            JourneyUnlockIdKind::Hero,
+            {{1, true}},
+            {1, 7},
+            {},
+            "2026-07-25T20:06:00.000Z");
+        Expect(heroes.size() == 1, "hero_unlock_new_only");
+        Expect(heroes.at(0).hero_id == 7, "hero_unlock_id");
+
+        const auto maps_u = BuildNewlySeenIdEvents(
+            "map_unlock",
+            JourneyUnlockIdKind::Map,
+            {},
+            {73},
+            {},
+            "2026-07-25T20:07:00.000Z");
+        Expect(maps_u.size() == 1, "map_unlock_count");
+        Expect(maps_u.at(0).kind == "map_unlock", "map_unlock_kind");
+
+        const auto hm = BuildHardModeUnlockEvents(
+            false,
+            true,
+            {},
+            "2026-07-25T20:08:00.000Z");
+        Expect(hm.size() == 1, "hard_mode_unlock_once");
+        Expect(BuildHardModeUnlockEvents(true, true, hm, "2026-07-25T20:09:00.000Z").empty(),
+            "hard_mode_idempotent");
+
+        const auto profs = BuildNewlySeenIdEvents(
+            "profession_unlock",
+            JourneyUnlockIdKind::Profession,
+            {},
+            {5},
+            {},
+            "2026-07-25T20:10:00.000Z");
+        Expect(profs.size() == 1, "profession_unlock_count");
+        Expect(profs.at(0).profession_id == 5, "profession_unlock_id");
+
+        const uint32_t bits[1] = {0xFFu};
+        Expect(ComputeCartographyCoveragePercent(bits, 1, 8, 1) == 100, "carto_full");
+        Expect(ComputeCartographyCoveragePercent(bits, 1, 32, 32) >= 1, "carto_partial");
+
+        const auto carto = BuildCartographyThresholdEvents(
+            0, 50, 73, {}, "2026-07-25T20:11:00.000Z");
+        Expect(carto.size() == 4, "carto_thresholds_crossed");
+        Expect(carto.back().percent == 50, "carto_last_threshold");
+        Expect(BuildCartographyThresholdEvents(50, 50, 73, carto, "2026-07-25T20:12:00.000Z").empty(),
+            "carto_idempotent");
+
+        const auto dungeon = BuildTimedMapClearEvents(
+            "dungeon_complete", 73, {}, "2026-07-25T20:13:00.000Z");
+        Expect(dungeon.size() == 1, "dungeon_complete_once");
+        Expect(dungeon.at(0).kind == "dungeon_complete", "dungeon_kind");
+    }
+
     RunBatch2BStoreTests();
     RunBatch2CServiceTests();
     RunAbandonProbeTests();

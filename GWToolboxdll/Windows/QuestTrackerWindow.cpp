@@ -131,8 +131,36 @@ void QuestTrackerWindow::Update(float delta)
                     wall_now,
                     stored ? stored->titles : std::map<uint32_t, QuestProgress::TitleStateRecord>{},
                     stored ? stored->last_known_level : std::nullopt,
+                    stored ? stored->last_map_id : std::nullopt,
                     stored ? stored->journey_events : std::vector<QuestProgress::JourneyEventRecord>{});
                 progress_.IngestJourneySnapshot(std::move(journey));
+
+                std::vector<JourneyMilestoneHint> hints;
+                observation_.DrainPendingJourneyHints(hints);
+                if (!hints.empty()) {
+                    const auto* after = [&]() -> const QuestProgress::StoredCharacter* {
+                        for (const auto& [key, ch] : progress_.account_store().characters) {
+                            if (key == progress_.identity().character_key) {
+                                return &ch;
+                            }
+                        }
+                        return nullptr;
+                    }();
+                    const auto& prior = after ? after->journey_events
+                                             : std::vector<QuestProgress::JourneyEventRecord>{};
+                    std::vector<QuestProgress::JourneyEventRecord> timed;
+                    for (const auto& hint : hints) {
+                        const auto observed_at = QuestProgress::FormatCanonicalUtc(hint.wall_at);
+                        if (!QuestProgress::IsCanonicalUtcTimestamp(observed_at)) {
+                            continue;
+                        }
+                        QuestProgress::AppendUniqueJourneyEvents(
+                            timed,
+                            QuestProgress::BuildTimedMapClearEvents(
+                                hint.kind, hint.map_id, prior, observed_at));
+                    }
+                    progress_.IngestJourneyEvents(std::move(timed));
+                }
             }
         }
     }

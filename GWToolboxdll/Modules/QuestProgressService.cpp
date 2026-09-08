@@ -243,6 +243,9 @@ void QuestProgressService::ApplyIdentityMetadataBackfill()
             if (!identity_.profession.empty()) {
                 stored->profession = identity_.profession;
             }
+            if (!identity_.secondary_profession.empty()) {
+                stored->secondary_profession = identity_.secondary_profession;
+            }
             if (identity_.is_pre_searing.has_value()) {
                 stored->is_pre_searing = identity_.is_pre_searing;
             }
@@ -279,6 +282,7 @@ StoredCharacter QuestProgressService::BuildOutgoingStoredCharacter() const
     stored.character_key = identity_.character_key;
     stored.display_name = identity_.display_name;
     stored.profession = identity_.profession;
+    stored.secondary_profession = identity_.secondary_profession;
     stored.is_pre_searing = identity_.is_pre_searing;
     stored.quests = character_.quests;
     stored.last_observed_at = character_.last_reduced_at;
@@ -289,6 +293,9 @@ StoredCharacter QuestProgressService::BuildOutgoingStoredCharacter() const
         }
         if (stored.profession.empty()) {
             stored.profession = existing->profession;
+        }
+        if (stored.secondary_profession.empty()) {
+            stored.secondary_profession = existing->secondary_profession;
         }
         if (!stored.is_pre_searing.has_value()) {
             stored.is_pre_searing = existing->is_pre_searing;
@@ -302,6 +309,7 @@ StoredCharacter QuestProgressService::BuildOutgoingStoredCharacter() const
         stored.missions = existing->missions;
         stored.titles = existing->titles;
         stored.last_known_level = existing->last_known_level;
+        stored.last_map_id = existing->last_map_id;
         stored.journey_events = existing->journey_events;
     }
     return stored;
@@ -457,6 +465,9 @@ void QuestProgressService::SyncCharacterIntoAccountStore()
     if (!identity_.profession.empty()) {
         stored->profession = identity_.profession;
     }
+    if (!identity_.secondary_profession.empty()) {
+        stored->secondary_profession = identity_.secondary_profession;
+    }
     if (identity_.is_pre_searing.has_value()) {
         stored->is_pre_searing = identity_.is_pre_searing;
     }
@@ -499,6 +510,9 @@ std::optional<StoredCharacter> QuestProgressService::BuildExportCharacterSnapsho
     if (!identity_.profession.empty()) {
         out.profession = identity_.profession;
     }
+    if (!identity_.secondary_profession.empty()) {
+        out.secondary_profession = identity_.secondary_profession;
+    }
     if (identity_.is_pre_searing.has_value()) {
         out.is_pre_searing = identity_.is_pre_searing;
     }
@@ -516,6 +530,7 @@ void QuestProgressService::EnsureCharacterRecord()
         created.character_key = identity_.character_key;
         created.display_name = identity_.display_name;
         created.profession = identity_.profession;
+        created.secondary_profession = identity_.secondary_profession;
         created.is_pre_searing = identity_.is_pre_searing;
         account_store_.characters.emplace(identity_.character_key, std::move(created));
         stored = FindCharacter(account_store_, identity_.character_key);
@@ -526,6 +541,9 @@ void QuestProgressService::EnsureCharacterRecord()
         }
         if (!identity_.profession.empty()) {
             stored->profession = identity_.profession;
+        }
+        if (!identity_.secondary_profession.empty()) {
+            stored->secondary_profession = identity_.secondary_profession;
         }
         if (identity_.is_pre_searing) {
             stored->is_pre_searing = identity_.is_pre_searing;
@@ -639,6 +657,9 @@ void QuestProgressService::BindIdentity(
         if (!next.profession.empty()) {
             identity_.profession = next.profession;
         }
+        if (!next.secondary_profession.empty()) {
+            identity_.secondary_profession = next.secondary_profession;
+        }
         if (next.is_pre_searing.has_value()) {
             identity_.is_pre_searing = next.is_pre_searing;
         }
@@ -655,6 +676,9 @@ void QuestProgressService::BindIdentity(
         }
         if (!next.profession.empty()) {
             identity_.profession = next.profession;
+        }
+        if (!next.secondary_profession.empty()) {
+            identity_.secondary_profession = next.secondary_profession;
         }
         if (next.is_pre_searing.has_value()) {
             identity_.is_pre_searing = next.is_pre_searing;
@@ -1164,6 +1188,11 @@ void QuestProgressService::IngestJourneySnapshot(JourneySnapshotResult snapshot)
         stored->last_known_level = snapshot.level;
         changed = true;
     }
+    if (snapshot.observed_map_id.has_value()
+        && snapshot.observed_map_id != stored->last_map_id) {
+        stored->last_map_id = snapshot.observed_map_id;
+        changed = true;
+    }
     const auto before = stored->journey_events.size();
     AppendUniqueJourneyEvents(stored->journey_events, snapshot.new_events);
     if (stored->journey_events.size() != before) {
@@ -1173,6 +1202,31 @@ void QuestProgressService::IngestJourneySnapshot(JourneySnapshotResult snapshot)
         return;
     }
 
+    semantic_dirty_ = true;
+    heartbeat_pending_ = false;
+    if (!LatchBlocksAutoRetry(persist_latch_)) {
+        persist_latch_ = PersistLatch::DirtyDebouncing;
+    }
+}
+
+void QuestProgressService::IngestJourneyEvents(std::vector<JourneyEventRecord> events)
+{
+    if (!accept_input_ || events.empty()) {
+        return;
+    }
+    if (identity_.kind != IdentityKind::Persistent || identity_.character_key.empty()) {
+        return;
+    }
+    EnsureCharacterRecord();
+    auto* stored = FindCharacter(account_store_, identity_.character_key);
+    if (!stored) {
+        return;
+    }
+    const auto before = stored->journey_events.size();
+    AppendUniqueJourneyEvents(stored->journey_events, events);
+    if (stored->journey_events.size() == before) {
+        return;
+    }
     semantic_dirty_ = true;
     heartbeat_pending_ = false;
     if (!LatchBlocksAutoRetry(persist_latch_)) {

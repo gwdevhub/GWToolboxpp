@@ -25,7 +25,8 @@ struct SessionIdentity {
     std::string character_uuid;  // normalized GUID; empty/zero when ephemeral/unbound
     std::string character_key;   // account_key + "/" + character_uuid when persistent
     std::string display_name;    // metadata only
-    std::string profession;      // metadata only
+    std::string profession;      // primary profession metadata only
+    std::string secondary_profession; // secondary profession metadata only
     std::optional<bool> is_pre_searing;
 };
 
@@ -48,7 +49,8 @@ SessionIdentity MakeSessionIdentity(
     std::string_view character_uuid_raw,
     std::string_view display_name,
     std::string_view profession,
-    std::optional<bool> is_pre_searing);
+    std::optional<bool> is_pre_searing,
+    std::string_view secondary_profession = {});
 
 bool SamePersistentCharacter(const SessionIdentity& a, const SessionIdentity& b);
 bool SameAccount(const SessionIdentity& a, const SessionIdentity& b);

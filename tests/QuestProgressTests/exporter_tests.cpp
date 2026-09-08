@@ -20,6 +20,13 @@ AccountProgressStore MakeSampleStore()
     character.display_name = "Test Hero";
     character.is_pre_searing = false;
     character.profession = "5";
+    character.secondary_profession = "1";
+    JourneyEventRecord map_enter;
+    map_enter.kind = "map_enter";
+    map_enter.subject_key = "map:73";
+    map_enter.observed_at = "2026-07-25T17:00:00.000Z";
+    map_enter.map_id = 73;
+    character.journey_events.push_back(map_enter);
 
     MissionRecord mission;
     mission.map_id = 73;
@@ -141,6 +148,8 @@ void TestEnvelopeAndMapping()
         "export_mission_last_observed_at");
     Expect(json.find("\"objectiveIndex\"") != std::string::npos, "export_objective_index");
     Expect(json.find("\"primaryProfession\"") != std::string::npos, "export_primary_profession");
+    Expect(json.find("\"secondaryProfession\"") != std::string::npos, "export_secondary_profession");
+    Expect(json.find("\"map_enter\"") != std::string::npos, "export_map_enter_kind");
     Expect(json.find("\"mapId\"") != std::string::npos, "export_mission_map_id");
     Expect(json.find("\"isCompleted\"") != std::string::npos, "export_is_completed");
     Expect(json.find("\"eventId\"") != std::string::npos, "export_event_id");
