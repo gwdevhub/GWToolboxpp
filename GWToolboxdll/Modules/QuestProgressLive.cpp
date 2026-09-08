@@ -318,6 +318,43 @@ JourneySnapshotResult SampleLiveJourneySnapshot(
             existing_events,
             observed_at));
 
+    static const std::vector<uint32_t> kSkillPointThresholds{
+        1, 5, 10, 25, 50, 75, 100, 150, 200, 250, 300};
+    AppendUniqueJourneyEvents(
+        out.new_events,
+        BuildAbsoluteThresholdEvents(
+            "skill_point_threshold",
+            "skill_points",
+            MaxAmountFromJourneyEvents(existing_events, "skill_point_threshold", "skill_points"),
+            world->total_earned_skill_points,
+            kSkillPointThresholds,
+            existing_events,
+            observed_at));
+
+    static const std::vector<uint32_t> kFactionThresholds{
+        1000, 5000, 10000, 25000, 50000, 100000, 250000, 500000, 1000000};
+    const struct {
+        const char* prefix;
+        uint32_t value;
+    } factions[] = {
+        {"faction:kurzick", world->total_earned_kurzick},
+        {"faction:luxon", world->total_earned_luxon},
+        {"faction:balthazar", world->total_earned_balth},
+        {"faction:imperial", world->total_earned_imperial},
+    };
+    for (const auto& faction : factions) {
+        AppendUniqueJourneyEvents(
+            out.new_events,
+            BuildAbsoluteThresholdEvents(
+                "faction_threshold",
+                faction.prefix,
+                MaxAmountFromJourneyEvents(existing_events, "faction_threshold", faction.prefix),
+                faction.value,
+                kFactionThresholds,
+                existing_events,
+                observed_at));
+    }
+
     return out;
 }
 

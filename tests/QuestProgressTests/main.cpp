@@ -838,6 +838,32 @@ int main()
             "dungeon_complete", 73, {}, "2026-07-25T20:13:00.000Z");
         Expect(dungeon.size() == 1, "dungeon_complete_once");
         Expect(dungeon.at(0).kind == "dungeon_complete", "dungeon_kind");
+
+        const auto sp = BuildAbsoluteThresholdEvents(
+            "skill_point_threshold",
+            "skill_points",
+            0,
+            50,
+            {1, 10, 25, 50, 100},
+            {},
+            "2026-07-25T20:14:00.000Z");
+        Expect(sp.size() == 4, "skill_point_thresholds");
+        Expect(sp.back().amount == 50, "skill_point_last");
+
+        const auto faction = BuildAbsoluteThresholdEvents(
+            "faction_threshold",
+            "faction:kurzick",
+            5000,
+            10000,
+            {1000, 5000, 10000, 25000},
+            {},
+            "2026-07-25T20:15:00.000Z");
+        Expect(faction.size() == 1, "faction_threshold_new");
+        Expect(faction.at(0).amount == 10000, "faction_threshold_amount");
+
+        const auto vq_clear = BuildTimedMapClearEvents(
+            "vanquish_complete", 73, {}, "2026-07-25T20:16:00.000Z");
+        Expect(vq_clear.size() == 1, "vanquish_complete_once");
     }
 
     RunBatch2BStoreTests();

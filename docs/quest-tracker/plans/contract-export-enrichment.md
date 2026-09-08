@@ -1,25 +1,21 @@
 # Contract export enrichment — character life journey
 
 Date: 2026-09-08  
-Status: **Phase 3 complete (pending in-game verify)**
+Status: **Phase 4 complete (pending in-game verify)**
 
-## Goal
+## Phase 1–3 (done)
 
-Maximize observational Contract v1 export so a character’s chronicle captures exciting life-path milestones.
+secondaryProfession; unlocks; map/vanquish; dungeon/mission clear; cartography %.
 
-## Phase 1–2 (done)
+## Phase 4 (this slice)
 
-secondaryProfession; map_enter; vanquish_area; skill/hero/map/profession/hard_mode unlocks.
+1. `vanquish_complete` — UI `kVanquishComplete` + `mapId` (timed; `vanquish_area` stays permanent).
+2. `skill_point_threshold` — `total_earned_skill_points` crossings (+ `amount`).
+3. `faction_threshold` — `total_earned_{kurzick,luxon,balth,imperial}` (+ `amount`, subjectKey `faction:<name>:<amount>`).
+4. Codex: friendlier journey labels (hero/profession names); Contract `amount` field.
 
-## Phase 3 (this slice)
+## Deferred
 
-1. `dungeon_complete` — UI `kDungeonComplete` + current `mapId` (timed clear beat).
-2. `mission_complete` — UI `kMissionComplete` + current `mapId` (timestamped; missions[] remains permanent bits).
-3. `cartography_threshold` — continent fog bit coverage crosses 1/10/25/50/75/90/100% (+ optional `percent`, `mapId` = where observed).
+Festival/minipet/HoM, death spam, gold/XP spam, PvP account tallies as character journey.
 
-## Deferred (honesty)
-
-- Festival hats / minipets / HoM — dialog-string and network tallies; brittle provenance.
-- Death stream, gold/XP spam.
-
-## STOP after Phase 3 build/tests.
+## STOP after Phase 4 build/tests + push both forks.

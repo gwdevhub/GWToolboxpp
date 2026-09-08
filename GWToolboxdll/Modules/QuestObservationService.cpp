@@ -58,6 +58,7 @@ void QuestObservationService::RegisterCallbacks()
         GW::UI::UIMessage::kWriteToChatLog,
         GW::UI::UIMessage::kDungeonComplete,
         GW::UI::UIMessage::kMissionComplete,
+        GW::UI::UIMessage::kVanquishComplete,
     };
 
     for (const auto message_id : messages) {
@@ -177,7 +178,7 @@ void QuestObservationService::PushJourneyMilestoneHint(std::string_view kind, ui
     if (terminated_ || map_id == 0) {
         return;
     }
-    if (kind != "dungeon_complete" && kind != "mission_complete") {
+    if (kind != "dungeon_complete" && kind != "mission_complete" && kind != "vanquish_complete") {
         return;
     }
     JourneyMilestoneHint hint;
@@ -582,6 +583,14 @@ void QuestObservationService::OnUIMessage(GW::HookStatus*, GW::UI::UIMessage mes
             if (GW::Map::GetIsMapLoaded()) {
                 PushJourneyMilestoneHint(
                     "mission_complete",
+                    static_cast<uint32_t>(GW::Map::GetMapID()));
+            }
+            break;
+        }
+        case GW::UI::UIMessage::kVanquishComplete: {
+            if (GW::Map::GetIsMapLoaded()) {
+                PushJourneyMilestoneHint(
+                    "vanquish_complete",
                     static_cast<uint32_t>(GW::Map::GetMapID()));
             }
             break;

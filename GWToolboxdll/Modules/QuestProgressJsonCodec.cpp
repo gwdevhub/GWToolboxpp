@@ -73,6 +73,7 @@ struct JsonJourneyEvent {
     uint32_t hero_id = 0;
     uint32_t profession_id = 0;
     uint32_t percent = 0;
+    uint32_t amount = 0;
 };
 
 struct JsonCharacter {
@@ -183,7 +184,8 @@ struct glz::meta<QuestProgress::JsonJourneyEvent> {
         "skillId", &T::skill_id,
         "heroId", &T::hero_id,
         "professionId", &T::profession_id,
-        "percent", &T::percent);
+        "percent", &T::percent,
+        "amount", &T::amount);
 };
 
 template <>
@@ -528,6 +530,7 @@ bool ConvertCharacter(const JsonCharacter& in, StoredCharacter& out, CodecDiagno
         event.hero_id = je.hero_id;
         event.profession_id = je.profession_id;
         event.percent = je.percent;
+        event.amount = je.amount;
         if (event.kind.empty() || event.subject_key.empty()) {
             AddDiag(d, "journey event missing kind or subjectKey");
             return false;
@@ -599,6 +602,7 @@ JsonCharacter ToJsonCharacter(const StoredCharacter& in)
         je.hero_id = ev.hero_id;
         je.profession_id = ev.profession_id;
         je.percent = ev.percent;
+        je.amount = ev.amount;
         out.journey_events.push_back(je);
     }
     std::sort(out.journey_events.begin(), out.journey_events.end(),

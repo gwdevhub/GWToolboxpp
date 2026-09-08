@@ -301,25 +301,57 @@ Optional elements of `character.journeyEvents[]`:
 }
 ```
 
+```json
+{
+  "kind": "vanquish_complete",
+  "subjectKey": "map:73",
+  "observedAt": "2026-07-25T20:00:00.000Z",
+  "mapId": 73
+}
+```
+
+```json
+{
+  "kind": "skill_point_threshold",
+  "subjectKey": "skill_points:50",
+  "observedAt": "2026-07-25T20:00:00.000Z",
+  "amount": 50
+}
+```
+
+```json
+{
+  "kind": "faction_threshold",
+  "subjectKey": "faction:kurzick:10000",
+  "observedAt": "2026-07-25T20:00:00.000Z",
+  "amount": 10000
+}
+```
+
 #### Journey rules
 
 - `kind` is required. v1 producers MAY emit `title_tier`, `level_up`,
   `map_enter`, `vanquish_area`, `map_unlock`, `skill_unlock`, `hero_unlock`,
   `profession_unlock`, `hard_mode_unlock`, `dungeon_complete`,
-  `mission_complete`, and `cartography_threshold`. Consumers MUST tolerate
+  `mission_complete`, `vanquish_complete`, `cartography_threshold`,
+  `skill_point_threshold`, and `faction_threshold`. Consumers MUST tolerate
   unknown `kind` values without rejecting the file.
 - `subjectKey` is required opaque milestone key.
 - `observedAt` is required UTC ISO-8601.
 - Optional `titleId`, `tierIndex`, `level`, `mapId`, `skillId`, `heroId`,
-  `professionId`, and `percent` clarify payload by kind.
-- `mapId`, `skillId`, `heroId`, `professionId`, and `percent` when present MUST
-  be non-negative JSON integers (Guild Wars ids; `percent` is 0–100 coverage).
+  `professionId`, `percent`, and `amount` clarify payload by kind.
+- `mapId`, `skillId`, `heroId`, `professionId`, `percent`, and `amount` when
+  present MUST be non-negative JSON integers (Guild Wars ids; `percent` is
+  0–100 coverage; `amount` is a lifetime counter milestone).
 - `map_enter` is a visit observation; `map_unlock` is permanent travel unlock —
   producers MUST NOT treat one as the other.
-- `mission_complete` / `dungeon_complete` are timed clear observations; permanent
-  mission bits remain in `missions[]`.
+- `mission_complete` / `dungeon_complete` / `vanquish_complete` are timed clear
+  observations; permanent mission/vanquish bits remain in `missions[]` /
+  `vanquish_area`.
 - `cartography_threshold` is continent fog-grid coverage (not a claim of map-local
   100% cartography title completion).
+- `skill_point_threshold` / `faction_threshold` use lifetime earned totals, not
+  current spendable bank.
 - Duplicate `(kind, subjectKey, observedAt)` within one character SHOULD be avoided.
 
 ---

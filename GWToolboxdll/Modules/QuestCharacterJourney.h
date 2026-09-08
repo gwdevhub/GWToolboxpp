@@ -36,6 +36,7 @@ struct JourneyEventRecord {
     uint32_t hero_id = 0;
     uint32_t profession_id = 0;
     uint32_t percent = 0;
+    uint32_t amount = 0;
 };
 
 struct TitleSnapshotInput {
@@ -121,7 +122,21 @@ std::vector<JourneyEventRecord> BuildTimedMapClearEvents(
     const std::vector<JourneyEventRecord>& existing_events,
     std::string_view observed_at_utc);
 
+std::vector<JourneyEventRecord> BuildAbsoluteThresholdEvents(
+    std::string_view kind,
+    std::string_view subject_prefix,
+    uint32_t previous_max_amount,
+    uint32_t current_amount,
+    const std::vector<uint32_t>& thresholds,
+    const std::vector<JourneyEventRecord>& existing_events,
+    std::string_view observed_at_utc);
+
 uint32_t MaxCartographyPercentFromEvents(const std::vector<JourneyEventRecord>& events);
+
+uint32_t MaxAmountFromJourneyEvents(
+    const std::vector<JourneyEventRecord>& events,
+    std::string_view kind,
+    std::string_view subject_prefix);
 
 std::map<uint32_t, bool> PriorIdsFromJourneyEvents(
     const std::vector<JourneyEventRecord>& events,

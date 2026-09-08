@@ -115,8 +115,15 @@ std::string BuildJourneyEventFingerprint(const JourneyEventRecord& event)
     if (event.kind == "cartography_threshold") {
         return std::format("cartography_threshold:{}", event.percent);
     }
-    if (event.kind == "dungeon_complete" || event.kind == "mission_complete") {
+    if (event.kind == "dungeon_complete" || event.kind == "mission_complete"
+        || event.kind == "vanquish_complete") {
         return std::format("{}:{}:{}", event.kind, event.map_id, event.observed_at);
+    }
+    if (event.kind == "skill_point_threshold") {
+        return std::format("skill_point_threshold:{}", event.amount);
+    }
+    if (event.kind == "faction_threshold") {
+        return std::format("faction_threshold:{}", event.subject_key);
     }
     return std::format("{}:{}", event.kind, event.subject_key);
 }
@@ -339,7 +346,8 @@ std::vector<JourneyEventRecord> BuildTimedMapClearEvents(
     std::string_view observed_at_utc)
 {
     std::vector<JourneyEventRecord> out;
-    if (map_id == 0 || (kind != "dungeon_complete" && kind != "mission_complete")) {
+    if (map_id == 0
+        || (kind != "dungeon_complete" && kind != "mission_complete" && kind != "vanquish_complete")) {
         return out;
     }
     JourneyEventRecord ev;
@@ -354,6 +362,36 @@ std::vector<JourneyEventRecord> BuildTimedMapClearEvents(
     return out;
 }
 
+std::vector<JourneyEventRecord> BuildAbsoluteThresholdEvents(
+    std::string_view kind,
+    std::string_view subject_prefix,
+    uint32_t previous_max_amount,
+    uint32_t current_amount,
+    const std::vector<uint32_t>& thresholds,
+    const std::vector<JourneyEventRecord>& existing_events,
+    std::string_view observed_at_utc)
+{
+    std::vector<JourneyEventRecord> out;
+    if (current_amount == 0 || current_amount <= previous_max_amount || subject_prefix.empty()) {
+        return out;
+    }
+    for (const uint32_t threshold : thresholds) {
+        if (threshold == 0 || threshold <= previous_max_amount || threshold > current_amount) {
+            continue;
+        }
+        JourneyEventRecord ev;
+        ev.kind = std::string(kind);
+        ev.amount = threshold;
+        ev.subject_key = std::format("{}:{}", subject_prefix, threshold);
+        ev.observed_at = std::string(observed_at_utc);
+        const auto fp = BuildJourneyEventFingerprint(ev);
+        if (!HasEventFingerprint(existing_events, fp)) {
+            out.push_back(std::move(ev));
+        }
+    }
+    return out;
+}
+
 uint32_t MaxCartographyPercentFromEvents(const std::vector<JourneyEventRecord>& events)
 {
     uint32_t max_pct = 0;
@@ -363,6 +401,27 @@ uint32_t MaxCartographyPercentFromEvents(const std::vector<JourneyEventRecord>& 
         }
     }
     return max_pct;
+}
+
+uint32_t MaxAmountFromJourneyEvents(
+    const std::vector<JourneyEventRecord>& events,
+    std::string_view kind,
+    std::string_view subject_prefix)
+{
+    uint32_t max_amount = 0;
+    const auto prefix = std::format("{}:", subject_prefix);
+    for (const auto& ev : events) {
+        if (ev.kind != kind) {
+            continue;
+        }
+        if (!ev.subject_key.starts_with(prefix)) {
+            continue;
+        }
+        if (ev.amount > max_amount) {
+            max_amount = ev.amount;
+        }
+    }
+    return max_amount;
 }
 
 std::map<uint32_t, bool> PriorIdsFromJourneyEvents(
