@@ -221,20 +221,10 @@ void ObserverModule::Initialize()
         HandleGenericPacket(value_id, caster_id, target_id, value, no_target);
     });
 
-    const auto on_agent_skill_status = [this](GW::HookStatus*, const GW::UI::UIMessage message_id, void* wparam, void*) {
-        if (!wparam || !IsActive() || !InitializeObserverSession()) {
-            return;
-        }
-        const auto packet = static_cast<GW::UI::UIPacket::kAgentSkillPacket*>(wparam);
-        if (message_id == GW::UI::UIMessage::kAgentSkillCancelled) {
-            HandleSkillCancelled(packet->agent_id);
-        }
-        else {
-            HandleInterrupted(packet->agent_id);
-        }
-    };
-    RegisterUIMessageCallback(&AgentSkillStatus_Entry, GW::UI::UIMessage::kAgentSkillCancelled, on_agent_skill_status);
-    RegisterUIMessageCallback(&AgentSkillStatus_Entry, GW::UI::UIMessage::kAgentSkillInterrupted, on_agent_skill_status);
+    // NB: skill cancel/interrupt tracking is driven by the raw GenericValue value_ids above
+    // (attack_skill_stopped/skill_stopped/interrupted), not by kAgentSkillCancelled/kAgentSkillInterrupted -
+    // the client never actually broadcasts kAgentSkillCancelled, and always posts kAgentSkillInterrupted
+    // for both a genuine interrupt and a plain self-cancel/stop, making those UI messages indistinguishable.
 
     if (IsActive() && !observer_session_initialized) {
         InitializeObserverSession();
@@ -377,6 +367,10 @@ void ObserverModule::HandleGenericPacket(const uint32_t value_id, const uint32_t
             HandleAttackSkillFinished(caster_id);
             break;
 
+        case GW::Packet::StoC::GenericValueID::attack_skill_stopped:
+            HandleSkillCancelled(caster_id);
+            break;
+
         case GW::Packet::StoC::GenericValueID::instant_skill_activated:
             HandleInstantSkillActivated(caster_id, target_id, static_cast<GW::Constants::SkillID>(value));
             break;
@@ -401,6 +395,17 @@ void ObserverModule::HandleGenericPacket(const uint32_t value_id, const uint32_t
 
         case GW::Packet::StoC::GenericValueID::skill_finished:
             HandleSkillFinished(caster_id);
+            break;
+
+        case GW::Packet::StoC::GenericValueID::skill_stopped:
+            HandleSkillCancelled(caster_id);
+            break;
+
+        case GW::Packet::StoC::GenericValueID::interrupted:
+            // Real interrupt confirmation, sent by the server right after attack_skill_stopped/skill_stopped.
+            // See ObserverModule::ActionStage::Interrupted - ReduceAction() corrects the cancelled_count
+            // it already applied for the preceding Stopped stage.
+            HandleInterrupted(caster_id);
             break;
 
         case GW::Packet::StoC::GenericValueID::skill_activated: {

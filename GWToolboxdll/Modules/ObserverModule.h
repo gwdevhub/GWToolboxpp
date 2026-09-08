@@ -723,5 +723,4 @@ private:
     GW::HookEntry GenericValueTarget_Entry;
     GW::HookEntry GenericValue_Entry;
     GW::HookEntry GenericFloat_Entry;
-    GW::HookEntry AgentSkillStatus_Entry;
 };
