@@ -16,15 +16,78 @@
 #include <Utils/FontLoader.h>
 #include <Utils/TextUtils.h>
 
+#include <bcrypt.h>
+
 #include <chrono>
 #include <format>
 #include <fstream>
+#include <iomanip>
+#include <sstream>
+
+#pragma comment(lib, "bcrypt.lib")
 
 namespace {
     constexpr ImU32 TEXT_COLOR_COMPLETED = 0xffbbbbbb;
     constexpr ImU32 TEXT_COLOR_ACTIVE = 0xff00ff00;
     constexpr ImU32 TEXT_COLOR_READY = 0xff66ccff;
     constexpr auto custom_marker_quest_id = static_cast<GW::Constants::QuestID>(0x0000fdd);
+    constexpr char kContractContentFingerprintExportedAt[] = "1970-01-01T00:00:00.000Z";
+
+    std::string Sha256Hex(std::string_view bytes)
+    {
+        constexpr DWORD kSha256Size = 32;
+        BYTE hash[kSha256Size] = {};
+        if (BCryptHash(BCRYPT_SHA256_ALG_HANDLE, nullptr, 0,
+                reinterpret_cast<PUCHAR>(const_cast<char*>(bytes.data())),
+                static_cast<ULONG>(bytes.size()), hash, kSha256Size) != 0) {
+            return {};
+        }
+        std::ostringstream hex;
+        hex << std::hex << std::setfill('0');
+        for (const auto b : hash) {
+            hex << std::setw(2) << static_cast<unsigned>(b);
+        }
+        return hex.str();
+    }
+
+    std::string CompactUtcForFilename(std::string_view exported_at_utc)
+    {
+        std::string out;
+        out.reserve(16);
+        for (const auto ch : exported_at_utc) {
+            if ((ch >= '0' && ch <= '9') || ch == 'T' || ch == 'Z') {
+                out.push_back(ch);
+            }
+        }
+        return out.empty() ? "unknown" : out;
+    }
+
+    std::filesystem::path ContractExportSidecarPath(
+        const std::filesystem::path& exports_folder, std::string_view character_key)
+    {
+        const auto key_hash = Sha256Hex(character_key);
+        const auto short_hash = key_hash.size() >= 16 ? key_hash.substr(0, 16) : key_hash;
+        return exports_folder / (std::string("last_content_") + short_hash + ".sha256");
+    }
+
+    std::string ReadTextFile(const std::filesystem::path& path)
+    {
+        std::ifstream in(path, std::ios::binary);
+        if (!in) {
+            return {};
+        }
+        return std::string(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
+    }
+
+    bool WriteTextFile(const std::filesystem::path& path, std::string_view contents)
+    {
+        std::ofstream out(path, std::ios::binary | std::ios::trunc);
+        if (!out) {
+            return false;
+        }
+        out.write(contents.data(), static_cast<std::streamsize>(contents.size()));
+        return static_cast<bool>(out);
+    }
 
     void EnqueueSetActiveQuest(GW::Constants::QuestID quest_id)
     {
@@ -369,11 +432,37 @@ void QuestTrackerWindow::Draw(IDirect3DDevice9*)
 
     SyncDecodeCache(*snap);
 
+    if (ImGui::CollapsingHeader("Data for Tyrian Wayfarer")) {
+        ImGui::PushTextWrapPos();
+        ImGui::TextUnformatted(
+            "This window is the progress bridge for Tyrian Wayfarer (not only a live quest list).");
+        ImGui::Spacing();
+        ImGui::TextUnformatted("Always recorded while Quest Tracker is loaded:");
+        ImGui::BulletText("Quest log, objectives, and append-only history");
+        ImGui::BulletText("Missions, journey milestones, professions, level/XP/SP/factions");
+        ImGui::BulletText("Hall of Monuments (async; may lag the live session)");
+        ImGui::TextDisabled("Quest disappearance is never treated as confirmed completion.");
+        ImGui::Spacing();
+        ImGui::TextUnformatted("Export Contract v1:");
+        ImGui::BulletText("QuestProgress/exports/…_contract_v1_<UTC>_<key>.json");
+        ImGui::BulletText("Also updates QuestProgress/quest_progress_contract_v1.json (latest)");
+        ImGui::BulletText("Skipped when progress is unchanged since the last export");
+        ImGui::Spacing();
+        ImGui::TextUnformatted("Optional (not imported by Wayfarer beta yet):");
+        ImGui::BulletText("Drops — enable Item Settings → Drop Tracking Enabled");
+        ImGui::BulletText("Completion — character_completion.json from Completion window");
+        ImGui::BulletText("Account inventory / Objective Timer runs — separate Toolbox files");
+        ImGui::Spacing();
+        ImGui::TextUnformatted("In Tyrian Wayfarer: Settings → GWToolbox quest progress → import the JSON.");
+        ImGui::PopTextWrapPos();
+        ImGui::Separator();
+    }
+
     if (ImGui::Button("Export Contract v1")) {
         ExportContractV1();
     }
     ImGui::SameLine();
-    ImGui::TextDisabled("(Codex import)");
+    ImGui::TextDisabled("(new file only if progress changed)");
     ImGui::Separator();
 
     ImGui::TextUnformatted("Quest log");
@@ -520,7 +609,6 @@ void QuestTrackerWindow::ExportContractV1()
         return;
     }
 
-    // Flush dirty progress before reading the in-memory account store.
     progress_.Flush(false);
 
     const auto character = progress_.BuildExportCharacterSnapshot();
@@ -535,33 +623,63 @@ void QuestTrackerWindow::ExportContractV1()
     export_store.store_version = {QuestProgress::kStoreFormatMajor, QuestProgress::kStoreFormatMinor};
     export_store.characters.emplace(character->character_key, *character);
 
+    QuestProgress::ContractExportOptions fingerprint_options;
+    fingerprint_options.exported_at_utc = kContractContentFingerprintExportedAt;
+    fingerprint_options.bound_character_key = character->character_key;
+    const auto fingerprint_export =
+        QuestProgress::ExportAccountStoreToContractV1(export_store, fingerprint_options);
+    if (fingerprint_export.status != QuestProgress::ContractExportStatus::Ok) {
+        WriteChat(GW::Chat::CHANNEL_GLOBAL, L"Quest Tracker: Contract export failed");
+        return;
+    }
+    const auto content_fingerprint = Sha256Hex(fingerprint_export.utf8_json);
+    if (content_fingerprint.empty()) {
+        WriteChat(GW::Chat::CHANNEL_GLOBAL, L"Quest Tracker: Contract export fingerprint failed");
+        return;
+    }
+
+    const auto folder = Resources::GetPath(L"QuestProgress");
+    const auto exports_folder = folder / L"exports";
+    Resources::EnsureFolderExists(folder);
+    Resources::EnsureFolderExists(exports_folder);
+    const auto sidecar = ContractExportSidecarPath(exports_folder, character->character_key);
+    const auto previous_fingerprint = TextUtils::trim(ReadTextFile(sidecar));
+    if (!previous_fingerprint.empty() && previous_fingerprint == content_fingerprint) {
+        WriteChat(GW::Chat::CHANNEL_GLOBAL,
+            L"Quest Tracker: Contract unchanged since last export — skipped (no new file)");
+        return;
+    }
+
+    const auto exported_at = QuestProgress::FormatCanonicalUtc(std::chrono::system_clock::now());
     QuestProgress::ContractExportOptions options;
-    options.exported_at_utc = QuestProgress::FormatCanonicalUtc(std::chrono::system_clock::now());
+    options.exported_at_utc = exported_at;
     options.producer_version = GWTOOLBOXDLL_VERSION;
     options.bound_character_key = character->character_key;
-
     const auto exported = QuestProgress::ExportAccountStoreToContractV1(export_store, options);
     if (exported.status != QuestProgress::ContractExportStatus::Ok) {
         WriteChat(GW::Chat::CHANNEL_GLOBAL, L"Quest Tracker: Contract export failed");
         return;
     }
 
-    const auto folder = Resources::GetPath(L"QuestProgress");
-    Resources::EnsureFolderExists(folder);
-    const auto file_location = folder / L"quest_progress_contract_v1.json";
+    const auto key_hash = Sha256Hex(character->character_key);
+    const auto short_key = key_hash.size() >= 8 ? key_hash.substr(0, 8) : key_hash;
+    const auto stamped_name = std::format(
+        "quest_progress_contract_v1_{}_{}.json",
+        CompactUtcForFilename(exported_at),
+        short_key);
+    const auto stamped_location = exports_folder / stamped_name;
+    const auto latest_location = folder / L"quest_progress_contract_v1.json";
 
-    {
-        std::ofstream out(file_location, std::ios::binary | std::ios::trunc);
-        if (!out) {
-            WriteChat(GW::Chat::CHANNEL_GLOBAL, L"Quest Tracker: could not write Contract export file");
-            return;
-        }
-        out << exported.utf8_json;
+    if (!WriteTextFile(stamped_location, exported.utf8_json)
+        || !WriteTextFile(latest_location, exported.utf8_json)
+        || !WriteTextFile(sidecar, content_fingerprint)) {
+        WriteChat(GW::Chat::CHANNEL_GLOBAL, L"Quest Tracker: could not write Contract export file");
+        return;
     }
 
     wchar_t file_location_wc[512];
     size_t msg_len = 0;
-    const auto message = file_location.wstring();
+    const auto message = stamped_location.wstring();
     constexpr size_t max_len = _countof(file_location_wc) - 1;
     for (size_t i = 0; i < message.length(); i++) {
         if (!message[i]) {

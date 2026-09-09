@@ -12,6 +12,9 @@ Use RelWithDebInfo `GWToolboxdll.dll` built from `feature/quest-tracker-phase-2-
 - [ ] Note display name + that `isPreSearing` should export `true`
 - [ ] Keep Toolbox running for the whole session (no offline play for this checklist)
 - [ ] Export Contract JSON at least twice: mid-session and end-of-session
+- [ ] Unchanged re-export is skipped (chat: unchanged since last export)
+- [ ] Changed re-export writes a new stamped file under `QuestProgress/exports/`
+  and updates `QuestProgress/quest_progress_contract_v1.json` as latest
 
 ## Live observation (Toolbox Quest Tracker window)
 
