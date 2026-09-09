@@ -5,11 +5,12 @@ Goal: ship a **progress-bridge beta**, not a finished encyclopedia.
 
 ## In scope for beta
 
-- [ ] Fork Quest Tracker always-on Contract v1 export (historical files + skip unchanged)
-- [ ] In-window **Data for Tyrian Wayfarer** help (what / enable / path)
-- [ ] Wayfarer Settings: matching help + Contract import + character link
-- [ ] Pre-Searing smoke: play → export → import → journey/quests visible
-- [ ] Honesty: disappearance not auto-completed; optional drops not required
+- [x] Fork Quest Tracker Contract v1 export (historical files + skip unchanged)
+- [x] In-window **Data for Tyrian Wayfarer** help (what / enable / path)
+- [x] Wayfarer Settings: matching help + Contract import + character link
+- [x] Post-import **Open dossier** CTA + readable quest labels on Life journey
+- [ ] Manual Pre-Searing smoke in UI: export → import → dossier Life journey
+- [x] Honesty docs: disappearance not completion; optional drops not required
 
 ## Out of scope for beta
 
