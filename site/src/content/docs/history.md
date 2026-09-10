@@ -8,6 +8,7 @@ Previous releases are available on Github as dll files. There is no support for 
 the latest version, go to the [Home Page](./) instead.
 
 ## Version 8.34
+* [New] Armory: search armor and weapon previews by name.
 * [Fix] Hero Builds now applies saved disabled skill states at a controlled rate, so loading teams with more than 16 disabled hero skills no longer leaves later skills enabled.
 * [Fix] Effects Monitor now tracks Shadowsong, Dissonance, Wanderlust, Anguish, Gaze of Fury and Vampirism after you summon them. These spirit timers also highlight their matching skill and appear in the Skillbar widget's effect monitor. Timers use each spirit's actual lifespan, including Shadowsong's fixed 30 seconds and Vampirism's Sunspear-rank scaling.
 * [Fix] Cartographer now detects the Bird's Eye View effect automatically and adjusts its reveal range while the effect is active, replacing the manual Bird's Eye Compass setting.
