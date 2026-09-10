@@ -26,6 +26,7 @@
 #include <Utils/GuiUtils.h>
 #include <Utils/TextUtils.h>
 #include <Windows/BuildsWindow.h>
+#include <Windows/HeroBuildsWindow.h>
 #include <Windows/PconsWindow.h>
 #include <Windows/RerollWindow.h>
 #include "TeamBuildEncoder.h"
@@ -262,12 +263,33 @@ namespace {
         HeroID::GhostOfAlthea
     };
 
-    // Returns hero IDs sorted by name; re-sorts each frame until all names are decoded.
+    bool HeroSortByName(const HeroID left, const HeroID right)
+    {
+        return _stricmp(Resources::GetHeroName(left)->string().c_str(), Resources::GetHeroName(right)->string().c_str()) < 0;
+    }
+
+    bool HeroSortByProfession(const HeroID left, const HeroID right)
+    {
+        const auto left_profession = Resources::GetHeroProfession(left);
+        const auto right_profession = Resources::GetHeroProfession(right);
+        if (left_profession == right_profession) return HeroSortByName(left, right);
+        if (left_profession == GW::Constants::Profession::None) return false;
+        if (right_profession == GW::Constants::Profession::None) return true;
+        return left_profession < right_profession;
+    }
+
     const std::vector<HeroID>& SortedHeroIDs()
     {
         static std::vector<HeroID> sorted;
         static bool is_sorted = false;
-        if (!is_sorted) {
+        static bool sort_by_profession = false;
+        static std::array<GW::Constants::Profession, 8> mercenary_professions{};
+        const bool should_sort_by_profession = HeroBuildsWindow::SortByProfession();
+        std::array<GW::Constants::Profession, 8> current_mercenary_professions{};
+        for (size_t i = 0; i < current_mercenary_professions.size(); ++i) {
+            current_mercenary_professions[i] = Resources::GetHeroProfession(static_cast<HeroID>(HeroID::Merc1 + i));
+        }
+        if (!is_sorted || sort_by_profession != should_sort_by_profession || mercenary_professions != current_mercenary_professions) {
             sorted.clear();
             for (const auto id : HeroIndexToID) {
                 if (id != HeroID::NoHero) sorted.push_back(id);
@@ -279,10 +301,10 @@ namespace {
                     break;
                 }
             }
-            std::ranges::sort(sorted, [](const HeroID a, const HeroID b) {
-                return _stricmp(Resources::GetHeroName(a)->string().c_str(), Resources::GetHeroName(b)->string().c_str()) < 0;
-            });
+            std::ranges::sort(sorted, should_sort_by_profession ? &HeroSortByProfession : &HeroSortByName);
             is_sorted = all_decoded;
+            sort_by_profession = should_sort_by_profession;
+            mercenary_professions = current_mercenary_professions;
         }
         return sorted;
     }
@@ -1080,18 +1102,23 @@ void TeamBuild::DrawHeroBuildsContent(bool& builds_modified, bool editable)
                 const auto hero_it = std::ranges::find(sorted_heroes, build.hero_id);
                 int combo_idx = hero_it != sorted_heroes.end() ? static_cast<int>(std::distance(sorted_heroes.begin(), hero_it)) : -1;
                 ImGui::PushItemWidth(name_width);
-                if (ImGui::MyCombo(
-                        "###heroid", "Choose Hero", &combo_idx,
-                        [](void*, const int idx, const char** out_text) -> bool {
-                            const auto& heroes = SortedHeroIDs();
-                            if (idx < 0 || idx >= static_cast<int>(heroes.size())) return false;
-                            *out_text = Resources::GetHeroName(heroes[idx])->string().c_str();
-                            return true;
-                        },
-                        nullptr, static_cast<int>(sorted_heroes.size())
-                    )) {
-                    build.hero_id = (combo_idx >= 0 && combo_idx < static_cast<int>(sorted_heroes.size())) ? sorted_heroes[combo_idx] : HeroID::NoHero;
-                    ResetEncodedCache();
+                const char* preview = combo_idx >= 0 ? HeroBuildsWindow::GetMercDisplayName(sorted_heroes[combo_idx]) : "Choose Hero";
+                if (ImGui::BeginCombo("###heroid", preview)) {
+                    const ImVec2 profession_icon_size{ImGui::GetFrameHeight() * 0.8f, ImGui::GetFrameHeight() * 0.8f};
+                    for (int i = 0; i < static_cast<int>(sorted_heroes.size()); ++i) {
+                        const auto hero_id = sorted_heroes[i];
+                        const bool is_selected = i == combo_idx;
+                        if (const auto profession = Resources::GetHeroProfession(hero_id); profession != GW::Constants::Profession::None) {
+                            ImGui::Image(*Resources::GetProfessionIcon(profession), profession_icon_size);
+                            ImGui::SameLine();
+                        }
+                        if (ImGui::Selectable(HeroBuildsWindow::GetMercDisplayName(hero_id), is_selected)) {
+                            build.hero_id = hero_id;
+                            ResetEncodedCache();
+                        }
+                        if (is_selected) ImGui::SetItemDefaultFocus();
+                    }
+                    ImGui::EndCombo();
                 }
                 ImGui::PopItemWidth();
 
