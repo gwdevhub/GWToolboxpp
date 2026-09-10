@@ -17,6 +17,7 @@ the latest version, go to the [Home Page](./) instead.
 * [Fix] Audio Settings no longer crashes Guild Wars when an audio handle has already been released.
 * [Fix] Game Settings: in-game name tag colour overrides can now be disabled so the colours configured in Guild Wars are used instead. The overrides are off by default.
 * [Minor] Mouse Settings: disabled the "Enable cursor fix" camera-glitch workaround because an August 2026 Guild Wars update changed lookaround speed. Cursor-size scaling remains available.
+* [Minor] Breakout buttons are now available only for modules with an icon, preventing ambiguous text-only buttons.
 
 ## Version 8.33
 * [New] Cartographer widget: helps you finish the Cartographer titles. It shades the parts of the world map you still have to uncover, and — using the game's own cartography rules — marks the exact squares you need to *stand in* to clear them, rather than just the fog itself. Reachability is derived from real pathing (travel portals count as walls, so it won't suggest a square you can only reach by zoning), the whole continent is shown rather than just your current map, and hovering a fog patch names the map you have to travel to in order to uncover it. Squares you can get close to but still can't uncover are drawn in grey.
