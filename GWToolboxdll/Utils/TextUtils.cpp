@@ -10,18 +10,6 @@ bool wcseq(const wchar_t* a, const wchar_t* b)
 }
 
 namespace {
-    int portable_stricmp(const char* a, const char* b)
-    {
-        while (*a && *b) {
-            char c1 = static_cast<char>(std::tolower(static_cast<unsigned char>(*a)));
-            char c2 = static_cast<char>(std::tolower(static_cast<unsigned char>(*b)));
-            if (c1 != c2) return c1 - c2;
-            ++a;
-            ++b;
-        }
-        return static_cast<char>(std::tolower(static_cast<unsigned char>(*a))) - static_cast<char>(std::tolower(static_cast<unsigned char>(*b)));
-    }
-
     constexpr auto diacritics = std::to_array<const wchar_t*>({
         L"A\x0041\x0410\x24B6\xFF21\x00C0\x00C1\x00C2\x1EA6\x1EA4\x1EAA\x1EA8\x00C3\x0100\x0102\x1EB0\x1EAE\x1EB4\x1EB2\x0226\x01E0\x00C4\x01DE\x1EA2\x00C5\x01FA\x01CD\x0200\x0202\x1EA0\x1EAC\x1EB6\x1E00\x0104\x023A\x2C6F",
         L"B\x00DF\x0412\x0042\x24B7\xFF22\x1E02\x1E04\x1E06\x0243\x0182\x0181",
@@ -341,8 +329,19 @@ namespace TextUtils {
         return Encoding::WideToUtf8(str);
     }
 
-    // Makes sure the file name doesn't have chars that won't be allowed on disk
-    // https://docs.microsoft.com/en-gb/windows/win32/fileio/naming-a-file
+    int Stricmp(const std::string_view a, const std::string_view b)
+    {
+        const auto& locale = std::locale();
+        const auto length = std::min(a.size(), b.size());
+        for (size_t i = 0; i < length; i++) {
+            const auto lower_a = std::tolower(a[i], locale);
+            const auto lower_b = std::tolower(b[i], locale);
+            if (lower_a != lower_b) return lower_a < lower_b ? -1 : 1;
+        }
+        if (a.size() == b.size()) return 0;
+        return a.size() < b.size() ? -1 : 1;
+    }
+
     std::string SanitiseFilename(const std::string_view str)
     {
         const auto invalid_chars = "<>:\"/\\|?*";
@@ -353,15 +352,13 @@ namespace TextUtils {
             out += c;
         }
 
-        // Reserved device names (case-insensitive, with or without extension)
         static constexpr std::array reserved = {"CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"};
         for (const auto& name : reserved) {
-            if (portable_stricmp(out.c_str(), name) == 0) {
+            if (Stricmp(out, name) == 0) {
                 out += "_";
                 break;
             }
         }
-        // Trim trailing spaces and dots (Windows silently strips them)
         while (!out.empty() && (out.back() == ' ' || out.back() == '.'))
             out.pop_back();
 
