@@ -453,11 +453,6 @@ namespace GWArmory {
         return true;
     }
 
-    bool MatchesSearch(const Armor* armor)
-    {
-        return search_term.empty() || TextUtils::ToLower(armor->label).find(search_term) != std::string::npos;
-    }
-
     uint32_t CreateColor(GW::DyeColor col1, GW::DyeColor col2 = GW::DyeColor::None, GW::DyeColor col3 = GW::DyeColor::None, GW::DyeColor col4 = GW::DyeColor::None)
     {
         if (col1 == GW::DyeColor::None && col2 == GW::DyeColor::None && col3 == GW::DyeColor::None && col4 == GW::DyeColor::None) {
@@ -485,26 +480,25 @@ namespace GWArmory {
         if (!me) return nullptr;
         size_t armor_cnt = 0;
         const auto armors = GetArmorsPerProfession((GW::Constants::Profession)me->primary, &armor_cnt);
-        const auto lower_name = TextUtils::ToLower(item_name.data());
         for (size_t i = 0; i < armor_cnt && armors; i++) {
             const auto& armor = armors[i];
-            if (TextUtils::ToLower(armor.label) == lower_name) return &armor;
+            if (TextUtils::Stricmp(armor.label, item_name) == 0) return &armor;
         }
         for (size_t i = 0; i < _countof(costumes); i++) {
             const auto& armor = costumes[i];
-            if (TextUtils::ToLower(armor.label) == lower_name) return &armor;
+            if (TextUtils::Stricmp(armor.label, item_name) == 0) return &armor;
         }
         for (size_t i = 0; i < _countof(costume_heads); i++) {
             const auto& armor = costume_heads[i];
-            if (TextUtils::ToLower(armor.label) == lower_name) return &armor;
+            if (TextUtils::Stricmp(armor.label, item_name) == 0) return &armor;
         }
         for (size_t i = 0; i < _countof(weapons); i++) {
             const auto& weapon = weapons[i];
-            if (TextUtils::ToLower(weapon.label) == lower_name) return &weapon;
+            if (TextUtils::Stricmp(weapon.label, item_name) == 0) return &weapon;
         }
         for (size_t i = 0; i < _countof(unequipped_armors); i++) {
             const auto& armor = unequipped_armors[i];
-            if (TextUtils::ToLower(armor.label) == lower_name) return &armor;
+            if (TextUtils::Stricmp(armor.label, item_name) == 0) return &armor;
         }
         return nullptr;
     }
@@ -531,6 +525,8 @@ namespace GWArmory {
                 if (!IsEquipmentSlotSupportedByArmory(slot))
                     continue;
                 if (c != Campaign::BonusMissionPack && armor.campaign != c)
+                    continue;
+                if (!search_term.empty() && TextUtils::ToLower(armor.label).find(search_term) == std::string::npos)
                     continue;
                 ASSERT(slot != ItemSlot::Unknown);
                 const auto piece = &drawn_pieces[slot];
@@ -766,9 +762,7 @@ namespace GWArmory {
         const auto player_piece = &imgui_armor_pieces[slot];
         bool value_changed = false;
 
-        if (!search_term.empty() && std::ranges::none_of(state->pieces, [](const auto* piece) {
-            return MatchesSearch(piece);
-        })) {
+        if (!search_term.empty() && state->pieces.empty()) {
             ImGui::PopID();
             return false;
         }
@@ -866,9 +860,6 @@ namespace GWArmory {
 #else
         for (const auto& piece : state->pieces) {
 #endif
-            if (!MatchesSearch(piece)) {
-                continue;
-            }
             ImGui::PushID(piece->label);
 
             if (0 <= state->current_piece_index && static_cast<size_t>(state->current_piece_index) < state->pieces.size()) {
@@ -938,7 +929,7 @@ namespace GWArmory {
 
         std::vector<Armor*> type_pieces;
         for (auto* piece : state->pieces) {
-            if (piece->type == type && MatchesSearch(piece))
+            if (piece->type == type)
                 type_pieces.push_back(piece);
         }
         if (type_pieces.empty())
@@ -1445,6 +1436,7 @@ void ArmoryWindow::Draw(IDirect3DDevice9*)
         }
         if (ImGui::InputTextWithHint("##search", "Search armour and weapons...", search_buffer, sizeof(search_buffer))) {
             search_term = TextUtils::ToLower(search_buffer);
+            UpdateArmorsFilter();
         }
         const auto armor_order = {Headpiece, Chestpiece, Gloves, Leggings, Boots, CostumeHead, CostumeBody};
         for (const auto slot : armor_order) {
