@@ -40,6 +40,8 @@ namespace GWArmory {
 
     bool use_global_color;
     std::array<GW::DyeColor, 4> global_dyes = {};
+    char search_buffer[128] = {};
+    std::string search_term;
 
     constexpr size_t costume_count = 0x17;
     struct CostumeData {
@@ -451,6 +453,11 @@ namespace GWArmory {
         return true;
     }
 
+    bool MatchesSearch(const Armor* armor)
+    {
+        return search_term.empty() || TextUtils::ToLower(armor->label).find(search_term) != std::string::npos;
+    }
+
     uint32_t CreateColor(GW::DyeColor col1, GW::DyeColor col2 = GW::DyeColor::None, GW::DyeColor col3 = GW::DyeColor::None, GW::DyeColor col4 = GW::DyeColor::None)
     {
         if (col1 == GW::DyeColor::None && col2 == GW::DyeColor::None && col3 == GW::DyeColor::None && col4 == GW::DyeColor::None) {
@@ -759,6 +766,13 @@ namespace GWArmory {
         const auto player_piece = &imgui_armor_pieces[slot];
         bool value_changed = false;
 
+        if (!search_term.empty() && std::ranges::none_of(state->pieces, [](const auto* piece) {
+            return MatchesSearch(piece);
+        })) {
+            ImGui::PopID();
+            return false;
+        }
+
         const float scale = ImGui::FontScale();
 
         ImGui::Separator();
@@ -852,6 +866,9 @@ namespace GWArmory {
 #else
         for (const auto& piece : state->pieces) {
 #endif
+            if (!MatchesSearch(piece)) {
+                continue;
+            }
             ImGui::PushID(piece->label);
 
             if (0 <= state->current_piece_index && static_cast<size_t>(state->current_piece_index) < state->pieces.size()) {
@@ -921,7 +938,7 @@ namespace GWArmory {
 
         std::vector<Armor*> type_pieces;
         for (auto* piece : state->pieces) {
-            if (piece->type == type)
+            if (piece->type == type && MatchesSearch(piece))
                 type_pieces.push_back(piece);
         }
         if (type_pieces.empty())
@@ -1425,6 +1442,9 @@ void ArmoryWindow::Draw(IDirect3DDevice9*)
 
         if (ImGui::MyCombo("##filter", "All", reinterpret_cast<int*>(&current_campaign), armor_filter_array_getter, nullptr, 6)) {
             UpdateArmorsFilter();
+        }
+        if (ImGui::InputTextWithHint("##search", "Search armour and weapons...", search_buffer, sizeof(search_buffer))) {
+            search_term = TextUtils::ToLower(search_buffer);
         }
         const auto armor_order = {Headpiece, Chestpiece, Gloves, Leggings, Boots, CostumeHead, CostumeBody};
         for (const auto slot : armor_order) {
