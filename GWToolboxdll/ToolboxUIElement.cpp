@@ -552,24 +552,26 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
         ImGui::SetTooltip("This %s cannot be shown in the main window", TypeName());
     }
 
-    ImGui::CheckboxWithHelp("Show breakout button", &show_breakout_button, "Shows a small floating button on screen that toggles this window.\nRight-click the button to remove it.");
-    if (show_breakout_button) {
-        ImGui::Indent();
-        ImGui::Checkbox("Lock breakout button position", &lock_breakout_button);
-        if (!lock_breakout_button) {
-            char breakout_window_id[256];
-            snprintf(breakout_window_id, sizeof(breakout_window_id), "%s##breakout_btn", Name());
-            const auto breakout_window = ImGui::FindWindowByName(breakout_window_id);
-            ImVec2 _breakout_pos(0, 0);
-            if (breakout_window) {
-                _breakout_pos = breakout_window->Pos;
+    if (const auto icon = Icon(); icon && *icon) {
+        ImGui::CheckboxWithHelp("Show breakout button", &show_breakout_button, "Shows a small floating button on screen that toggles this window.\nRight-click the button to remove it.");
+        if (show_breakout_button) {
+            ImGui::Indent();
+            ImGui::Checkbox("Lock breakout button position", &lock_breakout_button);
+            if (!lock_breakout_button) {
+                char breakout_window_id[256];
+                snprintf(breakout_window_id, sizeof(breakout_window_id), "%s##breakout_btn", Name());
+                const auto breakout_window = ImGui::FindWindowByName(breakout_window_id);
+                ImVec2 _breakout_pos(0, 0);
+                if (breakout_window) {
+                    _breakout_pos = breakout_window->Pos;
+                }
+                if (ImGui::DragFloat2("Breakout position", reinterpret_cast<float*>(&_breakout_pos), 1.0f, 0.0f, 0.0f, "%.0f")) {
+                    ImGui::SetWindowPos(breakout_window_id, _breakout_pos);
+                }
+                ImGui::ShowHelp("You need to show the breakout button for this control to work");
             }
-            if (ImGui::DragFloat2("Breakout position", reinterpret_cast<float*>(&_breakout_pos), 1.0f, 0.0f, 0.0f, "%.0f")) {
-                ImGui::SetWindowPos(breakout_window_id, _breakout_pos);
-            }
-            ImGui::ShowHelp("You need to show the breakout button for this control to work");
+            ImGui::Unindent();
         }
-        ImGui::Unindent();
     }
 }
 
@@ -647,8 +649,8 @@ namespace {
 
 void ToolboxUIElement::DrawBreakoutButton(IDirect3DDevice9*)
 {
-    // Runs for every enabled element every frame, so bail before building the window id.
-    if (!show_breakout_button) {
+    const auto icon = Icon();
+    if (!show_breakout_button || !icon || !*icon) {
         breakout_button_rects.erase(this);
         return;
     }
@@ -668,7 +670,6 @@ void ToolboxUIElement::DrawBreakoutButton(IDirect3DDevice9*)
         breakout_pos_set = true;
     }
     else if (!breakout_pos_set) {
-        // Brand-new button: default to the middle of the screen, nudged so it doesn't land on another button.
         const float est = ImGui::GetFrameHeight() + 16.f;
         const ImVec2 pos = GetDefaultBreakoutPos(this, {est, est});
         ImGui::SetNextWindowPos(pos, ImGuiCond_Always);
@@ -693,27 +694,15 @@ void ToolboxUIElement::DrawBreakoutButton(IDirect3DDevice9*)
     if (ImGui::Begin(window_id, nullptr, flags)) {
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {6.f, 4.f});
         const float btn_size = ImGui::GetTextLineHeight() + ImGui::GetStyle().FramePadding.y * 2.f;
-        const char* icon = Icon();
 
         const auto active_col = ImGui::GetStyle().Colors[ImGuiCol_ButtonActive];
         const auto inactive_col = ImVec4(0.15f, 0.15f, 0.15f, 0.8f);
         ImGui::PushStyleColor(ImGuiCol_Button, visible ? active_col : inactive_col);
 
-        bool clicked;
-        if (icon && *icon) {
-            clicked = ImGui::Button(icon, {btn_size, btn_size});
-        }
-        else {
-            char label[4] = {};
-            const auto* name = Name();
-            for (size_t i = 0; i < 2 && name[i]; i++) {
-                label[i] = name[i];
-            }
-            clicked = ImGui::Button(label, {btn_size, btn_size});
-        }
+        const bool clicked = ImGui::Button(icon, {btn_size, btn_size});
 
         ImGui::PopStyleColor();
-        ImGui::PopStyleVar(); // FramePadding
+        ImGui::PopStyleVar();
 
         if (clicked) {
             ToggleVisible();
@@ -737,8 +726,6 @@ void ToolboxUIElement::DrawBreakoutButton(IDirect3DDevice9*)
     ImGui::End();
     ImGui::PopStyleVar(2);
 
-    // Keep breakout_pos current so SaveSettings captures the right position even without a live ImGui context.
-    // Also record the live rect so other breakout buttons can avoid overlapping this one.
     if (const auto bw = ImGui::FindWindowByName(window_id)) {
         breakout_pos[0] = bw->Pos.x;
         breakout_pos[1] = bw->Pos.y;
