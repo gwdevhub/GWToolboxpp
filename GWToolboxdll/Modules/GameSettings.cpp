@@ -13,6 +13,7 @@
 
 #include <GWCA/GameContainers/Array.h>
 #include <GWCA/GameContainers/GamePos.h>
+#include <GWCA/GameContainers/Hash.h>
 
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Camera.h>
@@ -150,23 +151,28 @@ namespace {
     GW::HookEntry SkillList_UICallback_HookEntry;
     GW::UI::UIInteractionCallback SkillList_UICallback_Func = nullptr, SkillList_UICallback_Ret = nullptr;
 
-    // If this ui message is adding an unlearnt skill to the tome window, block it
     void OnSkillList_UICallback(GW::UI::InteractionMessage* message, void* wParam, void* lParam)
     {
         GW::Hook::EnterHook();
         if (message->message_id == GW::UI::UIMessage::kFrameMessage_0x47) {
             if (settings.hide_known_skills && (static_cast<uint32_t*>(wParam)[1] & 0x3) != 0) {
                 GW::Hook::LeaveHook();
-                return; // Only show unlearned skills from tomes and skill trainers
+                return;
             }
 
             if (settings.hide_nonelites_on_capture) {
+                static const auto capture_frame_hash = GW::HashWString(L"DlgSkillCapture");
+                const auto frame = GW::UI::GetFrameById(message->frame_id);
                 const auto parent = GW::UI::GetFrameByLabel(L"DlgSkillCapture");
-                if (parent && GW::UI::BelongsToFrame(parent, GW::UI::GetFrameById(message->frame_id))) {
+                auto is_capture_frame = parent && GW::UI::BelongsToFrame(parent, frame);
+                for (auto current = frame; !is_capture_frame && current; current = GW::UI::GetParentFrame(current)) {
+                    is_capture_frame = current->relation.frame_hash_id == capture_frame_hash;
+                }
+                if (is_capture_frame) {
                     const auto skill = GW::SkillbarMgr::GetSkillConstantData(*static_cast<GW::Constants::SkillID*>(wParam));
                     if (skill && !skill->IsElite()) {
                         GW::Hook::LeaveHook();
-                        return; // Hide non-elites when capturing skills
+                        return;
                     }
                 }
             }
