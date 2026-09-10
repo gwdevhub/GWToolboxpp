@@ -43,16 +43,21 @@ class PingsLinesRenderer : public D3DVertexBuffer {
         [[nodiscard]] virtual float GetScale() const { return 1.0f; }
         [[nodiscard]] virtual bool ShowInner() const { return true; }
         [[nodiscard]] virtual DWORD GetAgentID() const { return 0; }
+        [[nodiscard]] virtual Color GetColor() const { return 0; }
     };
 
     struct TerrainPing : Ping {
         TerrainPing(const float _x, const float _y)
-            : x(_x), y(_y) { }
+            : TerrainPing(_x, _y, Colors::Empty()) { }
+        TerrainPing(const float _x, const float _y, const Color _color)
+            : x(_x), y(_y), color(_color) { }
 
         const float x, y;
+        const Color color;
         [[nodiscard]] float GetX() const override { return x; }
         [[nodiscard]] float GetY() const override { return y; }
         [[nodiscard]] float GetScale() const override { return 2.0f; }
+        [[nodiscard]] Color GetColor() const override { return color; }
     };
 
     struct AgentPing : Ping {
@@ -174,6 +179,7 @@ private:
     std::vector<GW::UI::CompassPoint> queue{};
 
     Color color_drawings = Colors::ARGB(0xFF, 0xFF, 0xFF, 0xFF);
+    Color color_pings = Colors::ARGB(128, 255, 0, 0);
     Color color_shadowstep_line = Colors::ARGB(155, 128, 0, 128);
     Color color_shadowstep_line_maxrange = Colors::ARGB(255, 255, 0, 128);
     float maxrange_interp_begin = 0.85f;

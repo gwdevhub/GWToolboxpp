@@ -34,7 +34,13 @@ namespace GW {
 		enum class StringPreference : uint32_t;
 		enum class EnumPreference : uint32_t;
 		enum class UiProfileSetting : uint32_t;
-		struct CompassPoint;
+		
+        struct CompassPoint {
+			CompassPoint() : x(0), y(0) {}
+			CompassPoint(int _x, int _y) : x(_x), y(_y) {}
+			int x;
+			int y;
+		};
 
 		enum class UIMessage : uint32_t {
 			kNone = 0x0,                             // 0x0
@@ -290,7 +296,7 @@ namespace GW {
 			kDialogueMessageUpdated,                 // 0x1000009c
 			kLogout,                                 // 0x1000009d, wparam = { bool unknown, bool character_select }
 			kCompassDraw,                            // 0x1000009e, wparam = UIPacket::kCompassDraw*
-			kMessage_0x1000009f,                     // 0x1000009f
+			kCompassPing,                            // 0x1000009f, wParam = UIPacket::kCompassPing*
 			kMessage_0x100000a0,                     // 0x100000a0
 			kMessage_0x100000a1,                     // 0x100000a1
 			kOnScreenMessage,                        // 0x100000a2, wparam = wchar_** encoded_string
@@ -977,6 +983,11 @@ namespace GW {
 				uint32_t number_of_points;
 				CompassPoint* points;
 			};
+            struct kCompassPing {
+                CompassPoint point;
+                uint32_t color; // ARGB
+                bool muted;
+            };
 			struct kObjectiveAdd {
 				uint32_t objective_id;
 				wchar_t* name;

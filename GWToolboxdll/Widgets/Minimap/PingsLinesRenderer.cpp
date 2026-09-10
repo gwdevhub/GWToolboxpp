@@ -28,7 +28,7 @@ void PingsLinesRenderer::RegisterSettings(ToolboxModule* module)
         SettingsRegistry::RegisterField(module, key, reinterpret_cast<Colors::SettingColor*>(color));
     };
     register_color("color_drawings", &color_drawings);
-    register_color("color_pings", &ping_circle.color);
+    register_color("color_pings", &color_pings);
     register_color("color_shadowstep_mark", &marker.color);
     register_color("color_shadowstep_line", &color_shadowstep_line);
     register_color("color_shadowstep_line_maxrange", &color_shadowstep_line_maxrange);
@@ -43,7 +43,7 @@ void PingsLinesRenderer::DrawSettings()
     ImGui::SmallConfirmButton("Restore Defaults", "Are you sure?", [&](bool result, void*) {
         if (result) {
             color_drawings = Colors::ARGB(0xFF, 0xFF, 0xFF, 0xFF);
-            ping_circle.color = Colors::ARGB(128, 255, 0, 0);
+            color_pings = Colors::ARGB(128, 255, 0, 0);
             marker.color = Colors::ARGB(200, 128, 0, 128);
             color_shadowstep_line = Colors::ARGB(48, 128, 0, 128);
             color_shadowstep_line_maxrange = Colors::ARGB(48, 128, 0, 128);
@@ -52,7 +52,7 @@ void PingsLinesRenderer::DrawSettings()
         }
         });
     changed |= Colors::DrawSettingHueWheel("Drawings", &color_drawings);
-    changed |= Colors::DrawSettingHueWheel("Pings", &ping_circle.color);
+    changed |= Colors::DrawSettingHueWheel("Pings", &color_pings);
     changed |= Colors::DrawSettingHueWheel("Shadow Step Marker", &marker.color);
     changed |= Colors::DrawSettingHueWheel("Shadow Step Line", &color_shadowstep_line);
     changed |= Colors::DrawSettingHueWheel("Shadow Step Line (Max range)", &color_shadowstep_line_maxrange);
@@ -94,62 +94,73 @@ void PingsLinesRenderer::P046Callback(const GW::Packet::StoC::AgentPinged* pak)
 }
 
 void PingsLinesRenderer::OnUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* wparam, void*) {
-    if (message_id != GW::UI::UIMessage::kCompassDraw)
-        return;
+    switch (message_id) {
+    case GW::UI::UIMessage::kCompassDraw: {
+        const auto packet = (GW::UI::UIPacket::kCompassDraw*)wparam;
 
-    const auto packet = (GW::UI::UIPacket::kCompassDraw*)wparam;
+        bool new_session;
 
-    bool new_session;
-
-    if (is_minimap_compass_draw) {
-        return;
-    }
-    if (drawings[packet->player_number].player == packet->player_number) {
-        new_session = drawings[packet->player_number].session != packet->session_id;
-        drawings[packet->player_number].session = packet->session_id;
-    }
-    else {
-        drawings[packet->player_number].player = packet->player_number;
-        drawings[packet->player_number].session = packet->session_id;
-        new_session = true;
-    }
-
-    if (new_session && packet->number_of_points == 1) {
-        pings.push_front(new TerrainPing(
-            packet->points[0].x * drawing_scale,
-            packet->points[0].y * drawing_scale));
-        return;
-    }
-
-    if (new_session) {
-        for (auto i = 0u; i < packet->number_of_points - 1; i++) {
-            DrawingLine l;
-            l.x1 = packet->points[i + 0].x * drawing_scale;
-            l.y1 = packet->points[i + 0].y * drawing_scale;
-            l.x2 = packet->points[i + 1].x * drawing_scale;
-            l.y2 = packet->points[i + 1].y * drawing_scale;
-            drawings[packet->player_number].lines.push_back(l);
-        }
-    }
-    else {
-        if (drawings[packet->player_number].lines.empty()) {
+        if (is_minimap_compass_draw) {
             return;
         }
-        for (auto i = 0u; i < packet->number_of_points; i++) {
-            DrawingLine l;
-            if (i == 0) {
-                l.x1 = drawings[packet->player_number].lines.back().x2;
-                l.y1 = drawings[packet->player_number].lines.back().y2;
-            }
-            else {
-                l.x1 = packet->points[i - 1].x * drawing_scale;
-                l.y1 = packet->points[i - 1].y * drawing_scale;
-            }
-            l.x2 = packet->points[i].x * drawing_scale;
-            l.y2 = packet->points[i].y * drawing_scale;
-            drawings[packet->player_number].lines.push_back(l);
+        if (drawings[packet->player_number].player == packet->player_number) {
+            new_session = drawings[packet->player_number].session != packet->session_id;
+            drawings[packet->player_number].session = packet->session_id;
         }
+        else {
+            drawings[packet->player_number].player = packet->player_number;
+            drawings[packet->player_number].session = packet->session_id;
+            new_session = true;
+        }
+
+        if (new_session && packet->number_of_points == 1) {
+            pings.push_front(new TerrainPing(
+                packet->points[0].x * drawing_scale,
+                packet->points[0].y * drawing_scale));
+            return;
+        }
+
+        if (new_session) {
+            for (auto i = 0u; i < packet->number_of_points - 1; i++) {
+                DrawingLine l;
+                l.x1 = packet->points[i + 0].x * drawing_scale;
+                l.y1 = packet->points[i + 0].y * drawing_scale;
+                l.x2 = packet->points[i + 1].x * drawing_scale;
+                l.y2 = packet->points[i + 1].y * drawing_scale;
+                drawings[packet->player_number].lines.push_back(l);
+            }
+        }
+        else {
+            if (drawings[packet->player_number].lines.empty()) {
+                return;
+            }
+            for (auto i = 0u; i < packet->number_of_points; i++) {
+                DrawingLine l;
+                if (i == 0) {
+                    l.x1 = drawings[packet->player_number].lines.back().x2;
+                    l.y1 = drawings[packet->player_number].lines.back().y2;
+                }
+                else {
+                    l.x1 = packet->points[i - 1].x * drawing_scale;
+                    l.y1 = packet->points[i - 1].y * drawing_scale;
+                }
+                l.x2 = packet->points[i].x * drawing_scale;
+                l.y2 = packet->points[i].y * drawing_scale;
+                drawings[packet->player_number].lines.push_back(l);
+            }
+        }
+    } break;
+    case GW::UI::UIMessage::kCompassPing: {
+        const auto packet = (GW::UI::UIPacket::kCompassPing*)wparam;
+
+        pings.push_front(new TerrainPing(
+            packet->point.x * drawing_scale,
+            packet->point.y * drawing_scale,
+            packet->color
+        ));
+    } break;
     }
+
 
 }
 
@@ -253,6 +264,13 @@ void PingsLinesRenderer::DrawPings(IDirect3DDevice9* device)
         }
         if (TIMER_DIFF(ping->start) > ping->duration) {
             continue;
+        }
+
+        if (ping->GetColor() != Colors::Empty()) {
+            ping_circle.color = Colors::Sub(ping->GetColor(), Colors::ARGB(128, 0, 0, 0));
+        }
+        else {
+            ping_circle.color = color_pings;
         }
 
         DirectX::XMMATRIX scale, world;
