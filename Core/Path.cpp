@@ -67,7 +67,6 @@ bool PathCreateDirectorySafe(const fs::path& path)
         return false;
     }
     if (result) {
-        // Already a valid directory
         return true;
     }
     result = create_directories(path, errcode);
@@ -107,14 +106,12 @@ bool PathRecursiveRemove(const fs::path& from)
         return false;
     }
     if (!result) {
-        // Doesn't exist anyway
         return true;
     }
     if (!PathIsDirectorySafe(from, &result)) {
         return false;
     }
     if (result) {
-        // directory
         if (!PathDirectoryIteratorSafe(from, &it)) {
             return false;
         }
@@ -154,7 +151,6 @@ bool PathSafeCopy(const fs::path& from, const fs::path& to, const bool copy_if_t
         return false;
     }
     if (result) {
-        // directory
         if (!PathDirectoryIteratorSafe(from, &it)) {
             return false;
         }

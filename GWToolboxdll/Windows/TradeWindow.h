@@ -1,6 +1,10 @@
 #pragma once
 
 #include <ToolboxWindow.h>
+#include <Utils/TextUtils.h>
+
+#include <atomic>
+#include <mutex>
 
 class TradeWindow : public ToolboxWindow {
     TradeWindow() : ToolboxWindow() { show_menubutton = can_show_in_main_window; }
@@ -41,7 +45,7 @@ public:
     static void FindPlayerPartySearch(GW::HookStatus* status = nullptr, void* packet = nullptr);
 
 private:
-    
+
 
     void DrawAlertsWindowContent(bool ownwindow);
 
@@ -56,11 +60,10 @@ private:
 
     // tasks to be done async by the worker thread
     std::queue<std::function<void()>> thread_jobs{};
-    bool should_stop = false;
+    std::mutex thread_jobs_mutex;
+    std::atomic<bool> should_stop = false;
     std::thread* worker = nullptr;
 
-    static void ParseBuffer(const char* text, std::vector<std::string>& words);
-    static void ParseBuffer(std::fstream stream, std::vector<std::string>& words);
 
     static void DeleteWebSocket(easywsclient::WebSocket* ws);
     void SwitchSockets();

@@ -32,6 +32,8 @@ The "Alerts" button opens a new window with additional options:
 ### Alert Keywords
 In the Alerts window, you can set up keywords for filtering trade messages. Each line represents a separate keyword (not case-sensitive).
 
+A line wrapped in slashes is treated as a regular expression instead of a plain keyword, e.g. `/(wtb|wts).*ecto/`. Flags go after the closing slash — matching is case-insensitive unless you add `I`. The same syntax works for the party search alerts and for [loot beacon name rules](./loot_beacons/).
+
 ## Seek Party
 When in Kamadan or Pre-Searing Ascalon, you can use the "Seek Party" feature to advertise your party search:
 

@@ -2,6 +2,9 @@
 
 #include <GWCA/Utilities/Export.h>
 
+#include <cstddef>
+#include <cstdint>
+
 // forward declaration, we don't need to include the full directx header here
 struct IDirect3DDevice9;
 
@@ -12,36 +15,68 @@ namespace GW {
 
     namespace Render {
 
-        typedef void(__cdecl* RenderCallback) (IDirect3DDevice9*);
-
-        typedef struct Mat4x3f {
-            float _11;
-            float _12;
-            float _13;
-            float _14;
-            float _21;
-            float _22;
-            float _23;
-            float _24;
-            float _31;
-            float _32;
-            float _33;
-            float _34;
-
-
-            enum Flags {
-                Shear = 1 << 3
-            };
-
-            uint32_t flags;
-        } Mat4x3f;
-
-        enum Transform : int {
-            TRANSFORM_PROJECTION_MATRIX = 0,
-            TRANSFORM_MODEL_MATRIX = 1,
-            // TODO:
-            TRANSFORM_COUNT = 5
+        // Runtime, not build-time: Gw.exe ships both backends and picks one via Param::GetFlag(10).
+        enum class Backend : uint32_t {
+            Unknown = 0,
+            D3D9,
+            GLES3,
         };
+
+        GWCA_API Backend GetBackend();
+
+        // VirtualDeviceRenderer::renderer_mode -- all windowed variants, ordered as the settings dropdown lists them.
+        enum class RendererMode : uint32_t {
+            Windowed = 0,
+            WindowedBorderless = 1,
+            WindowedFullscreen = 2,
+        };
+
+        // Unknown values pass through rather than being coerced.
+        GWCA_API RendererMode GetRendererMode();
+
+        // GetDevice() is the Dx9 device, GetGlesDevice() the GLES3 one; pick with GetBackend(). The rest works on all three.
+
+        // GLES3 device, captured from a hook since ddi_device is an id, not a pointer. Offsets confirmed against a running client.
+        using EGLSurface = void*;
+        using EGLContext = void*;
+        using EGLDisplay = void*;
+
+        // The std140 block the fragment shader reads; the layout is exact, taken from the shader source embedded in the client.
+        struct GlFragmentRenderState {
+            /* +h0000 */ float texture_factor[4];
+            /* +h0010 */ float fog_color[4];
+            /* +h0020 */ float sampler_biases[2][4];
+            /* +h0040 */ float bump_env_mat[8][4];
+            /* +h00C0 */ float discard_settings[4];
+        };
+        static_assert(sizeof(GlFragmentRenderState) == 0xD0);
+
+        // ArenaNet's own struct wrapping EGL handles, not a COM object -- you cannot call methods on it, only read and write cached state.
+        struct GlesDevice {
+            /* +h0000 */ uint8_t h0000[0x7D4];
+            /* +h07D4 */ uint32_t dev_mode;          // GR_MODE_*
+            /* +h07D8 */ uint8_t h07D8[0x28];
+            /* +h0800 */ void* dev_window;           // native window
+            /* +h0804 */ uint8_t h0804[0x8];
+            /* +h080C */ EGLSurface dev_surface;
+            /* +h0810 */ uint32_t width;             // live surface size
+            /* +h0814 */ uint32_t height;
+            /* +h0818 */ EGLContext dev_context;
+            /* +h081C */ uint8_t h081C[0x7D4];
+            /* +h0FF0 */ GlFragmentRenderState fragment_state;
+            /* +h10C0 */ uint32_t uniform_buffer;    // the UBO name
+        };
+        static_assert(offsetof(GlesDevice, dev_mode)        == 0x07D4);
+        static_assert(offsetof(GlesDevice, dev_window)      == 0x0800);
+        static_assert(offsetof(GlesDevice, dev_surface)     == 0x080C);
+        static_assert(offsetof(GlesDevice, dev_context)     == 0x0818);
+        static_assert(offsetof(GlesDevice, fragment_state)  == 0x0FF0);
+        static_assert(offsetof(GlesDevice, uniform_buffer)  == 0x10C0);
+
+        // Captured from a hook -- not reachable from the generic device. Null unless GetBackend() is GLES3.
+        GWCA_API GlesDevice* GetGlesDevice();
+
+        typedef void(__cdecl* RenderCallback) (IDirect3DDevice9*);
 
         enum Metric : uint32_t {
             Metric0,
@@ -73,27 +108,17 @@ namespace GW {
             Count
         };
 
-        // Careful, this doesn't return correct values if you have the U mission map, or other things open
-        // prefer to calculate the transformation matrix yourself using Render::GetFieldOfView()
-        [[deprecated]] GWCA_API Mat4x3f* GetTransform(Transform transform);
-
         GWCA_API void EnableHooks();
 
         // this returns the FoV used for rendering
         GWCA_API float GetFieldOfView();
 
-        // Set up a callback for drawing on screen.
-        // Will be called after GW render.
-        //
-        // Important: if you use this, you should call  GW::Terminate()
-        // or at least GW::Render::RestoreHooks() from within the callback
+        // Called after GW render each frame on D3D9 (End Scene); call GW::Terminate() or RestoreHooks() from within it.
         GWCA_API void SetRenderCallback(RenderCallback callback);
 
         GWCA_API RenderCallback GetRenderCallback();
 
-        // Flush GW's deferred GR command queue so previously-submitted draws (e.g. the 3D
-        // world) are materialised into the back/depth buffer. No-op unless the queue is in
-        // a flushable state. Lets a render hook draw between GW's world and UI passes.
+        // Flush GW's deferred GR queue so submitted draws materialise, letting a render hook draw between the world and UI passes.
         GWCA_API void FlushCommandQueue();
 
         // Can be used to get information like vsync status or monitor refresh rate of the renderer
@@ -105,22 +130,37 @@ namespace GW {
         // Set a hard upper limit for frame rate. Actual limit may be lower (but not higher) depending on vsync/in-game preference
         GWCA_API bool SetFrameLimit(uint32_t value);
 
-        // Set up a callback for directx device reset
+        // D3D9 device reset. GLES has no lost-device concept; SetGlesResetCallback covers the corresponding event.
         GWCA_API void SetResetCallback(RenderCallback callback);
+        GWCA_API RenderCallback GetResetCallback();
 
-        // Check if gw is in fullscreen
-        // Note: requires one or both callbacks to be set and called before
-        // Note: does not update while minimized
-        // Note: returns -1 if it doesn't know yet
+        // The same two events typed on the GLES device -- set whichever pair matches GetBackend().
+
+        // Fires each frame on GLES3 at the queue flush, so anything drawn goes out with that frame's commands.
+        typedef void(__cdecl* GlesRenderCallback)(GlesDevice* gles_device);
+
+        GWCA_API void SetGlesRenderCallback(GlesRenderCallback callback);
+        GWCA_API GlesRenderCallback GetGlesRenderCallback();
+
+        // Fires when the GLES device is created or updated -- a state-change event, not per-frame, and where the pointer is captured.
+        GWCA_API void SetGlesResetCallback(GlesRenderCallback callback);
+        GWCA_API GlesRenderCallback GetGlesResetCallback();
+
+        // The same frame boundary as the render callbacks, without a device, for callers that only need the tick.
+        typedef void(__cdecl* FrameCallback)();
+
+        GWCA_API void SetFrameCallback(FrameCallback callback);
+        GWCA_API FrameCallback GetFrameCallback();
+
+        // Needs a callback set and called first, does not update while minimized, and returns -1 until known.
         GWCA_API int GetIsFullscreen();
 
         GWCA_API bool SetFog(bool enabled);
 
         GWCA_API HWND GetWindowHandle();
 
+        // Null unless GetBackend() == Backend::D3D9.
         GWCA_API IDirect3DDevice9* GetDevice();
-
-        GWCA_API bool GetIsInRenderLoop();
 
         GWCA_API uint32_t GetViewportWidth();
         GWCA_API uint32_t GetViewportHeight();

@@ -31,18 +31,14 @@ namespace Pathing {
         // fields + each ring edge's wall/connection classification and neighbour poly/plane. Writes to log.txt.
         void DebugDumpNear(const GW::GamePos& center, float radius) const;
 
-        // Terrain height to drape an overlay/path point on, resolved against the navmesh: among the planes that
-        // actually have a walkable polygon at (x,y), return the QueryAltitude surface closest to `prev_z`
-        // (continuity). This keeps a path on the surface it walks — e.g. up onto a monument plane between two
-        // ground hops, instead of sinking to the ground-under-monument that a blind all-planes query returns.
-        // Returns FLT_MAX if the navmesh isn't ready or no walkable plane covers (x,y) — caller should fall back.
-        // Must run on the game/render thread (calls GW::Map::QueryAltitude).
         float DrapeHeightAt(float x, float y, float prev_z) const;
 
     private:
         void DestroyMesh();
         int PlaneIndex(uint32_t zplane) const; // GW query zplane -> plane index (ground sentinel -> 0)
         float PlaneY(int plane) const;
+        // Bucket ground trapezoids into Y rows so DrapeHeightAt point-locates in O(few), not O(all ~10k-32k).
+        void BuildDrapeIndex(float min_y, float max_y);
 
         dtNavMesh* m_navmesh = nullptr;
 
@@ -53,6 +49,15 @@ namespace Pathing {
 
         std::vector<uint16_t> m_poly_plane; // ground poly index -> plane index
         std::vector<const GW::PathingTrapezoid*> m_poly_trap; // ground poly index -> source trapezoid (point-location for DrapeHeightAt)
+
+        // === Y-row point-location index (DrapeHeightAt) ===
+        // 1D rows suffice: GW trapezoids are thin horizontal bands, so a query touches exactly one row.
+        float                 m_row_min_y = 0.f;
+        float                 m_row_inv_h = 0.f;  // rows per unit Y; 0 => not built, fall back to the full scan
+        uint32_t              m_row_count = 0;
+        std::vector<uint32_t> m_row_start;        // CSR offsets into m_row_items, size m_row_count + 1
+        std::vector<uint32_t> m_row_items;
+        std::vector<uint32_t> m_tall_items;       // spans too many rows to bucket; always scanned
     };
 
 } // namespace Pathing

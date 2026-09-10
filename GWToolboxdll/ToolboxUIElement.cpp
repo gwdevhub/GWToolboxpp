@@ -48,6 +48,11 @@ namespace {
     {
         return a.x == b.x && a.y == b.y;
     }
+
+    // Live rects of currently-shown breakout buttons, keyed by the owning element.
+    // Lets a newly-shown button pick a spot near the screen centre that doesn't overlap the others.
+    std::unordered_map<const ToolboxUIElement*, ImRect> breakout_button_rects;
+
 } // namespace
 
 void ToolboxUIElement::UpdateCachedFrameStates()
@@ -161,6 +166,7 @@ void ToolboxUIElement::Initialize()
 
 void ToolboxUIElement::Terminate()
 {
+    breakout_button_rects.erase(this);
     ToolboxModule::Terminate();
 }
 
@@ -188,9 +194,6 @@ void ToolboxUIElement::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 
 void ToolboxUIElement::SaveSettings(SettingsDoc& doc)
 {
-    // Sync current mode's stored positions from the live window.
-    // Guard with context check: SaveSettings is called a second time after ImGui is destroyed
-    // (from UpdateTerminating -> ToggleModule), at which point FindWindowByName would crash.
     if (ImGui::GetCurrentContext()) {
         if (const auto window = ImGui::FindWindowByName(Name())) {
             if (ToolboxSettings::is_in_mobile_mode) {
@@ -287,7 +290,6 @@ void ToolboxUIElement::OnMobileModeChanged(const bool is_mobile)
 {
     const auto window = ImGui::FindWindowByName(Name());
     if (is_mobile) {
-        // Save current (normal) position before switching
         if (window) {
             normal_pos[0] = window->Pos.x;
             normal_pos[1] = window->Pos.y;
@@ -295,14 +297,12 @@ void ToolboxUIElement::OnMobileModeChanged(const bool is_mobile)
             normal_size[1] = window->SizeFull.y;
             has_normal_layout = true;
         }
-        // Apply stored mobile position if available
         if (has_mobile_layout && window) {
             ImGui::SetWindowPos(window, {mobile_pos[0], mobile_pos[1]});
             ImGui::SetWindowSize(window, {mobile_size[0], mobile_size[1]});
         }
     }
     else {
-        // Save current (mobile) position before switching
         if (window) {
             mobile_pos[0] = window->Pos.x;
             mobile_pos[1] = window->Pos.y;
@@ -310,13 +310,11 @@ void ToolboxUIElement::OnMobileModeChanged(const bool is_mobile)
             mobile_size[1] = window->SizeFull.y;
             has_mobile_layout = true;
         }
-        // Restore stored normal position if available
         if (has_normal_layout && window) {
             ImGui::SetWindowPos(window, {normal_pos[0], normal_pos[1]});
             ImGui::SetWindowSize(window, {normal_size[0], normal_size[1]});
         }
     }
-    // Reset settings tab to reflect new mode
     settings_active_tab = is_mobile ? 1 : 0;
 }
 
@@ -331,7 +329,6 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
 
     const auto window = ImGui::FindWindowByName(Name());
 
-    // Sync the current mode's stored positions from the live window
     if (window) {
         if (is_mobile) {
             mobile_pos[0] = window->Pos.x;
@@ -420,13 +417,11 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
         const bool pos_disabled = !is_movable || lm;
         ImGui::BeginDisabled(pos_disabled);
         if (!snap.empty()) {
-            // Show relative offset to the snapped GW frame
             if (ImGui::DragFloat2("Snap Offset", snap_off, 1.0f, 0.0f, 0.0f, "%.0f")) {
                 needs_init_ref = false; // user explicitly set offset; cancel pending init
             }
         }
         else {
-            // Show absolute screen coordinates
             if (ImGui::DragFloat2("Position", cur_pos, 1.0f, 0.0f, 0.0f, "%.0f")) {
                 if (window) {
                     ImGui::SetWindowPos(window, {cur_pos[0], cur_pos[1]});
@@ -450,7 +445,6 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
         }
     }
 
-    // Size
     {
         const bool size_disabled = !is_resizable || ls || as_;
         ImGui::BeginDisabled(size_disabled);
@@ -476,7 +470,6 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
         }
     }
 
-    // Lock / auto checkboxes
     ImGui::StartSpacedElements(180.f);
 
     ImGui::NextSpacedElement();
@@ -597,9 +590,68 @@ void ToolboxUIElement::ShowVisibleRadio()
     ImGui::PopID();
 }
 
+namespace {
+    bool BreakoutRectsOverlap(const ImRect& a, const ImRect& b)
+    {
+        return a.Min.x < b.Max.x && a.Max.x > b.Min.x && a.Min.y < b.Max.y && a.Max.y > b.Min.y;
+    }
+
+    // Minimum translation needed to push `self` out of every overlapping breakout button.
+    // Returns {0,0} when it already clears all of them.
+    ImVec2 ResolveBreakoutOverlap(const ToolboxUIElement* self_element, const ImRect& self)
+    {
+        ImVec2 push = {0.f, 0.f};
+        for (const auto& [element, other] : breakout_button_rects) {
+            if (element == self_element) continue;
+            const ImRect moved({self.Min.x + push.x, self.Min.y + push.y}, {self.Max.x + push.x, self.Max.y + push.y});
+            const float ox = ImMin(moved.Max.x, other.Max.x) - ImMax(moved.Min.x, other.Min.x);
+            const float oy = ImMin(moved.Max.y, other.Max.y) - ImMax(moved.Min.y, other.Min.y);
+            if (ox <= 0.f || oy <= 0.f) continue; // no overlap
+            if (ox < oy) {
+                push.x += moved.GetCenter().x < other.GetCenter().x ? -ox : ox;
+            }
+            else {
+                push.y += moved.GetCenter().y < other.GetCenter().y ? -oy : oy;
+            }
+        }
+        return push;
+    }
+
+    // Pick a position starting from the centre of the screen, cascading until it clears every other breakout button.
+    ImVec2 GetDefaultBreakoutPos(const ToolboxUIElement* self_element, const ImVec2& size)
+    {
+        const ImGuiViewport* vp = ImGui::GetMainViewport();
+        const ImVec2 start = {vp->WorkPos.x + (vp->WorkSize.x - size.x) * 0.5f, vp->WorkPos.y + (vp->WorkSize.y - size.y) * 0.5f};
+        const ImVec2 max = {vp->WorkPos.x + vp->WorkSize.x, vp->WorkPos.y + vp->WorkSize.y};
+        ImVec2 pos = start;
+        for (int i = 0; i < 256; i++) {
+            const ImRect candidate = {pos, {pos.x + size.x, pos.y + size.y}};
+            bool overlaps = false;
+            for (const auto& [element, rect] : breakout_button_rects) {
+                if (element != self_element && BreakoutRectsOverlap(candidate, rect)) {
+                    overlaps = true;
+                    break;
+                }
+            }
+            if (!overlaps) break;
+            pos.x += size.x + 6.f;
+            if (pos.x + size.x > max.x) {
+                pos.x = start.x;
+                pos.y += size.y + 6.f;
+                if (pos.y + size.y > max.y) pos.y = vp->WorkPos.y;
+            }
+        }
+        return pos;
+    }
+}
+
 void ToolboxUIElement::DrawBreakoutButton(IDirect3DDevice9*)
 {
-    if (!show_breakout_button) return;
+    // Runs for every enabled element every frame, so bail before building the window id.
+    if (!show_breakout_button) {
+        breakout_button_rects.erase(this);
+        return;
+    }
 
     char window_id[256];
     snprintf(window_id, sizeof(window_id), "%s##breakout_btn", Name());
@@ -613,6 +665,26 @@ void ToolboxUIElement::DrawBreakoutButton(IDirect3DDevice9*)
     if (pending_breakout_pos) {
         ImGui::SetNextWindowPos({breakout_pos[0], breakout_pos[1]}, ImGuiCond_Always);
         pending_breakout_pos = false;
+        breakout_pos_set = true;
+    }
+    else if (!breakout_pos_set) {
+        // Brand-new button: default to the middle of the screen, nudged so it doesn't land on another button.
+        const float est = ImGui::GetFrameHeight() + 16.f;
+        const ImVec2 pos = GetDefaultBreakoutPos(this, {est, est});
+        ImGui::SetNextWindowPos(pos, ImGuiCond_Always);
+        breakout_pos[0] = pos.x;
+        breakout_pos[1] = pos.y;
+        breakout_pos_set = true;
+    }
+    else if (const auto bw = ImGui::FindWindowByName(window_id); bw && !(flags & ImGuiWindowFlags_NoMove)) {
+        const ImGuiContext* g = ImGui::GetCurrentContext();
+        const bool being_moved = g && g->MovingWindow && g->MovingWindow->RootWindow == bw->RootWindow;
+        if (!being_moved) {
+            const ImVec2 push = ResolveBreakoutOverlap(this, ImRect(bw->Pos, {bw->Pos.x + bw->Size.x, bw->Pos.y + bw->Size.y}));
+            if (push.x != 0.f || push.y != 0.f) {
+                ImGui::SetNextWindowPos({bw->Pos.x + push.x, bw->Pos.y + push.y}, ImGuiCond_Always);
+            }
+        }
     }
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, {6.f, 6.f});
@@ -666,9 +738,11 @@ void ToolboxUIElement::DrawBreakoutButton(IDirect3DDevice9*)
     ImGui::PopStyleVar(2);
 
     // Keep breakout_pos current so SaveSettings captures the right position even without a live ImGui context.
+    // Also record the live rect so other breakout buttons can avoid overlapping this one.
     if (const auto bw = ImGui::FindWindowByName(window_id)) {
         breakout_pos[0] = bw->Pos.x;
         breakout_pos[1] = bw->Pos.y;
+        breakout_button_rects[this] = ImRect(bw->Pos, {bw->Pos.x + bw->Size.x, bw->Pos.y + bw->Size.y});
     }
 }
 

@@ -17,11 +17,6 @@
 
 #include <DirectXTex.h>
 
-// GwDatModule reads/decodes textures straight from the client's on-disk Gw.dat. It does NOT interface with
-// the game's streaming/download subsystem: whatever is in the dat, we can decode; a file the dat doesn't
-// contain simply won't load (see ReadFile's one-time -image hint). On a Steam streaming install the dat can
-// be incomplete until the user runs Guild Wars with -image to download everything.
-
 namespace {
 
     struct Vec2i {
@@ -200,7 +195,6 @@ namespace {
         return true;
     }
 
-    // Decodes file_id and converts it to greyscale A8R8G8B8 in place.
     bool DecodeGreyscaleToArgb(uint32_t file_id, std::vector<uint32_t>& argb, Vec2i& dims)
     {
         if (!file_id || !DecodeTextureToArgb(file_id, argb, dims) || !dims.x || !dims.y)
@@ -325,6 +319,8 @@ IDirect3DTexture9** GwDatModule::LoadItemImage(uint32_t model_file_id, uint32_t 
     return &img->m_tex;
 }
 
+
+
 void GwDatModule::SaveTextureFromFileIdToFile(uint32_t file_id, const std::filesystem::path& file_path)
 {
     std::vector<uint32_t> argb;
@@ -361,9 +357,6 @@ bool GwDatModule::ReadDatFile(const wchar_t* file_name, std::vector<uint8_t>* by
 
 void GwDatModule::Terminate()
 {
-    // The cache is shared_ptr-owned: clearing it here only drops our references; any DX-upload task still in
-    // flight holds its own reference and frees its GwImg (releasing the texture) when it finishes. The dat
-    // mapping is left open (written once, read lock-free) and released by the OS on unload.
     {
         std::scoped_lock lock(deferred_mutex);
         deferred_decodes.clear();

@@ -1,9 +1,6 @@
 #pragma once
 #ifdef _DEBUG
-    // Diagnostic GCC/MinGW build: plain __VA_ARGS__ leaves a trailing comma
-    // when a call site passes no extra args (e.g. GWCA_INFO("message")),
-    // which MSVC's preprocessor tolerates but GCC's doesn't. ##__VA_ARGS__
-    // is a GNU extension that swallows the comma in that case.
+    // ##__VA_ARGS__ is a GNU extension swallowing the trailing comma when no extra args are passed; MSVC tolerates plain __VA_ARGS__.
     #define GWCA_TRACE(fmt, ...) GW::LogMessage(GW::LEVEL_TRACE, __FILE__, (unsigned)__LINE__, __FUNCTION__, fmt, ##__VA_ARGS__)
     #define GWCA_DEBUG(fmt, ...) GW::LogMessage(GW::LEVEL_DEBUG, __FILE__, (unsigned)__LINE__, __FUNCTION__, fmt, ##__VA_ARGS__)
     #define GWCA_INFO(fmt, ...) GW::LogMessage(GW::LEVEL_INFO, __FILE__, (unsigned)__LINE__, __FUNCTION__, fmt, ##__VA_ARGS__)

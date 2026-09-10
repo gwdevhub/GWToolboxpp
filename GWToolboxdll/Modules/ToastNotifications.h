@@ -52,6 +52,7 @@ public:
     void SaveSettings(SettingsDoc& doc) override;
     void Terminate() override;
     void DrawSettingsInternal() override;
+    void Update(float delta) override;
     bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam) override;
 
     class Toast;
@@ -67,7 +68,6 @@ public:
         WinToastLib::WinToastTemplate* toast_template = nullptr;
         Toast(const std::wstring& _title, const std::wstring& _message);
         ~Toast() override;
-        // Public interfaces
         void toastActivated() const override;
         void toastActivated(int) const override;
         void toastDismissed(WinToastDismissalReason) const override;

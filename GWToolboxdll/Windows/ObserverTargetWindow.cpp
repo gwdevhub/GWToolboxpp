@@ -12,7 +12,6 @@ void ObserverTargetWindow::Prepare()
         return;
     }
 
-    // prepare the current tracking and compared agents
     // keep tracking up-to-date with the current desired target
     const GW::Agent* tracking_agent = GW::Agents::GetTarget();
     const GW::AgentLiving* tracking_living = nullptr;
@@ -40,13 +39,11 @@ void ObserverTargetWindow::Prepare()
     previously_tracked_agent_id = next_tracked_id;
 }
 
-// Get the agent we're currently tracking
 uint32_t ObserverTargetWindow::GetTracking()
 {
     return previously_tracked_agent_id;
 }
 
-// Get the agent we're comparing to
 uint32_t ObserverTargetWindow::GetComparison()
 {
     return previously_compared_agent_id;

@@ -29,7 +29,6 @@ namespace {
         if (waiting) {
             return false;
         }
-        // Reorder
         std::ranges::sort(HotkeyGWKey::control_labels, [](const ControlLabelPair& lhs, const ControlLabelPair& rhs) {
             return lhs.second->string().compare(rhs.second->string()) < 0;
             });

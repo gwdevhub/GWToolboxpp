@@ -168,7 +168,6 @@ bool HotkeyEquipItem::DrawSettings()
         }
         if (ImGui::BeginPopupModal("Choose Item to Equip", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
             if (need_to_fetch_bag_items) {
-                // Free available_items ptrs
                 for (auto& it : available_items) {
                     for (auto atts : it.second) {
                         delete atts;
@@ -259,13 +258,6 @@ bool HotkeyEquipItem::IsEquippable(const GW::Item* _item)
     }
     return true;
     // 2021-05-02: Disabled customised check, conflicts with obfuscator module, not worth the hassle - the hotkey will fail with a message on timeout anyway - Jon
-    /*
-    if (!_item->customized)
-        return true;
-    GW::GameContext *g = GW::GetGameContext();
-    GW::CharContext *c = g ? g->character : nullptr;
-    return c && c->player_name &&
-           wcscmp(c->player_name, _item->customized) == 0;*/
 }
 
 GW::Item* HotkeyEquipItem::FindMatchingItem(const GW::Constants::Bag _bag_idx, GW::Bag** bag) const
@@ -351,7 +343,6 @@ void HotkeyEquipItem::Execute()
     const GW::Skillbar* s = GW::SkillbarMgr::GetPlayerSkillbar();
     if (p->GetIsKnockedDown() || (s && s->cast_array.size())) {
         ongoing = true;
-        // Player knocked down or casting; wait.
         return;
     }
     if (p->skill) {

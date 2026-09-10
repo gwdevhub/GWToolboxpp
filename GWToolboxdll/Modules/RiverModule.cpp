@@ -38,12 +38,9 @@ namespace {
     using namespace lava_river_module;
 
     constexpr float kSampleSpacing = 50.f;            // resample a river centerline every ~50 gu (follow slopes)
-    constexpr float kAltUnknown = 1e30f;              // sentinel: no terrain data at this (x,y)
+    constexpr float kAltUnknown = TerrainDrape::kNoAltitude; // sentinel: no terrain data at this (x,y)
     constexpr size_t kMaxVertices = 1500000;          // safety cap on total surface geometry per map (raise cell_size if hit)
 
-    // Settings (persisted scalars via SettingsRegistry; rivers persisted separately as JSON).
-    // Occlusion behind terrain is shared with the "In-game rendering" module
-    // via GameWorldRenderer::GetOccludeBehindTerrain() so it's set in one place.
     float render_max_distance = 5000.f;
     float fog_factor = 1.0f;     // distance-fade strength fed to the shader
     float glow = 0.4f;           // emissive brightness boost (0 = plain texture)
@@ -110,10 +107,6 @@ namespace {
     bool mesh_dirty = true;
     uint32_t built_map_id = 0xFFFFFFFFu;
 
-    // Incremental ground-mesh build. Tessellating every trapezoid (one QueryAltitude per grid vertex) across a
-    // large explorable is far too heavy for one frame, and QueryAltitude isn't thread-safe (it swaps the global
-    // map context), so the work can't move to a worker. Instead we spread it across frames on the render thread
-    // under a per-frame query budget: the floor fills in over a handful of frames and the load never stalls.
     constexpr int kQueriesPerFrame = 2000; // max QueryAltitude calls per frame while a build is in progress
     struct GroundGridVert {
         float x, y, z;
@@ -143,34 +136,6 @@ namespace {
 
     // Authoring state (not persisted): which river of the current map "Add point" appends to.
     int active_river = -1;
-
-    // Highest static surface at (x,y) over all planes (GW up is -z, so highest = min altitude), or sentinel.
-    float HighestSurfaceZ(const float x, const float y, const uint32_t n_planes)
-    {
-        float best = kAltUnknown;
-        for (uint32_t zp = 0; zp < n_planes; ++zp) {
-            const float a = TerrainDrape::QueryAltAt(x, y, zp);
-            if (a != 0.f && (best == kAltUnknown || a < best)) best = a;
-        }
-        return best;
-    }
-
-    // Surface altitude at (x,y) closest to `prev` (so a draped ribbon follows the walked surface across
-    // ramps/bridges instead of snapping to the ground beneath), or sentinel if no plane has data.
-    float ClosestSurfaceZ(const float x, const float y, const uint32_t n_planes, const float prev)
-    {
-        float best = kAltUnknown, best_d = kAltUnknown;
-        for (uint32_t zp = 0; zp < n_planes; ++zp) {
-            const float a = TerrainDrape::QueryAltAt(x, y, zp);
-            if (a == 0.f) continue;
-            const float d = std::fabs(a - prev);
-            if (best == kAltUnknown || d < best_d) {
-                best_d = d;
-                best = a;
-            }
-        }
-        return best;
-    }
 
     // Build a draped, textured ribbon for one river and append it to the given vertex bucket.
     void BuildRiverMesh(const LavaRiver& river, const uint32_t n_planes, std::vector<LavaVertex>& out)
@@ -204,7 +169,7 @@ namespace {
         xs.reserve(dense.size());
 
         float arc = 0.f;
-        float prevz = HighestSurfaceZ(dense[0].x, dense[0].y, n_planes);
+        float prevz = TerrainDrape::HighestZ(dense[0].x, dense[0].y, n_planes);
         if (prevz == kAltUnknown) prevz = 0.f;
 
         for (size_t i = 0; i < dense.size(); ++i) {
@@ -229,11 +194,11 @@ namespace {
             const float lx = dense[i].x + px * half, ly = dense[i].y + py * half;
             const float rx = dense[i].x - px * half, ry = dense[i].y - py * half;
 
-            float lz = ClosestSurfaceZ(lx, ly, n_planes, prevz);
+            float lz = TerrainDrape::ClosestZ(lx, ly, n_planes, prevz);
             if (lz == kAltUnknown) lz = prevz;
-            float rz = ClosestSurfaceZ(rx, ry, n_planes, prevz);
+            float rz = TerrainDrape::ClosestZ(rx, ry, n_planes, prevz);
             if (rz == kAltUnknown) rz = prevz;
-            const float cz = ClosestSurfaceZ(dense[i].x, dense[i].y, n_planes, prevz);
+            const float cz = TerrainDrape::ClosestZ(dense[i].x, dense[i].y, n_planes, prevz);
             if (cz != kAltUnknown) prevz = cz;
 
             xs.push_back({lx, ly, lz - z_lift, rx, ry, rz - z_lift, arc / tile});
@@ -252,10 +217,6 @@ namespace {
         }
     }
 
-    // Tessellate one pathing trapezoid into its texture bucket: grid it (fine enough for the wave displacement to
-    // read), drape each sub-vertex onto the trapezoid's own plane via an altitude query, and tile the texture by
-    // world position so it's seamless across trapezoids. Returns the number of QueryAltitude calls made, or -1 if
-    // the per-map geometry cap was hit (the caller should stop the build).
     int EmitGroundTrapezoid(const GW::PathingTrapezoid& tz, const uint32_t p)
     {
         if (tz.YT == tz.YB) return 0; // degenerate connector
@@ -403,9 +364,6 @@ namespace {
             return;
         }
 
-        // One vertex bucket per selected texture; concatenated into mesh_vertices with a TexRange each.
-        // The cover-entire-ground flood is built incrementally (see BeginGroundBuild); here we only lay down the
-        // authored rivers, which are few enough to build in a single frame.
         std::vector<std::vector<LavaVertex>> buckets(num);
         size_t river_count = 0;
         if (const auto it = rivers_by_map.find(map_id); it != rivers_by_map.end()) {
@@ -493,8 +451,7 @@ void RiverModule::DrawInWorld(IDirect3DDevice9* device)
     // Slow, incommensurate envelope so the waves swell and calm without an obvious period.
     const float env = std::max(0.15f, 1.f + 0.5f * std::sin(t_seconds * 0.13f) + 0.3f * std::sin(t_seconds * 0.071f));
 
-    IDirect3DStateBlock9* state_block = nullptr; // restored on exit so GW's own rendering isn't corrupted
-    if (device->CreateStateBlock(D3DSBT_ALL, &state_block) != D3D_OK) return;
+    const D3DStateGuard state_guard(device); // restored on exit so GW's own rendering isn't corrupted
     if (device->SetVertexShader(lava_vs) == D3D_OK && device->SetPixelShader(lava_ps) == D3D_OK && device->SetVertexDeclaration(lava_decl) == D3D_OK && GameWorldCompositor::SetWorldViewProj(device)) {
         GameWorldCompositor::SetWorldRenderStates(device, GameWorldRenderer::GetOccludeBehindTerrain());
         GameWorldCompositor::SetDistanceFog(device, render_max_distance, fog_factor);
@@ -517,8 +474,6 @@ void RiverModule::DrawInWorld(IDirect3DDevice9* device)
             }
         }
     }
-    state_block->Apply();
-    state_block->Release();
 }
 
 void RiverModule::RegisterSettings(ToolboxModule* module)

@@ -138,6 +138,7 @@ private:
     void DrawRecallLine(IDirect3DDevice9* device);
     void DrawDrawings(IDirect3DDevice9* device);
     void EnqueueVertex(float x, float y, Color color);
+    [[nodiscard]] bool HasPendingLines() const;
 
     int ToIntPos(const float n) const
     {

@@ -5,9 +5,6 @@
 #include <D3DContainers.h>
 #include <ToolboxModule.h>
 
-// In-game (game-world) rendering: draws custom markers, lines and polygons into the 3D
-// world, occluded by terrain and drawn under the in-game UI. Its own settings module,
-// with its own settings section / JSON file (separate from the Minimap).
 class GameWorldRenderer : public ToolboxModule {
     GameWorldRenderer() = default;
     ~GameWorldRenderer() override = default;
@@ -24,7 +21,6 @@ public:
         GenericPolyRenderable(GW::Constants::MapID map_id, const std::vector<GW::GamePos>& points, unsigned int col, bool filled) noexcept;
         ~GenericPolyRenderable() noexcept;
 
-        // copy not allowed
         GenericPolyRenderable(const GenericPolyRenderable& other) = delete;
 
         GenericPolyRenderable(GenericPolyRenderable&& other) noexcept
@@ -33,6 +29,9 @@ public:
             , from_player_pos(other.from_player_pos)
             , use_dotted_effect(other.use_dotted_effect)
             , vertices_processed(other.vertices_processed)
+            , anchor_x(other.anchor_x)
+            , anchor_y(other.anchor_y)
+            , anchored(other.anchored)
             , vb(other.vb)
         {
             other.vb = nullptr;
@@ -42,7 +41,6 @@ public:
             other.vertices.clear();
         }
 
-        // copy not allowed
         GenericPolyRenderable& operator=(const GenericPolyRenderable& other) = delete;
 
         GenericPolyRenderable& operator=(GenericPolyRenderable&& other) noexcept
@@ -61,6 +59,9 @@ public:
             vertices_processed = other.vertices_processed;
             from_player_pos = other.from_player_pos;
             use_dotted_effect = other.use_dotted_effect;
+            anchor_x = other.anchor_x;
+            anchor_y = other.anchor_y;
+            anchored = other.anchored;
 
             return *this;
         }
@@ -74,6 +75,10 @@ public:
         bool from_player_pos = false;
         bool use_dotted_effect = false;
         unsigned int vertices_processed = 0u;
+        // Player position this from_player_pos line was last re-anchored to; skips the re-drape while standing still.
+        float anchor_x = 0.f;
+        float anchor_y = 0.f;
+        bool anchored = false;
         IDirect3DVertexBuffer9* vb = nullptr;
     };
 
@@ -97,9 +102,6 @@ public:
     static void Render(IDirect3DDevice9* device);
     static void TriggerSyncAllMarkers();
 
-    // Batched in-world line overlay: one incrementally surface-draped vertex buffer drawn in a single call.
-    // Used by the navmesh debug overlay instead of thousands of per-line CustomLines (which made each map-load
-    // rebuild O(N^2) through the CustomLine sync/drape/remove path). Pass the full edge set once per map.
     struct BatchedLine {
         GW::GamePos a, b;
         unsigned int color;

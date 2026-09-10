@@ -2,9 +2,6 @@
 
 #include <ToolboxModule.h>
 
-// Draws the hostile ground AoE effects tracked by Utils/AoeEffects (Meteor Shower, Maelstrom,
-// traps, ...) as rings draped onto the terrain in the 3D world, via the shared
-// GameWorldCompositor: composited under the in-game UI and depth-tested against the scene.
 class DangerRingsModule : public ToolboxModule {
     DangerRingsModule() = default;
     ~DangerRingsModule() override = default;

@@ -1,0 +1,47 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "ghidra": {
+      "type": "remote",
+      "url": "https://ghidra-mcp.gwtoolbox.com/mcp",
+      "enabled": true,
+      "oauth": false,
+      "headers": {
+        "Authorization": "Bearer {env:GHIDRA_MCP_TOKEN}"
+      },
+      "timeout": 30000
+    }
+  },
+  "permission": {
+    "ghidra_rename_*": "deny",
+    "ghidra_set_*_comment": "deny",
+    "ghidra_set_global": "deny",
+    "ghidra_set_disassembly_comment": "deny",
+    "ghidra_set_decompiler_comment": "deny",
+    "ghidra_set_plate_comment": "deny",
+    "ghidra_delete_*": "deny",
+    "ghidra_save_*": "deny",
+    "ghidra_commit_*": "deny",
+    "ghidra_create_*": "deny",
+    "ghidra_add_*": "deny",
+    "ghidra_modify_*": "deny",
+    "ghidra_remove_*": "deny",
+    "ghidra_apply_*": "deny",
+    "ghidra_import_*": "deny",
+    "ghidra_batch_set_*": "deny",
+    "ghidra_batch_create_*": "deny",
+    "ghidra_batch_delete_*": "deny",
+    "ghidra_batch_remove_*": "deny",
+    "ghidra_batch_add_*": "deny",
+    "ghidra_clear_*": "deny",
+    "ghidra_close_*": "deny",
+    "ghidra_archive_ingest_*": "deny",
+    "ghidra_merge_*": "deny",
+    "ghidra_move_*": "deny",
+    "ghidra_clone_*": "deny",
+    "ghidra_suggest_*": "deny",
+    "ghidra_can_rename_at_address": "deny",
+    "ghidra_run_analysis": "deny",
+    "ghidra_unload_tool_group": "deny"
+  }
+}

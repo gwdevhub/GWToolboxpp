@@ -70,7 +70,6 @@ bool ToolboxBreakoutWindow::CreateDeviceD3D()
     if ((g_pD3D = Direct3DCreate9_Func(D3D_SDK_VERSION)) == nullptr)
     return false;
 
-    // Create the D3DDevice
     g_d3dpp = { 0 };
     g_d3dpp.Windowed = TRUE;
     g_d3dpp.SwapEffect = D3DSWAPEFFECT_DISCARD;
@@ -112,7 +111,6 @@ int ToolboxBreakoutWindow::CreateOSWindow() {
         Log::Error("Failed to CreateWindowW in ToolboxUIElement; GetLastError %p", GetLastError());
         return 1;
     }
-    // Initialize Direct3D
     if (!CreateDeviceD3D())
     {
         CleanupDeviceD3D();
@@ -123,11 +121,9 @@ int ToolboxBreakoutWindow::CreateOSWindow() {
 
     breakout_windows_by_handle[window_handle] = this;
 
-    // Show the window
     ::ShowWindow(window_handle, SW_SHOWDEFAULT);
     ::UpdateWindow(window_handle);
 
-    // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
@@ -138,7 +134,6 @@ int ToolboxBreakoutWindow::CreateOSWindow() {
     //io.ConfigViewportsNoAutoMerge = true;
     //io.ConfigViewportsNoTaskBarIcon = true;
 
-    // Setup Dear ImGui style
     ImGui::StyleColorsDark();
     //ImGui::StyleColorsLight();
 
@@ -150,36 +145,16 @@ int ToolboxBreakoutWindow::CreateOSWindow() {
         style.Colors[ImGuiCol_WindowBg].w = 1.0f;
     }
 
-    // Setup Platform/Renderer backends
     ImGui_ImplWin32_Init(window_handle);
     ImGui_ImplDX9_Init(g_pd3dDevice);
 
-    // Load Fonts
-    // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
-    // - AddFontFromFileTTF() will return the ImFont* so you can store it if you need to select the font among multiple.
-    // - If the file cannot be loaded, the function will return a nullptr. Please handle those errors in your application (e.g. use an assertion, or display an error and quit).
-    // - The fonts will be rasterized at a given size (w/ oversampling) and stored into a texture when calling ImFontAtlas::Build()/GetTexDataAsXXXX(), which ImGui_ImplXXXX_NewFrame below will call.
-    // - Use '#define IMGUI_ENABLE_FREETYPE' in your imconfig file to use Freetype for higher quality font rendering.
-    // - Read 'docs/FONTS.md' for more instructions and details.
-    // - Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
-    //io.Fonts->AddFontDefault();
-    //io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\segoeui.ttf", 18.0f);
-    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/DroidSans.ttf", 16.0f);
-    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Roboto-Medium.ttf", 16.0f);
-    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Cousine-Regular.ttf", 15.0f);
-    //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, nullptr, io.Fonts->GetGlyphRangesJapanese());
-    //IM_ASSERT(font != nullptr);
-
-    // Our state
     bool show_demo_window = true;
     bool show_another_window = false;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
-    // Main loop
     bool done = false;
     while (!done)
     {
-        // Poll and handle messages (inputs, window resize, etc.)
         // See the WndProc() function below for our to dispatch events to the Win32 backend.
         MSG msg;
         while (::PeekMessage(&msg, nullptr, 0U, 0U, PM_REMOVE))
@@ -192,7 +167,6 @@ int ToolboxBreakoutWindow::CreateOSWindow() {
         if (done)
             break;
 
-        // Handle lost D3D9 device
         if (g_DeviceLost)
         {
             HRESULT hr = g_pd3dDevice->TestCooperativeLevel();
@@ -218,16 +192,13 @@ int ToolboxBreakoutWindow::CreateOSWindow() {
         window_mutex.unlock();
 
 
-        // Start the Dear ImGui frame
         ImGui_ImplDX9_NewFrame();
         ImGui_ImplWin32_NewFrame();
         ImGui::NewFrame();
 
-        // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
         if (show_demo_window)
             ImGui::ShowDemoWindow(&show_demo_window);
 
-        // 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
         {
             static float f = 0.0f;
             static int counter = 0;
@@ -250,7 +221,6 @@ int ToolboxBreakoutWindow::CreateOSWindow() {
             ImGui::End();
         }
 
-        // 3. Show another simple window.
         if (show_another_window)
         {
             ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
@@ -260,7 +230,6 @@ int ToolboxBreakoutWindow::CreateOSWindow() {
             ImGui::End();
         }
 
-        // Rendering
         ImGui::EndFrame();
         g_pd3dDevice->SetRenderState(D3DRS_ZENABLE, FALSE);
         g_pd3dDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
@@ -274,7 +243,6 @@ int ToolboxBreakoutWindow::CreateOSWindow() {
             g_pd3dDevice->EndScene();
         }
 
-        // Update and Render additional Platform Windows
         if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         {
             ImGui::UpdatePlatformWindows();
@@ -286,7 +254,6 @@ int ToolboxBreakoutWindow::CreateOSWindow() {
             g_DeviceLost = true;
     }
 
-    // Cleanup
     ImGui_ImplDX9_Shutdown();
     ImGui_ImplWin32_Shutdown();
     ImGui::DestroyContext();

@@ -10,10 +10,6 @@
 #include <unordered_map>
 #include <vector>
 
-// Guild Wars .dat module: memory-maps the client's on-disk Gw.dat, parses its MFT, and decodes textures
-// from it for the UI. It does not interface with the game's streaming/download subsystem - a file the dat
-// doesn't already contain won't load (ReadFile hints the user at -image). The MFT/decompression logic is
-// derived from GuildWarsMapBrowser (see GwDat/CREDITS.txt).
 class GwDatModule : public ToolboxModule {
     GwDatModule() = default;
     ~GwDatModule() override = default;
@@ -40,15 +36,12 @@ public:
     // stream_id picks a stream within the file; item/armor UI icons live at stream 1 of the model file.
     static IDirect3DTexture9** LoadTextureFromFileId(uint32_t file_id, uint32_t stream_id = 0);
 
-    // Loads an item's UI icon (stream 1 of the model file), recolouring its dyeable region (the stream
-    // 0xc mask). `dyes` packs up to four GW::DyeColor values, one per byte, blended as GW combines dye
-    // slots; 0 (no applied slot) yields the undyed icon.
-    // failed_out, if given, is set true once the decode has actually run and permanently failed (as
-    // opposed to simply not having decoded yet) - callers can use this to render a placeholder.
     static IDirect3DTexture9** LoadItemImage(uint32_t model_file_id, uint32_t dyes = 0, bool* failed_out = nullptr);
 
     // Decodes the texture for file_id from the dat and writes it to disk (format chosen by extension).
     static void SaveTextureFromFileIdToFile(uint32_t file_id, const std::filesystem::path& file_path);
+
+
 
     // --- Archive reading ---
     // Decompressed bytes for a GW file id; stream_id picks a stream (0 = the file's own data). False if absent.

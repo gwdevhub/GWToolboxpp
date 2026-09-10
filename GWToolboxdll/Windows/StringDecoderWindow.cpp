@@ -79,9 +79,6 @@ void StringDecoderWindow::Draw(IDirect3DDevice9*)
     }
     if (!decoded.empty()) {
         // std::wstring str = TextUtils::StringToWString(encoded);
-        /*Log::LogW(L"%d %ls\n",
-                  GW::UI::EncStrToUInt32(GetEncodedString().c_str()),
-                  decoded.c_str());*/
         WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, decoded.c_str(), nullptr, true);
         //PrintEncStr(GetEncodedString().c_str());
         decoded.clear();

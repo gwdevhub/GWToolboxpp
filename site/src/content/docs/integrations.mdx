@@ -50,8 +50,25 @@ Features:
 
 To configure Twitch integration:
 1. In GWToolbox++ settings, enable "Twitch integration"
-2. Enter your Twitch username and OAuth token
-3. Customize notification settings as desired
+2. Click "Click Here to get a Twitch Oauth Token" - this opens Twitch in your browser to authorise GWToolbox++, and fills in the token for you
+3. Enter the Twitch channel you want to connect to (your own Twitch username if you're streaming)
+4. Customize notification settings as desired
+5. Click the "Disconnected" button to connect. Re-connect after changing any of these settings
+
+### Sending messages to Twitch chat
+
+Incoming Twitch messages appear in your chat window as if they were whispers from `<viewer> @ Twitch`.
+
+To send a message back to Twitch chat, **send a whisper to `Twitch`**:
+
+- Type `/whisper Twitch, your message here` (or `/w Twitch, your message`), or
+- Click a Twitch message in your chat window to start a whisper - GWToolbox++ rewrites the recipient to `Twitch` automatically
+
+Anything you whisper to `Twitch` is posted in the Twitch channel you're connected to, and is echoed back into your in-game chat window. Whispers to any other name behave normally.
+
+Notes:
+- You must be connected (the button in settings reads "Connected") for this to work.
+- The message is sent as the Twitch account whose OAuth token you authorised, so that account needs to be able to talk in the target channel (i.e. not banned, and meeting any follower/subscriber-only chat requirements).
 
 These integrations help bridge the gap between Guild Wars and popular external services, enhancing communication and social features for players and streamers alike.
 

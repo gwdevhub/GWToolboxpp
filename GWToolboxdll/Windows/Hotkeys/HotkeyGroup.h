@@ -21,7 +21,6 @@ public:
     void Execute() override {};
     void Toggle() override;
 
-    // Overrides the outer draw to render the group header + its children
     bool DrawSettings() override;
 
     int Description(char* buf, size_t bufsz) override;

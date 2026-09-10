@@ -21,9 +21,7 @@ namespace GW {
     };
 }
 
-// ============================================================
 // C Interop API
-// ============================================================
 extern "C" {
     GWCA_API void* GetPlayerGuild();
     GWCA_API void* GetCurrentGH();

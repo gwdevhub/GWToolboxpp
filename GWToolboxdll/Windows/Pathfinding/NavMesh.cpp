@@ -80,6 +80,70 @@ namespace Pathing {
         m_poly_trap.clear();
         m_ground_poly_count = 0;
         m_plane_count = 0;
+        m_row_min_y = 0.f;
+        m_row_inv_h = 0.f;
+        m_row_count = 0;
+        m_row_start.clear();
+        m_row_items.clear();
+        m_tall_items.clear();
+    }
+
+    void NavMesh::BuildDrapeIndex(const float min_y, const float max_y)
+    {
+        m_row_inv_h = 0.f;
+        m_row_count = 0;
+        m_row_start.clear();
+        m_row_items.clear();
+        m_tall_items.clear();
+
+        const float span = max_y - min_y;
+        if (m_ground_poly_count == 0 || !(span > 0.f)) return;
+
+        constexpr uint32_t kTrapsPerRow = 8;
+        constexpr uint32_t kMaxRowsPerTrap = 32; // past this a trapezoid goes to m_tall_items, so degenerate data can't grow the index to n*rows
+        m_row_count = std::clamp(m_ground_poly_count / kTrapsPerRow, 64u, 4096u);
+        m_row_min_y = min_y;
+        const float inv_h = static_cast<float>(m_row_count) / span;
+
+        const auto row_of = [&](const float y) -> uint32_t {
+            const float r = (y - min_y) * inv_h;
+            if (r <= 0.f) return 0;
+            const auto ri = static_cast<uint32_t>(r);
+            return ri >= m_row_count ? m_row_count - 1 : ri;
+        };
+
+        m_row_start.assign(m_row_count + 1, 0);
+        std::vector<uint8_t> is_tall(m_ground_poly_count, 0);
+        size_t total = 0;
+        for (uint32_t i = 0; i < m_ground_poly_count; ++i) {
+            const GW::PathingTrapezoid* t = m_poly_trap[i];
+            if (!t) { is_tall[i] = 1; continue; } // no bounds to bucket on, so keep it visible to every query
+            const uint32_t lo = row_of(std::min(t->YB, t->YT));
+            const uint32_t hi = row_of(std::max(t->YB, t->YT));
+            if (hi - lo + 1 > kMaxRowsPerTrap) {
+                is_tall[i] = 1;
+                continue;
+            }
+            for (uint32_t r = lo; r <= hi; ++r) m_row_start[r + 1]++;
+            total += hi - lo + 1;
+        }
+
+        for (uint32_t r = 0; r < m_row_count; ++r) m_row_start[r + 1] += m_row_start[r];
+
+        m_row_items.resize(total);
+        std::vector<uint32_t> cursor(m_row_start.begin(), m_row_start.end() - 1);
+        for (uint32_t i = 0; i < m_ground_poly_count; ++i) {
+            if (is_tall[i]) {
+                m_tall_items.push_back(i);
+                continue;
+            }
+            const GW::PathingTrapezoid* t = m_poly_trap[i];
+            const uint32_t lo = row_of(std::min(t->YB, t->YT));
+            const uint32_t hi = row_of(std::max(t->YB, t->YT));
+            for (uint32_t r = lo; r <= hi; ++r) m_row_items[cursor[r]++] = i;
+        }
+
+        m_row_inv_h = inv_h; // published last: non-zero is what marks the index usable
     }
 
     int NavMesh::PlaneIndex(uint32_t zplane) const
@@ -134,6 +198,7 @@ namespace Pathing {
         }
 
         minx -= 16.f; miny -= 16.f; maxx += 16.f; maxy += 16.f;
+        BuildDrapeIndex(miny, maxy);
         m_cs = std::max(1.0f, std::max(maxx - minx, maxy - miny) / 60000.0f); // keep quantised verts in uint16 range
         const float yrange = (float)(m_plane_count + 1) * kPlaneSeparation;
         m_ch = std::max(1.0f, yrange / 60000.0f);
@@ -481,11 +546,6 @@ namespace Pathing {
         const dtMeshTile* tile = static_cast<const dtNavMesh*>(m_navmesh)->getTile(0);
         if (!tile || !tile->header) return;
 
-        // GW only records adjacency across a trapezoid's LEFT/RIGHT edges (via portals). Where two trapezoids on
-        // DIFFERENT pathing planes meet along a shared TOP/BOTTOM edge (constant game-Y) at the same terrain height
-        // — i.e. continuous flat floor that GW's decomposition split onto separate planes — there is no portal to
-        // record it, so Build finds no neighbour and the edge becomes a phantom "wall". Index every ~horizontal
-        // poly edge by rounded game-Y so we can detect those seams below and reclassify them as walkable.
         constexpr float kHorizEps = 1.0f;     // |Δgame-Y| under which an edge counts as a top/bottom (horizontal) edge
         constexpr float kSeamHeightEps = 50.f; // |Δaltitude| under which the two planes are the same surface, not an over/underpass
         struct HEdge { int plane; int poly; float xmin, xmax; };
@@ -532,9 +592,6 @@ namespace Pathing {
             const auto plane = static_cast<uint32_t>((poly < (int)m_poly_plane.size()) ? m_poly_plane[poly] : 0);
             return TerrainDrape::QueryAltAt(x, ys, plane);
         };
-        // A horizontal boundary stretch of poly_i's edge: wherever another same-plane poly abuts the line at
-        // ~the same height it is walkable floor (trapezoids can have 3+ neighbours per edge, Build links at
-        // most two); only the un-abutted remainder is wall — unless it's a cross-plane seam (push_line).
         auto emit_boundary = [&](int poly_i, float x0, float x1, float y, int plane) {
             if (x1 - x0 <= 2.f) return;
             std::vector<std::pair<float, float>> cov;
@@ -583,11 +640,6 @@ namespace Pathing {
                     continue;
                 }
 
-                // The reverse: Build's two-neighbour top/bottom split hands the whole edge to the two neighbours (a
-                // 3-segment edge would exceed Detour's 6-vert poly cap), swallowing any wall stretch between them —
-                // e.g. a pillar whose base sits on the slab line. Re-emit the uncovered remainder via emit_boundary.
-                // This must run on the dup side too: these edges are asymmetric (different verts per side), so the
-                // gap exists only in the wider poly's segment and the other side can't recover it.
                 if (!wall && horizontal && !(p.neis[j] & DT_EXT_LINK)) {
                     const int ni = (int)p.neis[j] - 1;
                     const GW::PathingTrapezoid* tb = (ni >= 0 && ni < (int)m_poly_trap.size()) ? m_poly_trap[ni] : nullptr;
@@ -615,27 +667,36 @@ namespace Pathing {
     float NavMesh::DrapeHeightAt(float x, float y, float prev_z) const
     {
         if (!m_navmesh || m_poly_trap.empty()) return FLT_MAX;
-        // Point-locate directly against the source trapezoids (cheap: a Y-band reject skips almost everything).
-        // Among every plane whose walkable trapezoid contains (x,y), return the QueryAltitude surface closest to
-        // prev_z. So over a monument the only containing plane is the monument's -> the path rides it; under a
-        // bridge the floor plane contains it -> the path stays on the floor.
         float best = FLT_MAX, best_d = FLT_MAX;
-        for (uint32_t i = 0; i < m_ground_poly_count; ++i) {
+
+        const auto consider = [&](const uint32_t i) {
             const GW::PathingTrapezoid* t = m_poly_trap[i];
-            if (!t) continue;
+            if (!t) return;
             const float lo = std::min(t->YB, t->YT), hi = std::max(t->YB, t->YT);
-            if (y < lo || y > hi) continue; // cheap Y-band reject
+            if (y < lo || y > hi) return; // cheap Y-band reject
             const float denom = t->YT - t->YB;
             const float u = std::fabs(denom) > 1e-4f ? (y - t->YB) / denom : 0.f;
             const float lx = t->XBL + (t->XTL - t->XBL) * u;
             const float rx = t->XBR + (t->XTR - t->XBR) * u;
-            if (x < std::min(lx, rx) || x > std::max(lx, rx)) continue; // outside the trapezoid in X at this Y
+            if (x < std::min(lx, rx) || x > std::max(lx, rx)) return; // outside the trapezoid in X at this Y
             const int plane = m_poly_plane[i];
             const float z = TerrainDrape::QueryAltAt(x, y, static_cast<uint32_t>(plane)); // surface of THIS walkable plane at (x,y)
-            if (z == 0.f) continue;                       // out of this plane's data
+            if (z == 0.f) return;                         // out of this plane's data
             const float d = std::fabs(z - prev_z);
             if (d < best_d) { best_d = d; best = z; } // continuity: nearest walkable surface to where we already are
+        };
+
+        if (m_row_inv_h <= 0.f) { // no index: exhaustive scan
+            for (uint32_t i = 0; i < m_ground_poly_count; ++i) consider(i);
+            return best;
         }
+
+        const float rf = (y - m_row_min_y) * m_row_inv_h;
+        if (rf >= 0.f && rf < static_cast<float>(m_row_count)) {
+            const auto row = static_cast<uint32_t>(rf);
+            for (uint32_t k = m_row_start[row]; k < m_row_start[row + 1]; ++k) consider(m_row_items[k]);
+        }
+        for (const uint32_t i : m_tall_items) consider(i);
         return best;
     }
 

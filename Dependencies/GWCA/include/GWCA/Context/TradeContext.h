@@ -29,8 +29,7 @@ namespace GW {
         /* +h0010 */ TradePlayer player;
         /* +h0024 */ TradePlayer partner;
 
-        // bool GetPartnerAccepted();
-        // bool GetPartnerOfferSent();
+        // bool GetPartnerAccepted(); bool GetPartnerOfferSent();
 
         bool GetIsTradeOffered()   const { return (flags & TRADE_OFFER_SEND) != 0; }
         bool GetIsTradeInitiated() const { return (flags & TRADE_INITIATED)  != 0; }

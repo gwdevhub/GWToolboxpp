@@ -1,5 +1,8 @@
 #include "stdafx.h"
 #include "TextUtils.h"
+#include "TextUtils_Encoding.h"
+#include "TextUtils_Time.h"
+#include <cwchar>
 
 bool wcseq(const wchar_t* a, const wchar_t* b)
 {
@@ -7,6 +10,18 @@ bool wcseq(const wchar_t* a, const wchar_t* b)
 }
 
 namespace {
+    int portable_stricmp(const char* a, const char* b)
+    {
+        while (*a && *b) {
+            char c1 = static_cast<char>(std::tolower(static_cast<unsigned char>(*a)));
+            char c2 = static_cast<char>(std::tolower(static_cast<unsigned char>(*b)));
+            if (c1 != c2) return c1 - c2;
+            ++a;
+            ++b;
+        }
+        return static_cast<char>(std::tolower(static_cast<unsigned char>(*a))) - static_cast<char>(std::tolower(static_cast<unsigned char>(*b)));
+    }
+
     constexpr auto diacritics = std::to_array<const wchar_t*>({
         L"A\x0041\x0410\x24B6\xFF21\x00C0\x00C1\x00C2\x1EA6\x1EA4\x1EAA\x1EA8\x00C3\x0100\x0102\x1EB0\x1EAE\x1EB4\x1EB2\x0226\x01E0\x00C4\x01DE\x1EA2\x00C5\x01FA\x01CD\x0200\x0202\x1EA0\x1EAC\x1EB6\x1E00\x0104\x023A\x2C6F",
         L"B\x00DF\x0412\x0042\x24B7\xFF22\x1E02\x1E04\x1E06\x0243\x0182\x0181",
@@ -62,12 +77,6 @@ namespace {
         L"z\u007A\u24E9\uFF5A\u017A\u1E91\u017C\u017E\u1E93\u1E95\u01B6\u0225\u0240\u2C6C\uA763"
     });
     std::map<wchar_t, wchar_t> diacritics_charmap;
-
-    time_t filetime_to_timet(const FILETIME& ft)
-    {
-        const ULARGE_INTEGER ull{ft.dwLowDateTime, ft.dwHighDateTime};
-        return ull.QuadPart / 10000000ULL - 11644473600ULL;
-    }
 }
 
 namespace TextUtils {
@@ -159,57 +168,6 @@ namespace TextUtils {
         return result;
     }
 
-    std::string RemovePunctuation(std::string s)
-    {
-        std::erase_if(s, [](auto c) { return std::ispunct(c, std::locale()); });
-        return s;
-    }
-
-    std::wstring RemovePunctuation(std::wstring s)
-    {
-        std::erase_if(s, [](auto c) { return std::ispunct(c, std::locale()); });
-        return s;
-    }
-
-    std::string ToSlug(std::string s)
-    {
-        s = RemovePunctuation(s);
-        std::ranges::transform(s, s.begin(), [](const char c) {
-            if (c == ' ') {
-                return '_';
-            }
-            return std::tolower(c, std::locale());
-        });
-        return s;
-    }
-
-    std::wstring ToSlug(std::wstring s)
-    {
-        s = RemovePunctuation(s);
-        std::ranges::transform(s, s.begin(), [](const wchar_t c) {
-            if (c == L' ') {
-                return L'_';
-            }
-            return std::tolower(c, std::locale());
-        });
-        return s;
-    }
-
-    std::string ToLower(std::string s)
-    {
-        std::ranges::transform(s, s.begin(), [](const char c) {
-            return std::tolower(c, std::locale());
-        });
-        return s;
-    }
-
-    std::wstring ToLower(std::wstring s)
-    {
-        std::ranges::transform(s, s.begin(), [](const wchar_t c) {
-            return std::tolower(c, std::locale());
-        });
-        return s;
-    }
 
 
     std::wstring StripTags(std::wstring_view str)
@@ -261,12 +219,9 @@ namespace TextUtils {
     std::string GetFormattedDateTime()
     {
         auto now = std::chrono::system_clock::now();
-        auto time_t = std::chrono::system_clock::to_time_t(now);
+        time_t time_t_now = std::chrono::system_clock::to_time_t(now);
+        std::tm tm_buf = Time::SafeLocaltime(time_t_now);
 
-        std::tm tm_buf;
-        localtime_s(&tm_buf, &time_t);
-
-        // Format: "Jan 15, 2024 2:30 PM"
         char buffer[64];
         std::strftime(buffer, sizeof(buffer), "%b %d, %Y %I:%M %p", &tm_buf);
 
@@ -357,25 +312,12 @@ namespace TextUtils {
                ) == 11;
     }
 
-    // Convert an UTF8 string to a wide Unicode String
     std::wstring StringToWString(const std::string_view str)
     {
-        // @Cleanup: ASSERT used incorrectly here; value passed could be from anywhere!
         if (str.empty()) {
             return {};
         }
-        // NB: GW uses code page 0 (CP_ACP)
-        constexpr int try_code_pages[] = {CP_UTF8, CP_ACP};
-        for (const auto code_page : try_code_pages) {
-            const auto size_needed = MultiByteToWideChar(code_page, MB_ERR_INVALID_CHARS, str.data(), static_cast<int>(str.size()), nullptr, 0);
-            if (!size_needed)
-                continue;
-            std::wstring dest(size_needed, 0);
-            ASSERT(MultiByteToWideChar(code_page, 0, str.data(), static_cast<int>(str.size()), dest.data(), size_needed));
-            return dest;
-        }
-        ASSERT("Failed to convert" && false);
-        return {};
+        return Encoding::Utf8ToWide(str);
     }
 
     std::wstring Replace(const std::wstring_view subject, const std::wstring& pattern, const std::wstring& replacement)
@@ -391,25 +333,12 @@ namespace TextUtils {
         return std::regex_replace(subject_str, regex, replacement);
     }
 
-    // Convert a wide Unicode string to an UTF8 string
     std::string WStringToString(const std::wstring_view str)
     {
-        // @Cleanup: ASSERT used incorrectly here; value passed could be from anywhere!
         if (str.empty()) {
             return "";
         }
-        // NB: GW uses code page 0 (CP_ACP)
-        constexpr int try_code_pages[] = {CP_UTF8, CP_ACP};
-        for (const auto code_page : try_code_pages) {
-            const auto size_needed = WideCharToMultiByte(code_page, WC_ERR_INVALID_CHARS, str.data(), static_cast<int>(str.size()), nullptr, 0, nullptr, nullptr);
-            if (!size_needed)
-                continue;
-            std::string dest(size_needed, 0);
-            ASSERT(WideCharToMultiByte(code_page, 0, str.data(), static_cast<int>(str.size()), dest.data(), size_needed, nullptr, nullptr));
-            return dest;
-        }
-        ASSERT("Failed to convert" && false);
-        return {};
+        return Encoding::WideToUtf8(str);
     }
 
     // Makes sure the file name doesn't have chars that won't be allowed on disk
@@ -427,7 +356,7 @@ namespace TextUtils {
         // Reserved device names (case-insensitive, with or without extension)
         static constexpr std::array reserved = {"CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"};
         for (const auto& name : reserved) {
-            if (_stricmp(out.c_str(), name) == 0) {
+            if (portable_stricmp(out.c_str(), name) == 0) {
                 out += "_";
                 break;
             }
@@ -498,10 +427,89 @@ namespace TextUtils {
         return path;
     }
 
+    // "/pattern/flags", the syntax the chat filter has always used; unknown flag letters are ignored.
+    template <typename CharT>
+    SearchPattern<CharT>::SearchPattern(const std::basic_string_view<CharT> pattern, const Fallback fallback, std::regex_constants::syntax_option_type flags)
+        : source(pattern)
+    {
+        const auto last_slash = pattern.rfind(static_cast<CharT>('/'));
+        const bool slash_wrapped = pattern.starts_with(static_cast<CharT>('/')) && last_slash != 0 && last_slash != std::basic_string_view<CharT>::npos;
+        if (!slash_wrapped && fallback != Fallback::Regex) {
+            lowered = ToLower(std::basic_string<CharT>(pattern));
+            exact = fallback == Fallback::Exact;
+            return;
+        }
+        auto expression = pattern;
+        if (slash_wrapped) {
+            expression = pattern.substr(1, last_slash - 1);
+            for (const auto chr : pattern.substr(last_slash + 1)) {
+                switch (chr) {
+                    case 'i': flags |= std::regex_constants::icase; break;
+                    case 'I': flags &= ~std::regex_constants::icase; break;
+                    case 'c': flags |= std::regex_constants::collate; break;
+                    case 'n': flags |= std::regex_constants::nosubs; break;
+                    case 's': flags |= std::regex_constants::ECMAScript; break;
+                    case 'b': flags |= std::regex_constants::basic; break;
+                    case 'x': flags |= std::regex_constants::extended; break;
+                    case 'a': flags |= std::regex_constants::awk; break;
+                    case 'g': flags |= std::regex_constants::grep; break;
+                    case 'e': flags |= std::regex_constants::egrep; break;
+                    default: break;
+                }
+            }
+        }
+        try {
+            regex.emplace(expression.begin(), expression.end(), flags);
+        } catch (const std::regex_error&) {
+            valid = false;
+        }
+    }
+
+    template <typename CharT>
+    bool SearchPattern<CharT>::Matches(const std::basic_string_view<CharT> subject) const
+    {
+        if (!valid) return false;
+        if (regex) return std::regex_search(subject.begin(), subject.end(), *regex);
+        if (lowered.empty()) return false;
+        static constexpr auto fold_table = [] {
+            std::array<CharT, 256> table{};
+            for (size_t i = 0; i < 256; i++) {
+                const auto c = static_cast<CharT>(i);
+                table[i] = c >= static_cast<CharT>('A') && c <= static_cast<CharT>('Z') ? static_cast<CharT>(c | static_cast<CharT>(0x20)) : c;
+            }
+            return table;
+        }();
+        // `lowered` is already lowercased, so only the subject needs folding as we go.
+        const auto folded_equals = [](const CharT a, const CharT b) {
+            return (a >= 0 && static_cast<size_t>(a) < 256 ? fold_table[a] : a) == b;
+        };
+        if (exact) return std::ranges::equal(subject, lowered, folded_equals);
+        return !std::ranges::search(subject, lowered, folded_equals).empty();
+    }
+
+    template <typename CharT>
+    std::vector<SearchPattern<CharT>> ParsePatterns(const std::basic_string_view<CharT> text, const typename SearchPattern<CharT>::Fallback fallback, const std::regex_constants::syntax_option_type flags)
+    {
+        std::vector<SearchPattern<CharT>> patterns;
+        std::basic_istringstream<CharT> stream{std::basic_string<CharT>(text)};
+        std::basic_string<CharT> line;
+        while (std::getline(stream, line)) {
+            if (line.empty()) {
+                continue;
+            }
+            patterns.emplace_back(line, fallback, flags);
+        }
+        return patterns;
+    }
+
+    template class SearchPattern<char>;
+    template class SearchPattern<wchar_t>;
+    template std::vector<SearchPattern<char>> ParsePatterns(std::basic_string_view<char>, SearchPattern<char>::Fallback, std::regex_constants::syntax_option_type);
+    template std::vector<SearchPattern<wchar_t>> ParsePatterns(std::basic_string_view<wchar_t>, SearchPattern<wchar_t>::Fallback, std::regex_constants::syntax_option_type);
+
     std::wstring RemoveDiacritics(const std::wstring_view s)
     {
         if (diacritics_charmap.empty()) {
-            // Build static diacritics map if not already done so
             for (size_t i = 0; i < diacritics.size(); i++) {
                 for (size_t j = 1; diacritics[i][j]; j++) {
                     diacritics_charmap[diacritics[i][j]] = diacritics[i][0];
@@ -615,66 +623,34 @@ namespace TextUtils {
         return SanitizePlayerName(name);
     }
 
-    bool ParseInt(const char* str, int* val, const int base)
+    bool ParseInt(const char* str, int* val, int base)
     {
-        char* end;
-        *val = strtol(str, &end, base);
-        if (*end != 0 || errno == ERANGE) {
-            return false;
-        }
-
-        return true;
+        return Parse(str, val, base);
     }
 
-    bool ParseInt(const wchar_t* str, int* val, const int base)
+    bool ParseInt(const wchar_t* str, int* val, int base)
     {
-        wchar_t* end;
-        *val = wcstol(str, &end, base);
-        if (*end != 0 || errno == ERANGE) {
-            return false;
-        }
-
-        return true;
+        return Parse(str, val, base);
     }
 
-    bool ParseUInt(const char* str, unsigned int* val, const int base)
+    bool ParseUInt(const char* str, unsigned int* val, int base)
     {
-        char* end;
-        if (!str) {
-            return false;
-        }
-        *val = strtoul(str, &end, base);
-        if (str == end || errno == ERANGE) {
-            return false;
-        }
-        return true;
+        return Parse(str, val, base);
     }
 
-    bool ParseUInt(const wchar_t* str, unsigned int* val, const int base)
+    bool ParseUInt(const wchar_t* str, unsigned int* val, int base)
     {
-        wchar_t* end;
-        if (!str) {
-            return false;
-        }
-        *val = wcstoul(str, &end, base);
-        if (str == end || errno == ERANGE) {
-            return false;
-        }
-        return true;
+        return Parse(str, val, base);
     }
 
     bool ParseFloat(const char* str, float* val)
     {
-        char* end;
-        *val = strtof(str, &end);
-        return str != end && errno != ERANGE;
+        return Parse(str, val);
     }
 
     bool ParseFloat(const wchar_t* str, float* val)
     {
-        wchar_t* end;
-        *val = wcstof(str, &end);
-        return str != end && errno != ERANGE;
+        return Parse(str, val);
     }
 
     bool IsUrl(const wchar_t* str)
@@ -746,9 +722,8 @@ namespace TextUtils {
     {
         const time_t now = time(nullptr);
         if (!utc_timestamp) utc_timestamp = now;
-        std::tm timeinfo, nowinfo;
-        localtime_s(&timeinfo, &utc_timestamp);
-        localtime_s(&nowinfo, &now);
+        std::tm timeinfo = Time::SafeLocaltime(utc_timestamp);
+        std::tm nowinfo = Time::SafeLocaltime(now);
 
         std::string out;
         out.reserve(32);
@@ -773,98 +748,11 @@ namespace TextUtils {
         return TimeToString(static_cast<time_t>(utc_timestamp), include_seconds, milliseconds);
     }
 
-    std::string TimeToString(const FILETIME utc_timestamp, bool include_seconds, int milliseconds)
-    {
-        return TimeToString(filetime_to_timet(utc_timestamp), include_seconds, milliseconds);
-    }
-
     std::string FilenameTimestamp()
     {
-        SYSTEMTIME st;
-        GetLocalTime(&st);
-        char buf[32];
-        snprintf(buf, sizeof(buf), "%04d-%02d-%02d_%02d-%02d-%02d",
-                 st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
-        return buf;
+        return Time::FilenameTimestamp();
     }
 
-    std::vector<std::string> Split(const std::string& in, const std::string& token)
-    {
-        std::vector<std::string> result;
-        size_t start = 0;
-        size_t pos = 0;
-
-        while ((pos = in.find(token, start)) != std::string::npos) {
-            auto part = in.substr(start, pos - start);
-            if (!part.empty()) {
-                // Skip empty substrings
-                result.push_back(part);
-            }
-            start = pos + token.length();
-        }
-
-        // Add the last remaining part if it's not empty
-        auto lastPart = in.substr(start);
-        if (!lastPart.empty()) {
-            result.push_back(lastPart);
-        }
-
-        return result;
-    }
-    std::vector<std::wstring> Split(const std::wstring& in, const std::wstring& token)
-    {
-        std::vector<std::wstring> result;
-        size_t start = 0;
-        size_t pos = 0;
-
-        while ((pos = in.find(token, start)) != std::wstring::npos) {
-            auto part = in.substr(start, pos - start);
-            if (!part.empty()) {
-                // Skip empty substrings
-                result.push_back(part);
-            }
-            start = pos + token.length();
-        }
-
-        // Add the last remaining part if it's not empty
-        auto lastPart = in.substr(start);
-        if (!lastPart.empty()) {
-            result.push_back(lastPart);
-        }
-
-        return result;
-    }
-
-    std::wstring Join(const std::vector<std::wstring>& parts, const std::wstring& token)
-    {
-        std::wstring result;
-        bool first = true;
-        for (const auto& part : parts) {
-            if (!part.empty()) {
-                if (!first) {
-                    result += token;
-                }
-                result += part;
-                first = false;
-            }
-        }
-        return result;
-    }
-    std::string Join(const std::vector<std::string>& parts, const std::string& token)
-    {
-        std::string result;
-        bool first = true;
-        for (const auto& part : parts) {
-            if (!part.empty()) {
-                if (!first) {
-                    result += token;
-                }
-                result += part;
-                first = false;
-            }
-        }
-        return result;
-    }
 
     std::string UcWords(const std::string_view input)
     {

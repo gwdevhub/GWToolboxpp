@@ -6,6 +6,8 @@ import tailwindcss from '@tailwindcss/vite';
 import { rehypeHeadingIds } from '@astrojs/markdown-remark';
 import rehypeAutolinkHeadings from 'rehype-autolink-headings';
 
+// Legacy URLs (/linux → /docs/linux/) are handled by [legacySlug].astro to preserve fragment and query string.
+
 // Lucide "link" icon as a hast node, appended to each heading as a permalink.
 const linkIcon = {
   type: 'element',

@@ -3033,9 +3033,8 @@ namespace GW {
             Vow_of_Revolution,
             Heroic_Refrain,
             Reforged_Mode=0xD6A,
-            Dhuums_Covenant_Broken,
-            Count = 0xD6c
-        };
+            Dhuums_Covenant_Broken
+		};
 
         enum class SkillType {
             Bounty = 1,

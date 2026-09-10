@@ -62,7 +62,6 @@ public:
         Interrupted // "Interrupted" is received after "Stopped"
     };
 
-    // Death event tracking
     struct DeathEvent {
         uint32_t timestamp_ms;      // Match time when death occurred
         float position_x;           // X coordinate of death
@@ -75,7 +74,6 @@ public:
             : timestamp_ms(ts), position_x(x), position_y(y), killer_agent_id(killer), killing_skill_id(skill), is_npc(npc) {}
     };
 
-    // Morale boost event tracking
     struct MoraleBoostEvent {
         uint32_t timestamp_ms;      // Match time when morale boost occurred
         
@@ -139,9 +137,6 @@ public:
         const bool is_skill;
         const GW::Constants::SkillID skill_id;
 
-        // if the action was interrupted after it was finished (e.g. an attack skill that gets interrupted
-        // in the aftersting [once the skill has completed activation]) then we don't count as "interrupted"
-        // even if receiving an "interrupted" signal
         bool was_stopped = false;
         bool was_finished = false;
     };
@@ -154,9 +149,6 @@ public:
         size_t finished = 0;
         size_t interrupted = 0;
 
-        // should be zero at all times except when an action is not yet concluded
-        // used to indicate there may be inaccuracies in the stats due to due to
-        // inaccuracies in our modelling of the game engine
         int integrity = 0;
 
         // damage tracking
@@ -251,10 +243,8 @@ public:
         // skills received from other team (inc. npcs)
         ObservedAction total_skills_received_from_other_teams;
 
-        // fired when the agent dies
         void HandleDeath();
 
-        // fired when the agent scores a kill
         void HandleKill();
     };
 
@@ -392,20 +382,13 @@ public:
         // latest action (attack/skill) the agent was undertaking
         TargetAction* current_target_action = nullptr;
 
-        // last_hit_by tells us who killed the player if they die
-        // MUST be a party_member (e.g. not a footman)
-        // Not literally who is responsible for the kill, but may help
-        // account for degen / npc steals / such.
-        // It's a for fun stat so don't take it too serious
         uint32_t last_hit_by = NO_AGENT;
         
         // Track the skill that last damaged this agent (for death tracking)
         GW::Constants::SkillID last_damage_skill_id = NO_SKILL;
 
-        // Track if agent is currently dead
         bool is_dead = false;
         
-        // Track who last used a resurrection skill on this agent
         uint32_t last_resurrector = NO_AGENT;
 
         // TODO: last_hit_at to limit the kill window
@@ -413,13 +396,10 @@ public:
         bool is_player;
         bool is_npc;
 
-        // stats:
         ObservableAgentStats stats;;
 
-        // Death event (if agent died)
         std::vector<DeathEvent> death_events;
         
-        // Resurrection events (if agent was resurrected)
         std::vector<ResurrectionEvent> resurrection_events;
 
         // name fns with excessive caching & lazy loading
@@ -497,9 +477,6 @@ public:
 
         uint32_t party_id;
 
-        // guild_id and name are inferred from the guilds members
-        // TODO: get the actual teams guild/name from memory,
-        // instead of guessing
         uint32_t guild_id = NO_GUILD;
         uint32_t rating = NO_RATING;
         uint32_t rank = NO_RANK;
@@ -519,7 +496,6 @@ public:
 
         bool SynchroniseParty();
 
-        // agent_ids representing the players
         std::vector<uint32_t> agent_ids = {};
 
         // Aggregate party health snapshots (every 15 seconds)
@@ -672,7 +648,6 @@ private:
     void HandleHealingDone(uint32_t caster_id, uint32_t target_id, float amount_pc);
     void HandleAgentAdd(uint32_t agent_id);
 
-    // Helper function to get or cache max HP for an agent
     uint32_t GetOrCacheMaxHP(uint32_t agent_id);
 
     void HandleAttackFinished(uint32_t agent_id);

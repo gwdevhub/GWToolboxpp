@@ -24,6 +24,7 @@
 #include <ImGuiAddons.h>
 #include <Defender.h>
 #include <Modules/Resources.h>
+#include <Timer.h>
 #include <Utils/FontLoader.h>
 #include <Utils/TextUtils.h>
 
@@ -884,14 +885,12 @@ namespace {
 
     IDirect3DTexture9* LastCreatedTexture = nullptr;
 
-    // Hook Release to clean up tracking
     ULONG WINAPI OnD3D9TextureRelease(IDirect3DTexture9* texture)
     {
         GW::Hook::EnterHook();
         ULONG ref = TextureRelease_Ret(texture);
         if (ref == 0) {
             if (texture == LastCreatedTexture) LastCreatedTexture = 0;
-            // Remove from hash map if present
             for (auto it = dx9_textures_created_by_hash.begin(); it != dx9_textures_created_by_hash.end();) {
                 if (it->second == texture) {
                     it = dx9_textures_created_by_hash.erase(it);
@@ -923,7 +922,6 @@ namespace {
 
         // Only track managed/system-mem textures (lockable, survive reset); skip D3DPOOL_DEFAULT (unsafe to lock, and a held ref would block device reset).
         if (SUCCEEDED(result) && *ppTexture && Pool != D3DPOOL_DEFAULT) {
-            // Hook Release on first texture creation
             if (!TextureRelease_Func) {
                 uintptr_t* texture_vtable = *reinterpret_cast<uintptr_t**>(*ppTexture);
                 constexpr int RELEASE_INDEX = 2;
@@ -946,7 +944,6 @@ namespace {
             if (!CreateDx9Texture_Func) {
                 IDirect3DDevice9* device = GW::Render::GetDevice();
                 if (!device) return;
-                // Get vtable pointer
                 uintptr_t* vtable = *reinterpret_cast<uintptr_t**>(device);
                 // CreateTexture is at index 23 in IDirect3DDevice9 vtable
                 constexpr int CREATE_TEXTURE_INDEX = 23;
@@ -955,7 +952,6 @@ namespace {
                 GW::Hook::EnableHooks(CreateDx9Texture_Func);
             }
 
-            // Hook texture Release to track when textures are destroyed
             if (!TextureRelease_Func) {
                 // Create a temporary dummy texture to get its vtable.
                 IDirect3DTexture9* temp_texture = nullptr;
@@ -1138,6 +1134,9 @@ void TexmodModule::Update(float)
     }
 
     if (gmodReady) return;
+    static clock_t last_init_attempt = 0;
+    if (last_init_attempt && TIMER_DIFF(last_init_attempt) < 1000) return;
+    last_init_attempt = TIMER_INIT();
     InitGMod();
 }
 

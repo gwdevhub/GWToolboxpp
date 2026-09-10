@@ -182,19 +182,16 @@ void Pcon::Terminate()
 void Pcon::Update(int delay)
 {
     if (mapid != GW::Map::GetMapID() || maptype != GW::Map::GetInstanceType()) {
-        // Map changed; reset vars
         mapid = GW::Map::GetMapID();
         maptype = GW::Map::GetInstanceType();
         SetPlayerName();
         ResetCounts();
         Refill(refill_if_below_threshold && IsEnabled() && PconsWindow::Instance().GetEnabled());
     }
-    // Refill pcons if needed.
     UpdateRefill();
     if (maptype == GW::Constants::InstanceType::Loading || GW::Map::GetIsObserving()) {
         return;
     }
-    // Check pcon count in inventory
     if (!pcon_quantity_checked) {
         const auto qty = CheckInventory();
         if (qty < 0) {
@@ -272,7 +269,6 @@ void Pcon::AfterUsed(const bool used, const int qty)
         if (used) {
             timer = TIMER_INIT();
             if (quantity == 0) {
-                // if we just used the last one
                 mapid = GW::Map::GetMapID();
                 maptype = GW::Map::GetInstanceType();
                 Log::Warning("Just used the last %s", chat.c_str());
@@ -299,7 +295,6 @@ void Pcon::AfterUsed(const bool used, const int qty)
 
 bool Pcon::FindVacantStackOrSlotInInventory(const GW::Item* likeItem, GW::Item* result)
 {
-    // Scan bags, find an incomplete stack, or otherwise an empty slot.
     GW::Bag** bags = GW::Items::GetBagArray();
     if (bags == nullptr) {
         return false;
@@ -322,7 +317,6 @@ bool Pcon::FindVacantStackOrSlotInInventory(const GW::Item* likeItem, GW::Item* 
             const size_t slotIndex = i - 1;
             GW::Item* item = items[slotIndex];
             if (!item || item == nullptr) {
-                // Reserve this slot for later
                 if (!emptyBag && ReserveSlotForMove(bag->index, slotIndex)) {
                     emptySlotIdx = slotIndex;
                     emptyBag = bag;
@@ -473,9 +467,6 @@ void Pcon::UpdateRefill()
         return;
     }
 
-    // Lambda that scans storage for a matching item and moves it to inventory.
-    // If preferred_model_id != 0, only items with that model_id are considered.
-    // Returns true if a move was initiated, false if no matching item was found.
     auto try_move_from_storage = [&](DWORD preferred_model_id) -> bool {
         GW::Item inventoryItem;
         for (auto bagIndex = static_cast<size_t>(GW::Constants::Bag::Storage_1); bagIndex <= static_cast<size_t>(GW::Constants::Bag::Storage_14); ++bagIndex) {

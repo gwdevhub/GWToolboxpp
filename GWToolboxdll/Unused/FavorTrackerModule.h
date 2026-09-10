@@ -31,6 +31,5 @@ public:
     static const wchar_t* GetFavorMessageW();
     static const char* GetFavorMessage();
 
-    // Returns true if favor is currently active
     static bool HasFavor();
 };

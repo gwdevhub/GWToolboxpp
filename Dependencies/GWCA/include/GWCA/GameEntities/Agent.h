@@ -6,6 +6,7 @@
 #include <GWCA/Constants/Constants.h>
 
 #include <GWCA/GameEntities/Item.h>
+#include <GWCA/Utilities/Export.h>
 
 namespace GW {
     typedef uint32_t AgentID;
@@ -90,19 +91,12 @@ namespace GW {
         /* +h0109 */ uint8_t offhand_item_type;     // Offhand item type for stance/animation
         /* +h010A */ uint16_t offhand_item_id;      // Offhand item id for stance/animation
 
-        inline uint32_t GetType() {
-            return vtable->GetType(this);
-        }
-        inline bool RedrawEquipmentSlot(uint32_t slot) {
-            if (!(slot < _countof(items) && items[slot].model_file_id))
-                return false;
-            return vtable->EquipItem(this, 0, slot), true;
-        }
-        inline bool UndrawEquipmentSlot(uint32_t slot) {
-            if (!(slot < _countof(items) && items[slot].model_file_id))
-                return false;
-            return vtable->RemoveItem(this, 0, slot), true;
-        }
+        // These three call through the game's vtable (see Source/Agent.cpp) -- kept
+        // out of line so the wasm table-adoption dance stays an implementation
+        // detail rather than something every caller's translation unit compiles.
+        GWCA_API uint32_t GetType();
+        GWCA_API bool RedrawEquipmentSlot(uint32_t slot);
+        GWCA_API bool UndrawEquipmentSlot(uint32_t slot);
     };
     static_assert(sizeof(NPCEquipment) == 0x10C);
 
@@ -145,6 +139,30 @@ namespace GW {
     struct AgentGadget;
     struct AgentLiving;
 
+	// Bits in GW::Agent::name_properties, which AvAgent.cpp recomputes name tag visibility from.
+	enum NameTagFlags : uint32_t {
+		// In the mouse pick list; cleared wholesale whenever that list is rebuilt.
+		NameTagFlags_Picked = 0x8,
+		// Moused-over agent: underlines the tag, glows the model, draws the selection decal.
+		NameTagFlags_Highlighted = 0x10,
+		// Within name tag draw distance (1500 gwinches from the camera).
+		NameTagFlags_InRange = 0x20,
+		// The evaluated target - manual target, else auto target.
+		NameTagFlags_EvaluatedTarget = 0x80,
+		// The manual target, while a different auto target exists.
+		NameTagFlags_ManualTarget = 0x100,
+		// Name tags globally suppressed (cutscenes, /hideui); refcounted by the client.
+		NameTagFlags_Suppressed = 0x200,
+		// Agent::type passes the persistent filter from the Guild Wars name tag options.
+		NameTagFlags_PassesFilter = 0x400,
+		// Dropped item reserved for another player, so it never gets a distance-based tag.
+		NameTagFlags_NotOwnedByPlayer = 0x800,
+		// Agent::type passes the transient filter, bound to the "show item names" key.
+		NameTagFlags_PassesTransientFilter = 0x1000,
+		// Name tag disabled for this agent regardless of any filter.
+		NameTagFlags_Disabled = 0x20000
+	};
+
     struct Agent {
         /* +h0000 */ uint32_t* vtable;
         /* +h0004 */ uint32_t h0004;
@@ -165,7 +183,7 @@ namespace GW {
         /* +h004C */ float rotation_angle; // Rotation in radians from East (-pi to pi)
         /* +h0050 */ float rotation_cos; // cosine of rotation
         /* +h0054 */ float rotation_sin; // sine of rotation
-        /* +h0058 */ uint32_t name_properties; // Bitmap basically telling what the agent is
+        /* +h0058 */ NameTagFlags name_properties; // Bitmap basically telling what the agent is
         /* +h005C */ uint32_t ground;
         /* +h0060 */ uint32_t h0060;
         /* +h0064 */ Vec3f terrain_normal;

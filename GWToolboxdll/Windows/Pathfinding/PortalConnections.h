@@ -14,17 +14,10 @@ namespace Pathing {
         Dummy,          // one-way: arbitrary marker position (yellow)
     };
 
-    // Types whose connections default to one-way when first created (position
-    // markers / NPC teleports have no inherent return path). This only seeds the
-    // one_way flag in the editor — actual directionality is the flag alone (see
-    // IsOneWay), so a Dummy/NPC connection can still be made bidirectional.
     inline bool DefaultsToOneWay(ConnectionType t) {
         return t == ConnectionType::Dummy || t == ConnectionType::NPC;
     }
 
-    // Kind of agent stored in an NPC endpoint. The "NPC" name is kept for the
-    // ConnectionType enum and JSON for backwards compat, but the storage now
-    // supports both AgentLiving (NPCs) and AgentGadget (signposts, statues, etc).
     enum class AgentKind : uint8_t {
         Living = 0,  // AgentLiving — model_id stores player_number
         Gadget = 1,  // AgentGadget — model_id stores gadget_id
@@ -74,10 +67,8 @@ namespace Pathing {
         const std::vector<PortalConnection>& GetAll() const { return connections; }
         size_t Count() const { return connections.size(); }
 
-        // Get all connections involving a specific map
         std::vector<const PortalConnection*> GetConnectionsForMap(GW::Constants::MapID map) const;
 
-        // Get connections between two specific maps
         std::vector<const PortalConnection*> GetConnectionsBetween(
             GW::Constants::MapID a, GW::Constants::MapID b) const;
 
@@ -89,7 +80,6 @@ namespace Pathing {
         // Check if any connection exists between two maps (ignoring positions)
         bool HasConnection(GW::Constants::MapID from, GW::Constants::MapID to) const;
 
-        // Cost multiplier for a connection type
         static float GetCostMultiplier(ConnectionType type);
 
     private:

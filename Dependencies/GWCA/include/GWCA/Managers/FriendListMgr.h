@@ -27,14 +27,15 @@ namespace GW {
             HookEntry* entry);
         GWCA_API bool AddFriend(const wchar_t* name, const wchar_t* alias = nullptr);
         GWCA_API bool AddIgnore(const wchar_t* name, const wchar_t* alias = nullptr);
+        // Fire-and-forget, like AddFriend: true means the request was queued (it
+        // may need the Friends window to finish opening across a few game ticks
+        // first), not that the row is gone by the time this returns.
         GWCA_API bool RemoveFriend(Friend* _friend);
         GWCA_API bool ChangeFriendType(Friend* _friend, FriendType type);
     };
 }
 
-// ============================================================
 // C Interop API
-// ============================================================
 extern "C" {
     GWCA_API void* GetFriendList();
     GWCA_API void* GetFriendByIndex(uint32_t index);

@@ -7,18 +7,6 @@
 namespace {
     const char* GetWikiPrefix()
     {
-        /*uint32_t language = GW::UI::GetPreference(GW::UI::Preference_TextLanguage);
-        char* wiki_prefix = "https://wiki.guildwars.com/wiki/";
-        switch (static_cast<GW::Constants::MapLanguage>(language)) {
-        case GW::Constants::MapLanguage::German: // German wiki
-            wiki_prefix = "https://www.guildwiki.de/wiki/";
-            break;
-        case GW::Constants::MapLanguage::French: // French wiki
-            wiki_prefix = "https://www.gwiki.fr/w/index.php";
-            break;
-
-        }
-        return wiki_prefix;*/
         return "https://wiki.guildwars.com/wiki/";
     }
 
@@ -297,7 +285,6 @@ namespace PluginUtils {
         return out;
     }
 
-    // Convert a wide Unicode string to an UTF8 string
     std::string WStringToString(const std::wstring& s)
     {
         // @Cleanup: ASSERT used incorrectly here; value passed could be from anywhere!
@@ -351,7 +338,6 @@ namespace PluginUtils {
     std::wstring RemoveDiacritics(const std::wstring& s)
     {
         if (diacritics_charmap.empty()) {
-            // Build static diacritics map if not already done so
             for (size_t i = 0; i < _countof(diacritics); i++) {
                 for (size_t j = 1; diacritics[i][j]; j++) {
                     diacritics_charmap[diacritics[i][j]] = diacritics[i][0];
@@ -369,7 +355,6 @@ namespace PluginUtils {
         return out;
     }
 
-    // Convert an UTF8 string to a wide Unicode String
     std::wstring StringToWString(const std::string& str)
     {
         // @Cleanup: ASSERT used incorrectly here; value passed could be from anywhere!

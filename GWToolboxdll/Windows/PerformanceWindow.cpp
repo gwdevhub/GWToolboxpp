@@ -13,7 +13,6 @@
 namespace {
     PerformanceWindow::Settings settings;
 
-    // QPC helper
     uint64_t QpcToMicroseconds(LONGLONG ticks)
     {
         static LARGE_INTEGER freq = [] { LARGE_INTEGER f; QueryPerformanceFrequency(&f); return f; }();
@@ -97,16 +96,16 @@ namespace {
 
     // Ring buffer of 1-second snapshots
     Stats hist_frame[WINDOW_SECONDS], hist_tb_update[WINDOW_SECONDS], hist_tb_draw[WINDOW_SECONDS], hist_present[WINDOW_SECONDS];
-    std::map<std::string, ModuleStats> hist_modules[WINDOW_SECONDS];
+    std::map<std::string, ModuleStats, std::less<>> hist_modules[WINDOW_SECONDS];
     int hist_index = 0;
 
     // Displayed stats (merged from ring buffer)
     Stats displayed_frame, displayed_tb_update, displayed_tb_draw, displayed_present;
-    std::map<std::string, ModuleStats> displayed_modules;
+    std::map<std::string, ModuleStats, std::less<>> displayed_modules;
 
     // Accumulating stats (current 1s window)
     Stats acc_frame, acc_tb_update, acc_tb_draw, acc_present;
-    std::map<std::string, ModuleStats> acc_modules;
+    std::map<std::string, ModuleStats, std::less<>> acc_modules;
     DWORD window_start_tick = 0;
 
     // Raw 1s accumulator values, so true averages can be recomputed offline
@@ -171,7 +170,6 @@ namespace {
     {
         if (settings.stream_to_csv) StreamSnapshotToCsv(tick);
 
-        // Store current 1s snapshot into ring buffer
         hist_frame[hist_index] = acc_frame;
         hist_tb_update[hist_index] = acc_tb_update;
         hist_tb_draw[hist_index] = acc_tb_draw;
@@ -179,7 +177,6 @@ namespace {
         hist_modules[hist_index] = acc_modules;
         hist_index = (hist_index + 1) % WINDOW_SECONDS;
 
-        // Merge all snapshots in the ring buffer
         displayed_frame = {};
         displayed_tb_update = {};
         displayed_tb_draw = {};
@@ -200,7 +197,6 @@ namespace {
             }
         }
 
-        // Reset accumulators for next 1s window
         acc_frame = {};
         acc_tb_update = {};
         acc_tb_draw = {};
@@ -283,7 +279,6 @@ void PerformanceWindow::Draw(IDirect3DDevice9* device)
     }
     HookPresent(device);
 
-    // Frame period tracking
     static LARGE_INTEGER prev_frame_qpc = {};
     {
         LARGE_INTEGER now;
@@ -295,13 +290,14 @@ void PerformanceWindow::Draw(IDirect3DDevice9* device)
         prev_frame_qpc = now;
     }
 
-    // Accumulate per-module times
     uint64_t total_update_us = 0, total_draw_us = 0;
 
     for (const auto* m : GWToolbox::GetAllModules()) {
         const bool has_data = m->last_update_time_us_ || m->last_draw_time_us_ || !m->last_ui_message_times_us_.empty();
         if (!has_data) continue;
-        auto& ms = acc_modules[m->Name()];
+        auto found = acc_modules.find(m->Name());
+        if (found == acc_modules.end()) found = acc_modules.emplace(m->Name(), ModuleStats{}).first;
+        auto& ms = found->second;
         ms.update.Record(m->last_update_time_us_);
         ms.draw.Record(m->last_draw_time_us_);
         for (auto& [msg_id, time_us] : m->last_ui_message_times_us_) {
@@ -316,7 +312,6 @@ void PerformanceWindow::Draw(IDirect3DDevice9* device)
     if (total_draw_us > 0) acc_tb_draw.Record(total_draw_us);
     if (present_time_us > 0) acc_present.Record(present_time_us);
 
-    // Flush every 1s
     const DWORD now = GetTickCount();
     if (window_start_tick == 0) window_start_tick = now;
     if (now - window_start_tick >= 1000) {
@@ -332,12 +327,12 @@ void PerformanceWindow::Draw(IDirect3DDevice9* device)
 
     struct DisplayEntry {
         const char* name;
-        ModuleStats stats;
+        const ModuleStats* stats;
     };
     static std::vector<DisplayEntry> entries;
     entries.clear();
     for (const auto& [name, ms] : displayed_modules) {
-        entries.push_back({name.c_str(), ms});
+        entries.push_back({name.c_str(), &ms});
     }
 
     if (ImGui::BeginTabBar("##perf_tabs")) {
@@ -421,26 +416,33 @@ void PerformanceWindow::Draw(IDirect3DDevice9* device)
                         uint64_t va = 0, vb = 0;
                         switch (static_cast<SortColMod>(spec.ColumnUserID)) {
                             case MCN:       return asc ? strcmp(a.name, b.name) < 0 : strcmp(a.name, b.name) > 0;
-                            case MCUpdAvg:  va = a.stats.update.Avg(); vb = b.stats.update.Avg(); break;
-                            case MCUpdMax:  va = a.stats.update.max_us; vb = b.stats.update.max_us; break;
-                            case MCDrawAvg: va = a.stats.draw.Avg(); vb = b.stats.draw.Avg(); break;
-                            case MCDrawMax: va = a.stats.draw.max_us; vb = b.stats.draw.max_us; break;
+                            case MCUpdAvg:  va = a.stats->update.Avg(); vb = b.stats->update.Avg(); break;
+                            case MCUpdMax:  va = a.stats->update.max_us; vb = b.stats->update.max_us; break;
+                            case MCDrawAvg: va = a.stats->draw.Avg(); vb = b.stats->draw.Avg(); break;
+                            case MCDrawMax: va = a.stats->draw.max_us; vb = b.stats->draw.max_us; break;
                             default: return false;
                         }
                         return asc ? va < vb : va > vb;
                     });
                 }
 
-                for (const auto& e : mod_entries) {
-                    const uint64_t total_avg = e.stats.update.Avg() + e.stats.draw.Avg();
-                    ImGui::TableNextRow();
-                    ImGui::TableNextColumn();
-                    if (total_avg >= static_cast<uint64_t>(settings.slow_threshold_us))
-                        ImGui::TextColored(ImVec4(1.f, 0.3f, 0.3f, 1.f), "%s", e.name);
-                    else
-                        ImGui::TextUnformatted(e.name);
-                    DrawStatsColumns(e.stats.update);
-                    DrawStatsColumns(e.stats.draw);
+                // Every module has a row but only a dozen fit on screen; submitting all of them
+                // made this window one of the most expensive things it was measuring.
+                ImGuiListClipper clipper;
+                clipper.Begin(static_cast<int>(mod_entries.size()));
+                while (clipper.Step()) {
+                    for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; row++) {
+                        const auto& e = mod_entries[row];
+                        const uint64_t total_avg = e.stats->update.Avg() + e.stats->draw.Avg();
+                        ImGui::TableNextRow();
+                        ImGui::TableNextColumn();
+                        if (total_avg >= static_cast<uint64_t>(settings.slow_threshold_us))
+                            ImGui::TextColored(ImVec4(1.f, 0.3f, 0.3f, 1.f), "%s", e.name);
+                        else
+                            ImGui::TextUnformatted(e.name);
+                        DrawStatsColumns(e.stats->update);
+                        DrawStatsColumns(e.stats->draw);
+                    }
                 }
                 ImGui::EndTable();
             }
@@ -504,18 +506,23 @@ void PerformanceWindow::Draw(IDirect3DDevice9* device)
                         });
                     }
 
-                    for (const auto& e : ui_entries) {
-                        ImGui::TableNextRow();
-                        ImGui::TableNextColumn();
-                        if (e.stats.Avg() >= static_cast<uint64_t>(settings.slow_threshold_us))
-                            ImGui::TextColored(ImVec4(1.f, 0.3f, 0.3f, 1.f), "%s", e.module_name);
-                        else
-                            ImGui::TextUnformatted(e.module_name);
-                        ImGui::TableNextColumn();
-                        ImGui::Text("0x%04X", e.msg_id);
-                        DrawStatsColumns(e.stats);
-                        ImGui::TableNextColumn();
-                        ImGui::Text("%u", e.stats.count);
+                    ImGuiListClipper clipper;
+                    clipper.Begin(static_cast<int>(ui_entries.size()));
+                    while (clipper.Step()) {
+                        for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; row++) {
+                            const auto& e = ui_entries[row];
+                            ImGui::TableNextRow();
+                            ImGui::TableNextColumn();
+                            if (e.stats.Avg() >= static_cast<uint64_t>(settings.slow_threshold_us))
+                                ImGui::TextColored(ImVec4(1.f, 0.3f, 0.3f, 1.f), "%s", e.module_name);
+                            else
+                                ImGui::TextUnformatted(e.module_name);
+                            ImGui::TableNextColumn();
+                            ImGui::Text("0x%04X", e.msg_id);
+                            DrawStatsColumns(e.stats);
+                            ImGui::TableNextColumn();
+                            ImGui::Text("%u", e.stats.count);
+                        }
                     }
                     ImGui::EndTable();
                 }

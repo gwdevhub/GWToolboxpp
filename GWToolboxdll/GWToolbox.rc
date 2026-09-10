@@ -96,6 +96,8 @@ END
 // RCDATA
 //
 
+#include "gwca_embed_stamp.h"
+
 IDR_GWCA_DLL            RCDATA                  "..\\Dependencies\\GWCA\\bin\\gwca.dll"
 IDR_PORTAL_CONNECTIONS_JSON RCDATA              "Windows\\Pathfinding\\portal_connections.json"
 

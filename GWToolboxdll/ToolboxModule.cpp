@@ -1,24 +1,31 @@
 #include "stdafx.h"
 
 #include <ToolboxModule.h>
+#ifndef __EMSCRIPTEN__
+// GWToolbox.h drags in the whole module graph, out of scope for the wasm build's curated source list; only IsProfilingEnabled() needs it, and that path is skipped under Emscripten anyway.
 #include <GWToolbox.h>
+#endif
 
 namespace {
+#ifndef __EMSCRIPTEN__
     uint64_t QpcToMicroseconds(LONGLONG ticks)
     {
         static LARGE_INTEGER freq = [] { LARGE_INTEGER f; QueryPerformanceFrequency(&f); return f; }();
         return static_cast<uint64_t>(ticks * 1000000 / freq.QuadPart);
     }
+#endif
 
-    // static function to register content
     std::unordered_map<std::string, SectionDrawCallbackList> settings_draw_callbacks{};
     std::unordered_map<std::string, const char*> settings_icons{};
     std::unordered_map<std::string, ToolboxModule*> modules_loaded{};
 
     std::unordered_map<ToolboxModule*, std::vector<SectionDrawCallback>> module_setting_draw_callbacks;
+
+    uint32_t settings_draw_callbacks_revision = 0;
 } // namespace
 
 const std::unordered_map<std::string, SectionDrawCallbackList>& ToolboxModule::GetSettingsCallbacks() { return settings_draw_callbacks; }
+uint32_t ToolboxModule::GetSettingsCallbacksRevision() { return settings_draw_callbacks_revision; }
 const std::unordered_map<std::string, const char*>& ToolboxModule::GetSettingsIcons() { return settings_icons; }
 const std::unordered_map<std::string, ToolboxModule*>& ToolboxModule::GetModulesLoaded() { return modules_loaded; }
 
@@ -43,13 +50,13 @@ void ToolboxModule::SaveSettings(SettingsDoc& doc)
 void ToolboxModule::Terminate()
 {
     SettingsRegistry::Unregister(this);
-    // Remove any settings draw callbacks associated with this module
     auto callbacks_it = settings_draw_callbacks.begin();
     while (callbacks_it != settings_draw_callbacks.end()) {
         auto modules_it = callbacks_it->second.begin();
         while (modules_it != callbacks_it->second.end()) {
             if (modules_it->module == this) {
                 callbacks_it->second.erase(modules_it);
+                settings_draw_callbacks_revision++;
                 modules_it = callbacks_it->second.begin();
                 continue;
             }
@@ -87,6 +94,7 @@ void ToolboxModule::RegisterUIMessageCallback(
 {
     GW::UI::RegisterUIMessageCallback(entry, message_id,
         [this, callback](GW::HookStatus* status, GW::UI::UIMessage msg, void* wparam, void* lparam) {
+#ifndef __EMSCRIPTEN__
             if (GWToolbox::IsProfilingEnabled()) {
                 LARGE_INTEGER t0, t1;
                 QueryPerformanceCounter(&t0);
@@ -94,7 +102,9 @@ void ToolboxModule::RegisterUIMessageCallback(
                 QueryPerformanceCounter(&t1);
                 last_ui_message_times_us_[static_cast<uint32_t>(msg)] += QpcToMicroseconds(t1.QuadPart - t0.QuadPart);
             }
-            else {
+            else
+#endif
+            {
                 callback(status, msg, wparam, lparam);
             }
         },
@@ -123,4 +133,5 @@ void ToolboxModule::RegisterSettingsContent(const char* section, const char* ico
         return pair.weighting > weighting;
     });
     callbacks.insert(it, {weighting, callback, this});
+    settings_draw_callbacks_revision++;
 }

@@ -35,6 +35,7 @@ namespace {
     // Test overlays against the scene depth buffer so world geometry hides them.
     bool occlude_behind_terrain = false;
 
+    float z_lift = 2.f; // raise above the surface so lines draw on top of terrain instead of z-fighting it (GW up is -z)
 
     GameWorldRenderer::RenderableVectors renderables;
     std::mutex renderables_mutex{};
@@ -119,32 +120,7 @@ namespace {
         return a * t + b * (1.f - t);
     }
 
-    constexpr auto ALTITUDE_UNKNOWN = std::numeric_limits<float>::max();
-
-    // Highest static surface at (x,y) among candidate planes (GW up is -z, so highest = min altitude). QueryAltitude returns 0.f out-of-bounds (ignored); ALTITUDE_UNKNOWN if no plane has data.
-    float HighestSurfaceZ(const float x, const float y, const std::vector<uint32_t>& planes)
-    {
-        float best = ALTITUDE_UNKNOWN;
-        for (const uint32_t zp : planes) {
-            const float a = TerrainDrape::QueryAltAt(x, y, zp);
-            if (a != 0.f && (best == ALTITUDE_UNKNOWN || a < best))
-                best = a;
-        }
-        return best;
-    }
-
-    // Surface altitude at (x,y) closest to `prev` over all planes (continuity tracking): the line follows whichever surface it walks (deck/ramp/ground), so a straight visgraph edge rides a bridge instead of cutting through, and unlike "highest wins" never floats a ground sample onto an overhead deck. 0.f is out-of-bounds (skipped); ALTITUDE_UNKNOWN if no data.
-    float ClosestSurfaceZ(const float x, const float y, const uint32_t num_planes, const float prev)
-    {
-        float best = ALTITUDE_UNKNOWN, best_d = std::numeric_limits<float>::max();
-        for (uint32_t zp = 0; zp < num_planes; ++zp) {
-            const float a = TerrainDrape::QueryAltAt(x, y, zp);
-            if (a == 0.f) continue;
-            const float d = std::abs(a - prev);
-            if (d < best_d) { best_d = d; best = a; }
-        }
-        return best;
-    }
+    constexpr auto ALTITUDE_UNKNOWN = TerrainDrape::kNoAltitude;
 
     // ===== Batched navmesh-overlay line buffer =====
     // One line-list buffer for the navmesh overlay's tens of thousands of edges (per-line CustomLines were O(N^2) per map-load and re-draped on every move): drape it incrementally on the game thread, draw in a single call, render-thread only (no mutex).
@@ -182,17 +158,13 @@ namespace {
             const auto& ln = b.lines[b.build_cursor];
             const float dx = ln.b.x - ln.a.x, dy = ln.b.y - ln.a.y;
             const int steps = std::max(1, static_cast<int>(std::sqrt(dx * dx + dy * dy) / spacing));
-            // Drape each sample on the edge's OWN plane. A navmesh edge lies on a single trapezoid, so its surface IS
-            // that plane's heightfield (which ramps/steps where the floor does). Querying the plane directly per point —
-            // not the globally-closest surface — makes the line ride that surface: flat stays flat, a ramp rises, a
-            // deck stays on the deck, and an edge under a bridge stays on the ground rather than snapping to the deck.
-            // Sampling density is `spacing` gw; each surface query is exact at that point, so the only error is the chord
-            // between samples — tighten `spacing` to shrink it.
+            // Drape each sample on the edge's OWN plane (an edge lies on a single trapezoid, so that plane's heightfield
+            // IS its surface): unlike a globally-closest query, an edge under a bridge stays on the ground.
             const uint32_t plane = ln.a.zplane; // == ln.b.zplane: both verts come from the same trapezoid
             auto surfaceZ = [&](float x, float y, float fallback) -> float {
                 const float a = TerrainDrape::QueryAltAt(x, y, plane);
                 if (a != 0.f) return a;                                      // edge's plane has floor here (the common case)
-                const float c = ClosestSurfaceZ(x, y, num_planes, fallback); // only at an edge lip with no plane surface
+                const float c = TerrainDrape::ClosestZ(x, y, num_planes, fallback); // only at an edge lip with no plane surface
                 return c == ALTITUDE_UNKNOWN ? fallback : c;
             };
             float prev = surfaceZ(ln.a.x, ln.a.y, 0.f);
@@ -313,19 +285,13 @@ namespace {
                     candidate_planes.push_back(pt.zplane);
             }
             for (size_t i = poly.vertices_processed; i < vertices.size(); i++, poly.vertices_processed++)
-                vertices[i].z = HighestSurfaceZ(vertices[i].x, vertices[i].y, candidate_planes);
+                vertices[i].z = TerrainDrape::HighestZOnPlanes(vertices[i].x, vertices[i].y, candidate_planes);
         }
         else {
-            // Ordered, densely-sampled path: drape on the navmesh-walkable plane at each sample (point-location),
-            // choosing the surface closest to the running height. This follows the surface the path actually walks —
-            // e.g. up onto a monument plane between two ground hops — instead of sinking onto the ground beneath it,
-            // which the old all-planes "closest surface" did because plane 0's heightfield still reports the floor
-            // under the monument. Falls back to that all-planes query when the navmesh isn't built yet or no walkable
-            // plane covers the sample (so cross-plane edges with no waypoint on the higher plane still drape sanely).
             auto* nav = PathfindingWindow::GetResidentNavMesh();
             GW::GamePos seed_pos = poly.points.empty() ? GW::GamePos{} : poly.points.front();
             float prev = TerrainDrape::QueryAltAt(seed_pos.x, seed_pos.y, seed_pos.zplane);
-            if (prev == 0.f) prev = ClosestSurfaceZ(seed_pos.x, seed_pos.y, num_planes, -1.0e9f); // highest surface
+            if (prev == 0.f) prev = TerrainDrape::ClosestZ(seed_pos.x, seed_pos.y, num_planes, -1.0e9f); // highest surface
             for (size_t i = poly.vertices_processed; i < vertices.size(); i++, poly.vertices_processed++) {
                 float z;
                 if (nav) {
@@ -333,7 +299,7 @@ namespace {
                     if (z == ALTITUDE_UNKNOWN) z = prev; // over a gap with no walkable poly: hold height, don't sink to the ground
                 }
                 else {
-                    z = ClosestSurfaceZ(vertices[i].x, vertices[i].y, num_planes, prev); // navmesh not built yet
+                    z = TerrainDrape::ClosestZ(vertices[i].x, vertices[i].y, num_planes, prev); // navmesh not built yet
                 }
                 if (z != ALTITUDE_UNKNOWN) prev = z;
                 vertices[i].z = z;
@@ -350,6 +316,8 @@ namespace {
                 if (v.z == ALTITUDE_UNKNOWN) v.z = last;
                 else last = v.z;
             }
+            // After backfill so the sentinel is never lifted (the compare above is exact).
+            for (auto& v : vertices) v.z -= z_lift;
         }
 
         auto res = device->CreateVertexBuffer(vertices.size() * sizeof(D3DVertex), D3DUSAGE_WRITEONLY, D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &poly.vb, nullptr);
@@ -359,7 +327,7 @@ namespace {
         }
 
         void* mem_loc = nullptr;
-        res = poly.vb->Lock(0, vertices.size() * sizeof(D3DVertex), &mem_loc, D3DLOCK_DISCARD);
+        res = poly.vb->Lock(0, vertices.size() * sizeof(D3DVertex), &mem_loc, 0);
         if (res != S_OK || !mem_loc) {
             poly.vb->Release();
             poly.vb = nullptr;
@@ -434,10 +402,13 @@ void GameWorldRenderer::GenericPolyRenderable::Draw(IDirect3DDevice9* device)
         return;
 
     if (from_player_pos && vertices.size() > 1) {
-        if (const auto player = GW::Agents::GetControlledCharacter()) {
-            // Re-anchor the leading line to the player's live position each frame and drape on the navmesh-walkable
-            // plane at each sample, seeded from player->z (reliable even when the reported plane reads 0). This rides
-            // the surface the player actually walks (up a monument/ramp between hops) instead of the ground beneath.
+        // Any movement re-anchors: a distance threshold leaves the line's start trailing the player and snapping forward, which reads as jitter.
+        // Standing still still costs nothing, and a few dozen vertices against the Y-row drape index is cheap per-frame.
+        const auto player = GW::Agents::GetControlledCharacter();
+        if (player && (!anchored || player->pos.x != anchor_x || player->pos.y != anchor_y)) {
+            anchor_x = player->pos.x;
+            anchor_y = player->pos.y;
+            anchored = true;
             const float ex = vertices.back().x, ey = vertices.back().y;
             const GW::PathingMapArray* pathing_map = GW::Map::GetPathingMap();
             const uint32_t num_planes = pathing_map ? static_cast<uint32_t>(pathing_map->size()) : 0;
@@ -454,16 +425,17 @@ void GameWorldRenderer::GenericPolyRenderable::Draw(IDirect3DDevice9* device)
                     if (z == ALTITUDE_UNKNOWN) z = prev; // gap with no walkable poly: hold height, don't sink to the ground
                 }
                 else {
-                    z = num_planes ? ClosestSurfaceZ(sx, sy, num_planes, prev) : ALTITUDE_UNKNOWN; // navmesh not built yet
+                    z = num_planes ? TerrainDrape::ClosestZ(sx, sy, num_planes, prev) : ALTITUDE_UNKNOWN; // navmesh not built yet
                 }
                 if (z != ALTITUDE_UNKNOWN) prev = z; else z = prev;
                 vertices[j].x = sx;
                 vertices[j].y = sy;
-                vertices[j].z = z;
+                vertices[j].z = z - z_lift; // `prev` stays unlifted: it seeds the next drape query
             }
 
             void* mem_loc = nullptr;
-            auto res = vb->Lock(0, vertices.size() * sizeof(D3DVertex), &mem_loc, D3DLOCK_DISCARD);
+            // flags=0, not D3DLOCK_DISCARD: DISCARD needs D3DUSAGE_DYNAMIC but this is MANAGED, so it's ignored and the lock serialises against the GPU.
+            auto res = vb->Lock(0, vertices.size() * sizeof(D3DVertex), &mem_loc, 0);
             if (res == S_OK) {
                 memcpy(mem_loc, vertices.data(), vertices.size() * sizeof(D3DVertex));
                 vb->Unlock();
@@ -519,11 +491,8 @@ void GameWorldRenderer::DrawInWorld(IDirect3DDevice9* device)
         return;
     }
 
-    // Snapshot all device state; restored unconditionally on exit (incl. error paths) so GW's later rendering isn't corrupted.
-    IDirect3DStateBlock9* state_block = nullptr;
-    if (device->CreateStateBlock(D3DSBT_ALL, &state_block) != D3D_OK) {
-        return;
-    }
+    // Snapshot the device state toolbox touches; restored unconditionally on exit (incl. error paths) so GW's later rendering isn't corrupted.
+    const D3DStateGuard state_guard(device);
 
     if (GameWorldCompositor::SetupPipeline(device, occlude_behind_terrain, render_max_distance, fog_factor)) {
         const auto map_id = GW::Map::GetMapID();
@@ -582,16 +551,10 @@ void GameWorldRenderer::DrawInWorld(IDirect3DDevice9* device)
         }
         renderables_mutex.unlock();
     }
-
-    state_block->Apply();
-    state_block->Release();
 }
 
 void GameWorldRenderer::Render(IDirect3DDevice9* device)
 {
-    // On-top (End Scene) path. When under-UI is wanted and the shared compositor is running, it
-    // draws our markers between GW's world and HUD instead (and runs the marker sync itself), so
-    // skip here. Otherwise draw on top - this is also the fallback if the compositor failed.
     if (render_under_ui && GameWorldCompositor::IsActive()) {
         return;
     }
@@ -606,12 +569,14 @@ void GameWorldRenderer::RegisterSettings(ToolboxModule* module)
     SettingsRegistry::RegisterField(module, "occlude_behind_terrain", &occlude_behind_terrain);
     SettingsRegistry::RegisterField(module, "render_under_ui", &render_under_ui);
     SettingsRegistry::RegisterField(module, "exclude_compass", &exclude_compass);
+    SettingsRegistry::RegisterField(module, "z_lift", &z_lift);
 }
 
 void GameWorldRenderer::OnSettingsLoaded()
 {
     render_max_distance = std::max(render_max_distance, 10.0f);
     fog_factor = std::clamp(fog_factor, 0.0f, 1.0f);
+    z_lift = std::clamp(z_lift, 0.0f, 200.0f);
     need_sync_markers = true;
     UpdateCompositorRegistration();
 }
@@ -627,6 +592,14 @@ void GameWorldRenderer::DrawSettings()
     ImGui::ShowHelp("Number of points to interpolate. Affects smoothness of rendering.");
     ImGui::DragFloat("Fog factor", &fog_factor, 0.1f, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
     ImGui::ShowHelp("Scales from 0.0 (disabled) to 1.0");
+    if (ImGui::DragFloat("Height lift", &z_lift, 0.5f, 0.f, 200.f, "%.1f", ImGuiSliderFlags_AlwaysClamp)) {
+        // The lift is baked into each renderable's vertex buffer, so drop them and let the next sync re-drape.
+        renderables_mutex.lock();
+        renderables.clear();
+        renderables_mutex.unlock();
+        need_sync_markers = true;
+    }
+    ImGui::ShowHelp("Raise quest paths and other in-world overlays above the surface they're draped on, so they draw on top of the terrain instead of z-fighting it.");
 
     if (ImGui::Checkbox("Render under game UI", &render_under_ui)) {
         UpdateCompositorRegistration();

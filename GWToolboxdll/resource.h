@@ -1,7 +1,3 @@
-//{{NO_DEPENDENCIES}}
-// Microsoft Visual C++ generated include file.
-// Used by GWToolbox.rc
-//
 
 #define IDR_GWCA_DLL                                        154
 #define IDR_PORTAL_CONNECTIONS_JSON                         155

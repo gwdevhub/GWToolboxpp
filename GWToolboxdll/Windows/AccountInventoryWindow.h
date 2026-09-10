@@ -26,8 +26,6 @@ public:
         bool hide_unclaimed_items = false;
     };
 
-    // callbacks
-
     void Initialize() override;
     void Terminate() override;
     void Update(float delta) override;

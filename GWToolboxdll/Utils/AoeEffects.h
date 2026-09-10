@@ -7,9 +7,6 @@
 class SettingsDoc;
 class ToolboxIni;
 
-// Shared tracking of hostile ground AoE effects (Meteor Shower, Maelstrom, traps, ...), fed by
-// StoC packets. Single source of truth for the minimap EffectRenderer and the in-world
-// DangerRingsModule; tracking runs regardless of whether either consumer is visible.
 namespace AoeEffects {
     struct EffectSettings {
         Color color = 0xFFFF0000;

@@ -19,11 +19,6 @@ namespace {
         GWToolbox::Initialize(dllmodule);
         return GetUserDefaultLCID_Ret();
     }
-    /**
-    * We can't call GWToolbox::Initialize inside DllMain - it tries to call LoadLibrary later on and can cause deadlocks!
-    * We know Guild Wars calls GetUserDefaultLCID on load - hook into this to initialize Toolbox instead
-    * This allows us to intercept early calls like login and keyboard language
-    */
     void HookForInitialize() {
         const auto hTimeApi = GetModuleHandleA("kernel32.dll");
         GetUserDefaultLCID_Func = hTimeApi ? (GetUserDefaultLCID_t)GetProcAddress(hTimeApi, "GetUserDefaultLCID") : nullptr;

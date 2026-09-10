@@ -403,8 +403,7 @@ bool HttpRequest::Perform()
         LeaveCriticalSection(cs);
     }
 
-    // Security relaxation: WinHTTP/Schannel verifies certs by default. Disable
-    // checks when the caller has opted out.
+    // WinHTTP/Schannel verifies certs by default; relax only where the caller opted out.
     if (!m_VerifyPeer || !m_VerifyHost) {
         DWORD secFlags = 0;
         if (!m_VerifyPeer) {
@@ -419,7 +418,6 @@ bool HttpRequest::Perform()
                          &secFlags, sizeof(secFlags));
     }
 
-    // Redirect policy
     {
         DWORD policy = m_FollowLocation
                            ? WINHTTP_OPTION_REDIRECT_POLICY_ALWAYS
@@ -433,7 +431,6 @@ bool HttpRequest::Perform()
                          &limit, sizeof(limit));
     }
 
-    // Custom request headers
     if (!m_HeadersBlock.empty()) {
         WinHttpAddRequestHeaders(
             hRequest,
@@ -474,7 +471,6 @@ bool HttpRequest::Perform()
         return false;
     }
 
-    // Status code
     {
         DWORD status_code = 0;
         DWORD size = sizeof(status_code);
@@ -486,7 +482,6 @@ bool HttpRequest::Perform()
         m_StatusCode = static_cast<int>(status_code);
     }
 
-    // Raw response headers
     {
         DWORD bytes = 0;
         WinHttpQueryHeaders(
@@ -513,7 +508,6 @@ bool HttpRequest::Perform()
         }
     }
 
-    // Body (skip when caller opted out)
     if (!m_NoBody) {
         char buf[8192];
         for (;;) {

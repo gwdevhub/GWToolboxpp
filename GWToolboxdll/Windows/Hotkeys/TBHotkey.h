@@ -17,8 +17,6 @@ namespace GW {
     enum class HeroBehavior : uint32_t;
 }
 
-// abstract class Toolbox Hotkey
-// has the key code and pressed status
 class TBHotkey {
 public:
     enum Op {

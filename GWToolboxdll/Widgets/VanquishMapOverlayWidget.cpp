@@ -9,6 +9,8 @@
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 
+#include <Windows/Pathfinding/Pathing.h>
+
 #include <Color.h>
 #include <D3DContainers.h>
 #include <Defines.h>
@@ -26,7 +28,6 @@ namespace {
     Color vq_color_blocked = IM_COL32(60, 20, 20, 170);
     Color vq_color_blocked_border = IM_COL32(180, 100, 100, 140);
 
-    // Enemy tracking
     enum class EnemyState { NotApplicable, Alive, Stale };
     struct TrackedEnemy {
         GW::Vec2f pos;
@@ -228,9 +229,6 @@ namespace {
         return !newly_explored_cells.empty();
     }
 
-    // Pure function, safe on a worker thread: build the fog cell index + quads.
-    // Includes both walkable and blocked cells in the fog buffer so blocked
-    // areas can also be "explored" (fog clears, revealing the blocked color).
     void BuildFogVertices(const MapGridData& data, std::vector<int>& out_cell_index, std::vector<D3DVertex>& out_verts)
     {
         out_cell_index.assign(data.size, -1);
@@ -455,113 +453,13 @@ namespace {
         return cx1 > left && cx0 < right;
     }
 
-    const GW::PathingTrapezoid* FindTrapezoidInPlane(const GW::Vec2f& point, const GW::PathingMap& plane)
-    {
-        GW::Node* n = plane.root_node;
-        int cnt = 50000;
-        while (n && cnt--) {
-            switch (n->type) {
-                case 0: {
-                    auto* xn = static_cast<GW::XNode*>(n);
-                    float d = (point.y - xn->pos.y) * xn->dir.x - (point.x - xn->pos.x) * xn->dir.y;
-                    n = d >= 0.0f ? xn->right : xn->left;
-                    break;
-                }
-                case 1: {
-                    auto* yn = static_cast<GW::YNode*>(n);
-                    if (point.y > yn->pos.y) n = yn->above;
-                    else if (point.y < yn->pos.y) n = yn->below;
-                    else n = point.x >= yn->pos.x ? yn->above : yn->below;
-                    break;
-                }
-                case 2: {
-                    auto* sn = static_cast<GW::SinkNode*>(n);
-                    return sn ? sn->trapezoid : nullptr;
-                }
-            }
-        }
-        return nullptr;
-    }
-
-    // BFS from the player's trapezoid through adjacency and unblocked portals.
-    // Returns the set of reachable trapezoids, or empty if the player position is unknown.
-    // Blocking checks match the game's native A* (IPath_ExpandPortalLeft/Right):
-    //   - portal.flags & 0x04  (portal flagged as blocked)
-    //   - blockedPlanes[neighbor_plane] & 1  (target plane blocked at runtime)
-    std::unordered_set<const GW::PathingTrapezoid*> FindReachableTrapezoids(const GW::PathingMapArray* pathing_map)
-    {
-        std::unordered_set<const GW::PathingTrapezoid*> reachable;
-
-        const auto* player = GW::Agents::GetControlledCharacter();
-        if (!player) return reachable;
-        const GW::Vec2f player_pos = {player->pos.x, player->pos.y};
-
-        auto* map_ctx = GW::GetMapContext();
-        auto* path_ctx = map_ctx ? map_ctx->path : nullptr;
-
-        const GW::PathingTrapezoid* start_trap = nullptr;
-        size_t start_plane = 0;
-
-        if (player->pos.zplane < pathing_map->size()) {
-            start_trap = FindTrapezoidInPlane(player_pos, pathing_map->at(player->pos.zplane));
-            start_plane = player->pos.zplane;
-        }
-        if (!start_trap) {
-            for (size_t p = 0; p < pathing_map->size(); p++) {
-                start_trap = FindTrapezoidInPlane(player_pos, pathing_map->at(p));
-                if (start_trap) { start_plane = p; break; }
-            }
-        }
-        if (!start_trap) return reachable;
-
-        struct TrapRef { const GW::PathingTrapezoid* trap; size_t plane; };
-        std::vector<TrapRef> queue;
-        queue.push_back({start_trap, start_plane});
-        reachable.insert(start_trap);
-
-        for (size_t head = 0; head < queue.size(); head++) {
-            const auto [trap, plane_idx] = queue[head];
-
-            for (int i = 0; i < 4; i++) {
-                auto* adj = trap->adjacent[i];
-                if (adj && !reachable.contains(adj)) {
-                    reachable.insert(adj);
-                    queue.push_back({adj, plane_idx});
-                }
-            }
-
-            const auto& pm = pathing_map->at(plane_idx);
-            auto check_portal = [&](uint16_t portal_idx) {
-                if (portal_idx >= pm.portal_count) return;
-                auto& portal = pm.portals[portal_idx];
-                if (portal.flags & 0x04) return;
-                auto* pair = portal.pair;
-                if (!pair) return;
-                size_t target_plane = portal.neighbor_plane;
-                if (path_ctx && target_plane < path_ctx->blockedPlanes.size()
-                    && (path_ctx->blockedPlanes[target_plane] & 1)) return;
-                for (uint32_t i = 0; i < pair->count; i++) {
-                    auto* t = pair->trapezoids[i];
-                    if (t && !reachable.contains(t)) {
-                        reachable.insert(t);
-                        queue.push_back({t, target_plane});
-                    }
-                }
-            };
-            check_portal(trap->portal_left);
-            check_portal(trap->portal_right);
-        }
-
-        return reachable;
-    }
-
     // Game thread only: BFS + copy out trapezoid coords for the worker thread.
     std::vector<TrapezoidSnapshot> SnapshotPathingMap()
     {
         std::vector<TrapezoidSnapshot> out;
         const auto pathing_map = GW::Map::GetPathingMap();
         if (!pathing_map) return out;
-        const auto reachable = FindReachableTrapezoids(pathing_map);
+        const auto reachable = Pathing::FindReachableTrapezoids();
         for (size_t p = 0; p < pathing_map->size(); p++) {
             const auto& plane = pathing_map->at(p);
             for (uint32_t t = 0; t < plane.trapezoid_count; t++) {
@@ -671,10 +569,6 @@ namespace {
 
     bool grid_rebuild_pending = false;
 
-    // Async rebuild: the heavy rasterization and vertex building run on the worker thread; only the BFS snapshot
-    // and the final swap touch the game thread. Used both on map change and for mid-instance changes (gates,
-    // teleports). `force` bypasses the in-flight guard so a map change always rebuilds even if a prior build for
-    // the old map is still running (its stale result is discarded by the map_id guard in the apply step).
     void QueueRebuildMapBorder(bool force = false)
     {
         if (grid_rebuild_pending && !force) return;
@@ -1025,7 +919,8 @@ void VanquishMapOverlayWidget::DrawVanquishToggleButton()
 void VanquishMapOverlayWidget::Update(float)
 {
     const bool render_ready = MissionMapWidget::IsRenderReady();
-    should_draw = render_ready && visible && ToolboxUtils::IsExplorable();
+    const bool explorable = ToolboxUtils::IsExplorable();
+    should_draw = render_ready && visible && explorable;
 
     if (render_ready) {
         cached_px_to_game = MissionMapWidget::GetPxToGame();
@@ -1068,12 +963,13 @@ void VanquishMapOverlayWidget::Update(float)
         }
     }
 
-    // Frame rate check for expensive updates
     static clock_t last_check = TIMER_INIT();
     if (!ToolboxUtils::FrameRateCheck(last_check, 30)) return;
 
+    if (!visible && explorable) return;
+
     const auto player_pos = GW::PlayerMgr::GetPlayerPosition();
-    if (ToolboxUtils::IsExplorable()) {
+    if (explorable) {
         UpdateEnemyTracking();
         if (UpdateExploration(player_pos))
             UpdateFrontierIncremental();

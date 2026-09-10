@@ -52,9 +52,6 @@ HotkeyGroup::HotkeyGroup(const char* _label) : TBHotkey(0, 0)
 
 HotkeyGroup::~HotkeyGroup()
 {
-    // Promote children to this group's parent scope before unlinking.
-    // Without this, deleted groups leave children in all_hotkeys but not in
-    // top_level_hotkeys or any group's hotkeys list, causing SortHotkeys() to assert.
     for (TBHotkey* hk : hotkeys) {
         if (hk->group != this) continue;
         hk->group = group;
@@ -93,7 +90,6 @@ int HotkeyGroup::Description(char* buf, size_t bufsz)
 bool HotkeyGroup::DrawSettings()
 {
     bool hotkey_changed = false;
-    // Draw child hotkeys
     ImGui::Spacing();
     ImGui::TextDisabled("Group hotkeys:");
     ImGui::Separator();

@@ -4,9 +4,6 @@
 
 class SettingsDoc;
 
-// Minimap view of the shared AoE effect store (Utils/AoeEffects): draws each active effect as a
-// circle. Also owns the persistence of the shared per-skill colours (kept in the minimap settings
-// section for backwards compatibility).
 class EffectRenderer : public D3DVertexBuffer {
     friend class Minimap;
 

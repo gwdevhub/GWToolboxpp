@@ -37,7 +37,7 @@ static void OpenLogFile(const std::filesystem::path& exe_path)
 
 static void ShowError(const wchar_t* message)
 {
-    ShowMessageBoxW(nullptr, message, L"GWToolbox - Error", 0);
+    ShowMessageBoxWithLinksW(nullptr, message, L"GWToolbox - Error");
 }
 
 static void ShowError(const char* message)
@@ -154,6 +154,42 @@ static bool InjectInstalledDllInProcess(const Process* process, std::wstring& er
     return true;
 }
 
+// Mirrors InjectInstalledDllInProcess's dllpath resolution (incl. /localdll) for gwtoolbox.gwmod, the wasm build's packaged bundle.
+static bool InjectWasmModIntoSession(const WasmSession& session, std::wstring& error)
+{
+    std::wstring exe_filename;
+    if (!PathGetExeFileName(exe_filename)) return error = L"PathGetExeFileName failed", false;
+
+    std::filesystem::path gwmod_path = GetInstallationDir();
+    if (gwmod_path.empty()) return error = L"GetInstallationDir failed", false;
+    gwmod_path = gwmod_path.parent_path() / WASM_GWMOD_FILENAME;
+    if (settings.localdll) {
+        if (!PathGetProgramDirectory(gwmod_path)) return error = L"PathGetProgramDirectory failed", false;
+        gwmod_path = gwmod_path / WASM_GWMOD_FILENAME;
+        if (!exists(gwmod_path)) {
+            return error = std::format(L"Application @ {} not found.\n\nEnsure your copy of {} is local to {} or run {} without the /localdll argument.", gwmod_path.wstring(), gwmod_path.filename().wstring(), exe_filename, exe_filename), false;
+        }
+    }
+
+    if (!exists(gwmod_path)) {
+        return error = std::format(L"Application @ {} not found.\n\nThe wasm build of GWToolbox may not be installed alongside the native one.", gwmod_path.wstring()), false;
+    }
+
+    std::vector<std::string> log_lines;
+    const bool ok = InjectWasmMod(session, gwmod_path, log_lines, error);
+    for (const auto& line : log_lines) {
+        fprintf(stderr, "  %s\n", line.c_str());
+    }
+    // `error` alone says nothing about which module/step failed - fold the loader's own log into the shown message rather than leaving it to GWToolbox.error.log.
+    if (!ok && !log_lines.empty()) {
+        error += L"\n\ngw_in_browser reported:\n";
+        for (const auto& line : log_lines) {
+            error += L"  " + std::wstring(line.begin(), line.end()) + L"\n";
+        }
+    }
+    return ok;
+}
+
 // Opts in to per-monitor DPI awareness so scaled displays get real layout instead of blurry bitmap-stretching; must run before any window (incl. a MessageBox) is created.
 static void EnableDpiAwareness()
 {
@@ -233,7 +269,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
     AsyncRestScopeInit RestInitializer;
 
-    Process proc;
+    InjectSelection selection;
     if (settings.install) {
         Install(settings.quiet, error);
         return 0;
@@ -243,9 +279,6 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
         return 0;
     }
     if (settings.reinstall) {
-        // @Enhancement:
-        // Uninstall shouldn't remove the existing data, that would instead be a
-        // "repair" or something along those lines.
         Uninstall(settings.quiet, error);
         Install(settings.quiet, error);
         return 0;
@@ -277,29 +310,41 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     // Exe/dll update checking now happens inside InjectWindow (status row + Update button), not here.
 
     if (settings.pid) {
-        if (!proc.Open(settings.pid)) {
+        // A wasm session never reaches here: RestartAsAdminForInjection (the only caller of /pid) is native-only, HTTP injection needs no elevation.
+        if (!selection.process.Open(settings.pid)) {
             fprintf(stderr, "Couldn't open process %d\n", settings.pid);
             return 1;
         }
 
-        if (!InjectInstalledDllInProcess(&proc, error)) {
+        if (!InjectInstalledDllInProcess(&selection.process, error)) {
             fprintf(stderr, "InjectInstalledDllInProcess failed\n");
             return 1;
         }
 
-        SetProcessForeground(&proc);
+        SetProcessForeground(&selection.process);
 
         return 0;
     }
 
     // If we can't open with appropriate rights, we can then ask to re-open
     // as admin.
-    const InjectReply reply = InjectWindow::AskInjectProcess(&proc);
+    const InjectReply reply = InjectWindow::AskInjectProcess(&selection);
 
     if (reply == InjectReply_Cancel) {
         fprintf(stderr, "InjectReply_Cancel\n");
         return 0;
     }
+
+    if (selection.is_wasm) {
+        if (!InjectWasmModIntoSession(*selection.wasm_session, error)) {
+            ShowError(error.c_str());
+            fprintf(stderr, "InjectWasmModIntoSession failed\n");
+            return 1;
+        }
+        return 0;
+    }
+
+    Process& proc = selection.process;
 
     // Before injecting, make sure Windows Security won't block the DLL from writing to its Documents folder.
     if (!settings.quiet) {
@@ -318,7 +363,8 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
         if (GetWineDiagnostics(wine)) {
             error += std::format(
                 L"\n\nGWToolbox is running under Wine on a non-Windows host, which is not supported. The "
-                L"Linux guide at https://www.gwtoolbox.com/linux is provided as-is for convenience only.\n\nDetected: {}",
+                L"Linux guide at <a href=\"https://www.gwtoolbox.com/docs/linux/\">gwtoolbox.com/docs/linux</a> "
+                L"is provided as-is for convenience only.\n\nDetected: {}",
                 wine
             );
             fprintf(stderr, "Wine detected: %S\n", wine.c_str());

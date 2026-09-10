@@ -269,9 +269,6 @@ namespace TeamBuildEncoder {
 
     using namespace GW::Constants;
 
-    // Ordered by frequency of use within each profession — most commonly invested
-    // attributes first. This minimises the attribute bitmask cost and keeps
-    // the most-used skill indices low for the variable-width skill flag.
     const std::array<Attribute, 5> kProfessionAttributes[11] = {
         // 0: None
         {Attribute::None, Attribute::None, Attribute::None, Attribute::None, Attribute::None},
@@ -302,7 +299,6 @@ namespace TeamBuildEncoder {
     // attributes' skills get the lowest indices.
     static void SortAttrsByInvestment(Attribute attrs[], int count, const GW::SkillbarMgr::SkillTemplate& tmpl)
     {
-        // Build investment lookup
         uint32_t investment[11] = {};
         for (uint32_t i = 0; i < tmpl.attributes_count; i++)
             investment[static_cast<int>(tmpl.attribute_ids[i])] = tmpl.attribute_values[i];
@@ -318,15 +314,6 @@ namespace TeamBuildEncoder {
     // Skill list
     // ---------------------------------------------------------------------------
 
-    // Skill ordering is tuned to minimise the highest accessible-list index
-    // actually used by a build, maximising the chance the 8-bit skill flag fires.
-    //
-    // Heroes (is_hero=true):  primary → secondary → (PvE omitted, heroes can't use them)
-    // Players (is_hero=false): primary hot attrs → PvE → secondary hot attrs →
-    //                          primary cold attrs → secondary cold attrs → no-attr skills
-    //
-    // "Hot" = first 3 attributes in kProfessionAttributes order (most commonly invested).
-    // "Cold" = remaining attributes.
     static int GetProfAttributes(Profession prof, Attribute out[], int max_count)
     {
         int count = 0;
@@ -351,14 +338,6 @@ namespace TeamBuildEncoder {
             SortAttrsByInvestment(sec_attrs, sec_count, *tmpl);
         }
 
-        // 7 buckets:
-        //   0: primary hot attrs (indices 0-2)
-        //   1: primary cold attrs (indices 3+)
-        //   2: secondary hot attrs (indices 0-2)
-        //   3: secondary cold attrs (indices 3+)
-        //   4: no-attribute primary skills
-        //   5: no-attribute secondary skills
-        //   6: PvE skills (players only)
         std::vector<SkillID> buckets[7];
 
         auto attr_bucket = [&](Attribute attr, bool is_primary) -> int {
@@ -370,7 +349,7 @@ namespace TeamBuildEncoder {
             return -1;
         };
 
-        for (size_t i = 1; i < static_cast<size_t>(SkillID::Count); i++) {
+        for (size_t i = 1, cnt = GW::SkillbarMgr::GetSkillCount(); i < cnt; i++) {
             const auto skill_id = static_cast<SkillID>(i);
             const auto* skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
             if (!skill || !skill->IsPlayable() || skill->IsPvP()) continue;

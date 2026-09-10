@@ -37,20 +37,20 @@
 #include <Modules/GuildWarsSettingsModule.h>
 #include <Modules/ItemTooltipModule.h>
 #include <Modules/LoginModule.h>
-#if defined(_DEBUG) || defined(GWTB_HARNESS)
+#ifdef _DEBUG
 #include <Modules/TestHarness.h>
 #endif
+
 #include <Modules/MouseFix.h>
 #include <Modules/PartyBroadcastModule.h>
 #include <Modules/PriceCheckerModule.h>
 #include <Modules/ResignLogModule.h>
 #include <Modules/TexmodModule.h>
+#include <Modules/SplashScreenModule.h>
 #include <Modules/TextToSpeechModule.h>
 #include <Modules/ToastNotifications.h>
 #include <Modules/VendorFix.h>
-
 #include <Widgets/VanquishMapOverlayWidget.h>
-
 #include <Windows/AccountInventoryWindow.h>
 #include <Windows/ArmoryWindow.h>
 #include <Windows/BuildsWindow.h>
@@ -77,19 +77,24 @@
 #include <Windows/RerollWindow.h>
 #include <Windows/TradeWindow.h>
 #include <Windows/TravelWindow.h>
+
 #ifdef _DEBUG
 #include <Windows/DoorMonitorWindow.h>
 #include <Windows/PacketLoggerWindow.h>
 #include <Windows/SkillListingWindow.h>
 #include <Windows/StringDecoderWindow.h>
+#include <Windows/PlaystyleRestrictionsWindow.h>
+#include <Modules/RiverModule.h>
 #endif
+
 #include <Windows/GWMarketWindow.h>
 #include <Windows/InventorySorting.h>
 #include <Windows/PerformanceWindow.h>
 #include <Windows/SettingsWindow.h>
 #include <Windows/TargetInfoWindow.h>
-
 #include <Utils/ToolboxUtils.h>
+#include <Utils/TextUtils.h>
+#include <Utils/TextUtils_Time.h>
 #include <Widgets/ActiveQuestWidget.h>
 #include <Widgets/AlcoholWidget.h>
 #include <Widgets/BondsWidget.h>
@@ -108,10 +113,7 @@
 #include <Modules/DangerRingsModule.h>
 #include <Modules/LootBeaconsModule.h>
 #include <Modules/SkillRangeRingsModule.h>
-#ifdef _DEBUG
-#include <Modules/CartographerModule.h>
-#include <Modules/RiverModule.h>
-#endif
+#include <Widgets/CartographerWidget.h>
 #include <Widgets/MissionMapWidget.h>
 #include <Widgets/PartyDamage.h>
 #include <Widgets/SkillMonitorWidget.h>
@@ -184,8 +186,8 @@ namespace {
         ResignLogModule::Instance(),
         PathfindingWindow::Instance(),
         QuestModule::Instance(),
-#if defined(_DEBUG) || defined(GWTB_HARNESS)
-        TestHarness::Instance(), // autonomous pathfinder test driver (dev builds only)
+#ifdef _DEBUG
+        TestHarness::Instance(),
 #endif
         VanquishMapOverlayWidget::Instance(),
         PartyBroadcast::Instance(),
@@ -203,14 +205,14 @@ namespace {
         {DistanceWidget::Instance(), false},
         Minimap::Instance(),
         GameWorldRenderer::Instance(),
-        WeatherModule::Instance(),
+        {WeatherModule::Instance(), false},
         {DangerRingsModule::Instance(), false},
         LootBeaconsModule::Instance(),
         {SkillRangeRingsModule::Instance(), false},
 #ifdef _DEBUG
         {RiverModule::Instance(), false},
-        CartographerModule::Instance(),
 #endif
+        CartographerWidget::Instance(),
         PartyDamage::Instance(),
         BondsWidget::Instance(),
         ClockWidget::Instance(),
@@ -255,11 +257,15 @@ namespace {
         DropTrackerWindow::Instance(),
         GWMarketWindow::Instance(),
         InventorySorting::Instance(),
+#ifdef _DEBUG
+        {PlaystyleRestrictionsWindow::Instance(), false},
+#endif
         FavorTracker::Instance(),
         LoginModule::Instance(),
         {AccountInventoryWindow::Instance(), false},
         {PerformanceWindow::Instance(), false},
-        TexmodModule::Instance()
+        TexmodModule::Instance(),
+        {SplashScreenModule::Instance(), false}
     };
 
     bool modules_sorted = false;
@@ -454,12 +460,6 @@ void ToolboxSettings::Draw(IDirect3DDevice9*)
 }
 
 namespace {
-    // Deferred screenshot request — populated when the user clicks the
-    // camera button on a window's title bar, consumed at end-of-frame by
-    // ToolboxSettings::FlushPendingScreenshot. capture_at_frame defers
-    // by one frame so the click frame itself isn't drawn into the
-    // capture (and we can suppress the cog/camera overlays on the
-    // captured frame to avoid them appearing in the screenshot).
     struct PendingScreenshot {
         bool active = false;
         ImRect rect;
@@ -492,10 +492,9 @@ namespace {
 
         // Local-time timestamp; precision down to the second is enough
         // to disambiguate consecutive captures.
-        SYSTEMTIME st;
-        GetLocalTime(&st);
+        const auto st = TextUtils::Time::GetCurrentSystemTime();
         char stamp[32];
-        snprintf(stamp, sizeof(stamp), "%04d%02d%02d-%02d%02d%02d", st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
+        snprintf(stamp, sizeof(stamp), "%04d%02d%02d-%02d%02d%02d", st.year, st.month, st.day, st.hour, st.minute, st.second);
 
         const auto folder = Resources::GetPath(L"Screens");
         Resources::EnsureFolderExists(folder);
@@ -535,9 +534,6 @@ void ToolboxSettings::DrawSettingsCogButtons()
         ImDrawList* dl = window->DrawList;
         dl->PushClipRect(tb.Min, tb.Max, false);
 
-        // Slot 0 (rightmost, just left of the close-button gap) is the cog.
-        // Slot 1 (one slot further left) is the camera. Only the buttons
-        // enabled in settings get drawn.
         float right_edge = tb.Max.x - close_offset;
 
         const auto draw_button = [&](const char* glyph, ToolboxUIElement** hovered_out) -> bool {
@@ -571,9 +567,6 @@ void ToolboxSettings::DrawSettingsCogButtons()
             pending_screenshot.active = true;
             pending_screenshot.rect = window->Rect();
             pending_screenshot.path = BuildScreenshotPath(elem->Name());
-            // Defer by one frame so the next frame can re-render the
-            // window without these overlay icons (see early-return above)
-            // before we read back the swap chain.
             pending_screenshot.capture_at_frame = ImGui::GetFrameCount() + 1;
         }
 
@@ -586,6 +579,15 @@ void ToolboxSettings::DrawSettingsCogButtons()
     else if (hovered_cam) {
         ImGui::SetTooltip("Save a PNG screenshot of '%s'", hovered_cam->Name());
     }
+}
+
+void ToolboxSettings::RequestFullscreenScreenshot(const std::filesystem::path& path)
+{
+    const ImVec2 display = ImGui::GetIO().DisplaySize;
+    pending_screenshot.active = true;
+    pending_screenshot.rect = ImRect({0.f, 0.f}, display);
+    pending_screenshot.path = path;
+    pending_screenshot.capture_at_frame = ImGui::GetFrameCount() + 1;
 }
 
 void ToolboxSettings::FlushPendingScreenshot(IDirect3DDevice9* device)
@@ -647,10 +649,9 @@ void ToolboxSettings::Update(float)
             prof_string += ToolboxUtils::GetProfessionAcronym(static_cast<GW::Constants::Profession>(me->secondary))->wstring();
         }
 
-        SYSTEMTIME localtime;
-        GetLocalTime(&localtime);
-        const std::wstring filename = std::to_wstring(localtime.wYear) + L"-" + std::to_wstring(localtime.wMonth) + L"-" + std::to_wstring(localtime.wDay) + L" - " + std::to_wstring(localtime.wHour) + L"-" + std::to_wstring(localtime.wMinute) + L"-" +
-                                      std::to_wstring(localtime.wSecond) + L" - " + map_string + prof_string + L".log";
+        const auto localtime = TextUtils::Time::GetCurrentSystemTime();
+        const std::wstring filename = std::to_wstring(localtime.year) + L"-" + std::to_wstring(localtime.month) + L"-" + std::to_wstring(localtime.day) + L" - " + std::to_wstring(localtime.hour) + L"-" + std::to_wstring(localtime.minute) + L"-" +
+                                      std::to_wstring(localtime.second) + L" - " + map_string + prof_string + L".log";
 
         if (location_file && location_file.is_open()) {
             location_file.close();

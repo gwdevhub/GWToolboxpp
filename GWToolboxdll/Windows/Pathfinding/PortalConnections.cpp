@@ -50,9 +50,6 @@ namespace Pathing {
             && a.name == b.name && a.agent_kind == b.agent_kind;
     }
 
-    // True when b is the exact mirror of a in every field. Only plain
-    // bidirectional connections qualify, so collapsing one half on save and
-    // re-synthesising it on load is lossless.
     static bool IsExactReverse(const PortalConnection& a, const PortalConnection& b)
     {
         if (a.IsOneWay() || b.IsOneWay()) return false;
@@ -226,9 +223,6 @@ namespace Pathing {
                 connections.push_back(c);
             }
 
-            // Bidirectional connections are stored once; materialise the reverse
-            // edge for any plain connection whose mirror isn't already present.
-            // NOTE: 5 source links (mixed Portal/NPC around map 625, e.g. 553->625 type 0/2) are authored single-direction, so the in-memory count exceeds the file's by 5. Harmless (pathfinder already treats non-one-way as bidirectional) — flagged for data cleanup.
             const size_t loaded = connections.size();
             for (size_t i = 0; i < loaded; ++i) {
                 if (connections[i].IsOneWay()) continue;

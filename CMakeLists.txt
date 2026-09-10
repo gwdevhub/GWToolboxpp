@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.29)
 
-if(NOT CMAKE_GENERATOR MATCHES "Ninja|Makefile")
+if(NOT EMSCRIPTEN AND NOT CMAKE_GENERATOR MATCHES "Ninja|Makefile")
     set(CMAKE_GENERATOR_PLATFORM win32)
 endif()
 
@@ -8,10 +8,34 @@ project(gwtoolbox)
 
 set(GWTOOLBOXEXE_VERSION "4.8")
 set(GWTOOLBOXEXE_MODULE_VERSION "4,8,0,0") # used for exe module info. See GWToolbox/GWToolbox.rc
-set(GWTOOLBOXDLL_VERSION "8.32")
+set(GWTOOLBOXDLL_VERSION "8.33")
 set(GWTOOLBOXDLL_VERSION_BETA "") # can be anything. Marks beta version if not empty.
-set(GWTOOLBOX_MODULE_VERSION "8,32,0,0") # used for Dll module info. See GWToolboxdll/GWToolbox.rc
+set(GWTOOLBOX_MODULE_VERSION "8,33,0,0") # used for Dll module info. See GWToolboxdll/GWToolbox.rc
 
+
+# Everything below this point (toolset/arch checks, MSVC-only flags, native-only
+# dependency acquisition) assumes an MSVC/clang-cl Win32 build -- none of it applies
+# configuring for Emscripten.
+if(EMSCRIPTEN)
+    message(STATUS "Configuring for Emscripten: native-only dependencies "
+        "(minhook, DirectXTex, wintoast, Steamworks, Discord Game SDK) are skipped.")
+
+    set(CMAKE_CXX_STANDARD 23)
+    set(CMAKE_CXX_STANDARD_REQUIRED ON)
+    list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
+
+    # imgui (portable core + the stock GLES3 backend, see cmake/imgui.cmake) is the
+    # one native-side dependency this configure still needs. Everything else
+    # GWToolboxdll/CMakeLists.txt's wasm branch links is header-only or part of the
+    # explicitly-curated wasm source list itself.
+    include(imgui)
+
+    # GWToolboxdll is the only wasm-relevant target: this is an MVP scaffold (mod_init,
+    # the render pipeline, a demo window -- see GWToolboxdll/Wasm/), not the real
+    # product yet, so Core/RestClient/GWToolbox (the native injector exe) stay out of
+    # this configure until something wasm-side actually needs them.
+    add_subdirectory(GWToolboxdll)
+else()
 
 if(MSVC_TOOLSET_VERSION LESS 143)
     message(FATAL_ERROR "Build using Visual Studio 2022 toolset (v143) or higher. Run cmake with `-T143`. You're currently using ${MSVC_TOOLSET_VERSION}")
@@ -129,6 +153,15 @@ else()
     add_link_options($<$<NOT:$<CONFIG:Debug>>:/LTCG>)
 endif()
 
+# Debug is what we profile in, and /RTC1 puts a check on every function entry/exit - measured
+# ~20% of the whole imgui frame on its own, and it can't coexist with /O2 on the hot third-party
+# targets (see cmake/imgui.cmake). Turn GWTB_DEBUG_RUNTIME_CHECKS on to get the checks back.
+option(GWTB_DEBUG_RUNTIME_CHECKS "MSVC /RTC1 runtime checks in Debug builds" OFF)
+if(MSVC AND NOT GWTB_DEBUG_RUNTIME_CHECKS)
+    string(REPLACE "/RTC1" "" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
+    string(REPLACE "/RTC1" "" CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
+endif()
+
 set(CMAKE_CXX_STANDARD 26)
 # CMake 4.3 doesn't yet know MSVC 14.50 supports C++26 — fall back to 23 for MSVC.
 if(MSVC AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
@@ -166,3 +199,5 @@ add_subdirectory(RestClient)
 add_subdirectory(GWToolbox)
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT GWToolbox)
+
+endif() # EMSCRIPTEN

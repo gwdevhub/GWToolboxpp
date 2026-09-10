@@ -8,10 +8,6 @@
 
 #include <glaze/glaze.hpp>
 
-// JSON settings document: in-memory map of section -> { key -> value }.
-// On disk each section is its own <section>.json inside a folder (toolbox), or all
-// sections share a single file (plugin SDK, and the one-time legacy GWToolbox.json seed).
-// Sections of unknown/disabled modules are preserved verbatim across load/save cycles.
 class SettingsDoc {
 public:
     using Section = std::map<std::string, glz::raw_json, std::less<>>;

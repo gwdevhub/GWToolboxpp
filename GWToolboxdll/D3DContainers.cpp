@@ -6,12 +6,10 @@
 #define M_PI 3.14159265358979323846f
 #endif
 
-// D3DVertex
 D3DVertex::D3DVertex(const float x, const float y, const float z, const DWORD color) : x(x), y(y), z(z), color(color) {}
 
 D3DVertex::D3DVertex(const float x, const float y, const DWORD color) : x(x), y(y), z(0.f), color(color) {}
 
-// D3DQuad
 D3DQuad::D3DQuad(const D3DVec2f& tl, const D3DVec2f& br, DWORD color)
 {
     const D3DVertex TL{tl.x, tl.y, color};
@@ -22,7 +20,6 @@ D3DQuad::D3DQuad(const D3DVec2f& tl, const D3DVec2f& br, DWORD color)
     t[1] = {TL, BR, BL};
 }
 
-// D3DLine
 D3DLine::D3DLine(const D3DVec2f& a, const D3DVec2f& b, float thickness, DWORD color)
 {
     const float dx = b.x - a.x;
@@ -38,7 +35,6 @@ D3DLine::D3DLine(const D3DVec2f& a, const D3DVec2f& b, float thickness, DWORD co
     t[1] = {TL, BR, BL};
 }
 
-// D3DDiamond
 D3DDiamond::D3DDiamond(const D3DVec2f& pos, float radius, DWORD color)
 {
     const D3DVertex top{pos.x, pos.y + radius, color};
@@ -49,7 +45,6 @@ D3DDiamond::D3DDiamond(const D3DVec2f& pos, float radius, DWORD color)
     t[1] = {top, bot, left};
 }
 
-// D3DVelocityArrow
 D3DVelocityArrow::D3DVelocityArrow(const D3DVec2f& pos, const D3DVec2f& velocity, float length, float half_width, DWORD color)
 {
     const float vlen_sq = velocity.x * velocity.x + velocity.y * velocity.y;
@@ -67,7 +62,6 @@ D3DVertexBuffer::~D3DVertexBuffer() {
     DEBUG_ASSERT(!buffer);
 }
 
-// D3DVertexBuffer
 void D3DVertexBuffer::Initialize(IDirect3DDevice9* device)
 {
     dirty = false;
@@ -326,4 +320,105 @@ D3DMATRIX MakeOrthoProjection(float w, float h)
          -1.f,   1.f,  0.f, 1.f
     }};
     return m;
+}
+
+namespace {
+    // Union of every render/texture-stage/sampler state written anywhere in GWToolboxdll.
+    constexpr D3DRENDERSTATETYPE GUARDED_RENDER_STATES[] = {
+        D3DRS_ALPHABLENDENABLE, D3DRS_ALPHATESTENABLE, D3DRS_ANTIALIASEDLINEENABLE, D3DRS_BLENDOP,
+        D3DRS_CLIPPING, D3DRS_COLORWRITEENABLE, D3DRS_CULLMODE, D3DRS_DEPTHBIAS,
+        D3DRS_DESTBLEND, D3DRS_DESTBLENDALPHA, D3DRS_FILLMODE, D3DRS_FOGENABLE,
+        D3DRS_LIGHTING, D3DRS_MULTISAMPLEANTIALIAS, D3DRS_RANGEFOGENABLE, D3DRS_SCISSORTESTENABLE,
+        D3DRS_SEPARATEALPHABLENDENABLE, D3DRS_SHADEMODE, D3DRS_SLOPESCALEDEPTHBIAS, D3DRS_SPECULARENABLE,
+        D3DRS_SRCBLEND, D3DRS_SRCBLENDALPHA, D3DRS_STENCILENABLE, D3DRS_STENCILFAIL,
+        D3DRS_STENCILFUNC, D3DRS_STENCILMASK, D3DRS_STENCILPASS, D3DRS_STENCILREF,
+        D3DRS_STENCILWRITEMASK, D3DRS_STENCILZFAIL, D3DRS_TEXTUREFACTOR, D3DRS_ZENABLE,
+        D3DRS_ZFUNC, D3DRS_ZWRITEENABLE, D3DRS_SRGBWRITEENABLE,
+    };
+    constexpr D3DTEXTURESTAGESTATETYPE GUARDED_TEXTURE_STAGE_STATES[] = {
+        D3DTSS_COLOROP, D3DTSS_COLORARG1, D3DTSS_COLORARG2,
+        D3DTSS_ALPHAOP, D3DTSS_ALPHAARG1, D3DTSS_ALPHAARG2,
+    };
+    constexpr D3DSAMPLERSTATETYPE GUARDED_SAMPLER_STATES[] = {
+        D3DSAMP_ADDRESSU, D3DSAMP_ADDRESSV, D3DSAMP_MAGFILTER, D3DSAMP_MINFILTER,
+    };
+}
+
+D3DStateGuard::D3DStateGuard(IDirect3DDevice9* dev) : device(dev)
+{
+    static_assert(std::size(GUARDED_RENDER_STATES) == std::extent_v<decltype(render_states)>);
+    static_assert(std::size(GUARDED_TEXTURE_STAGE_STATES) == std::extent_v<decltype(texture_stage_states), 1>);
+    static_assert(std::size(GUARDED_SAMPLER_STATES) == std::extent_v<decltype(sampler_states)>);
+
+    for (size_t i = 0; i < std::size(GUARDED_RENDER_STATES); i++) {
+        device->GetRenderState(GUARDED_RENDER_STATES[i], &render_states[i]);
+    }
+    for (DWORD stage = 0; stage < std::size(texture_stage_states); stage++) {
+        for (size_t i = 0; i < std::size(GUARDED_TEXTURE_STAGE_STATES); i++) {
+            device->GetTextureStageState(stage, GUARDED_TEXTURE_STAGE_STATES[i], &texture_stage_states[stage][i]);
+        }
+    }
+    for (size_t i = 0; i < std::size(GUARDED_SAMPLER_STATES); i++) {
+        device->GetSamplerState(0, GUARDED_SAMPLER_STATES[i], &sampler_states[i]);
+    }
+    device->GetTransform(D3DTS_WORLD, &world);
+    device->GetTransform(D3DTS_VIEW, &view);
+    device->GetTransform(D3DTS_PROJECTION, &projection);
+    device->GetVertexShaderConstantF(0, vertex_shader_constants, 12);
+    device->GetPixelShaderConstantF(0, pixel_shader_constants, 4);
+    device->GetPixelShaderConstantB(0, &pixel_shader_bool, 1);
+    device->GetTexture(0, &texture);
+    device->GetVertexShader(&vertex_shader);
+    device->GetPixelShader(&pixel_shader);
+    device->GetVertexDeclaration(&vertex_declaration);
+    device->GetIndices(&indices);
+    device->GetStreamSource(0, &stream0, &stream0_offset, &stream0_stride);
+    device->GetFVF(&fvf);
+    device->GetViewport(&viewport);
+    device->GetScissorRect(&scissor);
+}
+
+D3DStateGuard::~D3DStateGuard()
+{
+    for (size_t i = 0; i < std::size(GUARDED_RENDER_STATES); i++) {
+        device->SetRenderState(GUARDED_RENDER_STATES[i], render_states[i]);
+    }
+    for (DWORD stage = 0; stage < std::size(texture_stage_states); stage++) {
+        for (size_t i = 0; i < std::size(GUARDED_TEXTURE_STAGE_STATES); i++) {
+            device->SetTextureStageState(stage, GUARDED_TEXTURE_STAGE_STATES[i], texture_stage_states[stage][i]);
+        }
+    }
+    for (size_t i = 0; i < std::size(GUARDED_SAMPLER_STATES); i++) {
+        device->SetSamplerState(0, GUARDED_SAMPLER_STATES[i], sampler_states[i]);
+    }
+    device->SetTransform(D3DTS_WORLD, &world);
+    device->SetTransform(D3DTS_VIEW, &view);
+    device->SetTransform(D3DTS_PROJECTION, &projection);
+    device->SetVertexShaderConstantF(0, vertex_shader_constants, 12);
+    device->SetPixelShaderConstantF(0, pixel_shader_constants, 4);
+    device->SetPixelShaderConstantB(0, &pixel_shader_bool, 1);
+    device->SetViewport(&viewport);
+    device->SetScissorRect(&scissor);
+
+    // SetFVF and SetVertexDeclaration overwrite each other; GetFVF reports 0 when a real
+    // declaration (not an FVF-derived one) was bound, so that case has to win.
+    if (fvf) {
+        device->SetFVF(fvf);
+    }
+    else {
+        device->SetVertexDeclaration(vertex_declaration);
+    }
+
+    // Each Get*() above added a reference; drop it once the state is restored.
+    device->SetTexture(0, texture);
+    if (texture) texture->Release();
+    device->SetVertexShader(vertex_shader);
+    if (vertex_shader) vertex_shader->Release();
+    device->SetPixelShader(pixel_shader);
+    if (pixel_shader) pixel_shader->Release();
+    if (vertex_declaration) vertex_declaration->Release();
+    device->SetIndices(indices);
+    if (indices) indices->Release();
+    device->SetStreamSource(0, stream0, stream0_offset, stream0_stride);
+    if (stream0) stream0->Release();
 }

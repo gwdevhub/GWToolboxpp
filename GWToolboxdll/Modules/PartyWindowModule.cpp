@@ -37,27 +37,27 @@
 #include <Utils/ToolboxUtils.h>
 
 namespace {
-    std::map<uint32_t, GW::Constants::SkillID> summon_elites = {
-        {GW::Constants::ModelID::SummoningStone::ImperialCripplingSlash, GW::Constants::SkillID::Crippling_Slash},
-        {GW::Constants::ModelID::SummoningStone::ImperialTripleChop, GW::Constants::SkillID::Triple_Chop},
-        {GW::Constants::ModelID::SummoningStone::ImperialBarrage, GW::Constants::SkillID::Barrage},
-        {GW::Constants::ModelID::SummoningStone::ImperialQuiveringBlade, GW::Constants::SkillID::Quivering_Blade},
-        {GW::Constants::ModelID::SummoningStone::TenguHundredBlades, GW::Constants::SkillID::Hundred_Blades},
-        {GW::Constants::ModelID::SummoningStone::TenguBroadHeadArrow, GW::Constants::SkillID::Broad_Head_Arrow},
-        {GW::Constants::ModelID::SummoningStone::TenguPalmStrike, GW::Constants::SkillID::Palm_Strike},
-        {GW::Constants::ModelID::SummoningStone::TenguLifeSheath, GW::Constants::SkillID::Life_Sheath},
-        {GW::Constants::ModelID::SummoningStone::TenguAngchuElementalist, GW::Constants::SkillID::No_Skill},
-        {GW::Constants::ModelID::SummoningStone::TenguFeveredDreams, GW::Constants::SkillID::Fevered_Dreams},
-        {GW::Constants::ModelID::SummoningStone::TenguSpitefulSpirit, GW::Constants::SkillID::Spiteful_Spirit},
-        {GW::Constants::ModelID::SummoningStone::TenguPreservation, GW::Constants::SkillID::Preservation},
-        {GW::Constants::ModelID::SummoningStone::TenguPrimalRage, GW::Constants::SkillID::Primal_Rage},
-        {GW::Constants::ModelID::SummoningStone::TenguGlassArrows, GW::Constants::SkillID::Glass_Arrows},
-        {GW::Constants::ModelID::SummoningStone::TenguWayOftheAssassin, GW::Constants::SkillID::Way_of_the_Assassin},
-        {GW::Constants::ModelID::SummoningStone::TenguPeaceandHarmony, GW::Constants::SkillID::Peace_and_Harmony},
-        {GW::Constants::ModelID::SummoningStone::TenguSandstorm, GW::Constants::SkillID::Sandstorm},
-        {GW::Constants::ModelID::SummoningStone::TenguPanic, GW::Constants::SkillID::Panic},
-        {GW::Constants::ModelID::SummoningStone::TenguAuraOftheLich, GW::Constants::SkillID::Aura_of_the_Lich},
-        {GW::Constants::ModelID::SummoningStone::TenguDefiantWasXinrae, GW::Constants::SkillID::Defiant_Was_Xinrae},
+    std::map<std::wstring, GW::Constants::SkillID> summon_elites = {
+        {L"\x8103\x70d", GW::Constants::SkillID::Aura_of_the_Lich},
+        {L"\x8103\x705", GW::Constants::SkillID::Spiteful_Spirit},
+        {L"\x8103\x70e", GW::Constants::SkillID::Defiant_Was_Xinrae},
+        {L"\x8103\x706", GW::Constants::SkillID::Preservation},
+        {L"\x8103\x6ff", GW::Constants::SkillID::Hundred_Blades},
+        {L"\x8103\x707", GW::Constants::SkillID::Primal_Rage},
+        {L"\x8103\x704", GW::Constants::SkillID::Fevered_Dreams},
+        {L"\x8103\x70c", GW::Constants::SkillID::Panic},
+        {L"\x8103\x709", GW::Constants::SkillID::Way_of_the_Assassin},
+        {L"\x8103\x701", GW::Constants::SkillID::Palm_Strike},
+        {L"\x8103\x70a", GW::Constants::SkillID::Peace_and_Harmony},
+        {L"\x8103\x702", GW::Constants::SkillID::Life_Sheath},
+        {L"\x8103\x703", GW::Constants::SkillID::No_Skill}, // This is the Angchu Elementalist without an Elite Skill
+        {L"\x8103\x70b", GW::Constants::SkillID::Sandstorm},
+        {L"\x8103\x708", GW::Constants::SkillID::Glass_Arrows},
+        {L"\x8103\x700", GW::Constants::SkillID::Broad_Head_Arrow},
+        {L"\x8103\x6fe", GW::Constants::SkillID::Quivering_Blade},
+        {L"\x8103\x6fc", GW::Constants::SkillID::Triple_Chop},
+        {L"\x8103\x6fb", GW::Constants::SkillID::Crippling_Slash},
+        {L"\x8103\x6fd", GW::Constants::SkillID::Barrage},
     };
 
     struct PendingAddToParty {
@@ -97,8 +97,11 @@ namespace {
     GW::HookEntry GameSrvTransfer_Entry;
     GW::HookEntry GameThreadCallback_Entry;
 
-    GW::HookEntry Summon_AgentAdd_Entry;
+    GW::HookEntry Summon_AgentName_Entry;
     GW::HookEntry Summon_GameThreadCallback_Entry;
+
+    // Names are round-tripped through AgentName packets, so every copy has to fit that field.
+    constexpr size_t agent_enc_name_len = sizeof(GW::Packet::StoC::AgentName::name_enc) / sizeof(wchar_t);
 
     std::vector<uint32_t> allies_added_to_party;
     std::vector<PendingAddToParty> pending_add;
@@ -176,7 +179,8 @@ namespace {
         GW::Packet::StoC::AgentName packet;
         packet.header = GW::Packet::StoC::AgentName::STATIC_HEADER;
         packet.agent_id = agent_id;
-        wcscpy(packet.name_enc, name);
+        wcsncpy(packet.name_enc, name, _countof(packet.name_enc) - 1);
+        packet.name_enc[_countof(packet.name_enc) - 1] = 0;
         GW::StoC::EmulatePacket(&packet);
         return true;
     }
@@ -377,11 +381,12 @@ namespace {
         packet.agent_id = agent_id;
 
         const auto* a = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(agent_id));
-        wchar_t prev_name[8] = {0};
+        wchar_t prev_name[agent_enc_name_len] = {0};
         if (a) {
-            wcscpy(prev_name, GW::Agents::GetAgentEncName(a));
+            if (const auto* enc_name = GW::Agents::GetAgentEncName(a)) {
+                wcsncpy(prev_name, enc_name, _countof(prev_name) - 1);
+            }
         }
-        // 1. Remove NPC from window.
         GW::StoC::EmulatePacket(&packet);
         SetAgentName(agent_id, prev_name);
         const auto it = std::ranges::find(allies_added_to_party, agent_id);
@@ -399,8 +404,10 @@ namespace {
         if (!a || a->GetIsDead() || a->GetIsDeadByTypeMap()) {
             return;
         }
-        wchar_t prev_name[8] = {0};
-        wcscpy(prev_name, GW::Agents::GetAgentEncName(a));
+        wchar_t prev_name[agent_enc_name_len] = {0};
+        if (const auto* enc_name = GW::Agents::GetAgentEncName(a)) {
+            wcsncpy(prev_name, enc_name, _countof(prev_name) - 1);
+        }
         GW::Packet::StoC::PartyAllyAdd packet;
 
         packet.header = GW::Packet::StoC::PartyAllyAdd::STATIC_HEADER;
@@ -408,7 +415,6 @@ namespace {
         packet.agent_type = p.player_number | 0x20000000;
         packet.allegiance_bits = 1886151033;
 
-        // 1. Remove NPC from window.
         GW::StoC::EmulatePacket(&packet);
         SetAgentName(p.agent_id, prev_name);
 
@@ -471,19 +477,16 @@ namespace {
                     match_quality++; // Secondary match is worth 1 point
                 }
 
-                // Choose this position if it's a better match than what we have
                 if (match_quality > *match_quality_out || (match_quality == *match_quality_out && i < *sort_pos_out)) {
                     *sort_pos_out = i;
                     *match_quality_out = match_quality;
                 }
             }
         };
-        // Find best match for first player
         size_t p1_sort_pos = SIZE_MAX;
         int p1_match_quality = -1; // Higher = better match
         CalcSortPos(p1, &p1_sort_pos, &p1_match_quality);
 
-        // Find best match for second player
         size_t p2_sort_pos = SIZE_MAX;
         int p2_match_quality = -1;
         CalcSortPos(p2, &p2_sort_pos, &p2_match_quality);
@@ -663,7 +666,6 @@ namespace {
             auto& sorting = party_sortings[i];
             ImGui::PushID(static_cast<int>(i));
 
-            // Map name
             const char* map_name = "Any Map";
             if (sorting.map_id != GW::Constants::MapID::None) {
                 auto* enc_name = Resources::GetMapName(sorting.map_id);
@@ -679,7 +681,6 @@ namespace {
             ImGui::TextUnformatted(map_name);
             ImGui::SameLine(sort_cols[0]);
 
-            // Party size
             if (sorting.party_size == 0) {
                 ImGui::Text("Any");
             }
@@ -688,7 +689,6 @@ namespace {
             }
             ImGui::SameLine(sort_cols[1]);
 
-            // Sort order display
             std::string sort_display;
             for (size_t j = 0; j < sorting.sorting_by_profession.size(); j++) {
                 if (j > 0) sort_display += " -> ";
@@ -700,7 +700,6 @@ namespace {
 
             ImGui::SameLine(sort_cols[2]);
 
-            // Edit button
             if (ImGui::Button("Edit")) {
                 edit_sorting_index = i;
                 edit_map_id = static_cast<int>(sorting.map_id);
@@ -709,7 +708,6 @@ namespace {
             }
             ImGui::SameLine();
 
-            // Delete button
             if (ImGui::Button("Delete")) {
                 party_sortings.erase(party_sortings.begin() + i);
                 if (chosen_sorting_vector == &sorting) {
@@ -729,11 +727,9 @@ namespace {
 
 
 
-        // Add/Edit party sorting
         const bool is_editing = (edit_sorting_index >= 0);
         ImGui::Text(is_editing ? "Edit Party Sorting:" : "Add New Party Sorting:");
 
-        // Map selection
         ImGui::Text("Map ID (0 = Any):");
         ImGui::SameLine(200.0f * fontScale);
         ImGui::SetNextItemWidth(100.0f * fontScale);
@@ -742,7 +738,6 @@ namespace {
             ImGui::SameLine();
             ImGui::TextDisabled(Resources::GetMapName((GW::Constants::MapID)edit_map_id)->string().c_str());
         }
-        // Party size
         ImGui::Text("Party Size (0 = Any):");
         ImGui::SameLine(200.0f * fontScale);
         ImGui::SetNextItemWidth(100.0f * fontScale);
@@ -750,7 +745,6 @@ namespace {
         if (edit_party_size < 0) edit_party_size = 0;
         if (edit_party_size > 12) edit_party_size = 12;
 
-        // Profession order
         ImGui::Text("Profession Order:");
         ImGui::BeginChild("profession_order_edit", ImVec2(0, 150.0f), true);
 
@@ -763,7 +757,6 @@ namespace {
             ImGui::Text("%zu.", i + 1);
             ImGui::SameLine();
 
-            // Primary profession combo
             ImGui::SetNextItemWidth(120.0f * fontScale);
             if (ImGui::BeginCombo("##primary", ToolboxUtils::GetProfessionAcronym(static_cast<GW::Constants::Profession>(primary))->string().c_str())) {
                 for (uint8_t prof = 0; prof <= 10; prof++) {
@@ -780,7 +773,6 @@ namespace {
             ImGui::Text("/");
             ImGui::SameLine();
 
-            // Secondary profession combo
             ImGui::SetNextItemWidth(120.0f * fontScale);
             if (ImGui::BeginCombo("##secondary", ToolboxUtils::GetProfessionAcronym(static_cast<GW::Constants::Profession>(secondary))->string().c_str())) {
                 for (uint8_t prof = 0; prof <= 10; prof++) {
@@ -795,7 +787,6 @@ namespace {
 
             
 
-            // Move up button
             ImGui::SameLine();
             if (ImGui::Button(ICON_FA_ARROW_UP) && i > 0) 
                 std::swap(edit_profession_order[i], edit_profession_order[i - 1]);
@@ -805,7 +796,6 @@ namespace {
                 std::swap(edit_profession_order[i], edit_profession_order[i + 1]);
 
             ImGui::SameLine();
-            // Remove button
             if (ImGui::Button("Remove")) {
                 edit_profession_order.erase(edit_profession_order.begin() + i);
                 ImGui::PopID();
@@ -816,14 +806,12 @@ namespace {
         }
         ImGui::EndChild();
 
-        // Add profession button
         if (ImGui::Button("Add Profession")) {
             edit_profession_order.push_back(0); // Any/Any
         }
 
         ImGui::SameLine();
 
-        // Save button
         if (ImGui::Button(is_editing ? "Save Changes" : "Add Sorting")) {
             if (edit_profession_order.empty()) {
                 Log::Error("At least one profession entry is required");
@@ -844,7 +832,6 @@ namespace {
                     Log::Flash("Added new party sorting");
                 }
 
-                // Clear edit state
                 edit_map_id = 0;
                 edit_party_size = 0;
                 edit_profession_order.clear();
@@ -986,24 +973,20 @@ void PartyWindowModule::Initialize()
         }
     });
 
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentAdd>(
-        &Summon_AgentAdd_Entry,
-        [&](GW::HookStatus*, const GW::Packet::StoC::AgentAdd* pak) -> void {
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentName>(
+        &Summon_AgentName_Entry,
+        [&](GW::HookStatus*, const GW::Packet::StoC::AgentName* pak) -> void {
             if (!settings.add_elite_skill_to_summons) {
                 return;
             }
-            if (pak->type != 1) {
-                return; // Not a living agent.
-            }
-            const uint32_t player_number = pak->agent_type ^ 0x20000000;
-            const auto summon_elite = summon_elites.find(player_number);
+            const auto summon_elite = summon_elites.find(pak->name_enc);
             if (summon_elite == summon_elites.end()) {
                 return;
             }
             if (summon_elite->second == GW::Constants::SkillID::No_Skill) {
                 return;
             }
-            summons_pending.push({pak->agent_id, summon_elite->second});
+            summons_pending.push({ pak->agent_id, summon_elite->second });
         }
     );
 
@@ -1033,7 +1016,7 @@ void PartyWindowModule::SignalTerminate()
     GW::StoC::RemoveCallback<GW::Packet::StoC::AgentState>(&AgentState_Entry);
     GW::StoC::RemoveCallback<GW::Packet::StoC::AgentAdd>(&AgentAdd_Entry);
     GW::StoC::RemoveCallback<GW::Packet::StoC::GameSrvTransfer>(&GameSrvTransfer_Entry);
-    GW::StoC::RemoveCallback<GW::Packet::StoC::AgentAdd>(&Summon_AgentAdd_Entry);
+    GW::StoC::RemoveCallback<GW::Packet::StoC::AgentAdd>(&Summon_AgentName_Entry);
     ClearAddedAllies();
 }
 
@@ -1112,7 +1095,6 @@ void PartyWindowModule::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
         }
     }
     else if (legacy) {
-        // get all keys in a section
         TNamesDepend keys;
         legacy->GetAllKeys(Name(), keys);
         if (keys.empty()) {
@@ -1161,7 +1143,6 @@ void PartyWindowModule::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
         }
     }
     else if (legacy) {
-        // Load party sorting configurations
         party_sortings.clear();
         long sorting_count = legacy->GetLongValue(Name(), "party_sorting_count", 0);
 
@@ -1170,11 +1151,9 @@ void PartyWindowModule::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 
             PartySorting sorting;
 
-            // Load map ID and party size
             sorting.map_id = static_cast<GW::Constants::MapID>(legacy->GetLongValue(Name(), (prefix + "map_id").c_str(), 0));
             sorting.party_size = static_cast<uint32_t>(legacy->GetLongValue(Name(), (prefix + "party_size").c_str(), 0));
 
-            // Load profession order
             long profession_count = legacy->GetLongValue(Name(), (prefix + "profession_count").c_str(), 0);
             sorting.sorting_by_profession.reserve(profession_count);
 
@@ -1184,7 +1163,6 @@ void PartyWindowModule::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
                 sorting.sorting_by_profession.push_back(profession_combo);
             }
 
-            // Only add if we have at least one profession entry
             if (!sorting.sorting_by_profession.empty()) {
                 party_sortings.push_back(sorting);
             }

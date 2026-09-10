@@ -32,30 +32,6 @@ namespace skilllist_export {
 }
 
 
-/*namespace {
-    enum SkillTypesEncoded {
-        Attack = 0x48f, EliteAttack,
-        AxeAttack, EliteAxeAttack,
-        BowAttack, EliteBowAttack,
-        HammerAttack, EliteHammerAttack,
-        MeleeAttack, EliteMeleeAttack,
-        SwordAttack, EliteSwordAttack,
-        Preparation, ElitePreparation,
-        DualAttack, EliteDualAttack,
-        LeadAttack, EliteLeadAttack,
-        OffHandAttack, EliteOffHandAttack,
-        PartyBonus,
-        NatureRitual, EliteNatureRitual,
-        BindingRitual, EliteBindingRitual,
-        Signet, EliteSignet,
-        Shout, EliteShout,
-        Spell, EliteSpell,
-        HexSpell, EliteHexSpell,
-        EnchantmentSpell, EliteEnchantmentSpell,
-        Glyph, EliteGlyph,
-        Skill, EliteSkill
-    };
-}*/
 class SkillListingWindow : public ToolboxWindow {
 public:
     class Skill {
@@ -65,6 +41,7 @@ public:
 
         skilllist_export::SkillJson ToJson();
         const wchar_t* Name();
+        const std::wstring& NameLower();
         const wchar_t* GWWDescription();
         const wchar_t* GWWConcise();
         //const wchar_t* Description(uint32_t attribute_level, wchar_t* buffer);
@@ -83,6 +60,7 @@ public:
     private:
         wchar_t name_enc[64] = {0};
         wchar_t name_dec[256] = {0};
+        std::wstring name_lower;
         wchar_t desc_enc[64] = {0};
         wchar_t desc_dec[256] = {0};
         wchar_t desc_gww[256] = {0};

@@ -560,41 +560,42 @@ namespace GW {
 			kInventoryRelated2,                      // 0x100001aa, added to GW 2026-02-26
 			kInventoryRelated3,                      // 0x100001ab, added to GW 2026-02-26
 			kInventoryRelated4,                      // 0x100001ac, added to GW 2026-04-28
-			kEquipItem,                              // 0x100001ad, wparam = { item_id, agent_id }
-			kMoveItem,                               // 0x100001ae, wparam = { item_id, to_bag, to_slot, bool prompt }
-			kItemRelated_1,                          // 0x100001af
-			kItemTooltip,                            // 0x100001b0
-			kItemRelated_3,                          // 0x100001b1, added to GW 2026-02-26
-			kItemRelated_4,                          // 0x100001b2, added to GW 2026-02-26
-			kItemRelated_5,                          // 0x100001b3, added to GW 2026-04-28
-			kInitiateTrade,                          // 0x100001b4
-			kMessage_0x100001a7,                     // 0x100001b5
-			kMessage_0x100001a8,                     // 0x100001b6
-			kMessage_0x100001a9,                     // 0x100001b7
-			kMessage_0x100001aa,                     // 0x100001b8
-			kPartySearchWindowDestroyed,             // 0x100001b9
-			kMessage_0x100001ac,                     // 0x100001ba
-			kPartySearchWindowCreated,               // 0x100001bb
-			kMessage_0x100001ae,                     // 0x100001bc
-			kMessage_0x100001af,                     // 0x100001bd
-			kMessage_0x100001b0,                     // 0x100001be
-			kMessage_0x100001b1,                     // 0x100001bf
-			kMessage_0x100001b2,                     // 0x100001c0
-			kMessage_0x100001b3,                     // 0x100001c1
-			kMessage_0x100001b4,                     // 0x100001c2
-			kMessage_0x100001b5,                     // 0x100001c3
-			kInventoryAgentChanged,                  // 0x100001c4, Triggered when inventory needs updating due to agent change; no args
-			kInventoryRelated_1,                     // 0x100001c5
-			kInventoryRelated_2,                     // 0x100001c6
-			kMissionStatusRelated,                   // 0x100001c7
-			kUnused_1c2,                             // 0x100001c8
-			kCollapseExpandSkillListSection,         // 0x100001c9
-			kPromptLoadTemplate,                     // 0x100001ca
-			kOpenTemplateManager,                    // 0x100001cb
-			kPromptSaveTemplate,                     // 0x100001cc
-			kOpenTemplate,                           // 0x100001cd, wparam = GW::UI::ChatTemplate*
-			kTemplateRelated_3,                      // 0x100001ce
-			kTemplateRelated_4,                      // 0x100001cf
+			kInventoryRelated4_1,                    // 0x100001ad, added to GW 2026-08-07
+			kEquipItem,                              // 0x100001ae, wparam = { item_id, agent_id }
+			kMoveItem,                               // 0x100001af, wparam = { item_id, to_bag, to_slot, bool prompt }
+			kItemRelated_1,                          // 0x100001b0
+			kItemTooltip,                            // 0x100001b1
+			kItemRelated_3,                          // 0x100001b2, added to GW 2026-02-26
+			kItemRelated_4,                          // 0x100001b3, added to GW 2026-02-26
+			kItemRelated_5,                          // 0x100001b4, added to GW 2026-04-28
+			kInitiateTrade,                          // 0x100001b5
+			kMessage_0x100001a7,                     // 0x100001b6
+			kMessage_0x100001a8,                     // 0x100001b7
+			kMessage_0x100001a9,                     // 0x100001b8
+			kMessage_0x100001aa,                     // 0x100001b9
+			kPartySearchWindowDestroyed,             // 0x100001ba
+			kMessage_0x100001ac,                     // 0x100001bb
+			kPartySearchWindowCreated,               // 0x100001bc
+			kMessage_0x100001ae,                     // 0x100001bd
+			kMessage_0x100001af,                     // 0x100001be
+			kMessage_0x100001b0,                     // 0x100001bf
+			kMessage_0x100001b1,                     // 0x100001c0
+			kMessage_0x100001b2,                     // 0x100001c1
+			kMessage_0x100001b3,                     // 0x100001c2
+			kMessage_0x100001b4,                     // 0x100001c3
+			kMessage_0x100001b5,                     // 0x100001c4
+			kInventoryAgentChanged,                  // 0x100001c5, Triggered when inventory needs updating due to agent change; no args
+			kInventoryRelated_1,                     // 0x100001c6
+			kInventoryRelated_2,                     // 0x100001c7
+			kMissionStatusRelated,                   // 0x100001c8
+			kUnused_1c2,                             // 0x100001c9
+			kCollapseExpandSkillListSection,         // 0x100001ca
+			kPromptLoadTemplate,                     // 0x100001cb
+			kOpenTemplateManager,                    // 0x100001cc
+			kPromptSaveTemplate,                     // 0x100001cd
+			kOpenTemplate,                           // 0x100001ce, wparam = GW::UI::ChatTemplate*
+			kTemplateRelated_3,                      // 0x100001cf
+			kTemplateRelated_4,                      // 0x100001d0
 
 			// GWCA Client to Server commands. Only added the ones that are used for hooks, everything else goes straight into GW
 
@@ -603,7 +604,7 @@ namespace GW {
 			kSendMoveItem = 0x30000000 | 0x5,        // 0x30000005, wparam = UIPacket::kSendMoveItem*
 			kSendMerchantRequestQuote = 0x30000000 | 0x6,  // 0x30000006, wparam = UIPacket::kSendMerchantRequestQuote*
 			kSendMerchantTransactItem = 0x30000000 | 0x7,  // 0x30000007, wparam = UIPacket::kSendMerchantTransactItem*
-			kSendUseItem = 0x30000000 | 0x8,         // 0x30000008, wparam = UIPacket::kSendUseItem*
+			kSendUseItem = 0x30000000 | 0x8,         // 0x30000008, wparam = uint32_t item_id
 			kSendSetActiveQuest = 0x30000000 | 0x9,  // 0x30000009, wparam = uint32_t quest_id
 			kSendAbandonQuest = 0x30000000 | 0xA,    // 0x3000000a, wparam = uint32_t quest_id
 			kSendChangeTarget = 0x30000000 | 0xB,    // 0x3000000b, wparam = UIPacket::kSendChangeTarget* // e.g. tell the gw client to focus on a different target
@@ -626,7 +627,7 @@ namespace GW {
 			kChatLinkClicked = 0x30000000 | 0x25     // 0x30000025, wparam = UIPacket::kChatLinkClicked. Triggered when the player clicks an <a> link in chat, e.g. build code
 		};
 
-		//static_assert(GW::UI::UIMessage::kOpenTemplate == (GW::UI::UIMessage)0x100001c4);
+		static_assert(GW::UI::UIMessage::kOpenTemplate == (GW::UI::UIMessage)0x100001ce);
 
 		namespace UIPacket {
 			struct kUIFeatureChanged {
@@ -723,19 +724,34 @@ namespace GW {
 				uint32_t h0004;
 				uint32_t h0008;
 			};
+			// A handler that leaves both entries at 0 falls through to the engine's
+			// own default sizing (GetMinSize()-based) rather than being treated as "wants zero size".
+			//
+			// flags (offset 0xc) is passed through uninitialized in that call site and never visibly
+			// set before the dispatch - not confirmed as meaningful; treat as reserved/unused for now.
 			struct kMeasureContent {
-				float max_width;        // Maximum width constraint
-				float max_height;       // Maximum height constraint
-				float* size_output;     // Pointer to output buffer for calculated size
-				uint32_t flags;         // Layout flags (similar to the 0x100 flag we saw)
+				float max_width;        // Available width, after the frame's own margin/padding is already subtracted
+				float max_height;       // Available height, after the frame's own margin/padding is already subtracted
+				float* size_output;     // Points at a 2-float [width, height] buffer the handler must fill
+				uint32_t flags;         // Not confirmed meaningful - see comment above
 			};
+			// Every field here is relative to the frame's own content-origin rect (its content_left/
+			// content_bottom/content_right/content_top) - not absolute screen coordinates:
+			//   available_width  = content_right  - content_left
+			//   available_height = content_top    - content_bottom
+			//   local_left       = resolved_left  - content_left
+			//   local_bottom     = resolved_bottom - content_bottom
+			//   local_right      = resolved_right - content_left
+			//   local_top        = resolved_top   - content_bottom
+			// i.e. "here is how much room you have, and here is where your own just-resolved rect sits
+			// within it"
 			struct kSetLayout {
-				float field_0x0;
-				float field_0x4;
-				float field_0x8;
-				float field_0xc;
 				float available_width;
 				float available_height;
+				float local_left;
+				float local_bottom;
+				float local_right;
+				float local_top;
 			};
 			struct kSetAgentProfession {
 				AgentID agent_id;
@@ -938,10 +954,6 @@ namespace GW {
 				Merchant::QuoteInfo give;
 				uint32_t gold_recv;
 				Merchant::QuoteInfo recv;
-			};
-			struct kSendUseItem {
-				uint32_t item_id;
-				uint16_t quantity; // Unused, but would be cool
 			};
 			struct kSendChatMessage {
 				wchar_t* message;

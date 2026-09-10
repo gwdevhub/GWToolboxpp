@@ -141,7 +141,6 @@ namespace {
     void CHAT_CMD_FUNC(CmdMarkTarget)
     {
         if (argc > 1 && wcscmp(argv[1], L"clearall") == 0) {
-            // /marktarget clearall
             RemoveMarkedTarget();
             return;
         }
@@ -150,7 +149,6 @@ namespace {
             return;
         }
         if (argc > 1 && (wcscmp(argv[1], L"clear") == 0 || wcscmp(argv[1], L"remove") == 0)) {
-            // /marktarget clear
             RemoveMarkedTarget(agent->agent_id);
             return;
         }
@@ -313,9 +311,6 @@ void AgentRenderer::LoadCustomAgents()
 
 void AgentRenderer::SeedDefaultCustomAgents()
 {
-    // One-time migration of the categories that map onto a single allegiance; dead/quest-giver
-    // overrides apply across all friendly allegiances so they stay as the untouched GetColor()/GetSize() fallback.
-    // dead_state is left "Either": that fallback already gates color by dead state, and GetSize() doesn't vary by it.
     struct DefaultRow {
         const char* label;
         GW::Constants::Allegiance allegiance;
@@ -447,8 +442,6 @@ void AgentRenderer::DrawSettings()
                 SyncSeededDefaultsFromLegacyFields();
             }
         });
-
-        
 
         struct AgentColorRow {
             const char* label;
@@ -889,11 +882,12 @@ void AgentRenderer::Render(IDirect3DDevice9* device)
             }
         }
 
-        // get stuff
         GW::AgentArray* agents = GW::Agents::GetAgentArray();
         if (!agents) {
             return;
         }
+
+        RefreshRelevantPolys();
 
         const GW::AgentLiving* player = GW::Agents::GetControlledCharacter();
         const GW::Agent* target = GW::Agents::GetTarget();
@@ -952,7 +946,6 @@ void AgentRenderer::Render(IDirect3DDevice9* device)
 
         target_drawn = false;
 
-        // some helper lambads
 
         const auto add_custom_agents_to_draw = [this](const GW::Agent* agent) -> bool {
             const auto custom_agents_for_this_agent = GetCustomAgentsToDraw(agent);
@@ -995,7 +988,6 @@ void AgentRenderer::Render(IDirect3DDevice9* device)
             });
         };
 
-        // Sort through all agents, fill out arrays
         for (const auto agent : *agents) {
             if (!agent) {
                 continue;
@@ -1055,7 +1047,6 @@ void AgentRenderer::Render(IDirect3DDevice9* device)
             if (!agent->GetIsAlive()) {
                 continue;
             }
-            // Apply custom size/shape if defined && marked_target_inherit_custom_agents == true
             const auto* cas = GetCustomAgentsToDraw(agent);
             const auto* ca = cas && !cas->empty() ? cas->front() : nullptr;
             const auto size = marked_target_inherit_custom_agents && ca && ca->size_active && ca->size >= 0 ? ca->size : size_marked_target;
@@ -1073,7 +1064,6 @@ void AgentRenderer::Render(IDirect3DDevice9* device)
                 }
             }
             if (marked) {
-                // Apply custom size/shape if defined && marked_target_inherit_custom_agents == true
                 const auto* ca = custom_agents_for_this_agent && !custom_agents_for_this_agent->empty() ? custom_agents_for_this_agent->front() : nullptr;
                 const auto size = marked_target_inherit_custom_agents && ca && ca->size_active && ca->size >= 0 ? ca->size : size_marked_target;
                 const auto shape = marked_target_inherit_custom_agents && ca && ca->shape_active ? ca->shape : default_shape;
@@ -1102,7 +1092,7 @@ void AgentRenderer::Render(IDirect3DDevice9* device)
             Enqueue(player);
         }
     }
-    
+
     D3DVertexBuffer::Render(device);
 }
 
@@ -1112,6 +1102,42 @@ void AgentRenderer::Enqueue(const GW::Agent* agent, const CustomAgent* ca)
     const auto size = GetSize(agent, ca);
     const auto shape = GetShape(agent, ca);
     return Enqueue(shape, agent, size, color);
+}
+
+void AgentRenderer::RefreshRelevantPolys()
+{
+    const auto map_id = GW::Map::GetMapID();
+    relevant_polygons.clear();
+    relevant_markers.clear();
+    for (const CustomRenderer::CustomPolygon& polygon : Minimap::Instance().custom_renderer.polygons) {
+        if (!((polygon.visible && polygon.map == GW::Constants::MapID::None) || polygon.map == map_id)) {
+            continue;
+        }
+        if (polygon.points.empty() || !(polygon.color_sub & IM_COL32_A_MASK)) {
+            continue;
+        }
+        auto& cached = relevant_polygons.emplace_back();
+        cached.polygon = &polygon;
+        cached.min_x = cached.max_x = polygon.points[0].x;
+        cached.min_y = cached.max_y = polygon.points[0].y;
+        for (const GW::GamePos& point : polygon.points) {
+            cached.min_x = std::min(cached.min_x, point.x);
+            cached.max_x = std::max(cached.max_x, point.x);
+            cached.min_y = std::min(cached.min_y, point.y);
+            cached.max_y = std::max(cached.max_y, point.y);
+        }
+    }
+    for (const CustomRenderer::CustomMarker& marker : Minimap::Instance().custom_renderer.markers) {
+        if (!((marker.visible && marker.map == GW::Constants::MapID::None) || marker.map == map_id)) {
+            continue;
+        }
+        if (!(marker.color_sub & IM_COL32_A_MASK)) {
+            continue;
+        }
+        auto& cached = relevant_markers.emplace_back();
+        cached.marker = &marker;
+        cached.radius_squared = marker.size * marker.size;
+    }
 }
 
 Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) const
@@ -1159,7 +1185,6 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
         }
     }
 
-    // hostiles
     if (living->allegiance == GW::Constants::Allegiance::Enemy) {
         if (living->GetIsDead()) {
             return color_hostile_dead;
@@ -1173,16 +1198,7 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
                 }
             }
         }
-        const auto& polygons = Minimap::Instance().custom_renderer.polygons;
-        const auto& markers = Minimap::Instance().custom_renderer.markers;
-        const auto is_relevant = [living](const CustomRenderer::CustomPolygon& polygon)-> bool {
-            return (polygon.visible && polygon.map == GW::Constants::MapID::None || polygon.map == GW::Map::GetMapID()) && !polygon.points.empty() && (polygon.color_sub & IM_COL32_A_MASK) != 0 &&
-                   GetDistance(living->pos, polygon.points.at(0)) < 2500.f;
-        };
-        const auto is_relevant_circle = [living](const CustomRenderer::CustomMarker& marker) {
-            return (marker.visible && marker.map == GW::Constants::MapID::None || marker.map == GW::Map::GetMapID()) && (marker.color_sub & IM_COL32_A_MASK) != 0 &&
-                   GetDistance(living->pos, marker.pos) < 2500.f;
-        };
+        constexpr auto relevance_range_squared = 2500.f * 2500.f;
         const auto is_inside = [](const GW::GamePos pos, const std::vector<GW::GamePos>& points) -> bool {
             bool b = false;
             //TODO: This might need adjust to take into account zlevels
@@ -1196,24 +1212,30 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
             return b;
         };
 
-        auto is_inside_circle = [](const GW::Vec2f pos, const GW::Vec2f circle, const float radius) -> bool {
-            return GetSquareDistance(pos, circle) <= radius * radius;
-        };
-        for (const auto& polygon : polygons) {
-            if (!is_relevant(polygon)) {
+        for (const auto& cached : relevant_polygons) {
+            const auto& polygon = *cached.polygon;
+            if (living->pos.x < cached.min_x || living->pos.x > cached.max_x || living->pos.y < cached.min_y || living->pos.y > cached.max_y) {
+                continue;
+            }
+            const auto& origin = polygon.points[0];
+            const float dx = living->pos.x - origin.x;
+            const float dy = living->pos.y - origin.y;
+            if (dx * dx + dy * dy >= relevance_range_squared) {
                 continue;
             }
             if (is_inside(living->pos, polygon.points)) {
                 c = &polygon.color_sub;
             }
         }
-        for (const auto& marker : markers) {
-            if (!is_relevant_circle(marker)) {
+        for (const auto& cached : relevant_markers) {
+            const auto& marker = *cached.marker;
+            const float dx = living->pos.x - marker.pos.x;
+            const float dy = living->pos.y - marker.pos.y;
+            const float dist_squared = dx * dx + dy * dy;
+            if (dist_squared >= relevance_range_squared || dist_squared > cached.radius_squared) {
                 continue;
             }
-            if (is_inside_circle(living->pos, marker.pos, marker.size)) {
-                c = &marker.color_sub;
-            }
+            c = &marker.color_sub;
         }
         if (living->hp > 0.9f) {
             return *c;
@@ -1221,7 +1243,6 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
         return Colors::Sub(*c, color_agent_damaged_modifier);
     }
 
-    // neutrals
     if (living->allegiance == GW::Constants::Allegiance::Neutral) {
         return color_neutral;
     }
@@ -1247,6 +1268,20 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
     }
 
     return IM_COL32(0, 0, 0, 0);
+}
+
+float AgentRenderer::GetSeededDefaultSize(const GW::Constants::Allegiance allegiance, const float fallback) const
+{
+    const auto it = custom_agents_by_allegiance.find(static_cast<int>(allegiance));
+    if (it == custom_agents_by_allegiance.end()) {
+        return fallback;
+    }
+    for (const CustomAgent* ca : it->second) {
+        if (ca->is_default && ca->active && ca->size_active && ca->size >= 0) {
+            return ca->size;
+        }
+    }
+    return fallback;
 }
 
 float AgentRenderer::GetSize(const GW::Agent* agent, const CustomAgent* ca) const
@@ -1282,22 +1317,22 @@ float AgentRenderer::GetSize(const GW::Agent* agent, const CustomAgent* ca) cons
             if (!living->GetIsDead() && living->GetHasQuest()) {
                 return size_ally_npc_quest;
             }
-            return size_ally;
+            return GetSeededDefaultSize(GW::Constants::Allegiance::Ally_NonAttackable, size_ally);
 
         case GW::Constants::Allegiance::Neutral: // neutral
-            return size_neutral;
+            return GetSeededDefaultSize(GW::Constants::Allegiance::Neutral, size_neutral);
 
         case GW::Constants::Allegiance::Spirit_Pet: // spirit / pet
-            return size_ally_spirit;
+            return GetSeededDefaultSize(GW::Constants::Allegiance::Spirit_Pet, size_ally_spirit);
 
         case GW::Constants::Allegiance::Npc_Minipet: // npc / minipet
             if (!living->GetIsDead() && living->GetHasQuest()) {
                 return size_ally_npc_quest;
             }
-            return size_ally_npc;
+            return GetSeededDefaultSize(GW::Constants::Allegiance::Npc_Minipet, size_ally_npc);
 
         case GW::Constants::Allegiance::Minion: // minion
-            return size_minion;
+            return GetSeededDefaultSize(GW::Constants::Allegiance::Minion, size_minion);
 
         case GW::Constants::Allegiance::Enemy: // hostile
             switch (living->player_number) {
@@ -1445,11 +1480,9 @@ void AgentRenderer::Enqueue(const Shape_e shape, const GW::Agent* agent, const f
         if (is_target && target_drawn) {
             return; // Don't draw target twice
         }
-        // Add agent border if applicable
         if (agent_border_thickness != 0.f && agent->GetIsLivingType()) {
             Enqueue(shape, pos, size + agent_border_thickness, Colors::ARGB(static_cast<int>(alpha * 0.8), 0, 0, 0));
         }
-        // Add target highlight if applicable
         if (is_target) {
             Enqueue(shape, pos, size + target_border_thickness, color_target);
             target_drawn = true;

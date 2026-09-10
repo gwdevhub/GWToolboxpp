@@ -256,7 +256,6 @@ struct HallOfMonumentsAchievements {
     uint32_t resilience_points[static_cast<size_t>(ResiliencePoints::Count)] = {0};
     // Total sum of armors dedicated
     uint32_t resilience_tally = 0;
-    // Total sum of points achieved in resilience
     uint32_t resilience_points_total = 0;
 
     // Details of which companions have or haven't been dedicated, indexed by FellowshipDetail
@@ -265,7 +264,6 @@ struct HallOfMonumentsAchievements {
     uint32_t fellowship_points[static_cast<size_t>(FellowshipPoints::Count)] = {0};
     // Total sum of companions dedicated
     uint32_t fellowship_tally = 0;
-    // Total sum of points achieved in fellowship
     uint32_t fellowship_points_total = 0;
 
     // Details of which titles have or haven't been dedicated, indexed by HonorDetail
@@ -274,7 +272,6 @@ struct HallOfMonumentsAchievements {
     uint32_t honor_points[static_cast<size_t>(HonorPoints::Count)] = {0};
     // Total sum of titles dedicated
     uint32_t honor_tally = 0;
-    // Total sum of points achieved in honor
     uint32_t honor_points_total = 0;
 
     // Details of which weapons have or haven't been dedicated, indexed by ValorDetail
@@ -283,7 +280,6 @@ struct HallOfMonumentsAchievements {
     uint32_t valor_points[static_cast<size_t>(ValorPoints::Count)] = {0};
     // Total sum of weapons dedicated
     uint32_t valor_tally = 0;
-    // Total sum of points achieved in valor
     uint32_t valor_points_total = 0;
 
     // Details of how many different types of minipet have or haven't been dedicated, indexed by DevotionDetail
@@ -292,7 +288,6 @@ struct HallOfMonumentsAchievements {
     uint32_t devotion_points[static_cast<size_t>(DevotionPoints::Count)] = {0};
     // Total sum of minipets dedicated
     uint32_t devotion_tally = 0;
-    // Total sum of points achieved in devotion
     uint32_t devotion_points_total = 0;
 };
 
@@ -333,6 +328,5 @@ public:
     static bool DecodeHomCode(const char* in, HallOfMonumentsAchievements* out);
     // Decode a zero terminated base64 encoded hom code
     static bool DecodeHomCode(HallOfMonumentsAchievements* out);
-    // Get the account achievements for the current player
     static void AsyncGetAccountAchievements(const std::wstring& character_name, HallOfMonumentsAchievements* out, OnAchievementsLoadedCallback = nullptr);
 };

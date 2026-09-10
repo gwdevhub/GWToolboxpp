@@ -2,7 +2,6 @@
 
 #include "PathingMapDataLoader.h"
 
-// Include actual GW headers
 #include <GWCA/Context/MapContext.h>
 #include <GWCA/GameContainers/Array.h>
 #include <GWCA/GameEntities/Pathing.h>
@@ -80,7 +79,7 @@ namespace Pathing {
 
     // Travel-portal model file IDs (asura gates / ferry portals). Shared by the DAT
     // prop parser and the live MapContext extractor so both agree on what counts.
-    static bool IsPortalModelFileId(uint32_t fid)
+    bool IsPortalModelFileId(uint32_t fid)
     {
         switch (fid) {
             case 0x4e6b2: case 0x3c5ac: case 0xa825: case 0xe723: case 0x858b: case 0x28da0: case 0x1c533: case 0x5e77a: return true;
@@ -88,25 +87,32 @@ namespace Pathing {
         }
     }
 
-    // Decode a live prop's model file ID the way WorldMapWidget does:
-    // h0034[4] points at a sub-struct whose [1] is the model's file hash.
+    // The model info is shared by every prop using that model, and carries the file hash the
+    // portal check keys off plus the collision bounds the doorway width comes from.
     static uint32_t MapPropModelFileId(const GW::MapProp* prop)
     {
-        if (!(prop && prop->h0034[4])) return 0;
-        const auto* sub_deets = reinterpret_cast<const uint32_t*>(prop->h0034[4]);
-        return ArenaNetFileParser::FileHashToFileId(reinterpret_cast<const wchar_t*>(sub_deets[1]));
+        if (!(prop && prop->model_info)) return 0;
+        return ArenaNetFileParser::FileHashToFileId(prop->model_info->model_file_name);
+    }
+
+    // Horizontal extent of the prop in world units, from the same cylinder the client picks
+    // against. Zero when the model info is missing, which callers read as "unknown".
+    static float MapPropRadius(const GW::MapProp* prop)
+    {
+        if (!(prop && prop->model_info)) return 0.f;
+        return prop->scale * prop->model_info->bounding_radius;
     }
 
     // Extract travel-portal props from live map memory - the MapContext equivalent of
     // ParsePortalProps' DAT chunk walk.
-    static void ParsePortalPropsFromMapContext(const GW::MapContext* map_context, std::vector<PortalProp>& out)
+    void ParsePortalPropsFromMapContext(const GW::MapContext* map_context, std::vector<PortalProp>& out)
     {
         const auto props = map_context ? map_context->props : nullptr;
         if (!props) return;
         for (auto* prop : props->propArray) {
             const uint32_t fid = MapPropModelFileId(prop);
             if (IsPortalModelFileId(fid))
-                out.push_back({{prop->position.x, prop->position.y}, fid});
+                out.push_back({{prop->position.x, prop->position.y}, fid, MapPropRadius(prop)});
         }
     }
 
@@ -147,11 +153,9 @@ namespace Pathing {
             AllocatePlaneBuffer(dst, src.trapezoid_count, src.portal_count, src.portal_trapezoids_count,
                                src.x_node_count, src.y_node_count, src.sink_node_count);
 
-            // Copy trapezoids
             if (src.trapezoids && src.trapezoid_count > 0) {
                 memcpy(dst.trapezoids, src.trapezoids, sizeof(GW::PathingTrapezoid) * src.trapezoid_count);
 
-                // Clear adjacent pointers and build id map
                 for (uint32_t i = 0; i < src.trapezoid_count; ++i) {
                     dst.trapezoids[i].adjacent[0] = nullptr;
                     dst.trapezoids[i].adjacent[1] = nullptr;
@@ -162,11 +166,9 @@ namespace Pathing {
                 }
             }
 
-            // Copy portals
             if (src.portals && src.portal_count > 0) {
                 memcpy(dst.portals, src.portals, sizeof(GW::Portal) * src.portal_count);
 
-                // Clear pair and trapezoids pointers, build old->new map
                 for (uint32_t i = 0; i < src.portal_count; ++i) {
                     dst.portals[i].pair = nullptr;
                     dst.portals[i].trapezoids = nullptr;
@@ -186,7 +188,6 @@ namespace Pathing {
                 memcpy(dst.sink_nodes, src.sink_nodes, sizeof(GW::SinkNode) * src.sink_node_count);
             }
 
-            // Build old->new node pointer map for this plane
             for (uint32_t i = 0; i < src.x_node_count; ++i) {
                 oldNodeToNew[reinterpret_cast<GW::Node*>(&src.x_nodes[i])] = reinterpret_cast<GW::Node*>(&dst.x_nodes[i]);
             }
@@ -224,7 +225,6 @@ namespace Pathing {
                 uint32_t pt_offset = 0;
 
                 for (uint32_t i = 0; i < src.portal_count; ++i) {
-                    // Fix pair pointer
                     if (src.portals[i].pair) {
                         auto it = oldToNew.find(src.portals[i].pair);
                         if (it != oldToNew.end()) {
@@ -281,7 +281,6 @@ namespace Pathing {
                 }
             }
 
-            // Remap root_node
             dst.root_node = remap_node(src.root_node);
         }
 
@@ -316,7 +315,6 @@ namespace Pathing {
         AllocatePlaneBuffer(dst, trap_count, portal_count, portal_trap_count,
                            x_count, y_count, sink_count);
 
-        // Fill trapezoids
         for (uint32_t i = 0; i < trap_count; ++i) {
             const auto& pt = parsed.trapezoids[i];
             GW::PathingTrapezoid& dt = dst.trapezoids[i];
@@ -389,7 +387,6 @@ namespace Pathing {
             }
         };
 
-        // Fill XNodes
         for (uint32_t i = 0; i < x_count; ++i) {
             const auto& src = parsed.x_nodes[i];
             GW::XNode& xn = dst.x_nodes[i];
@@ -406,7 +403,6 @@ namespace Pathing {
             xn.right = resolve_node(src.right_idx);
         }
 
-        // Fill YNodes
         for (uint32_t i = 0; i < y_count; ++i) {
             const auto& src = parsed.y_nodes[i];
             GW::YNode& yn = dst.y_nodes[i];
@@ -417,7 +413,6 @@ namespace Pathing {
             yn.below = resolve_node(src.below_idx);
         }
 
-        // Fill SinkNodes
         for (uint32_t i = 0; i < sink_count; ++i) {
             const auto& src = parsed.sink_nodes[i];
             GW::SinkNode& sn = dst.sink_nodes[i];
@@ -479,7 +474,9 @@ namespace Pathing {
             if (filename_index < fn_count) {
                 uint32_t fid = prop_file_ids[filename_index];
                 if (IsPortalModelFileId(fid)) {
-                    out.push_back({{px, pz}, fid});
+                    float radius;
+                    memcpy(&radius, pi_data + pi_off + 42, 4);
+                    out.push_back({{px, pz}, fid, radius});
                 }
             }
             pi_off += 48 + num_structs * 8;
@@ -547,7 +544,6 @@ namespace Pathing {
         if (!detail::read_u32(chunk_data, 4, chunk_size, version)) return false;
         if (!detail::read_u32(chunk_data, 8, chunk_size, sequence)) return false;
 
-        // Verify signature
         if (signature != 0xEEFE704C) return false;
 
         size_t off = 12;
@@ -568,7 +564,6 @@ namespace Pathing {
         if (!detail::read_u32(chunk_data, off, chunk_size, plane_count)) return false;
         off += 4;
 
-        // Sanity check
         if (plane_count > 256) return false;
 
         // Parse into intermediate format first
@@ -598,7 +593,6 @@ namespace Pathing {
             if (!ConvertParsedPlaneToCopied(parsed_planes[i], result.planes[i], plane_trap_id_start[i])) {
                 return false;
             }
-            // Set portal_plane for each portal
             for (uint32_t j = 0; j < result.planes[i].portal_count; ++j) {
                 result.planes[i].portals[j].portal_plane = static_cast<uint16_t>(i);
             }
@@ -636,7 +630,6 @@ namespace Pathing {
 
         out->map_file_id = map_file_id;
 
-        // Parse portal props
         ParsePortalProps(game_asset, out->portal_props);
         out->total_props_parsed = 0; // not tracked in shared helper
         out->total_prop_filenames = 0;

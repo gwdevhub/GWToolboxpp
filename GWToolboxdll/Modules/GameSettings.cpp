@@ -8,6 +8,7 @@
 #include <GWCA/Constants/Skills.h>
 
 #include <GWCA/Context/CharContext.h>
+#include <GWCA/Context/GuildContext.h>
 #include <GWCA/Context/WorldContext.h>
 
 #include <GWCA/GameContainers/Array.h>
@@ -86,10 +87,6 @@ namespace {
         }
         const std::wstring title = GetPlayerName();
         if (!title.empty()) {
-            // Guild Wars' window may be registered as an ANSI (non-Unicode) window class; in that
-            // case SetWindowTextW() gets thunked down to the system codepage before being applied,
-            // corrupting any character outside it. Sending WM_SETTEXT via DefWindowProcW directly
-            // bypasses that thunking, same trick already used for our own windows in imgui_impl_win32.cpp.
             DefWindowProcW(hwnd, WM_SETTEXT, 0, reinterpret_cast<LPARAM>(title.c_str()));
         }
     }
@@ -121,9 +118,6 @@ namespace {
         SetMessageColor(chan, color.value);
     }
 
-    // For some reason no matter whether this call is wrapped in Draw or Update or main thread, it passes garbage to window title on first load.
-    // Even tried compiling in unicode, still no dice.
-    // I've given up trying, so here is a timer that triggers a 3s delay to do it in the Update loop, whatever
     clock_t set_window_title_delay = 0;
 
     clock_t last_send = 0;
@@ -185,16 +179,40 @@ namespace {
         const char* label;
         DEFAULT_NAMETAG_COLOR default_val;
         Color* ptr;
+        bool player_override = false;
     };
     NametagColor nametag_color_settings[] = {
         {"NPC", DEFAULT_NAMETAG_COLOR::NPC, &settings.nametag_color_npc.value},
         {"Myself", DEFAULT_NAMETAG_COLOR::PLAYER_SELF, &settings.nametag_color_player_self.value},
         {"Other Player", DEFAULT_NAMETAG_COLOR::PLAYER_OTHER, &settings.nametag_color_player_other.value},
         {"Other Player (In Party)", DEFAULT_NAMETAG_COLOR::PLAYER_IN_PARTY, &settings.nametag_color_player_in_party.value},
+        {"Other Player (In My Party)", DEFAULT_NAMETAG_COLOR::PLAYER_IN_MY_PARTY, &settings.nametag_color_player_in_my_party.value},
+        {"Friends", DEFAULT_NAMETAG_COLOR::PLAYER_OTHER, &settings.nametag_color_friends.value, true},
+        {"Guild Members", DEFAULT_NAMETAG_COLOR::PLAYER_OTHER, &settings.nametag_color_guild_members.value, true},
         {"Gadget", DEFAULT_NAMETAG_COLOR::GADGET, &settings.nametag_color_gadget.value},
         {"Enemy", DEFAULT_NAMETAG_COLOR::ENEMY, &settings.nametag_color_enemy.value},
         {"Item", DEFAULT_NAMETAG_COLOR::ITEM, &settings.nametag_color_item.value},
     };
+
+    // Cached per-player nametag colors; cleared on map load and party changes so lookups run once per hover per map.
+    std::unordered_map<std::wstring, Color> nametag_color_cache;
+
+    bool IsGuildMemberPlayer(const wchar_t* player_name)
+    {
+        if (!(player_name && *player_name)) {
+            return false;
+        }
+        const auto guild_context = GW::GetGuildContext();
+        if (!guild_context) {
+            return false;
+        }
+        for (const GW::GuildPlayer* player : guild_context->player_roster) {
+            if (player && player->current_name[0] && !wcsncmp(player->current_name, player_name, _countof(player->current_name))) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     struct ChannelColorDef {
         const char* key;
@@ -414,18 +432,10 @@ namespace {
         GW::Hook::LeaveHook();
     }
 
-    using SetGlobalNameTagVisibility_pt = void(__cdecl*)(uint32_t flags);
-    SetGlobalNameTagVisibility_pt SetGlobalNameTagVisibility_Func = nullptr;
-    uint32_t* GlobalNameTagVisibilityFlags = nullptr;
-
     // Refresh agent name tags when allegiance changes ( https://github.com/gwdevhub/GWToolboxpp/issues/781 )
-    void OnAgentAllegianceChanged(GW::HookStatus*, GW::Packet::StoC::AgentUpdateAllegiance*)
+    void OnAgentAllegianceChanged(GW::HookStatus*, const GW::Packet::StoC::AgentUpdateAllegiance* packet)
     {
-        // Backup the current name tag flag state, then "flash" nametags to update.
-        const uint32_t prev_flags = *GlobalNameTagVisibilityFlags;
-        SetGlobalNameTagVisibility_Func(0);
-        SetGlobalNameTagVisibility_Func(prev_flags);
-        ASSERT(*GlobalNameTagVisibilityFlags == prev_flags);
+        GW::Agents::RefreshAgentNameTag(GW::Agents::GetAgentByID(packet->agent_id));
     }
 
     uint32_t current_party_target_id = 0;
@@ -495,13 +505,11 @@ namespace {
         const GW::Player* next_player = nullptr;
         const GW::AgentLiving* me = GW::Agents::GetControlledCharacter();
         if (!me) {
-            // Can't find myself
             Log::Error("Failed to find me");
             return pending_reinvite.reset();
         }
         GW::PartyInfo* party = GW::PartyMgr::GetPartyInfo();
         if (!party || !party->players.valid()) {
-            // Can't find party
             Log::Error("Failed to find party");
             return pending_reinvite.reset();
         }
@@ -612,10 +620,9 @@ namespace {
                 if (IsPlayerInParty(pending_reinvite.identifier)) {
                     return;
                 }
-                const auto aliases = PartyWindowModule::Instance().GetAliasedPlayerNames();
-                if (aliases.contains(player->name)) {
-                    const auto orig_name = aliases.at(player->name).c_str();
-                    GW::PartyMgr::InvitePlayer(orig_name);
+                const auto& aliases = PartyWindowModule::Instance().GetAliasedPlayerNames();
+                if (const auto found_alias = aliases.find(player->name); found_alias != aliases.end()) {
+                    GW::PartyMgr::InvitePlayer(found_alias->second.c_str());
                 }
                 else {
                     GW::PartyMgr::InvitePlayer(pending_reinvite.identifier);
@@ -674,6 +681,7 @@ namespace {
     // Override the login status dropdown by sending ui message 0x51 if found
     void OverrideDefaultOnlineStatus()
     {
+        if (!settings.remember_online_status) return; // Opted out; leave GW's default status alone
         GW::GameThread::Enqueue([] {
             GW::UI::SelectDropdownOption(GW::UI::GetFrameByLabel(L"StatusOverride"), settings.last_online_status);
         });
@@ -941,6 +949,24 @@ namespace {
         }
     }
 
+    // Last party leader state the server told us about, so we can spot a change of leadership
+    bool was_party_leader = true;
+
+    void OnPartyLeaderChanged(GW::HookStatus*, const GW::Packet::StoC::PlayerIsPartyLeader* packet)
+    {
+        const auto is_leader = packet->is_leader != 0;
+        const auto became_leader = is_leader && !was_party_leader;
+        was_party_leader = is_leader;
+        if (!became_leader || !settings.fix_legacy_enter_mission_button) return;
+        if (!GW::UI::GetPreference(GW::UI::FlagPreference::LegacyStartMissionButton)) return;
+        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) return;
+        const auto map_info = GW::Map::GetCurrentMapInfo();
+        if (!map_info || !map_info->GetHasEnterButton()) return;
+        const auto party_frame = GW::UI::GetFrameByLabel(L"Party");
+        if (!party_frame) return;
+        GW::UI::SendFrameUIMessage(party_frame, GW::UI::UIMessage::kDisableEnterMissionBtn, nullptr);
+    }
+
     GW::HookEntry OnPreUIMessage_HookEntry;
 
     bool need_to_hide_inventory_window_after_trade = false;
@@ -1013,10 +1039,6 @@ namespace {
                 }
             } break;
             case GW::UI::UIMessage::kTradeSessionStart: {
-                // TODO: This only catches the scenario where the trade window is shown straight away (i.e. player initiates trade)
-                // If another player trades you, this ui message will show the trade "prompt" window and won't show inv until you click "view"
-                //
-                // Probably need to hook into CreateFloatingWindow and block it if the inv window is trying to be opened without user interaction
                 need_to_hide_inventory_window_after_trade = GW::UI::GetFrameByLabel(L"Inventory") == nullptr;
             } break;
         }
@@ -1083,10 +1105,8 @@ namespace {
         if (!(sign_btn && sign_btn->IsVisible() && sign_btn->IsDisabled())) return; // If sign button isn't visible, the player doesn't have enough faction
         const auto name_input = static_cast<GW::EditableTextFrame*>(GW::UI::GetChildFrame(frame, 4, 2));
         if (!name_input) return;
-        // Prefill and hide the name input
         name_input->SetValue(GW::PlayerMgr::GetPlayerName());
         GW::UI::SetFrameVisible(name_input, false);
-        // Show and enable the "Sign" button
         GW::UI::SetFrameDisabled(sign_btn, false);
     }
 
@@ -1119,7 +1139,6 @@ namespace {
     {
         uint32_t level = 1; // This is correct - start at 0
         while (XpReqForLevel(level + 1) <= currentXp) {
-            // Check next level
             level++;
         }
         return level; // 1 Based
@@ -1262,9 +1281,10 @@ namespace {
                     const auto title_id = static_cast<GW::Constants::TitleID>(reinterpret_cast<uint32_t>(wParam));
                     const auto title = GW::PlayerMgr::GetTitleTrack(title_id);
                     // @Cleanup: I don't think this behaves itself.
-                    if (title && title->max_title_tier_index == title->current_title_tier_index && last_recorded_tiers.contains(title_id) && last_recorded_tiers[title_id] != title->current_title_tier_index) {
+                    const auto recorded_tier = last_recorded_tiers.find(title_id);
+                    if (title && title->max_title_tier_index == title->current_title_tier_index && recorded_tier != last_recorded_tiers.end() && recorded_tier->second != title->current_title_tier_index) {
                         if (GW::Map::GetIsMapLoaded() && !GW::UI::IsLoadingScreenShown()) pending_screenshot = TIMER_INIT();
-                        last_recorded_tiers[title_id] = title->current_title_tier_index;
+                        recorded_tier->second = title->current_title_tier_index;
                     }
                 }
             } break;
@@ -1460,55 +1480,43 @@ bool PendingChatMessage::PrintMessage()
     return printed;
 };
 
-/*
- *   GWToolbox chat log end
- */
-
 void GameSettings::Initialize()
 {
     ToolboxModule::Initialize();
     SettingsRegistry::Register(this, settings);
+    SettingsRegistry::Describe(this, "automatically_flag_pet_to_fight_called_target", "Automatically lock heroes and pets onto your called target");
     SettingsRegistry::Describe(this, "combine_overhead_numbers", "Combine floating numbers above character", combine_overhead_numbers_help);
 
     OnSkillTomeWindow_UIMessage_Func = (GW::UI::UIInteractionCallback)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("GmSkTome.cpp", "selection.skillId", 0, 0), 0xfff);
+    DEBUG_ASSERT(OnSkillTomeWindow_UIMessage_Func);
     Log::Log("[GameSettings] OnSkillTomeWindow_UIMessage_Func = %p\n", OnSkillTomeWindow_UIMessage_Func);
 
     SkillList_UICallback_Func = (GW::UI::UIInteractionCallback)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("GmCtlSkList.cpp", "!obj", 0xc71, 0));
+    DEBUG_ASSERT(SkillList_UICallback_Func);
     Log::Log("[GameSettings] SkillList_UICallback_Func = %p\n", SkillList_UICallback_Func);
 
     auto address = GW::Scanner::Find("\xF7\x40\x0C\x10\x00\x02\x00\x75", "xxxxxx??", +7);
+    DEBUG_ASSERT(address);
     if (address) gold_confirm_patch.SetPatch(address, "\x90\x90", 2);
     Log::Log("[GameSettings] gold_confirm_patch = %p\n", gold_confirm_patch.GetAddress());
 
     address = GW::Scanner::Find("\xdf\xe0\xf6\xc4\x41\x7a\x79", "xxxxxxx", 0x5);
+    DEBUG_ASSERT(address);
     if (address) remove_skill_warmup_duration_patch.SetPatch(address, "\x90\x90", 2);
     Log::Log("[GameSettings] remove_skill_warmup_duration_patch = %p\n", remove_skill_warmup_duration_patch.GetAddress());
 
     // Call our CreateCodedTextLabel function instead of default CreateCodedTextLabel for patching skill descriptions
     SetFrameSkillDescription_Func = (SetFrameSkillDescription_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("GmTipSkill.cpp", "No valid case for switch variable \'m_powerType\'", 0, 0));
+    DEBUG_ASSERT(SetFrameSkillDescription_Func);
 
     Log::Log("[GameSettings] SetFrameSkillDescription_Func = %p\n", SetFrameSkillDescription_Func);
 
-    // See OnAgentAllegianceChanged
-    address = GW::Scanner::Find("\x81\xce\xa0\x06\x00\x00", "xxxxxx");
-    if (address) address = GW::Scanner::FunctionFromNearCall(GW::Scanner::FindInRange("\xe8", "x", 0, address, address + 0xff));
-    if (address) {
-        SetGlobalNameTagVisibility_Func = (SetGlobalNameTagVisibility_pt)address;
-        if (GW::Scanner::IsValidPtr(*(uintptr_t*)(address + 0xa)))
-            GlobalNameTagVisibilityFlags = *(uint32_t**)(address + 0xa);
-        else if (GW::Scanner::IsValidPtr(*(uintptr_t*)(address + 0xb)))
-            GlobalNameTagVisibilityFlags = *(uint32_t**)(address + 0xb);
-        GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::AgentUpdateAllegiance>(&PartyDefeated_Entry, &OnAgentAllegianceChanged);
-    }
-    Log::Log("[GameSettings] SetGlobalNameTagVisibility_Func = %p", (void*)SetGlobalNameTagVisibility_Func);
-    Log::Log("[GameSettings] GlobalNameTagVisibilityFlags = %p", static_cast<void*>(GlobalNameTagVisibilityFlags));
+    GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::AgentUpdateAllegiance>(&PartyDefeated_Entry, &OnAgentAllegianceChanged);
 
 #ifdef _DEBUG
     ASSERT(SkillList_UICallback_Func);
     ASSERT(remove_skill_warmup_duration_patch.IsValid());
     ASSERT(SetFrameSkillDescription_Func);
-    ASSERT(SetGlobalNameTagVisibility_Func);
-    ASSERT(GlobalNameTagVisibilityFlags);
     ASSERT(OnSkillTomeWindow_UIMessage_Func);
 #endif
 
@@ -1547,14 +1555,11 @@ void GameSettings::Initialize()
     });
 
     // Sanity check to prevent GW crash trying to despawn an agent that we may have already despawned.
-    /*GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentRemove>(&PartyDefeated_Entry, [](GW::HookStatus* status, GW::Packet::StoC::AgentRemove* packet) {
-        if (false && !GW::Agents::GetAgentByID(packet->agent_id))
-            status->blocked = true;
-        });*/
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayEffect>(&TradeStart_Entry, OnPlayEffect);
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::PartyInviteReceived_Create>(&PartyPlayerAdd_Entry, OnPartyInviteReceived);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyPlayerAdd>(&PartyPlayerAdd_Entry, OnPartyPlayerJoined);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&GameSrvTransfer_Entry, OnMapTravel);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayerIsPartyLeader>(&PartyLeaderChanged_Entry, OnPartyLeaderChanged, 0x8000);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::CinematicPlay>(&CinematicPlay_Entry, OnCinematic);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DungeonReward>(&VanquishComplete_Entry, OnDungeonReward);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MapLoaded>(&PlayerJoinInstance_Entry, OnMapLoaded);
@@ -1566,6 +1571,7 @@ void GameSettings::Initialize()
     // Trigger for message on party change
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyPlayerRemove>(&PartyPlayerRemove_Entry, [&](const GW::HookStatus*, GW::Packet::StoC::PartyPlayerRemove*) {
         check_message_on_party_change = true;
+        nametag_color_cache.clear();
     });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ScreenShake>(&OnScreenShake_Entry, OnScreenShake);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentModel>(&OnAgentModel_Entry, [this](GW::HookStatus* status, const GW::Packet::StoC::AgentModel* packet) {
@@ -1629,10 +1635,6 @@ void GameSettings::Initialize()
     set_window_title_delay = TIMER_INIT();
 
     settings.last_online_status = static_cast<uint32_t>(GW::FriendListMgr::GetMyStatus());
-
-    // Log::Log("[GameSettings] Enqueueing CheckRemoveWindowBorder");
-    // GW::GameThread::Enqueue(CheckRemoveWindowBorder);
-    // Log::Log("[GameSettings] Enqueued CheckRemoveWindowBorder");
 
 #ifdef APRIL_FOOLS
     AF::ApplyPatchesIfItsTime();
@@ -1834,6 +1836,10 @@ void GameSettings::DrawPartySettings()
     ImGui::CheckboxWithHelp("Automatically accept party invitations when ticked", &settings.auto_accept_invites, "When you're invited to join someone elses party");
     ImGui::CheckboxWithHelp("Automatically accept party join requests when ticked", &settings.auto_accept_join_requests, "When a player wants to join your existing party");
     ImGui::Checkbox("Automatically lock heroes and pets onto your called target", &settings.automatically_flag_pet_to_fight_called_target);
+    ImGui::CheckboxWithHelp(
+        "Restore the legacy Enter Mission button when party leadership changes", &settings.fix_legacy_enter_mission_button,
+        "Guild Wars only sets up the legacy Enter Mission button when the party window is built,\nso the button goes missing for whoever becomes party leader afterwards.\nTick this to have Toolbox rebuild the party window for you, the same as toggling\nthe 'legacy Enter Mission button' option off and on again.\n\nOnly applies if you have that game option enabled."
+    );
 }
 
 void GameSettings::DrawSettingsInternal()
@@ -2142,7 +2148,6 @@ bool GameSettings::WndProc(const UINT Message, WPARAM, LPARAM)
     static clock_t set_online_timer = TIMER_INIT();
     if (settings.auto_set_online && TIMER_DIFF(set_online_timer) > 5000 // to avoid spamming in case of failure
         && GW::FriendListMgr::GetMyStatus() == GW::FriendStatus::Away) {
-        printf("%X\n", Message);
         GW::FriendListMgr::SetFriendListStatus(GW::FriendStatus::Online);
         set_online_timer = TIMER_INIT();
     }
@@ -2220,6 +2225,7 @@ void GameSettings::OnPartyInviteReceived(const GW::HookStatus* status, const GW:
 // Flash window on player added
 void GameSettings::OnPartyPlayerJoined(const GW::HookStatus*, const GW::Packet::StoC::PartyPlayerAdd*)
 {
+    nametag_color_cache.clear();
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) {
         return;
     }
@@ -2375,6 +2381,8 @@ void GameSettings::OnMapTravel(const GW::HookStatus*, const GW::Packet::StoC::Ga
     if (settings.focus_window_on_zoning && pak->is_explorable) {
         FocusWindow();
     }
+    // The server tells us who leads on arrival; don't treat that as a change of leadership
+    was_party_leader = true;
 }
 
 // Turn screenshots into clickable links
@@ -2411,7 +2419,6 @@ void GameSettings::OnWriteChat(GW::HookStatus* status, GW::UI::UIMessage, void* 
     lstrcpyW(ptr, file_path.c_str());
     GlobalUnlock(hGlobal);
 
-    // prepare the clipboard
     OpenClipboard(nullptr);
     EmptyClipboard();
     SetClipboardData(CF_HDROP, hGlobal);
@@ -2475,6 +2482,7 @@ void GameSettings::OnMapLoaded(GW::HookStatus*, GW::Packet::StoC::MapLoaded*)
 {
     instance_entered_at = TIMER_INIT();
     SetWindowTitle(settings.set_window_title_as_charname);
+    nametag_color_cache.clear();
 }
 
 // Hide more than 10 signets of capture
@@ -2494,12 +2502,39 @@ void GameSettings::OnAgentNameTag(GW::HookStatus*, const GW::UI::UIMessage msgid
         return;
     }
     const auto tag = static_cast<GW::UI::AgentNameTagInfo*>(wParam);
+    // Apply default colors for nametags
     for (const auto& c : nametag_color_settings) {
+        if (c.player_override) {
+            continue;
+        }
         if (tag->text_color == static_cast<Color>(c.default_val)) {
             tag->text_color = *c.ptr;
             break;
         }
     }
+    // Override colors for friends, guildies and party members
+    if (tag->name_enc) {
+        const auto player_name = TextUtils::GetPlayerNameFromEncodedString(tag->name_enc);
+        if (!player_name.empty() && player_name != GetPlayerName()) {
+            const auto cached = nametag_color_cache.find(player_name);
+            if (cached != nametag_color_cache.end()) {
+                tag->text_color = cached->second;
+            }
+            else {
+                if (GW::FriendListMgr::GetFriend(nullptr, player_name.c_str(), GW::FriendType::Friend)) {
+                    tag->text_color = settings.nametag_color_friends;
+                }
+                else if (IsGuildMemberPlayer(player_name.c_str())) {
+                    tag->text_color = settings.nametag_color_guild_members;
+                }
+                else if (IsAgentInMyParty(tag->agent_id)) {
+                    tag->text_color = settings.nametag_color_player_in_my_party;
+                }
+                nametag_color_cache[player_name] = tag->text_color;
+            }
+        }
+    }
+    // Show amount of lockpicks under locked chest nametag
     if (settings.show_amount_of_lockpicks_under_locked_chest_nametag && tag->name_enc && wcseq(tag->name_enc, GW::EncStrings::LockedChest) && !tag->underline) {
         static wchar_t you_have_n_lockpicks[12];
         const auto count = GW::Items::CountItemByModelId(GW::Constants::ItemID::Lockpick, (int)GW::Constants::Bag::Backpack, (int)GW::Constants::Bag::Bag_2);

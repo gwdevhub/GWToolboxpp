@@ -21,15 +21,12 @@
 #include <Utils/GuiUtils.h>
 #include <Utils/ToolboxUtils.h>
 #include <Color.h>
-#include <Defines.h>
 #include "EffectsMonitorWidget.h"
 
 #include <Utils/FontLoader.h>
 
 namespace {
     EffectsMonitorWidget::Settings settings;
-
-    GW::UI::Frame* effects_frame = nullptr;
 
     ImGuiViewport* viewport = nullptr;
     ImDrawList* draw_list = nullptr;
@@ -89,9 +86,6 @@ namespace {
 
     void TrackSpirit(const uint32_t agent_id, const GW::Constants::SkillID skill_id)
     {
-        // Evict any previously tracked spirit for this skill_id.
-        // The old agent's kAgentDestroy may arrive after us, so we must unlink it
-        // from tracked_spirits now so RemoveTrackedSpirit doesn't kill our new effect.
         for (auto it = tracked_spirits.begin(); it != tracked_spirits.end();) {
             if (it->second == skill_id && it->first != agent_id) {
                 tracked_spirits.erase(it); // don't call RemoveTrackedSpirit - that would remove the effect
@@ -176,7 +170,7 @@ namespace {
 
     void DrawTextOverlay(const char* text, const GW::UI::Frame* frame)
     {
-        if (!(frame && text && *text && effects_frame)) return;
+        if (!(frame && text && *text)) return;
         auto skill_bottom_right = frame->position.GetBottomRightOnScreen();
         const auto skill_frame_size = frame->position.GetSizeOnScreen();
 
@@ -187,7 +181,6 @@ namespace {
 
         GW::Vec2f label_size = ImGui::CalcTextSize(text);
         if (label_size.x > skill_frame_size.x) {
-            // If the label is wider than the frame, scale text size.
             const auto scale_factor = skill_frame_size.x / label_size.x;
             const auto scaled_size = scale_factor * settings.font_effects;
             overridden_font = FontLoader::GetFont();
@@ -207,9 +200,9 @@ namespace {
             ImGui::PopFont(draw_list);
         }
     }
-    
+
     std::unordered_map<uint32_t, clock_t> effect_timestamps;
-    
+
     GW::HookEntry OnPreUIMessage_HookEntry;
     void OnPreUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* wparam, void*) {
         switch (message_id) {
@@ -219,8 +212,7 @@ namespace {
             case GW::Constants::SkillID::Aspect_of_Exhaustion:
             case GW::Constants::SkillID::Aspect_of_Depletion_energy_loss:
             case GW::Constants::SkillID::Scorpion_Aspect:
-                if (!effect_timestamps.contains((uint32_t)packet->effect->skill_id))
-                    effect_timestamps[(uint32_t)packet->effect->skill_id] = GW::MemoryMgr::GetSkillTimer();
+                effect_timestamps.try_emplace((uint32_t)packet->effect->skill_id, GW::MemoryMgr::GetSkillTimer());
                 break;
             }
         } break;
@@ -233,7 +225,7 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
     if (!visible) {
         return;
     }
-    effects_frame = GW::UI::GetFrameByLabel(L"Effects");
+    const auto effects_frame = GW::UI::GetFrameByLabel(L"Effects");
     if (!effects_frame) {
         return;
     }
@@ -258,17 +250,22 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
     const auto effects = GW::Effects::GetPlayerEffects();
 
     if (effects) {
-        std::unordered_map<GW::Constants::SkillID, DWORD> time_remaining_by_effect;
+        // Reused across frames: a handful of effects, so a flat scan beats rebuilding a hash map every frame.
+        static std::vector<std::pair<GW::Constants::SkillID, DWORD>> time_remaining_by_effect;
+        time_remaining_by_effect.clear();
         for (auto& effect : *effects) {
             if (effect.duration <= 0) continue;
             const auto remaining = effect.GetTimeRemaining();
             if (remaining <= 0) continue;
-            const auto found = time_remaining_by_effect.find(effect.skill_id);
-            if (found == time_remaining_by_effect.end() || found->second < remaining) {
-                time_remaining_by_effect[effect.skill_id] = remaining;
+            const auto found = std::ranges::find(time_remaining_by_effect, effect.skill_id, &std::pair<GW::Constants::SkillID, DWORD>::first);
+            if (found == time_remaining_by_effect.end()) {
+                time_remaining_by_effect.emplace_back(effect.skill_id, remaining);
+            }
+            else if (found->second < remaining) {
+                found->second = remaining;
             }
         }
-        for (auto& [skill_id, remaining] : time_remaining_by_effect) {
+        for (const auto& [skill_id, remaining] : time_remaining_by_effect) {
             const auto skill_frame = GW::UI::GetChildFrame(effects_frame, (uint32_t)skill_id + 0x4);
             if (!skill_frame) continue;
             std::array<char, 16> remaining_str;
@@ -325,9 +322,6 @@ void EffectsMonitorWidget::Update(float delta)
             const auto now = GW::MemoryMgr::GetSkillTimer();
             const clock_t diff = (now - timestamp) / 1000;
 
-            // a 30s timer starts when you enter the aspect
-            // a 30s timer starts 100s after you enter the aspect
-            // a 30s timer starts 200s after you enter the aspect
             long duration = 30 - diff % 30;
             if (diff > 100) duration = std::min(duration, 30 - (diff - 100) % 30);
             if (diff > 200) duration = std::min(duration, 30 - (diff - 200) % 30);

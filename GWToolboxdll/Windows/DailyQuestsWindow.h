@@ -40,6 +40,12 @@ public:
     void Draw(IDirect3DDevice9* pDevice) override;
 
 public:
+    // Both Nicholases can be traded with 5 times per rotation for a full set of gifts.
+    // Item counts are shown as the total needed for all 5 trades, not the amount for a single trade.
+    static constexpr uint32_t NICHOLAS_TRADES_PER_ROTATION = 5;
+    // Nicholas Sandford (pre-searing) always collects 5 of the daily item per trade.
+    static constexpr uint32_t NICHOLAS_SANDFORD_ITEMS_PER_TRADE = 5;
+
     class QuestData {
     protected:
         std::unique_ptr<GuiUtils::EncString> name_english;
@@ -86,9 +92,12 @@ public:
     static DailyQuestResult GetZaishenMission(time_t unix = 0);
     static DailyQuestResult GetZaishenCombat(time_t unix = 0);
     static DailyQuestResult GetNicholasTheTraveller(time_t unix = 0);
-    static time_t GetTimestampFromNicholasTheTraveller(DailyQuests::NicholasCycleData* data);
+    // Returns the next time Nicholas the Traveler collects this item, or `now` if he's collecting it already
+    static time_t GetTimestampFromNicholasTheTraveller(DailyQuests::NicholasCycleData* data, time_t now = 0);
     static DailyQuestResult GetNicholasSandford(time_t unix = 0);
-    static time_t GetTimestampFromNicholasSandford(DailyQuests::QuestData* data);
+    // Returns the next time Nicholas Sandford collects this item, or `now` if he's collecting it already.
+    // Items appear several times in the pre-searing cycle; the soonest occurrence is returned.
+    static time_t GetTimestampFromNicholasSandford(DailyQuests::QuestData* data, time_t now = 0);
     static DailyQuestResult GetVanguardQuest(time_t unix = 0);
     static DailyQuestResult GetWantedByShiningBlade(time_t unix = 0);
     static DailyQuestResult GetWeeklyPvEBonus(time_t unix = 0);

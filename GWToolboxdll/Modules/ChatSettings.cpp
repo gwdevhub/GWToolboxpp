@@ -23,7 +23,6 @@
 #include <GWCA/Utilities/MemoryPatcher.h>
 
 namespace {
-    // Settings
     ChatSettings::Settings settings;
 
     GW::MemoryPatcher bypass_chat_codepage_limitation;
@@ -54,7 +53,6 @@ namespace {
     std::map<std::wstring, GW::Chat::Color> chat_token_colors;
 
 
-    // Runtime
     bool ctrl_enter_whisper = false;
     std::wstring afk_message;
     clock_t afk_message_time = 0;
@@ -97,7 +95,6 @@ namespace {
     wchar_t* OnColorHexOrLabelToColor(wchar_t* token, GW::Chat::Color* color_out, uint32_t color_out_len) {
         GW::Hook::EnterHook();
         if (token && *token == L'@' && color_out_len == 1) {
-            // Replace
             const auto out = wcschr(token, L'>');
             const std::wstring token_label(&token[1], out);
             if (chat_token_colors.contains(token_label)) {
@@ -305,7 +302,9 @@ namespace {
             status->blocked = true;
             return;
         }
-        if (!ImGui::GetIO().KeyCtrl) {
+        // UI messages dispatch on the game thread, which outlives the ImGui context (before the first
+        // Present, and after DetachImgui on shutdown); GetIO() would deref a null GImGui.
+        if (!ImGui::GetCurrentContext() || !ImGui::GetIO().KeyCtrl) {
             return; // - Next logic only applicable when Ctrl is held
         }
 
@@ -364,7 +363,6 @@ namespace {
                     settings.show_timestamps = packet->new_value ? true : false;
             } break;
             case GW::UI::UIMessage::kPreferenceValueChanged: {
-                // Remember user setting for chat timestamps
                 const auto packet = static_cast<GW::UI::UIPacket::kPreferenceValueChanged*>(wParam);
                 if (settings.clear_chat_message_when_hiding_chat && packet->preference_id == GW::UI::NumberPreference::ChatState && packet->new_value == 0) {
                     const auto frame = (GW::EditableTextFrame*)GW::UI::GetFrameByLabel(L"EditMessage");
@@ -441,6 +439,7 @@ void ChatSettings::Initialize()
         RegisterUIMessageCallback(&OnUIMessage_Entry, message_id, OnUIMessage);
     }
     ColorHexOrLabelToColor_Func = (ColorHexOrLabelToColor_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("CtlTextMl.cpp", "value", 0, 0));
+    DEBUG_ASSERT(ColorHexOrLabelToColor_Func);
     if (ColorHexOrLabelToColor_Func) {
         GW::Hook::CreateHook((void**)&ColorHexOrLabelToColor_Func, OnColorHexOrLabelToColor, (void**)&ColorHexOrLabelToColor_Ret);
         GW::Hook::EnableHooks(ColorHexOrLabelToColor_Func);
@@ -448,6 +447,7 @@ void ChatSettings::Initialize()
     // b'\x75\x16\x68\x88\xe1\x00\x00'
 
     ChatLogLine_UICallback_Func = (GW::UI::UIInteractionCallback)GW::Scanner::ToFunctionStart(GW::Scanner::Find("\x75\x16\x68\x88\xe1\x00\x00", "xxxxxxx"),0xfff);
+    DEBUG_ASSERT(ChatLogLine_UICallback_Func);
     if (ChatLogLine_UICallback_Func) {
         GW::Hook::CreateHook((void**)&ChatLogLine_UICallback_Func, OnChatLogLine_UICallback, (void**)&ChatLogLine_UICallback_Ret);
         GW::Hook::EnableHooks(ChatLogLine_UICallback_Func);

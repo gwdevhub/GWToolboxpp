@@ -95,14 +95,6 @@ void GWFileRequester::Initialize() {
         message_loop();
         });
     // Example, bday present FFNA > Image not working.
-    /*GWFileRequester::Instance().load_file(193281, [](GWFileRequester::GWResource* out) {
-        GWFileRequester::GWResource copy = *out;
-        copy.data = (unsigned char*)malloc(copy.data_len);
-        memcpy(copy.data, out->data, copy.data_len);
-        GWFileRequester::Instance().load_texture_from_resource(copy, nullptr);
-        free(copy.data);
-        });
-    */
     GW::Chat::CreateCommand(L"mapfile", CmdDownloadMapFile);
     GW::Chat::CreateCommand(L"downloadfile", CmdDownloadFile);
     GW::Chat::CreateCommand(L"downloadimage", CmdDownloadImage);
@@ -135,10 +127,8 @@ int GWFileRequester::connect(uint32_t server_num) {
     }
     // TODO: Cycle this for each domain 1 to 12?
     ASSERT(snprintf(socket_domain, sizeof(socket_domain), "file%d.arenanetworks.com", server_num) != -1);
-    //Ensure that servinfo is clear
     memset(&hints, 0, sizeof hints); //make sure the struct is empty
 
-    //setup hints
     hints.ai_family = AF_UNSPEC;    //IPv4 or IPv6 doesnt matter
     hints.ai_socktype = SOCK_STREAM;        //TCP stream socket
 
@@ -156,21 +146,18 @@ int GWFileRequester::connect(uint32_t server_num) {
         return 1;
     }
 
-    //setup socket
     if ((fs_socket = socket(servinfo->ai_family, servinfo->ai_socktype, servinfo->ai_protocol)) == INVALID_SOCKET) {
         log(L"Failed to socket: %d", WSAGetLastError());
         disconnect();
         return 1;
     }
 
-    //Connect
     if (::connect(fs_socket, servinfo->ai_addr, servinfo->ai_addrlen) == SOCKET_ERROR) {
         log(L"Failed to connect: %d", WSAGetLastError());
         disconnect();
         return 1;
     }
 
-    //We dont need this anymore
     freeaddrinfo(servinfo);
 
     // Handshake
@@ -311,10 +298,8 @@ int GWFileRequester::process_resource_request(GWResourceRequest* file_request) {
         gw_resource.data_len = file_manifest.size_decompressed;
         gw_resource.data = d.DecompressFile((unsigned int*)compressed, file_manifest.size_compressed, (int&)(gw_resource.data_len));
         if (!gw_resource.data) {
-            // failed to decompress
             goto complete_file_request;
         }
-        // Write to file
         {
             std::ofstream fout(path, std::ofstream::out);
             fout.write((char*)gw_resource.data, gw_resource.data_len);

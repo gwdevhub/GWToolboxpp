@@ -40,7 +40,6 @@ public:
                 return;
             }
             if (d->is_open) {
-                // Opening
                 if (!d->first_open) {
                     d->first_open = now;
                 }
@@ -49,7 +48,6 @@ public:
                 }
             }
             else {
-                // Closing
                 if (!d->first_close) {
                     d->first_close = now;
                 }

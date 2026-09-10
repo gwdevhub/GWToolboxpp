@@ -195,9 +195,6 @@ namespace {
             if (!npc_model_file_id) {
                 return;
             }
-            // Need to create the NPC.
-            // Those 2 packets (P074 & P075) are used to create a new model, for instance if we want to "use" a tonic.
-            // We have to find the data that are in the NPC structure and feed them to those 2 packets.
             GW::NPC npc = {0};
             npc.model_file_id = npc_model_file_id;
             npc.npc_flags = flags;

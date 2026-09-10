@@ -286,12 +286,6 @@ namespace {
         if (!settings.enabled) {
             return failed(nullptr);
         }
-        //BOOL is_x64 = false;
-        //std::filesystem::path running_teamspeak_exe;
-        //if (!GetTeamspeakProcess(&running_teamspeak_exe, &is_x64))
-        //    return failed("Error finding running teamspeak executable (%04X)",GetLastError());
-        //if (running_teamspeak_exe.empty())
-        //    return failed("Failed to find running teamspeak executable; is Teamspeak 3 running?");
         if (settings.teamspeak3_api_key.empty()) {
             return failed("No API Key provided; find this in Teamspeak > Tools > Options > Addons > ClientQuery > Settings");
         }
@@ -337,7 +331,6 @@ namespace {
         }
         Log::Log("Teamspeak 3 welcome message:\n%s", response->content.c_str());
 
-        // Send auth message
         const std::string to_send = std::format("auth apikey={}\r\n", settings.teamspeak3_api_key);
         response = PollSocket(to_send);
         if (!response) {

@@ -227,7 +227,6 @@ namespace {
                 // TODO: Switch for whether this weapon set is supposed to be selected!
                 OnWeaponSetUICallback_Ret(message, wparam, lparam);
 
-                // Swap it back when done
                 *overwrite_weapon_set = original_overwrite_weapon_set;
                 context->this_weapon_set_id = original_weapon_set_id;
             } break;

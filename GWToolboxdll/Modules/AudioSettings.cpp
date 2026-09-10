@@ -10,6 +10,8 @@
 #include <ImGuiAddons.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/UIMgr.h>
+
+#include <Defines.h>
 #include <Utils/GuiUtils.h>
 #include <Timer.h>
 
@@ -85,7 +87,6 @@ struct MusicData {
 
     bool force_play_sound = false;
 
-    // Helper function to handle common logic
     template <typename CallbackMap>
     GW::RecObject* PlayAudioInternal(wchar_t* filename, SoundProps* props, CallbackMap& callbacks, PlaySound_pt ret_func)
     {
@@ -93,12 +94,10 @@ struct MusicData {
         GW::RecObject* ret = nullptr;
         GW::HookStatus status;
 
-        // Execute callbacks
         for (auto& [_, cb] : callbacks) {
             cb(&status, filename, props);
         }
 
-        // Check if sound should be played
         if (!status.blocked) {
             if (!force_play_sound) {
                 bool found = std::ranges::find(blocked_sounds, filename) != blocked_sounds.end();
@@ -121,7 +120,6 @@ struct MusicData {
     GW::RecObject* OnPlaySound(wchar_t* filename, SoundProps* props)
     {
         auto handle = PlayAudioInternal(filename, props, play_sound_callbacks, PlaySound_Ret);
-        // Log sound if enabled
         if (log_sounds && std::ranges::find(logged_sounds, filename) == logged_sounds.end()) {
             logged_sounds.push_back(filename);
         }
@@ -222,11 +220,13 @@ void AudioSettings::Initialize()
 {
     ToolboxModule::Initialize();
     PlaySound_Func = (PlaySound_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("SndMain.cpp","filename",0,0));
+    DEBUG_ASSERT(PlaySound_Func);
     if (PlaySound_Func) {
         GW::Hook::CreateHook((void**)&PlaySound_Func, OnPlaySound, reinterpret_cast<void**>(&PlaySound_Ret));
         GW::Hook::EnableHooks(PlaySound_Func);
     }
     PlayMusicFromSoundScript_Func = (PlayMusicFromSoundScript_pt)GW::Scanner::ToFunctionStart(GW::Scanner::Find("\x8d\x77\x0c\x83\xe0\xf3", "xxxxxx", 0));
+    DEBUG_ASSERT(PlayMusicFromSoundScript_Func);
     if (PlayMusicFromSoundScript_Func) {
         GW::Hook::CreateHook((void**)&PlayMusicFromSoundScript_Func, OnPlayMusicFromSoundScript, reinterpret_cast<void**>(&PlayMusicFromSoundScript_Ret));
         GW::Hook::EnableHooks(PlayMusicFromSoundScript_Func);

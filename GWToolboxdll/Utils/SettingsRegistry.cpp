@@ -20,7 +20,7 @@ namespace {
 } // namespace
 
 namespace SettingsRegistry {
-    void detail::AddEntry(ToolboxModule* module, const std::string_view key, const Type type, void* ptr, const bool from_struct, const std::string_view description)
+    void detail::AddEntry(ToolboxModule* module, const std::string_view key, const Type type, void* ptr, const bool from_struct, const bool in_settings_window, const std::string_view description)
     {
         const auto found = std::ranges::find_if(entries, [module, key](const Entry& e) {
             return e.module == module && e.key == key;
@@ -34,6 +34,7 @@ namespace SettingsRegistry {
         entry.type = type;
         entry.ptr = ptr;
         entry.from_struct = from_struct;
+        entry.in_settings_window = in_settings_window;
     }
 
     void detail::LogUnsupportedMember(ToolboxModule* module, const std::string_view key)
@@ -43,37 +44,37 @@ namespace SettingsRegistry {
 
     void RegisterField(ToolboxModule* module, const std::string_view key, bool* ptr, const std::string_view description)
     {
-        detail::AddEntry(module, key, Type::Bool, ptr, false, description);
+        detail::AddEntry(module, key, Type::Bool, ptr, false, true, description);
     }
 
     void RegisterField(ToolboxModule* module, const std::string_view key, int* ptr, const std::string_view description)
     {
-        detail::AddEntry(module, key, Type::Int, ptr, false, description);
+        detail::AddEntry(module, key, Type::Int, ptr, false, true, description);
     }
 
     void RegisterField(ToolboxModule* module, const std::string_view key, unsigned int* ptr, const std::string_view description)
     {
-        detail::AddEntry(module, key, Type::Uint, ptr, false, description);
+        detail::AddEntry(module, key, Type::Uint, ptr, false, true, description);
     }
 
     void RegisterField(ToolboxModule* module, const std::string_view key, float* ptr, const std::string_view description)
     {
-        detail::AddEntry(module, key, Type::Float, ptr, false, description);
+        detail::AddEntry(module, key, Type::Float, ptr, false, true, description);
     }
 
     void RegisterField(ToolboxModule* module, const std::string_view key, std::string* ptr, const std::string_view description)
     {
-        detail::AddEntry(module, key, Type::String, ptr, false, description);
+        detail::AddEntry(module, key, Type::String, ptr, false, true, description);
     }
 
     void RegisterField(ToolboxModule* module, const std::string_view key, Colors::SettingColor* ptr, const std::string_view description)
     {
-        detail::AddEntry(module, key, Type::Color, &ptr->value, false, description);
+        detail::AddEntry(module, key, Type::Color, &ptr->value, false, true, description);
     }
 
     void RegisterField(ToolboxModule* module, const std::string_view key, std::array<float, 2>* ptr, const std::string_view description)
     {
-        detail::AddEntry(module, key, Type::Float2, ptr, false, description);
+        detail::AddEntry(module, key, Type::Float2, ptr, false, true, description);
     }
 
     void Describe(ToolboxModule* module, const std::string_view key, const std::string_view label, const std::string_view description)

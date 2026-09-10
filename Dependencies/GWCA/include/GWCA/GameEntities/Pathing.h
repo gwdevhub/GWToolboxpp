@@ -3,136 +3,141 @@
 #include <GWCA/GameContainers/Array.h>
 
 namespace GW {
-    struct PathingTrapezoid { // total: 0x30/48
-        /* +h0000 */ uint32_t id;
-        union {
-        /* +h0004 */ PathingTrapezoid* adjacent[4];
-            struct {
-        /* +h0004 */ PathingTrapezoid* top_left;
-        /* +h0008 */ PathingTrapezoid* top_right;
-        /* +h000C */ PathingTrapezoid* bottom_left;
-        /* +h0010 */ PathingTrapezoid* bottom_right;
-            };
-        };
-        /* +h0014 */ uint16_t portal_left;
-        /* +h0016 */ uint16_t portal_right;
-        /* +h0018 */ float XTL;
-        /* +h001C */ float XTR;
-        /* +h0020 */ float YT;
-        /* +h0024 */ float XBL;
-        /* +h0028 */ float XBR;
-        /* +h002C */ float YB;
-    };
-    static_assert(sizeof(PathingTrapezoid) == 48, "struct PathingTrapezoid has incorrect size");
+	struct PathingTrapezoid { // total: 0x30/48
+		/* +h0000 */ uint32_t id;
+		union {
+			/* +h0004 */ PathingTrapezoid* adjacent[4];
+			struct {
+				/* +h0004 */ PathingTrapezoid* top_left;
+				/* +h0008 */ PathingTrapezoid* top_right;
+				/* +h000C */ PathingTrapezoid* bottom_left;
+				/* +h0010 */ PathingTrapezoid* bottom_right;
+			};
+		};
+		/* +h0014 */ uint16_t portal_left;
+		/* +h0016 */ uint16_t portal_right;
+		/* +h0018 */ float XTL;
+		/* +h001C */ float XTR;
+		/* +h0020 */ float YT;
+		/* +h0024 */ float XBL;
+		/* +h0028 */ float XBR;
+		/* +h002C */ float YB;
+	};
+	static_assert(sizeof(PathingTrapezoid) == 48, "struct PathingTrapezoid has incorrect size");
 
-    struct Node {
-        /* +h0000 */ uint32_t type;   //XNode = 0, YNode = 1, SinkNode = 2
-        /* +h0004 */ uint32_t id;
-    };
+	struct Node {
+		/* +h0000 */ uint32_t type;   //XNode = 0, YNode = 1, SinkNode = 2
+		/* +h0004 */ uint32_t id;
+	};
 
-    struct XNode : Node { // type = 0
-        /* +h0008 */ Vec2f    pos;
-        /* +h0010 */ Vec2f    dir;
-        /* +h0018 */ Node     *left;
-        /* +h001C */ Node     *right;
-    };
-    static_assert(sizeof(XNode) == 32, "struct XNode has incorrect size");
+	struct XNode : Node { // type = 0
+		/* +h0008 */ Vec2f    pos;
+		/* +h0010 */ Vec2f    dir;
+		/* +h0018 */ Node* left;
+		/* +h001C */ Node* right;
+	};
+	static_assert(sizeof(XNode) == 32, "struct XNode has incorrect size");
 
-    struct YNode : Node { // type = 1
-        /* +h0008 */ Vec2f    pos;
-        /* +h0010 */ Node     *above;
-        /* +h0014 */ Node     *below;
-    };
-    static_assert(sizeof(YNode) == 24, "struct YNode has incorrect size");
+	struct YNode : Node { // type = 1
+		/* +h0008 */ Vec2f    pos;
+		/* +h0010 */ Node* above;
+		/* +h0014 */ Node* below;
+	};
+	static_assert(sizeof(YNode) == 24, "struct YNode has incorrect size");
 
-    struct SinkNode : Node { // type = 2
-        /* +h0008 */ PathingTrapezoid *trapezoid;
-    };
-    static_assert(sizeof(SinkNode) == 12, "struct SinkNode has incorrect size");
+	struct SinkNode : Node { // type = 2
+		/* +h0008 */ PathingTrapezoid* trapezoid;
+	};
+	static_assert(sizeof(SinkNode) == 12, "struct SinkNode has incorrect size");
 
-    struct Portal { // total: 0x14/20
-        /* +h0000 */ uint16_t portal_plane;
-        /* +h0002 */ uint16_t neighbor_plane;
-        /* +h0004 */ uint32_t flags; // 0x4 => "Not used for path finding"
-        /* +h0008 */ Portal  *pair;
-        /* +h000C */ uint32_t count;
-        /* +h0010 */ PathingTrapezoid **trapezoids;
-    };
-    static_assert(sizeof(Portal) == 20, "struct Portal has incorrect size");
+	struct Portal { // total: 0x14/20
+		/* +h0000 */ uint16_t portal_plane;
+		/* +h0002 */ uint16_t neighbor_plane;
+		/* +h0004 */ uint32_t flags; // 0x4 => "Not used for path finding"
+		/* +h0008 */ Portal* pair;
+		/* +h000C */ uint32_t count;
+		/* +h0010 */ PathingTrapezoid** trapezoids;
+	};
+	static_assert(sizeof(Portal) == 20, "struct Portal has incorrect size");
 
-    struct PathingMap { // total: 0x54/84
-        /* +h0000 */ uint32_t zplane; // ground plane = UINT_MAX, rest 0 based index
-        /* +h0004 */ uint32_t h0004;
-        /* +h0008 */ void    *allocatedBuffer; // All following data are stored in a buffer allocated with a single MemAlloc. This is the pointer.
-        /* +h000C */ uint32_t h0010_count; // count of number h0010
-        /* +h0010 */ uint32_t *h0010; // elements of this array are 8 bytes
-        /* +h0014 */ uint32_t trapezoid_count;
-        /* +h0018 */ PathingTrapezoid* trapezoids;
-        /* +h001C */ uint32_t sink_node_count;
-        /* +h0020 */ SinkNode *sink_nodes;
-        /* +h0024 */ uint32_t x_node_count;
-        /* +h0028 */ XNode    *x_nodes;
-        /* +h002C */ uint32_t y_node_count;
-        /* +h0030 */ YNode    *y_nodes;
-        /* +h0034 */ uint32_t portal_trapezoids_count;
-        /* +h0038 */ PathingTrapezoid **portal_trapezoids;
-        /* +h003C */ uint32_t portal_count;
-        /* +h0040 */ Portal   *portals;
-        /* +h0044 */ Node     *root_node;
-        /* +h0048 */ BaseArray<Vec2f> dat_vectors; // this is an array of vectors read from the dat file. When reading the xnodes or ynodes from the dat file, an index will be used to get the pos.
-    };
-    static_assert(sizeof(PathingMap) == 84, "struct PathingMap has incorrect size");
+	struct PathingMap { // total: 0x54/84
+		/* +h0000 */ uint32_t zplane; // ground plane = UINT_MAX, rest 0 based index
+		/* +h0004 */ uint32_t h0004;
+		/* +h0008 */ void* allocatedBuffer; // All following data are stored in a buffer allocated with a single MemAlloc. This is the pointer.
+		/* +h000C */ uint32_t h0010_count; // count of number h0010
+		/* +h0010 */ uint32_t* h0010; // elements of this array are 8 bytes
+		/* +h0014 */ uint32_t trapezoid_count;
+		/* +h0018 */ PathingTrapezoid* trapezoids;
+		/* +h001C */ uint32_t sink_node_count;
+		/* +h0020 */ SinkNode* sink_nodes;
+		/* +h0024 */ uint32_t x_node_count;
+		/* +h0028 */ XNode* x_nodes;
+		/* +h002C */ uint32_t y_node_count;
+		/* +h0030 */ YNode* y_nodes;
+		/* +h0034 */ uint32_t portal_trapezoids_count;
+		/* +h0038 */ PathingTrapezoid** portal_trapezoids;
+		/* +h003C */ uint32_t portal_count;
+		/* +h0040 */ Portal* portals;
+		/* +h0044 */ Node* root_node;
+		/* +h0048 */ BaseArray<Vec2f> dat_vectors; // this is an array of vectors read from the dat file. When reading the xnodes or ynodes from the dat file, an index will be used to get the pos.
+	};
+	static_assert(sizeof(PathingMap) == 84, "struct PathingMap has incorrect size");
 
-    struct PropByType {
-        uint32_t object_id;
-        uint32_t prop_index;
-    };
+	struct PropByType {
+		uint32_t object_id;
+		uint32_t prop_index;
+	};
 
-    struct PropModelInfo {
-        /* +h0000 */ uint32_t h0000;
-        /* +h0004 */ uint32_t h0004;
-        /* +h0008 */ uint32_t h0008;
-        /* +h000C */ uint32_t h000C;
-        /* +h0010 */ uint32_t h0010;
-        /* +h0014 */ uint32_t h0014;
-    };
-    static_assert(sizeof(PropModelInfo) == 0x18, "struct PropModelInfo has incorrect size");
+	// Per-model collision bounds, shared by every prop using that model. Offsets confirmed against
+	// the client's prop ray-pick, which builds a cylinder as
+	//   radius = MapProp::scale * bounding_radius
+	//   z      = MapProp::position.z - bounds_z_offsets[n] * MapProp::scale
+	struct PropModelInfo {
+		/* +h0000 */ uint32_t h0000;
+		/* +h0004 */ const wchar_t* model_file_name; // hash-encoded; FileHashToFileId() turns it into a file id
+		/* +h0008 */ float bounding_radius;    // model space; scale by MapProp::scale for world units
+		/* +h000C */ float bounds_z_offsets[2];
+		/* +h0014 */ uint32_t h0014;
+	};
+	static_assert(sizeof(PropModelInfo) == 0x18, "struct PropModelInfo has incorrect size");
 
-    struct RecObject {
-        /* +h0000 */ void* vtable;
-        /* +h0004 */ uint32_t ref_count;
-        /* +h0008 */ uint32_t accessKey; // This is used by the game to make sure the data from the DAT matches the data in game
-        /* +h000c */ uint32_t standalone;
-        /* +h0010 */ uint32_t file_id;
-        /* +h0014 */ uint32_t stream_id;
-        /* +h0018 */ uint32_t flags;
-        /* +h001c */ uint32_t opened;
-        /* +h0020 */ uint32_t ref_count2;
-    };
-    static_assert(sizeof(RecObject) == 0x24, "struct RecObject has incorrect size");
+	struct RecObject {
+		/* +h0000 */ void* vtable;
+		/* +h0004 */ uint32_t ref_count;
+		/* +h0008 */ uint32_t accessKey; // This is used by the game to make sure the data from the DAT matches the data in game
+		/* +h000c */ uint32_t standalone;
+		/* +h0010 */ uint32_t file_id;
+		/* +h0014 */ uint32_t stream_id;
+		/* +h0018 */ uint32_t flags;
+		/* +h001c */ uint32_t opened;
+		/* +h0020 */ uint32_t ref_count2;
+	};
+	static_assert(sizeof(RecObject) == 0x24, "struct RecObject has incorrect size");
 
-    struct MapProp { // total: 0x54/84
-        /* +h0000 */ uint32_t h0000[5];
-        /* +h0014 */ uint32_t uptime_seconds; // time since spawned
-        /* +h0018 */ uint32_t h0018;
-        /* +h001C */ uint32_t prop_index;
-        /* +h0020 */ Vec3f position;
-        /* +h002C */ uint32_t model_file_id;
-        /* +h0030 */ uint32_t h0030[2];
-        /* +h0038 */ float rotation_angle;
-        /* +h003C */ float rotation_cos;
-        /* +h003C */ float rotation_sin;
-        /* +h0040 */ uint32_t h0034[5];
-        /* +h0058 */ RecObject* interactive_model;
-        /* +h005C */ uint32_t h005C[4];
-        /* +h006C */ uint32_t appearance_bitmap; // Modified when animation changes
-        /* +h0070 */ uint32_t animation_bits;
-        /* +h0064 */ uint32_t h0064[5];
-        /* +h0088 */ PropByType* prop_object_info;
-        /* +h008C */ uint32_t h008C;
-    };
+	struct MapProp { // total: 0x90/144
+		/* +h0000 */ uint32_t h0000[5];
+		/* +h0014 */ uint32_t uptime_seconds; // time since spawned
+		/* +h0018 */ uint32_t h0018;
+		/* +h001C */ uint32_t prop_index;
+		/* +h0020 */ Vec3f position;
+		/* +h002C */ uint32_t model_file_id;
+		/* +h0030 */ uint32_t h0030[2];
+		/* +h0038 */ float rotation_angle;
+		/* +h003C */ float rotation_cos;
+		/* +h0040 */ float rotation_sin;
+		/* +h0044 */ uint32_t h0044[3];
+		/* +h0050 */ float scale;
+		/* +h0054 */ PropModelInfo* model_info;
+		/* +h0058 */ RecObject* interactive_model;
+		/* +h005C */ uint32_t h005C[4];
+		/* +h006C */ uint32_t appearance_bitmap; // Modified when animation changes
+		/* +h0070 */ uint32_t animation_bits;
+		/* +h0074 */ uint32_t h0074[5];
+		/* +h0088 */ PropByType* prop_object_info;
+		/* +h008C */ uint32_t h008C;
+	};
 
-    static_assert(sizeof(MapProp) == 0x90, "struct MapProp has incorrect size");
+	static_assert(sizeof(MapProp) == 0x90, "struct MapProp has incorrect size");
 
-    typedef Array<PathingMap> PathingMapArray;
+	typedef Array<PathingMap> PathingMapArray;
 }

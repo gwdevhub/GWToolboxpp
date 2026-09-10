@@ -46,8 +46,23 @@
         "CMAKE_C_COMPILER": "cl",
         "CMAKE_CXX_COMPILER": "cl",
         "CMAKE_RC_COMPILER": "rc",
+        "CMAKE_JOB_POOL_COMPILE": "console",
+        "CMAKE_JOB_POOL_LINK": "console",
         "FXC": "/opt/msvc/bin/x86/fxc",
         "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/scripts/wine-msvc/vcpkg-triplets;${sourceDir}/vcpkg-overlays/triplets"
+      }
+    },
+    {
+      "name": "wasm",
+      "displayName": "GWToolboxdll.wasm (Emscripten, MVP scaffold)",
+      "description": "Builds the wasm MVP scaffold only (GWToolboxdll/Wasm/*) -- not the real product; see GWToolboxdll/Wasm/main_wasm.cpp for scope. Needs EMSDK set. Not inherited from `vcpkg`: none of the Win32/VS/vcpkg-triplet settings apply cross-compiling for wasm.",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build-wasm",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "$env{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake"
+      },
+      "environment": {
+        "EMSDK_QUIET": "1"
       }
     }
   ]

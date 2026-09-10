@@ -139,6 +139,16 @@ Restore-MpThreat
 
 When Windows Defender blocks one of these files, recent Toolbox versions read the Defender event log and show you the exact block reason in the error popup — include that text when you ask for help.
 
+## Cursor rendering issues (disappearing or corrupted cursor)
+
+If your mouse cursor **disappears**, flickers, or renders incorrectly in-game, this is a known rendering issue tied to the **Guild Wars cursor size** option in Toolbox's cursor scaling feature — it only reliably renders at its default size.
+
+1. Open the Toolbox settings and go to **Settings → Mouse Settings**.
+2. Set **Guild Wars cursor size** back to its default of **32**, or click the **Reset** button next to it.
+3. If the cursor is currently missing, right-click once in-game to make it reappear.
+
+This is a workaround, not a fix — the underlying rendering bug with non-default cursor sizes is still open and being investigated.
+
 ## Missing images in Toolbox
 
 If item, armor, skill, or map images show up **blank** in Toolbox — for example in the Armory, the skills list, or item tooltips — and Toolbox logs a message about not finding image data in `Gw.dat`, the cause is almost always an **incomplete local game install**, not a Toolbox bug.

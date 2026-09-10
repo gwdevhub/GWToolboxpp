@@ -5,10 +5,7 @@
 
 namespace GW {
 
-    /*
-     StoC Manager
-     See https://github.com/GameRevision/GWLP-R/wiki/GStoC for some already explored packets.
-    */
+    // StoC Manager. See https://github.com/GameRevision/GWLP-R/wiki/GStoC for some already explored packets.
 
     namespace Packet {
         namespace StoC {
@@ -24,9 +21,7 @@ namespace GW {
 
     namespace StoC {
         typedef HookCallback<Packet::StoC::PacketBase *> PacketCallback;
-        // Register a function to be called when a packet is received.
-        // An altitude of 0 or less will be triggered before the packet is processed.
-        // An altitude greater than 0 will be triggered after the packet has been processed.
+        // Altitude <= 0 fires before the packet is processed, > 0 after it.
         GWCA_API bool RegisterPacketCallback(
             HookEntry *entry,
             uint32_t header,

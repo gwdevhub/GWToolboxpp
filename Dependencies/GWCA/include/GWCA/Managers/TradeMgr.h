@@ -21,9 +21,7 @@ namespace GW {
         GWCA_API bool OfferItem(uint32_t item_id, uint32_t quantity = 0);
     };
 }
-// ============================================================
 // C Interop API
-// ============================================================
 extern "C" {
     GWCA_API bool      OpenTradeWindow(uint32_t agent_id);
     GWCA_API bool AcceptTrade();

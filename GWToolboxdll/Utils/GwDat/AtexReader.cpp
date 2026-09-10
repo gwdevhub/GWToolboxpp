@@ -365,3 +365,59 @@ DatTexture ProcessImageFile(unsigned char* img, int size)
 
     return DatTexture(r.xres, r.yres, image, tex_type);
 }
+
+DatTextureRaw ProcessImageFileRaw(unsigned char* img, int size)
+{
+    const int id1 = ((unsigned int*)img)[0];
+    const int id2 = ((unsigned int*)img)[1];
+    if (id1 != 'XTTA' && id1 != 'XETA')
+    {
+        return {};
+    }
+    if ((id2 & 0xffffff) != 'TXD')
+    {
+        return {};
+    }
+    const int cmptype = id2 >> 24;
+
+    SImageDescriptor r;
+    r.xres = *(unsigned short*)(img + 8);
+    r.yres = *(unsigned short*)(img + 10);
+    r.Data = img;
+    r.imageformat = 0xf;
+    r.a = size;
+    r.b = 6;
+    r.c = 0;
+
+    int format;
+    size_t block_bytes;
+    switch (cmptype)
+    {
+    case '1': format = 0xf; block_bytes = 8; break;
+    case '2':
+    case '3':
+    case 'N': format = 0x11; block_bytes = 16; break;
+    case '4':
+    case '5': format = 0x13; block_bytes = 16; break;
+    case 'L': format = 0x12; block_bytes = 16; break;
+    case 'A': format = 0x14; block_bytes = 8; break;
+    default: return {};
+    }
+
+    std::vector<RGBA> output(r.xres * r.yres);
+    r.image = (unsigned char*)output.data();
+    AtexDecompress((unsigned int*)img, size, format, r, (unsigned int*)output.data());
+
+    DatTextureRaw out;
+    out.width = r.xres;
+    out.height = r.yres;
+    out.cmptype = (char)cmptype;
+    const size_t block_count = ((r.xres + 3) / 4) * ((size_t)(r.yres + 3) / 4);
+    const size_t byte_count = block_count * block_bytes;
+    if (!byte_count || byte_count > output.size() * sizeof(RGBA))
+    {
+        return {};
+    }
+    out.blocks.assign((uint8_t*)output.data(), (uint8_t*)output.data() + byte_count);
+    return out;
+}

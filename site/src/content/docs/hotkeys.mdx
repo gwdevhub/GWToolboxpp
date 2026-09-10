@@ -84,6 +84,19 @@ This allows you to equip a specific item, either by its attributes or by its pos
 ## Flag Hero
 This allows you to set a flag for a specific hero or all heroes at a certain angle and distance from your character.
 
+- **Degree** — the angle of the flag, in degrees (-360 to 360), measured from the reference direction described below. `180` is directly behind that direction.
+- **Distance** — how far from your character the flag is placed, in game units (0 to 10000). For reference, aggro (danger) range is roughly 1250 units and spellcasting range roughly 1010.
+- **Hero** — which hero to flag (1-11, in party order). Use `0` to flag the whole party.
+
+The flag is always placed relative to **your** position; only the direction the angle is measured from changes:
+
+- **No target selected** — the angle is measured from the direction your character is facing, so the formation rotates with you.
+- **A target selected** — the angle is measured from the line between you and your target, so the formation stays oriented on the target as you move around it. `Degree = 0` therefore puts the hero directly between you and your target at the given distance.
+
+Pressing the hotkey again while that hero (or the party, for `0`) is already flagged clears the flag instead, so a single key toggles the position on and off.
+
+Building a formation is just a handful of these hotkeys — e.g. one per hero at the same distance with degrees spread out (120 / 180 / 240 for a three-hero backline), plus a `Hero = 0` hotkey to unflag everything. See also the [minimap's hero flagging controls](/docs/minimap/#hero-flagging) and the [`/flag` chat commands](/docs/minimap/#chat-commands).
+
 ## Guild Wars Key
 This allows you to bind a hotkey to trigger a specific Guild Wars control action.
 
