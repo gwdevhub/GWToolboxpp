@@ -278,12 +278,10 @@ void PingsLinesRenderer::DrawPings(IDirect3DDevice9* device)
         const auto translate = DirectX::XMMatrixTranslation(px, py, 0.0f);
 
         if (ping->ShowInner()) {
-            static bool requested_inner_texture = false;
             static IDirect3DTexture9** inner_texture_ptr = nullptr;
 
-            if (!requested_inner_texture) {
+            if (inner_texture_ptr == nullptr) {
                 inner_texture_ptr = GwDatModule::LoadGreyscaleTextureFromFileId(PING_INNER_FILE_ID);
-                requested_inner_texture = true;
             }
 
             if(inner_texture_ptr) {
@@ -337,12 +335,10 @@ void PingsLinesRenderer::DrawPings(IDirect3DDevice9* device)
             }
         }
 
-        static bool requested_outer_texture = false;
         static IDirect3DTexture9** outer_texture_ptr = nullptr;
 
-        if (!requested_outer_texture) {
+        if (outer_texture_ptr == nullptr) {
             outer_texture_ptr = GwDatModule::LoadGreyscaleTextureFromFileId(PING_OUTER_FILE_ID);
-            requested_outer_texture = true;
         }
 
         if (outer_texture_ptr) {
