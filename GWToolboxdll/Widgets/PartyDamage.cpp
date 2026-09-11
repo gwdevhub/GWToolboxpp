@@ -541,6 +541,7 @@ PartyDamage::PlayerDamage* PartyDamage::GetDamageByAgentId(uint32_t agent_id, ui
 void PartyDamage::Initialize()
 {
     SnapsToPartyWindow::Initialize();
+    is_resizable = true;
     SettingsRegistry::Register(this, settings);
 
     total = 0;
@@ -568,6 +569,11 @@ void PartyDamage::Terminate()
     GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
 
     party_names_by_index.clear();
+}
+
+ImGuiWindowFlags PartyDamage::GetWinFlags(const ImGuiWindowFlags flags, const bool noinput_if_frozen) const
+{
+    return ToolboxWidget::GetWinFlags(flags, noinput_if_frozen) | ImGuiWindowFlags_NoMove;
 }
 
 void PartyDamage::Update(const float)
@@ -654,7 +660,6 @@ void PartyDamage::Draw(IDirect3DDevice9*)
         return;
     }
 
-    // @Cleanup: Only call when the party window has been moved or updated
     const clock_t combat_time = GetEffectiveCombatTime();
 
     if (party_agent_ids_by_index.empty() || !RecalculatePartyPositions()) {
@@ -682,7 +687,11 @@ void PartyDamage::Draw(IDirect3DDevice9*)
     const Color healing_from = Colors::Add(settings.color_healing, Colors::ARGB(0, 20, 20, 20));
     const Color healing_to = Colors::Sub(settings.color_healing, Colors::ARGB(0, 20, 20, 20));
 
-    const auto width = settings.width;
+    const auto minimum_width = settings.width;
+    auto width = minimum_width;
+    if (const auto window = ImGui::FindWindowByName(Name())) {
+        width = std::max(width, window->SizeFull.x);
+    }
     const auto user_offset_x = abs(static_cast<float>(settings.user_offset));
     float window_x = .0f;
     if (settings.overlay_party_window) {
@@ -694,22 +703,23 @@ void PartyDamage::Draw(IDirect3DDevice9*)
     else {
         window_x = party_health_bars_position.top_left.x - user_offset_x - width;
         if (window_x < 0 || settings.user_offset < 0) {
-            // Right placement
             window_x = party_health_bars_position.bottom_right.x + user_offset_x;
         }
     }
 
     const float cond_h = settings.show_condition_dps ? ImGui::GetTextLineHeight() + 6.0f : 0.0f;
 
-    // Add a window to capture mouse clicks.
     ImGui::SetNextWindowPos({window_x, party_health_bars_position.top_left.y - cond_h});
-    ImGui::SetNextWindowSize({width, party_health_bars_position.bottom_right.y - party_health_bars_position.top_left.y + cond_h});
+    const float height = party_health_bars_position.bottom_right.y - party_health_bars_position.top_left.y + cond_h;
+    ImGui::SetNextWindowSizeConstraints({minimum_width, height}, {FLT_MAX, height});
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(10.0f, 10.0f));
     ImGui::PushStyleColor(ImGuiCol_WindowBg, 0);
     if (ImGui::Begin(Name(), nullptr, GetWinFlags())) {
         const auto draw_list = ImGui::GetWindowDrawList();
+        window_x = ImGui::GetWindowPos().x;
+        width = ImGui::GetWindowWidth();
         constexpr size_t buffer_size = 16;
         char buffer[buffer_size];
 
@@ -730,7 +740,7 @@ void PartyDamage::Draw(IDirect3DDevice9*)
                 ImGui::Text("%d/s", dps);
                 ImGui::SameLine();
             }
-            ImGui::NewLine(); // flush last SameLine
+            ImGui::NewLine();
         }
 
         for (auto& [agent_id, party_slot] : party_indeces_by_agent_id) {
@@ -899,7 +909,7 @@ void PartyDamage::DrawSettingsInternal()
     ImGui::PopItemWidth();
     ImGui::ShowHelp("Distance away from the party window");
 
-    ImGui::DragFloat("Width", &settings.width, 1.0f, 50.0f, 0.0f, "%.0f");
+    ImGui::DragFloat("Minimum width", &settings.width, 1.0f, 50.0f, 0.0f, "%.0f");
     if (settings.width <= 0) {
         settings.width = 1.0f;
     }

@@ -69,6 +69,8 @@ public:
     void Initialize() override;
     void Terminate() override;
 
+    ImGuiWindowFlags GetWinFlags(ImGuiWindowFlags flags = 0, bool noinput_if_frozen = true) const override;
+
     void Draw(IDirect3DDevice9* pDevice) override;
 
     void Update(float delta) override;
