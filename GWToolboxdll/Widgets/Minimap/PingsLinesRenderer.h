@@ -4,6 +4,8 @@
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Packets/StoC.h>
 
+#include <Modules/GwDatModule.h>
+
 #include <Color.h>
 #include <Timer.h>
 
@@ -15,6 +17,9 @@ class PingsLinesRenderer : public D3DVertexBuffer {
     friend class Minimap;
     const float drawing_scale = 96.0f;
     const clock_t drawing_timeout = 5000;
+
+    const uint32_t PING_INNER_FILE_ID = 50468;
+    const uint32_t PING_OUTER_FILE_ID = 49225;
 
     struct DrawingLine {
         DrawingLine()
@@ -91,6 +96,9 @@ class PingsLinesRenderer : public D3DVertexBuffer {
 
     public:
         Color color = Colors::ARGB(128, 255, 0, 0);
+        IDirect3DTexture9* texture = nullptr;
+
+        void Render(IDirect3DDevice9* device) override;
     };
 
     class Marker : public D3DVertexBuffer {
@@ -179,7 +187,7 @@ private:
     std::vector<GW::UI::CompassPoint> queue{};
 
     Color color_drawings = Colors::ARGB(0xFF, 0xFF, 0xFF, 0xFF);
-    Color color_pings = Colors::ARGB(128, 255, 0, 0);
+    Color color_pings = Colors::ARGB(104, 255, 0, 0);
     Color color_shadowstep_line = Colors::ARGB(155, 128, 0, 128);
     Color color_shadowstep_line_maxrange = Colors::ARGB(255, 255, 0, 128);
     float maxrange_interp_begin = 0.85f;

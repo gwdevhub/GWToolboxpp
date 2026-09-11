@@ -43,7 +43,7 @@ void PingsLinesRenderer::DrawSettings()
     ImGui::SmallConfirmButton("Restore Defaults", "Are you sure?", [&](bool result, void*) {
         if (result) {
             color_drawings = Colors::ARGB(0xFF, 0xFF, 0xFF, 0xFF);
-            color_pings = Colors::ARGB(128, 255, 0, 0);
+            color_pings = Colors::ARGB(104, 255, 0, 0);
             marker.color = Colors::ARGB(200, 128, 0, 128);
             color_shadowstep_line = Colors::ARGB(48, 128, 0, 128);
             color_shadowstep_line_maxrange = Colors::ARGB(48, 128, 0, 128);
@@ -52,7 +52,8 @@ void PingsLinesRenderer::DrawSettings()
         }
         });
     changed |= Colors::DrawSettingHueWheel("Drawings", &color_drawings);
-    changed |= Colors::DrawSettingHueWheel("Pings", &color_pings);
+    changed |= Colors::DrawSettingHueWheel("Player Pings", &color_pings);
+    ImGui::ShowHelp("The alpha level is also used for the game's pings");
     changed |= Colors::DrawSettingHueWheel("Shadow Step Marker", &marker.color);
     changed |= Colors::DrawSettingHueWheel("Shadow Step Line", &color_shadowstep_line);
     changed |= Colors::DrawSettingHueWheel("Shadow Step Line (Max range)", &color_shadowstep_line_maxrange);
@@ -267,7 +268,7 @@ void PingsLinesRenderer::DrawPings(IDirect3DDevice9* device)
         }
 
         if (ping->GetColor() != Colors::Empty()) {
-            ping_circle.color = Colors::Sub(ping->GetColor(), Colors::ARGB(128, 0, 0, 0));
+            ping_circle.color = (ping->GetColor() & ~IM_COL32_A_MASK) | (color_pings & IM_COL32_A_MASK);
         }
         else {
             ping_circle.color = color_pings;
@@ -277,21 +278,72 @@ void PingsLinesRenderer::DrawPings(IDirect3DDevice9* device)
         const auto translate = DirectX::XMMatrixTranslation(px, py, 0.0f);
 
         if (ping->ShowInner()) {
-            scale = DirectX::XMMatrixScaling(drawing_scale, drawing_scale, 1.0f);
-            world = scale * translate;
-            device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&world));
-            ping_circle.Render(device);
+            static bool requested_inner_texture = false;
+            static IDirect3DTexture9** inner_texture_ptr = nullptr;
+
+            if (!requested_inner_texture) {
+                inner_texture_ptr = GwDatModule::LoadGreyscaleTextureFromFileId(PING_INNER_FILE_ID);
+                requested_inner_texture = true;
+            }
+
+            if(inner_texture_ptr) {
+                const auto context = Minimap::GetRenderContext();
+
+                const GW::Agent* me = GW::Agents::GetObservingAgent();
+
+                if (me) {
+                    const auto center = me->pos - context.translation / context.zoom_scale;
+
+                    float dx = px - center.x;
+                    float dy = py - center.y;
+
+                    const float max_distance = (GW::Constants::Range::Compass - drawing_scale) / context.zoom_scale;
+                    const float distance_sq = dx * dx + dy * dy;
+
+                    auto inner_translate = translate;
+
+                    if (distance_sq > max_distance * max_distance) {
+                        const float distance = std::sqrt(distance_sq);
+                        const float factor = max_distance / distance;
+
+                        inner_translate = DirectX::XMMatrixTranslation(
+                            center.x + dx * factor,
+                            center.y + dy * factor,
+                            0.0f
+                        );
+                    }
+
+                    scale = DirectX::XMMatrixScaling(drawing_scale * 2, drawing_scale * 2, 1.0f);
+                    world = scale * inner_translate;
+                    device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&world));
+
+                    ping_circle.texture = *inner_texture_ptr;
+                    ping_circle.Render(device);
+                }
+            }
         }
 
-        int diff = TIMER_DIFF(ping->start);
-        const bool first_loop = diff < 1000;
-        diff = diff % 1000;
-        diff *= first_loop ? 2 : 1;
+        static bool requested_outer_texture = false;
+        static IDirect3DTexture9** outer_texture_ptr = nullptr;
 
-        scale = DirectX::XMMatrixScaling(diff * ping_scale, diff * ping_scale, 1.0f);
-        world = scale * translate;
-        device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&world));
-        ping_circle.Render(device);
+        if (!requested_outer_texture) {
+            outer_texture_ptr = GwDatModule::LoadGreyscaleTextureFromFileId(PING_OUTER_FILE_ID);
+            requested_outer_texture = true;
+        }
+
+        if (outer_texture_ptr) {
+            int diff = TIMER_DIFF(ping->start);
+            const bool first_loop = diff < 1000;
+            diff = diff % 1000;
+            diff *= first_loop ? 2 : 1;
+
+            scale = DirectX::XMMatrixScaling(diff * ping_scale, diff * ping_scale, 1.0f);
+            world = scale * translate;
+            device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&world));
+
+            ping_circle.texture = *outer_texture_ptr;
+            ping_circle.Render(device);
+        }
     }
     if (!pings.empty()) {
         const Ping* last = pings.back();
@@ -426,31 +478,67 @@ void PingsLinesRenderer::DrawRecallLine(IDirect3DDevice9*)
 void PingsLinesRenderer::PingCircle::Initialize(IDirect3DDevice9* device)
 {
     type = D3DPT_TRIANGLESTRIP;
-    count = 96; // polycount
-    const auto vertex_count = count + 2;
-    D3DVertex* _vertices = nullptr;
+    count = 2;
 
-    if (buffer) {
+    constexpr size_t vertex_count = 4;
+
+    D3DVertexTextured* _vertices = nullptr;
+
+    if (buffer)
+    {
         buffer->Release();
+        buffer = nullptr;
     }
-    device->CreateVertexBuffer(sizeof(D3DVertex) * vertex_count, 0,
-                               D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, nullptr);
-    buffer->Lock(0, sizeof(D3DVertex) * vertex_count, reinterpret_cast<void**>(&_vertices),
-                 D3DLOCK_DISCARD);
 
-    for (size_t i = 0; i < count; i++) {
-        const float angle = i * (2 * DirectX::XM_PI / count);
-        const bool outer = i % 2 == 0;
-        const float radius = outer ? 1.0f : 0.8f;
-        _vertices[i].x = radius * std::cos(angle);
-        _vertices[i].y = radius * std::sin(angle);
-        _vertices[i].z = 0.0f;
-        _vertices[i].color = outer ? color : Colors::Sub(color, 0xFF000000);
-    }
-    _vertices[count] = _vertices[0];
-    _vertices[count + 1] = _vertices[1];
+    device->CreateVertexBuffer(
+        sizeof(D3DVertexTextured) * vertex_count,
+        0,
+        D3DFVF_TEXTUREDVERTEX,
+        D3DPOOL_MANAGED,
+        &buffer,
+        nullptr);
+
+    buffer->Lock(
+        0,
+        sizeof(D3DVertexTextured) * vertex_count,
+        reinterpret_cast<void**>(&_vertices),
+        D3DLOCK_DISCARD);
+
+    _vertices[0] = { -1.0f, -1.0f, 0.0f, color, 0.0f, 1.0f };
+    _vertices[1] = { -1.0f,  1.0f, 0.0f, color, 0.0f, 0.0f };
+    _vertices[2] = {  1.0f, -1.0f, 0.0f, color, 1.0f, 1.0f };
+    _vertices[3] = {  1.0f,  1.0f, 0.0f, color, 1.0f, 0.0f };
 
     buffer->Unlock();
+
+    device->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_SELECTARG2);
+    device->SetTextureStageState(0, D3DTSS_COLORARG2, D3DTA_DIFFUSE);
+
+    device->SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
+    device->SetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
+    device->SetTextureStageState(0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE);
+
+    device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
+    device->SetRenderState(D3DRS_SRCBLEND,  D3DBLEND_SRCALPHA);
+    device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ONE);
+}
+
+void PingsLinesRenderer::PingCircle::Render(IDirect3DDevice9* device)
+{
+    if (dirty) Invalidate();
+    if (!initialized) {
+        initialized = true;
+        Initialize(device);
+    }
+    if (!buffer || !count || !texture) return;
+
+    device->SetTexture(0, texture);
+
+    device->SetFVF(D3DFVF_TEXTUREDVERTEX);
+    device->SetStreamSource(0, buffer, 0, sizeof(D3DVertexTextured));
+    device->DrawPrimitive(type, 0, count);
+
+    device->SetTexture(0, nullptr);
 }
 
 void PingsLinesRenderer::Marker::Initialize(IDirect3DDevice9* device)
