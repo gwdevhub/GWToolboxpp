@@ -286,41 +286,28 @@ void PingsLinesRenderer::DrawPings(IDirect3DDevice9* device)
 
             if(inner_texture_ptr) {
                 const auto context = Minimap::GetRenderContext();
-
                 const GW::Agent* me = GW::Agents::GetObservingAgent();
 
                 if (me) {
-                    const auto center = me->pos - GW::Rotate(context.translation, context.rotation - DirectX::XM_PIDIV2) / context.zoom_scale;
+                    const float rotation = context.rotation - DirectX::XM_PIDIV2;
+                    const auto center = me->pos - GW::Rotate(context.translation, rotation) / context.zoom_scale;
 
-                    float dx = px - center.x;
-                    float dy = py - center.y;
-
-                    const float angle = DirectX::XM_PIDIV2 - context.rotation;
-                    const float cos_a = std::cos(angle);
-                    const float sin_a = std::sin(angle);
-
-                    const float view_dx = dx * cos_a - dy * sin_a;
-                    const float view_dy = dx * sin_a + dy * cos_a;
+                    const auto p = GW::Vec2f(px, py);
+                    const auto delta = p - center;
 
                     const float max_distance = (GW::Constants::Range::Compass - drawing_scale) / context.zoom_scale;
-
-                    const float distance_sq = view_dx * view_dx + view_dy * view_dy;
+                    const float distance_sq = GW::GetSquareDistance(p, center);
 
                     auto inner_translate = translate;
 
                     if (distance_sq > max_distance * max_distance) {
-                        const float distance = std::sqrt(distance_sq);
+                        const float distance = GW::GetDistance(p, center);
                         const float factor = max_distance / distance;
-
-                        const float clamped_x = view_dx * factor;
-                        const float clamped_y = view_dy * factor;
-
-                        const float world_dx = clamped_x * cos_a + clamped_y * sin_a;
-                        const float world_dy = -clamped_x * sin_a + clamped_y * cos_a;
+                        const auto clamped = delta * factor;
 
                         inner_translate = DirectX::XMMatrixTranslation(
-                            center.x + world_dx,
-                            center.y + world_dy,
+                            center.x + clamped.x,
+                            center.y + clamped.y,
                             0.0f
                         );
                     }
