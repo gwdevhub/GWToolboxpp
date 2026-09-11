@@ -290,7 +290,7 @@ void PingsLinesRenderer::DrawPings(IDirect3DDevice9* device)
                 const GW::Agent* me = GW::Agents::GetObservingAgent();
 
                 if (me) {
-                    const auto center = me->pos - context.translation / context.zoom_scale;
+                    const auto center = me->pos - GW::Rotate(context.translation, context.rotation - DirectX::XM_PIDIV2) / context.zoom_scale;
 
                     float dx = px - center.x;
                     float dy = py - center.y;
