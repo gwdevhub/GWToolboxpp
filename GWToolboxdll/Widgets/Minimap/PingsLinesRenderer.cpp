@@ -283,42 +283,40 @@ void PingsLinesRenderer::DrawPings(IDirect3DDevice9* device)
             if (inner_texture_ptr == nullptr) {
                 inner_texture_ptr = GwDatModule::LoadGreyscaleTextureFromFileId(PING_INNER_FILE_ID);
             }
+            
+            const auto context = Minimap::GetRenderContext();
+            const GW::Agent* me = inner_texture_ptr ? GW::Agents::GetObservingAgent() : nullptr;
 
-            if(inner_texture_ptr) {
-                const auto context = Minimap::GetRenderContext();
-                const GW::Agent* me = GW::Agents::GetObservingAgent();
+            if (me) {
+                const float rotation = context.rotation - DirectX::XM_PIDIV2;
+                const auto center = me->pos - GW::Rotate(context.translation, rotation) / context.zoom_scale;
 
-                if (me) {
-                    const float rotation = context.rotation - DirectX::XM_PIDIV2;
-                    const auto center = me->pos - GW::Rotate(context.translation, rotation) / context.zoom_scale;
+                const auto p = GW::Vec2f(px, py);
+                const auto delta = p - center;
 
-                    const auto p = GW::Vec2f(px, py);
-                    const auto delta = p - center;
+                const float max_distance = (GW::Constants::Range::Compass - drawing_scale) / context.zoom_scale;
+                const float distance_sq = GW::GetSquareDistance(p, center);
 
-                    const float max_distance = (GW::Constants::Range::Compass - drawing_scale) / context.zoom_scale;
-                    const float distance_sq = GW::GetSquareDistance(p, center);
+                auto inner_translate = translate;
 
-                    auto inner_translate = translate;
+                if (distance_sq > max_distance * max_distance) {
+                    const float distance = GW::GetDistance(p, center);
+                    const float factor = max_distance / distance;
+                    const auto clamped = delta * factor;
 
-                    if (distance_sq > max_distance * max_distance) {
-                        const float distance = GW::GetDistance(p, center);
-                        const float factor = max_distance / distance;
-                        const auto clamped = delta * factor;
-
-                        inner_translate = DirectX::XMMatrixTranslation(
-                            center.x + clamped.x,
-                            center.y + clamped.y,
-                            0.0f
-                        );
-                    }
-
-                    scale = DirectX::XMMatrixScaling(drawing_scale * 2, drawing_scale * 2, 1.0f);
-                    world = scale * inner_translate;
-                    device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&world));
-
-                    ping_circle.texture = *inner_texture_ptr;
-                    ping_circle.Render(device);
+                    inner_translate = DirectX::XMMatrixTranslation(
+                        center.x + clamped.x,
+                        center.y + clamped.y,
+                        0.0f
+                    );
                 }
+
+                scale = DirectX::XMMatrixScaling(drawing_scale * 2, drawing_scale * 2, 1.0f);
+                world = scale * inner_translate;
+                device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&world));
+
+                ping_circle.texture = *inner_texture_ptr;
+                ping_circle.Render(device);
             }
         }
 
