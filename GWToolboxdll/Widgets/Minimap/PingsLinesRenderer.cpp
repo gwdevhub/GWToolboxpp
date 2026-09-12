@@ -285,7 +285,7 @@ void PingsLinesRenderer::DrawPings(IDirect3DDevice9* device)
             }
             
             const auto context = Minimap::GetRenderContext();
-            const GW::Agent* me = inner_texture_ptr ? GW::Agents::GetObservingAgent() : nullptr;
+            const GW::Agent* me = *inner_texture_ptr ? GW::Agents::GetObservingAgent() : nullptr;
 
             if (me) {
                 const float rotation = context.rotation - DirectX::XM_PIDIV2;
@@ -326,7 +326,7 @@ void PingsLinesRenderer::DrawPings(IDirect3DDevice9* device)
             outer_texture_ptr = GwDatModule::LoadGreyscaleTextureFromFileId(PING_OUTER_FILE_ID);
         }
 
-        if (outer_texture_ptr) {
+        if (*outer_texture_ptr) {
             int diff = TIMER_DIFF(ping->start);
             const bool first_loop = diff < 1000;
             diff = diff % 1000;
