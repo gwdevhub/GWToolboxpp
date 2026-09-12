@@ -50,6 +50,7 @@
 #include <Modules/TextToSpeechModule.h>
 #include <Modules/ToastNotifications.h>
 #include <Modules/VendorFix.h>
+#include <Modules/WebSocketModule.h>
 #include <Widgets/VanquishMapOverlayWidget.h>
 #include <Windows/AccountInventoryWindow.h>
 #include <Windows/ArmoryWindow.h>
@@ -75,6 +76,7 @@
 #include <Windows/Pathfinding/PathfindingWindow.h>
 #include <Windows/PconsWindow.h>
 #include <Windows/RerollWindow.h>
+#include <Windows/SplitsWindow.h>
 #include <Windows/TradeWindow.h>
 #include <Windows/TravelWindow.h>
 
@@ -239,7 +241,9 @@ namespace {
         MaterialsWindow::Instance(),
         TradeWindow::Instance(),
         NotePadWindow::Instance(),
+        WebSocketModule::Instance(),
         ObjectiveTimerWindow::Instance(),
+        SplitsWindow::Instance(),
         FactionLeaderboardWindow::Instance(),
         DailyQuests::Instance(),
         FriendListWindow::Instance(),
