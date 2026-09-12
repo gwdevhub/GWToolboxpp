@@ -322,6 +322,7 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
 {
     const bool is_mobile = ToolboxSettings::is_in_mobile_mode;
 
+    // Auto-select tab based on current mode on first open
     if (settings_active_tab < 0) {
         settings_active_tab = is_mobile ? 1 : 0;
     }
@@ -357,7 +358,7 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
     char need_show_buf[128];
     snprintf(need_show_buf, sizeof(need_show_buf), "You need to show the %s for this control to work", TypeName());
 
-    if (is_movable) {
+    {
         static const char* frame_label_options[_countof(available_frame_labels) + 1];
         for (size_t i = 0; i < _countof(available_frame_labels); i++) {
             frame_label_options[i] = available_frame_labels[i].label;
@@ -373,7 +374,7 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
         }
         const char* preview = current_idx >= 0 ? frame_label_options[current_idx] : "None";
 
-        const bool snap_disabled = lm;
+        const bool snap_disabled = !is_movable || lm;
         ImGui::BeginDisabled(snap_disabled);
         const std::string prev_snap = snap;
         if (ImGui::BeginCombo("Snap to Frame", preview)) {
@@ -392,31 +393,49 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
             ImGui::EndCombo();
         }
         ImGui::EndDisabled();
+        // When snap target changes to a new frame, schedule snap_offset initialization from current window position
         if (snap != prev_snap && !snap.empty()) {
             needs_init_ref = true;
             snap_off[0] = 0.f;
             snap_off[1] = 0.f;
         }
         if (snap_disabled && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
-            ImGui::SetTooltip("Uncheck 'Lock Position' to enable snap-to-frame");
+            if (!is_movable) {
+                ImGui::SetTooltip("This %s cannot be moved", TypeName());
+            }
+            else {
+                ImGui::SetTooltip("Uncheck 'Lock Position' to enable snap-to-frame");
+            }
         }
         else {
             ImGui::ShowHelp(need_show_buf);
         }
+    }
 
-        const bool pos_disabled = lm;
+    // Position / Snap Offset — mutually exclusive
+    {
+        const bool pos_disabled = !is_movable || lm;
         ImGui::BeginDisabled(pos_disabled);
         if (!snap.empty()) {
             if (ImGui::DragFloat2("Snap Offset", snap_off, 1.0f, 0.0f, 0.0f, "%.0f")) {
-                needs_init_ref = false;
+                needs_init_ref = false; // user explicitly set offset; cancel pending init
             }
         }
-        else if (ImGui::DragFloat2("Position", cur_pos, 1.0f, 0.0f, 0.0f, "%.0f") && window) {
-            ImGui::SetWindowPos(window, {cur_pos[0], cur_pos[1]});
+        else {
+            if (ImGui::DragFloat2("Position", cur_pos, 1.0f, 0.0f, 0.0f, "%.0f")) {
+                if (window) {
+                    ImGui::SetWindowPos(window, {cur_pos[0], cur_pos[1]});
+                }
+            }
         }
         ImGui::EndDisabled();
         if (pos_disabled && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
-            ImGui::SetTooltip("Uncheck 'Lock Position' to adjust position");
+            if (!is_movable) {
+                ImGui::SetTooltip("This %s cannot be moved", TypeName());
+            }
+            else {
+                ImGui::SetTooltip("Uncheck 'Lock Position' to adjust position");
+            }
         }
         else if (!snap.empty()) {
             ImGui::ShowHelp("Pixel offset from the snapped GW frame's top-left corner");
@@ -426,8 +445,8 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
         }
     }
 
-    if (is_resizable) {
-        const bool size_disabled = ls || as_;
+    {
+        const bool size_disabled = !is_resizable || ls || as_;
         ImGui::BeginDisabled(size_disabled);
         if (ImGui::DragFloat2("Size", cur_size, 1.0f, 0.0f, 0.0f, "%.0f")) {
             if (window) {
@@ -436,7 +455,10 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
         }
         ImGui::EndDisabled();
         if (size_disabled && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
-            if (as_) {
+            if (!is_resizable) {
+                ImGui::SetTooltip("This %s cannot be resized", TypeName());
+            }
+            else if (as_) {
                 ImGui::SetTooltip("Uncheck 'Auto Size' to adjust size");
             }
             else {
@@ -448,39 +470,58 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
         }
     }
 
-    if (is_movable || is_resizable) {
-        ImGui::StartSpacedElements(180.f);
-        if (is_movable) {
-            ImGui::NextSpacedElement();
-            ImGui::Checkbox("Lock Position", &lm);
-        }
-        if (is_resizable) {
-            ImGui::NextSpacedElement();
-            ImGui::Checkbox("Lock Size", &ls);
-            ImGui::NextSpacedElement();
-            ImGui::Checkbox("Auto Size", &as_);
-        }
+    ImGui::StartSpacedElements(180.f);
+
+    ImGui::NextSpacedElement();
+    ImGui::BeginDisabled(!is_movable);
+    ImGui::Checkbox("Lock Position", &lm);
+    ImGui::EndDisabled();
+    if (!is_movable && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
+        ImGui::SetTooltip("This %s cannot be moved", TypeName());
     }
 
-    if (is_resizable && has_titlebar) {
-        if (ImGui::Checkbox("Auto-resize on collapse/expand", &auto_resize_on_collapse)) {
-            collapse_size_initialized = false;
-        }
+    ImGui::NextSpacedElement();
+    ImGui::BeginDisabled(!is_resizable);
+    ImGui::Checkbox("Lock Size", &ls);
+    ImGui::EndDisabled();
+    if (!is_resizable && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
+        ImGui::SetTooltip("This %s cannot be resized", TypeName());
+    }
+
+    ImGui::NextSpacedElement();
+    ImGui::BeginDisabled(!is_resizable);
+    ImGui::Checkbox("Auto Size", &as_);
+    ImGui::EndDisabled();
+    if (!is_resizable && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
+        ImGui::SetTooltip("This %s cannot be resized", TypeName());
+    }
+
+    // Auto-resize on collapse/expand (only relevant when the window has a title bar)
+    ImGui::BeginDisabled(!has_titlebar);
+    if (ImGui::Checkbox("Auto-resize on collapse/expand", &auto_resize_on_collapse)) {
+        collapse_size_initialized = false;
+    }
+    ImGui::EndDisabled();
+    if (!has_titlebar && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
+        ImGui::SetTooltip("This %s has no titlebar", TypeName());
+    }
+    else {
         ImGui::ShowHelp("Automatically resize this window when it is collapsed or expanded");
-        ImGui::Indent();
-        ImGui::BeginDisabled(!auto_resize_on_collapse);
-        if (ImGui::DragFloat2("Collapsed size", collapsed_size.data(), 1.f, 0.f, 0.f, "%.0f")) {
-            collapse_size_initialized = false;
-        }
-        ImGui::ShowHelp("Width and height when the title bar is collapsed; 0 = keep current");
-        if (ImGui::DragFloat2("Expanded size", expanded_size.data(), 1.f, 0.f, 0.f, "%.0f")) {
-            collapse_size_initialized = false;
-        }
-        ImGui::ShowHelp("Width and height when the window is expanded; 0 = keep current");
-        ImGui::EndDisabled();
-        ImGui::Unindent();
     }
+    ImGui::Indent();
+    ImGui::BeginDisabled(!auto_resize_on_collapse || !has_titlebar);
+    if (ImGui::DragFloat2("Collapsed size", collapsed_size.data(), 1.f, 0.f, 0.f, "%.0f")) {
+        collapse_size_initialized = false;
+    }
+    ImGui::ShowHelp("Width and height when the title bar is collapsed; 0 = keep current");
+    if (ImGui::DragFloat2("Expanded size", expanded_size.data(), 1.f, 0.f, 0.f, "%.0f")) {
+        collapse_size_initialized = false;
+    }
+    ImGui::ShowHelp("Width and height when the window is expanded; 0 = keep current");
+    ImGui::EndDisabled();
+    ImGui::Unindent();
 
+    // Shared settings (not per-mode) drawn below the two-column layout
     ImGui::StartSpacedElements(180.f);
 
     ImGui::NextSpacedElement();
