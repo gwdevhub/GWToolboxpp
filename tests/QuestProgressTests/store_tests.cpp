@@ -319,6 +319,15 @@ void TestCodecVersioning()
     auto n = ParseAccountStoreJson(newer, kAcct);
     Expect(n.status == CodecStatus::UnsupportedNewerMajor, "codec_newer_major_rejected");
 
+    const std::string newer_minor = R"({
+  "storeFormat": "gwtoolbox-quest-progress",
+  "storeVersion": { "major": 1, "minor": 99 },
+  "accountKey": "01234567-89ab-cdef-0123-456789abcdef",
+  "characters": []
+})";
+    auto nm = ParseAccountStoreJson(newer_minor, kAcct);
+    Expect(nm.status == CodecStatus::UnsupportedNewerMajor, "codec_newer_minor_rejected");
+
     const std::string older = R"({
   "storeFormat": "gwtoolbox-quest-progress",
   "storeVersion": { "major": 1, "minor": 0 },
@@ -329,6 +338,661 @@ void TestCodecVersioning()
     Expect(o.status == CodecStatus::Ok, "codec_older_minor_migrated_ok");
     Expect(o.diagnostics.migrated, "codec_older_minor_migrated_flag");
     Expect(o.store.store_version.minor == kStoreFormatMinor, "codec_older_minor_now_current");
+    Expect(o.store.account_skill_baseline.state == JourneyBaselineSealState::Unset,
+        "codec_1_0_account_baseline_unset");
+}
+
+void ExpectUnsetBaselines(const CharacterJourneyBaselines& baselines, const char* tag)
+{
+    Expect(baselines.maps.state == JourneyBaselineSealState::Unset, tag);
+    Expect(baselines.maps.ids.empty(), tag);
+    Expect(baselines.character_skills.state == JourneyBaselineSealState::Unset, tag);
+    Expect(baselines.heroes.state == JourneyBaselineSealState::Unset, tag);
+    Expect(baselines.professions.state == JourneyBaselineSealState::Unset, tag);
+    Expect(baselines.vanquish_areas.state == JourneyBaselineSealState::Unset, tag);
+    Expect(baselines.hard_mode.state == JourneyBaselineSealState::Unset, tag);
+    Expect(!baselines.hard_mode.unlocked, tag);
+    Expect(baselines.skill_points.state == JourneyBaselineSealState::Unset, tag);
+    Expect(baselines.factions.state == JourneyBaselineSealState::Unset, tag);
+    Expect(baselines.hall_of_monuments.state == JourneyBaselineSealState::Unset, tag);
+    Expect(baselines.cartography.state == JourneyBaselineSealState::Unset, tag);
+    Expect(baselines.cartography.percent == 0, tag);
+}
+
+void TestJourneyBaselineCodecAndMerge()
+{
+    {
+        auto store = MakeStore(kAcct);
+        const auto ser = SerializeAccountStoreJson(store);
+        Expect(ser.status == CodecStatus::Ok, "baseline_empty_serialize");
+        const auto parsed = ParseAccountStoreJson(ser.utf8_json, kAcct);
+        Expect(parsed.status == CodecStatus::Ok, "baseline_empty_parse");
+        Expect(parsed.store.store_version.minor == 2, "baseline_empty_minor");
+        ExpectUnsetBaselines(parsed.store.characters.begin()->second.journey_baselines,
+            "baseline_empty_character");
+        Expect(parsed.store.account_skill_baseline.state == JourneyBaselineSealState::Unset,
+            "baseline_empty_account");
+        const auto ser2 = SerializeAccountStoreJson(parsed.store);
+        Expect(ser.utf8_json == ser2.utf8_json, "baseline_empty_deterministic");
+    }
+
+    {
+        auto store = MakeStore(kAcct);
+        auto& character = store.characters.begin()->second;
+        character.journey_baselines.maps.state = JourneyBaselineSealState::Sealed;
+        character.journey_baselines.maps.ids = {};
+        const auto ser = SerializeAccountStoreJson(store);
+        Expect(ser.status == CodecStatus::Ok, "baseline_sealed_empty_serialize");
+        Expect(ser.utf8_json.find("\"state\": \"sealed\"") != std::string::npos,
+            "baseline_sealed_empty_json_state");
+        Expect(ser.utf8_json.find("\"ids\": [\n      ]") != std::string::npos
+                || ser.utf8_json.find("\"ids\": []") != std::string::npos,
+            "baseline_sealed_empty_json_ids");
+        const auto parsed = ParseAccountStoreJson(ser.utf8_json, kAcct);
+        Expect(parsed.status == CodecStatus::Ok, "baseline_sealed_empty_parse");
+        Expect(parsed.store.characters.begin()->second.journey_baselines.maps.state
+                == JourneyBaselineSealState::Sealed,
+            "baseline_sealed_empty_state");
+        Expect(parsed.store.characters.begin()->second.journey_baselines.maps.ids.empty(),
+            "baseline_sealed_empty_ids");
+    }
+
+    {
+        auto store = MakeStore(kAcct);
+        auto& character = store.characters.begin()->second;
+        character.journey_baselines.maps = {JourneyBaselineSealState::Sealed, {30, 10, 10, 20}};
+        character.journey_baselines.character_skills = {JourneyBaselineSealState::Sealed, {5, 1}};
+        character.journey_baselines.heroes = {JourneyBaselineSealState::Sealed, {6}};
+        character.journey_baselines.professions = {JourneyBaselineSealState::Sealed, {1, 2}};
+        character.journey_baselines.vanquish_areas = {JourneyBaselineSealState::Sealed, {73}};
+        character.journey_baselines.hard_mode = {JourneyBaselineSealState::Sealed, true};
+        character.journey_baselines.skill_points = {JourneyBaselineSealState::Sealed};
+        character.journey_baselines.factions = {JourneyBaselineSealState::Sealed};
+        character.journey_baselines.hall_of_monuments = {JourneyBaselineSealState::Sealed};
+        character.journey_baselines.cartography = {JourneyBaselineSealState::Sealed, 42};
+        store.account_skill_baseline = {JourneyBaselineSealState::Sealed, {9, 7, 7}};
+
+        const auto ser = SerializeAccountStoreJson(store);
+        Expect(ser.status == CodecStatus::Ok, "baseline_populated_serialize");
+        const auto parsed = ParseAccountStoreJson(ser.utf8_json, kAcct);
+        Expect(parsed.status == CodecStatus::Ok, "baseline_populated_parse");
+        const auto& baselines = parsed.store.characters.begin()->second.journey_baselines;
+        Expect(baselines.maps.ids == std::vector<uint32_t>({10, 20, 30}), "baseline_maps_sorted_dedup");
+        Expect(baselines.character_skills.ids == std::vector<uint32_t>({1, 5}),
+            "baseline_skills_sorted");
+        Expect(baselines.heroes.ids == std::vector<uint32_t>({6}), "baseline_heroes");
+        Expect(baselines.professions.ids == std::vector<uint32_t>({1, 2}), "baseline_professions");
+        Expect(baselines.vanquish_areas.ids == std::vector<uint32_t>({73}), "baseline_vanquish");
+        Expect(baselines.hard_mode.unlocked, "baseline_hard_mode_true");
+        Expect(baselines.skill_points.state == JourneyBaselineSealState::Sealed, "baseline_sp");
+        Expect(baselines.factions.state == JourneyBaselineSealState::Sealed, "baseline_faction");
+        Expect(baselines.hall_of_monuments.state == JourneyBaselineSealState::Sealed, "baseline_hom");
+        Expect(baselines.cartography.percent == 42, "baseline_cartography");
+        Expect(parsed.store.account_skill_baseline.ids == std::vector<uint32_t>({7, 9}),
+            "baseline_account_skills_sorted_dedup");
+    }
+
+    {
+        auto store = MakeStore(kAcct);
+        store.characters.begin()->second.journey_baselines.hard_mode = {
+            JourneyBaselineSealState::Sealed, false};
+        const auto parsed = ParseAccountStoreJson(SerializeAccountStoreJson(store).utf8_json, kAcct);
+        Expect(parsed.status == CodecStatus::Ok, "baseline_hard_mode_false_ok");
+        Expect(parsed.store.characters.begin()->second.journey_baselines.hard_mode.state
+                == JourneyBaselineSealState::Sealed,
+            "baseline_hard_mode_false_sealed");
+        Expect(!parsed.store.characters.begin()->second.journey_baselines.hard_mode.unlocked,
+            "baseline_hard_mode_false_value");
+    }
+
+    {
+        auto store = MakeStore(kAcct);
+        store.characters.begin()->second.journey_baselines.cartography = {
+            JourneyBaselineSealState::Sealed, 0};
+        Expect(ParseAccountStoreJson(SerializeAccountStoreJson(store).utf8_json, kAcct).status
+                == CodecStatus::Ok,
+            "baseline_cartography_0");
+        store.characters.begin()->second.journey_baselines.cartography.percent = 100;
+        Expect(ParseAccountStoreJson(SerializeAccountStoreJson(store).utf8_json, kAcct).status
+                == CodecStatus::Ok,
+            "baseline_cartography_100");
+    }
+
+    {
+        const std::string bad_percent = R"({
+  "storeFormat": "gwtoolbox-quest-progress",
+  "storeVersion": { "major": 1, "minor": 2 },
+  "accountKey": "01234567-89ab-cdef-0123-456789abcdef",
+  "characters": [{
+    "characterKey": "c",
+    "displayName": "X",
+    "firstObservedAt": "2026-07-25T20:00:00.000Z",
+    "lastObservedAt": "2026-07-25T20:00:00.000Z",
+    "quests": [],
+    "missions": [],
+    "journeyBaselines": {
+      "cartography": { "state": "sealed", "percent": 101 }
+    }
+  }]
+})";
+        Expect(ParseAccountStoreJson(bad_percent, kAcct).status == CodecStatus::ValidationError,
+            "baseline_cartography_101_reject");
+    }
+
+    {
+        const std::string bad_state = R"({
+  "storeFormat": "gwtoolbox-quest-progress",
+  "storeVersion": { "major": 1, "minor": 2 },
+  "accountKey": "01234567-89ab-cdef-0123-456789abcdef",
+  "characters": [{
+    "characterKey": "c",
+    "displayName": "X",
+    "firstObservedAt": "2026-07-25T20:00:00.000Z",
+    "lastObservedAt": "2026-07-25T20:00:00.000Z",
+    "quests": [],
+    "missions": [],
+    "journeyBaselines": {
+      "maps": { "state": "pending", "ids": [] }
+    }
+  }]
+})";
+        Expect(ParseAccountStoreJson(bad_state, kAcct).status == CodecStatus::ValidationError,
+            "baseline_unknown_state_reject");
+    }
+
+    {
+        const std::string unset_payload = R"({
+  "storeFormat": "gwtoolbox-quest-progress",
+  "storeVersion": { "major": 1, "minor": 2 },
+  "accountKey": "01234567-89ab-cdef-0123-456789abcdef",
+  "characters": [{
+    "characterKey": "c",
+    "displayName": "X",
+    "firstObservedAt": "2026-07-25T20:00:00.000Z",
+    "lastObservedAt": "2026-07-25T20:00:00.000Z",
+    "quests": [],
+    "missions": [],
+    "journeyBaselines": {
+      "maps": { "state": "unset", "ids": [1] }
+    }
+  }]
+})";
+        Expect(ParseAccountStoreJson(unset_payload, kAcct).status == CodecStatus::ValidationError,
+            "baseline_unset_with_ids_reject");
+    }
+
+    {
+        auto store = MakeStore(kAcct);
+        auto& character = store.characters.begin()->second;
+        character.display_name = "KeepMe";
+        character.journey_events.push_back(
+            JourneyEventRecord{"map_enter", "map:1", "2026-07-25T20:02:00.000Z", 0, 0, 0, 1});
+        TitleStateRecord title;
+        title.title_id = 12;
+        title.tier_index = 1;
+        title.current_points = 10;
+        title.last_observed_at = "2026-07-25T20:00:00.000Z";
+        character.titles.emplace(12, title);
+        MissionRecord mission;
+        mission.map_id = 73;
+        mission.completed_normal = true;
+        mission.last_observed_at = "2026-07-25T20:00:00.000Z";
+        character.missions.emplace(73, mission);
+        character.skill_points_earned = 12;
+        auto ser = SerializeAccountStoreJson(store);
+        auto rewritten = ser.utf8_json;
+        const auto pos = rewritten.find("\"minor\": 2");
+        Expect(pos != std::string::npos, "baseline_migrate_find_minor");
+        rewritten.replace(pos, std::string("\"minor\": 2").size(), "\"minor\": 0");
+        auto migrated = ParseAccountStoreJson(rewritten, kAcct);
+        Expect(migrated.status == CodecStatus::Ok, "baseline_migrate_1_0_ok");
+        Expect(migrated.diagnostics.migrated, "baseline_migrate_1_0_flag");
+        Expect(migrated.store.store_version.minor == 2, "baseline_migrate_1_0_to_1_2");
+        Expect(
+            std::count_if(
+                migrated.diagnostics.messages.begin(),
+                migrated.diagnostics.messages.end(),
+                [](const std::string& m) { return m.find("1.0 -> 1.1") != std::string::npos; })
+                == 1,
+            "baseline_migrate_diag_1_0");
+        Expect(
+            std::count_if(
+                migrated.diagnostics.messages.begin(),
+                migrated.diagnostics.messages.end(),
+                [](const std::string& m) { return m.find("1.1 -> 1.2") != std::string::npos; })
+                == 1,
+            "baseline_migrate_diag_1_1");
+        const auto& round = migrated.store.characters.begin()->second;
+        Expect(round.display_name == "KeepMe", "baseline_migrate_keeps_name");
+        Expect(round.quests.size() == 1, "baseline_migrate_keeps_quest");
+        Expect(round.quests.at(100).history.size() == 1, "baseline_migrate_keeps_history");
+        Expect(round.journey_events.size() == 1, "baseline_migrate_keeps_journey");
+        Expect(round.titles.size() == 1, "baseline_migrate_keeps_title");
+        Expect(round.missions.size() == 1, "baseline_migrate_keeps_mission");
+        Expect(round.skill_points_earned == 12, "baseline_migrate_keeps_snapshot");
+        ExpectUnsetBaselines(round.journey_baselines, "baseline_migrate_1_0_unset");
+    }
+
+    {
+        auto store = MakeStore(kAcct);
+        auto ser = SerializeAccountStoreJson(store);
+        auto rewritten = ser.utf8_json;
+        const auto pos = rewritten.find("\"minor\": 2");
+        Expect(pos != std::string::npos, "baseline_migrate_1_1_find");
+        rewritten.replace(pos, std::string("\"minor\": 2").size(), "\"minor\": 1");
+        auto migrated = ParseAccountStoreJson(rewritten, kAcct);
+        Expect(migrated.status == CodecStatus::Ok, "baseline_migrate_1_1_ok");
+        Expect(migrated.diagnostics.migrated, "baseline_migrate_1_1_flag");
+        Expect(migrated.store.store_version.minor == 2, "baseline_migrate_1_1_to_1_2");
+        ExpectUnsetBaselines(
+            migrated.store.characters.begin()->second.journey_baselines, "baseline_migrate_1_1_unset");
+    }
+
+    {
+        const std::string unknown_opt = R"({
+  "storeFormat": "gwtoolbox-quest-progress",
+  "storeVersion": { "major": 1, "minor": 2 },
+  "accountKey": "01234567-89ab-cdef-0123-456789abcdef",
+  "futureBaselineField": true,
+  "characters": []
+})";
+        Expect(ParseAccountStoreJson(unknown_opt, kAcct).status == CodecStatus::Ok,
+            "baseline_unknown_field_tolerated");
+    }
+
+    {
+        AccountProgressStore disk = MakeStore(kAcct);
+        disk.characters.begin()->second.journey_baselines.maps = {
+            JourneyBaselineSealState::Sealed, {1, 2}};
+        disk.characters.begin()->second.journey_events.push_back(
+            JourneyEventRecord{"map_enter", "map:1", "2026-07-25T20:02:00.000Z", 0, 0, 0, 1});
+        disk.account_skill_baseline = {JourneyBaselineSealState::Sealed, {10}};
+
+        AccountProgressStore memory = MakeStore(kAcct);
+        memory.characters.begin()->second.journey_baselines.maps.state =
+            JourneyBaselineSealState::Unset;
+        memory.characters.begin()->second.journey_events.push_back(
+            JourneyEventRecord{"map_enter", "map:2", "2026-07-25T20:03:00.000Z", 0, 0, 0, 2});
+
+        auto merged = MergeAccountStores(disk, memory);
+        Expect(merged.status == StoreOpStatus::Ok, "baseline_merge_sealed_unset_ok");
+        const auto& character = merged.merged->characters.begin()->second;
+        Expect(character.journey_baselines.maps.state == JourneyBaselineSealState::Sealed,
+            "baseline_merge_sealed_sticky");
+        Expect(character.journey_baselines.maps.ids == std::vector<uint32_t>({1, 2}),
+            "baseline_merge_sealed_payload");
+        Expect(character.journey_events.size() == 2, "baseline_merge_keeps_journey_events");
+        Expect(merged.merged->account_skill_baseline.ids == std::vector<uint32_t>({10}),
+            "baseline_merge_account_sticky");
+    }
+
+    {
+        AccountProgressStore disk = MakeStore(kAcct);
+        disk.characters.begin()->second.journey_baselines.maps = {
+            JourneyBaselineSealState::Sealed, {1, 3}};
+        disk.characters.begin()->second.journey_baselines.hard_mode = {
+            JourneyBaselineSealState::Sealed, false};
+        disk.characters.begin()->second.journey_baselines.cartography = {
+            JourneyBaselineSealState::Sealed, 20};
+        disk.characters.begin()->second.journey_baselines.skill_points = {
+            JourneyBaselineSealState::Sealed};
+        disk.account_skill_baseline = {JourneyBaselineSealState::Sealed, {1, 4}};
+
+        AccountProgressStore memory = MakeStore(kAcct);
+        memory.characters.begin()->second.journey_baselines.maps = {
+            JourneyBaselineSealState::Sealed, {2, 3}};
+        memory.characters.begin()->second.journey_baselines.hard_mode = {
+            JourneyBaselineSealState::Sealed, true};
+        memory.characters.begin()->second.journey_baselines.cartography = {
+            JourneyBaselineSealState::Sealed, 55};
+        memory.characters.begin()->second.journey_baselines.skill_points = {
+            JourneyBaselineSealState::Unset};
+        memory.account_skill_baseline = {JourneyBaselineSealState::Sealed, {4, 8}};
+
+        auto merged = MergeAccountStores(disk, memory);
+        Expect(merged.status == StoreOpStatus::Ok, "baseline_merge_union_ok");
+        const auto& character = merged.merged->characters.begin()->second;
+        Expect(character.journey_baselines.maps.ids == std::vector<uint32_t>({1, 2, 3}),
+            "baseline_merge_id_union");
+        Expect(character.journey_baselines.hard_mode.unlocked, "baseline_merge_hard_mode_or");
+        Expect(character.journey_baselines.cartography.percent == 55, "baseline_merge_cartography_max");
+        Expect(character.journey_baselines.skill_points.state == JourneyBaselineSealState::Sealed,
+            "baseline_merge_state_only_sticky");
+        Expect(merged.merged->account_skill_baseline.ids == std::vector<uint32_t>({1, 4, 8}),
+            "baseline_merge_account_union");
+        Expect(character.quests.size() == 1, "baseline_merge_keeps_quests");
+    }
+}
+
+bool DiagContainsPath(const CodecDiagnostics& diagnostics, std::string_view needle)
+{
+    for (const auto& message : diagnostics.messages) {
+        if (message.find(needle) != std::string::npos) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void TestJourneyBaselineReviewFixes()
+{
+    {
+        auto store = MakeStore(kAcct);
+        store.characters.begin()->second.journey_baselines.cartography = {
+            JourneyBaselineSealState::Sealed, 101};
+        const auto ser = SerializeAccountStoreJson(store);
+        Expect(ser.status == CodecStatus::ValidationError, "baseline_ser_cartography_101");
+        Expect(ser.utf8_json.empty(), "baseline_ser_cartography_101_no_json");
+        Expect(DiagContainsPath(ser.diagnostics, "journeyBaselines.cartography"),
+            "baseline_ser_cartography_101_path");
+    }
+
+    {
+        auto store = MakeStore(kAcct);
+        store.characters.begin()->second.journey_baselines.maps.state =
+            static_cast<JourneyBaselineSealState>(99);
+        const auto ser = SerializeAccountStoreJson(store);
+        Expect(ser.status == CodecStatus::ValidationError, "baseline_ser_bad_char_enum");
+        Expect(ser.utf8_json.empty(), "baseline_ser_bad_char_enum_no_json");
+        Expect(DiagContainsPath(ser.diagnostics, "journeyBaselines.maps"),
+            "baseline_ser_bad_char_enum_path");
+    }
+
+    {
+        auto store = MakeStore(kAcct);
+        store.account_skill_baseline.state = static_cast<JourneyBaselineSealState>(7);
+        const auto ser = SerializeAccountStoreJson(store);
+        Expect(ser.status == CodecStatus::ValidationError, "baseline_ser_bad_account_enum");
+        Expect(ser.utf8_json.empty(), "baseline_ser_bad_account_enum_no_json");
+        Expect(DiagContainsPath(ser.diagnostics, "accountSkillBaseline"),
+            "baseline_ser_bad_account_enum_path");
+    }
+
+    {
+        auto store = MakeStore(kAcct);
+        store.characters.begin()->second.journey_baselines.maps = {
+            JourneyBaselineSealState::Unset, {1}};
+        Expect(SerializeAccountStoreJson(store).status == CodecStatus::ValidationError,
+            "baseline_ser_unset_ids_reject");
+        store = MakeStore(kAcct);
+        store.characters.begin()->second.journey_baselines.hard_mode = {
+            JourneyBaselineSealState::Unset, true};
+        Expect(SerializeAccountStoreJson(store).status == CodecStatus::ValidationError,
+            "baseline_ser_unset_unlocked_reject");
+        store = MakeStore(kAcct);
+        store.characters.begin()->second.journey_baselines.cartography = {
+            JourneyBaselineSealState::Unset, 12};
+        Expect(SerializeAccountStoreJson(store).status == CodecStatus::ValidationError,
+            "baseline_ser_unset_percent_reject");
+    }
+
+    {
+        const std::string missing_ids = R"({
+  "storeFormat": "gwtoolbox-quest-progress",
+  "storeVersion": { "major": 1, "minor": 2 },
+  "accountKey": "01234567-89ab-cdef-0123-456789abcdef",
+  "characters": [{
+    "characterKey": "c",
+    "displayName": "X",
+    "firstObservedAt": "2026-07-25T20:00:00.000Z",
+    "lastObservedAt": "2026-07-25T20:00:00.000Z",
+    "quests": [],
+    "missions": [],
+    "journeyBaselines": {
+      "maps": { "state": "sealed" }
+    }
+  }]
+})";
+        auto missing = ParseAccountStoreJson(missing_ids, kAcct);
+        Expect(missing.status == CodecStatus::ValidationError, "baseline_parse_sealed_missing_ids");
+        Expect(DiagContainsPath(missing.diagnostics, "journeyBaselines.maps"),
+            "baseline_parse_sealed_missing_ids_path");
+    }
+
+    {
+        const std::string empty_ids = R"({
+  "storeFormat": "gwtoolbox-quest-progress",
+  "storeVersion": { "major": 1, "minor": 2 },
+  "accountKey": "01234567-89ab-cdef-0123-456789abcdef",
+  "characters": [{
+    "characterKey": "c",
+    "displayName": "X",
+    "firstObservedAt": "2026-07-25T20:00:00.000Z",
+    "lastObservedAt": "2026-07-25T20:00:00.000Z",
+    "quests": [],
+    "missions": [],
+    "journeyBaselines": {
+      "maps": { "state": "sealed", "ids": [] }
+    }
+  }]
+})";
+        auto empty = ParseAccountStoreJson(empty_ids, kAcct);
+        Expect(empty.status == CodecStatus::Ok, "baseline_parse_sealed_empty_ids");
+        Expect(empty.store.characters.begin()->second.journey_baselines.maps.state
+                == JourneyBaselineSealState::Sealed,
+            "baseline_parse_sealed_empty_ids_state");
+        Expect(empty.store.characters.begin()->second.journey_baselines.maps.ids.empty(),
+            "baseline_parse_sealed_empty_ids_payload");
+    }
+
+    {
+        auto store = MakeStore(kAcct);
+        auto& character = store.characters.begin()->second;
+        character.journey_baselines.maps = {JourneyBaselineSealState::Sealed, {3, 1, 2}};
+        character.journey_baselines.hard_mode = {JourneyBaselineSealState::Sealed, false};
+        character.journey_baselines.cartography = {JourneyBaselineSealState::Sealed, 100};
+        store.account_skill_baseline = {JourneyBaselineSealState::Sealed, {9, 4}};
+        const auto ser = SerializeAccountStoreJson(store);
+        Expect(ser.status == CodecStatus::Ok, "baseline_valid_ser_ok");
+        const auto parsed = ParseAccountStoreJson(ser.utf8_json, kAcct);
+        Expect(parsed.status == CodecStatus::Ok, "baseline_valid_ser_roundtrip");
+        Expect(parsed.store.characters.begin()->second.journey_baselines.maps.ids
+                == std::vector<uint32_t>({1, 2, 3}),
+            "baseline_valid_ser_maps");
+        Expect(!parsed.store.characters.begin()->second.journey_baselines.hard_mode.unlocked,
+            "baseline_valid_ser_hard_mode");
+        Expect(parsed.store.characters.begin()->second.journey_baselines.cartography.percent == 100,
+            "baseline_valid_ser_cartography");
+        Expect(parsed.store.account_skill_baseline.ids == std::vector<uint32_t>({4, 9}),
+            "baseline_valid_ser_account");
+    }
+
+    {
+        const auto dir = MakeTempDir();
+        const auto paths = BuildAccountStorePaths(dir, kAcct);
+        auto valid = MakeStore(kAcct);
+        valid.characters.begin()->second.journey_baselines.maps = {
+            JourneyBaselineSealState::Sealed, {11}};
+        const auto valid_json = SerializeAccountStoreJson(valid).utf8_json;
+        WriteRaw(paths.primary, valid_json);
+        WriteRaw(paths.backup, valid_json);
+        const auto primary_before = ReadAll(paths.primary);
+        const auto bak_before = ReadAll(paths.backup);
+
+        auto memory = MakeStore(kAcct);
+        memory.characters.begin()->second.journey_baselines.cartography = {
+            JourneyBaselineSealState::Sealed, 101};
+        auto saved = SaveMergedAccountStore(dir, kAcct, memory, 2000);
+        Expect(saved.status == StoreOpStatus::CodecError, "baseline_save_invalid_percent_status");
+        Expect(saved.diagnostics.dirty_retained, "baseline_save_invalid_percent_dirty");
+        Expect(!saved.merged.has_value(), "baseline_save_invalid_percent_no_merged");
+        Expect(ReadAll(paths.primary) == primary_before, "baseline_save_invalid_percent_primary");
+        Expect(ReadAll(paths.backup) == bak_before, "baseline_save_invalid_percent_bak");
+    }
+
+    {
+        const std::string literal_1_0 = R"({
+  "storeFormat": "gwtoolbox-quest-progress",
+  "storeVersion": { "major": 1, "minor": 0 },
+  "accountKey": "01234567-89ab-cdef-0123-456789abcdef",
+  "characters": [{
+    "characterKey": "01234567-89ab-cdef-0123-456789abcdef/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+    "displayName": "LegacyHero",
+    "profession": "W",
+    "firstObservedAt": "2026-07-25T20:00:00.000Z",
+    "lastObservedAt": "2026-07-25T20:05:00.000Z",
+    "quests": [{
+      "gameQuestId": 100,
+      "state": "active",
+      "source": "game_snapshot",
+      "confidence": "confirmed",
+      "firstObservedAt": "2026-07-25T20:00:00.000Z",
+      "lastObservedAt": "2026-07-25T20:00:00.000Z",
+      "objectives": [],
+      "history": [{
+        "gameQuestId": 100,
+        "eventType": "observation",
+        "state": "active",
+        "source": "game_snapshot",
+        "confidence": "confirmed",
+        "observedAt": "2026-07-25T20:00:00.000Z",
+        "semanticEventKey": "legacy-key",
+        "objectives": [],
+        "evidenceKind": "none"
+      }]
+    }],
+    "missions": [{
+      "mapId": 73,
+      "completedNormal": true,
+      "completedHard": false,
+      "bonusNormal": false,
+      "bonusHard": false,
+      "lastObservedAt": "2026-07-25T20:01:00.000Z"
+    }],
+    "titles": [{
+      "titleId": 12,
+      "tierIndex": 2,
+      "currentPoints": 100,
+      "lastObservedAt": "2026-07-25T20:02:00.000Z"
+    }],
+    "lastKnownLevel": 12,
+    "skillPointsEarned": 8,
+    "journeyEvents": [{
+      "kind": "map_enter",
+      "subjectKey": "map:73",
+      "observedAt": "2026-07-25T20:03:00.000Z",
+      "mapId": 73
+    }]
+  }]
+})";
+        auto migrated = ParseAccountStoreJson(literal_1_0, kAcct);
+        Expect(migrated.status == CodecStatus::Ok, "baseline_literal_1_0_ok");
+        Expect(migrated.diagnostics.migrated, "baseline_literal_1_0_migrated");
+        Expect(migrated.store.store_version.minor == 2, "baseline_literal_1_0_minor");
+        Expect(migrated.store.account_skill_baseline.state == JourneyBaselineSealState::Unset,
+            "baseline_literal_1_0_account_unset");
+        const auto& character = migrated.store.characters.begin()->second;
+        ExpectUnsetBaselines(character.journey_baselines, "baseline_literal_1_0_unset");
+        Expect(character.display_name == "LegacyHero", "baseline_literal_1_0_name");
+        Expect(character.quests.at(100).history[0].semantic_event_key == "legacy-key",
+            "baseline_literal_1_0_history");
+        Expect(character.journey_events.size() == 1, "baseline_literal_1_0_journey");
+        Expect(character.titles.at(12).tier_index == 2, "baseline_literal_1_0_title");
+        Expect(character.missions.at(73).completed_normal, "baseline_literal_1_0_mission");
+        Expect(character.skill_points_earned == 8, "baseline_literal_1_0_snapshot");
+        Expect(literal_1_0.find("journeyBaselines") == std::string::npos,
+            "baseline_literal_1_0_no_baseline_field");
+    }
+
+    {
+        const std::string literal_1_1 = R"({
+  "storeFormat": "gwtoolbox-quest-progress",
+  "storeVersion": { "major": 1, "minor": 1 },
+  "accountKey": "01234567-89ab-cdef-0123-456789abcdef",
+  "characters": [{
+    "characterKey": "char-1-1",
+    "displayName": "OneOne",
+    "firstObservedAt": "2026-07-25T20:00:00.000Z",
+    "lastObservedAt": "2026-07-25T20:00:00.000Z",
+    "quests": [{
+      "gameQuestId": 42,
+      "state": "active",
+      "source": "game_snapshot",
+      "confidence": "confirmed",
+      "firstObservedAt": "2026-07-25T20:00:00.000Z",
+      "lastObservedAt": "2026-07-25T20:00:00.000Z",
+      "objectives": [],
+      "history": [{
+        "gameQuestId": 42,
+        "eventType": "observation",
+        "state": "active",
+        "source": "game_snapshot",
+        "confidence": "confirmed",
+        "observedAt": "2026-07-25T20:00:00.000Z",
+        "semanticEventKey": "one-one-key",
+        "objectives": [],
+        "evidenceKind": "none"
+      }]
+    }],
+    "missions": [],
+    "journeyEvents": [{
+      "kind": "level_up",
+      "subjectKey": "level:5",
+      "observedAt": "2026-07-25T20:04:00.000Z",
+      "level": 5
+    }]
+  }]
+})";
+        auto migrated = ParseAccountStoreJson(literal_1_1, kAcct);
+        Expect(migrated.status == CodecStatus::Ok, "baseline_literal_1_1_ok");
+        Expect(migrated.diagnostics.migrated, "baseline_literal_1_1_migrated");
+        Expect(migrated.store.store_version.minor == 2, "baseline_literal_1_1_minor");
+        ExpectUnsetBaselines(
+            migrated.store.characters.begin()->second.journey_baselines, "baseline_literal_1_1_unset");
+        Expect(migrated.store.characters.begin()->second.quests.at(42).history[0].semantic_event_key
+                == "one-one-key",
+            "baseline_literal_1_1_history");
+        Expect(migrated.store.characters.begin()->second.journey_events[0].kind == "level_up",
+            "baseline_literal_1_1_journey");
+        Expect(literal_1_1.find("journeyBaselines") == std::string::npos,
+            "baseline_literal_1_1_no_baseline_field");
+    }
+
+    {
+        const auto dir = MakeTempDir();
+        const auto paths = BuildAccountStorePaths(dir, kAcct);
+        const std::string newer_minor = R"({
+  "storeFormat": "gwtoolbox-quest-progress",
+  "storeVersion": { "major": 1, "minor": 99 },
+  "accountKey": "01234567-89ab-cdef-0123-456789abcdef",
+  "characters": []
+})";
+        const auto older_bak = SerializeAccountStoreJson(MakeStore(kAcct)).utf8_json;
+        WriteRaw(paths.primary, newer_minor);
+        WriteRaw(paths.backup, older_bak);
+        const auto primary_before = ReadAll(paths.primary);
+        const auto bak_before = ReadAll(paths.backup);
+        auto loaded = LoadAccountStore(dir, kAcct);
+        Expect(loaded.status == StoreOpStatus::UnsupportedDiskMajor, "baseline_newer_minor_no_downgrade");
+        auto saved = SaveMergedAccountStore(dir, kAcct, MakeStore(kAcct), 2000);
+        Expect(saved.status == StoreOpStatus::UnsupportedDiskMajor, "baseline_newer_minor_save_blocked");
+        Expect(ReadAll(paths.primary) == primary_before, "baseline_newer_minor_primary_preserved");
+        Expect(ReadAll(paths.backup) == bak_before, "baseline_newer_minor_bak_preserved");
+    }
+
+    {
+        const auto dir = MakeTempDir();
+        auto store = MakeStore(kAcct);
+        auto& character = store.characters.begin()->second;
+        character.journey_baselines.maps = {JourneyBaselineSealState::Sealed, {5, 8}};
+        character.journey_baselines.hard_mode = {JourneyBaselineSealState::Sealed, true};
+        character.journey_baselines.cartography = {JourneyBaselineSealState::Sealed, 33};
+        store.account_skill_baseline = {JourneyBaselineSealState::Sealed, {100, 200}};
+        auto saved = SaveMergedAccountStore(dir, kAcct, store, 2000);
+        Expect(saved.status == StoreOpStatus::Ok, "baseline_e2e_save_ok");
+        Expect(saved.merged.has_value(), "baseline_e2e_merged");
+        auto loaded = LoadAccountStore(dir, kAcct);
+        Expect(loaded.status == StoreOpStatus::Ok, "baseline_e2e_load_ok");
+        Expect(loaded.store.characters.begin()->second.journey_baselines.maps.ids
+                == std::vector<uint32_t>({5, 8}),
+            "baseline_e2e_maps");
+        Expect(loaded.store.characters.begin()->second.journey_baselines.hard_mode.unlocked,
+            "baseline_e2e_hard_mode");
+        Expect(loaded.store.characters.begin()->second.journey_baselines.cartography.percent == 33,
+            "baseline_e2e_cartography");
+        Expect(loaded.store.account_skill_baseline.ids == std::vector<uint32_t>({100, 200}),
+            "baseline_e2e_account");
+    }
 }
 
 void TestAtomicCreateReplaceBak()
@@ -769,6 +1433,8 @@ void RunBatch2BStoreTests()
     TestCodecOrderingIndependent();
     TestCodecEnumsAndValidation();
     TestCodecVersioning();
+    TestJourneyBaselineCodecAndMerge();
+    TestJourneyBaselineReviewFixes();
     TestAtomicCreateReplaceBak();
     TestLoadSaveStatusMatrix();
     TestMergeHistoryCanonicalization();

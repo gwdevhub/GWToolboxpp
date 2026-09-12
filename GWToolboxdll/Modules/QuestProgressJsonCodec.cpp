@@ -98,6 +98,38 @@ struct JsonFactionTotals {
     uint32_t imperial = 0;
 };
 
+struct JsonIdSetBaseline {
+    std::string state;
+    std::optional<std::vector<uint32_t>> ids;
+};
+
+struct JsonFlagBaseline {
+    std::string state;
+    std::optional<bool> unlocked;
+};
+
+struct JsonStateOnlyBaseline {
+    std::string state;
+};
+
+struct JsonPercentBaseline {
+    std::string state;
+    std::optional<uint32_t> percent;
+};
+
+struct JsonCharacterJourneyBaselines {
+    std::optional<JsonIdSetBaseline> maps;
+    std::optional<JsonIdSetBaseline> character_skills;
+    std::optional<JsonIdSetBaseline> heroes;
+    std::optional<JsonIdSetBaseline> professions;
+    std::optional<JsonIdSetBaseline> vanquish_areas;
+    std::optional<JsonFlagBaseline> hard_mode;
+    std::optional<JsonStateOnlyBaseline> skill_points;
+    std::optional<JsonStateOnlyBaseline> factions;
+    std::optional<JsonStateOnlyBaseline> hall_of_monuments;
+    std::optional<JsonPercentBaseline> cartography;
+};
+
 struct JsonCharacter {
     std::string character_key;
     std::string display_name;
@@ -117,12 +149,14 @@ struct JsonCharacter {
     std::optional<uint32_t> last_known_level;
     std::optional<uint32_t> last_map_id;
     std::vector<JsonJourneyEvent> journey_events;
+    std::optional<JsonCharacterJourneyBaselines> journey_baselines;
 };
 
 struct JsonAccountStore {
     std::string store_format;
     JsonStoreVersion store_version{};
     std::string account_key;
+    std::optional<JsonIdSetBaseline> account_skill_baseline;
     std::vector<JsonCharacter> characters;
 };
 
@@ -244,6 +278,52 @@ struct glz::meta<QuestProgress::JsonFactionTotals> {
 };
 
 template <>
+struct glz::meta<QuestProgress::JsonIdSetBaseline> {
+    using T = QuestProgress::JsonIdSetBaseline;
+    static constexpr auto value = object(
+        "state", &T::state,
+        "ids", &T::ids);
+};
+
+template <>
+struct glz::meta<QuestProgress::JsonFlagBaseline> {
+    using T = QuestProgress::JsonFlagBaseline;
+    static constexpr auto value = object(
+        "state", &T::state,
+        "unlocked", &T::unlocked);
+};
+
+template <>
+struct glz::meta<QuestProgress::JsonStateOnlyBaseline> {
+    using T = QuestProgress::JsonStateOnlyBaseline;
+    static constexpr auto value = object("state", &T::state);
+};
+
+template <>
+struct glz::meta<QuestProgress::JsonPercentBaseline> {
+    using T = QuestProgress::JsonPercentBaseline;
+    static constexpr auto value = object(
+        "state", &T::state,
+        "percent", &T::percent);
+};
+
+template <>
+struct glz::meta<QuestProgress::JsonCharacterJourneyBaselines> {
+    using T = QuestProgress::JsonCharacterJourneyBaselines;
+    static constexpr auto value = object(
+        "maps", &T::maps,
+        "characterSkills", &T::character_skills,
+        "heroes", &T::heroes,
+        "professions", &T::professions,
+        "vanquishAreas", &T::vanquish_areas,
+        "hardMode", &T::hard_mode,
+        "skillPoints", &T::skill_points,
+        "factions", &T::factions,
+        "hallOfMonuments", &T::hall_of_monuments,
+        "cartography", &T::cartography);
+};
+
+template <>
 struct glz::meta<QuestProgress::JsonCharacter> {
     using T = QuestProgress::JsonCharacter;
     static constexpr auto value = object(
@@ -264,7 +344,8 @@ struct glz::meta<QuestProgress::JsonCharacter> {
         "titles", &T::titles,
         "lastKnownLevel", &T::last_known_level,
         "lastMapId", &T::last_map_id,
-        "journeyEvents", &T::journey_events);
+        "journeyEvents", &T::journey_events,
+        "journeyBaselines", &T::journey_baselines);
 };
 
 template <>
@@ -274,6 +355,7 @@ struct glz::meta<QuestProgress::JsonAccountStore> {
         "storeFormat", &T::store_format,
         "storeVersion", &T::store_version,
         "accountKey", &T::account_key,
+        "accountSkillBaseline", &T::account_skill_baseline,
         "characters", &T::characters);
 };
 
@@ -286,6 +368,388 @@ constexpr glz::opts kWriteOpts{.prettify = true};
 void AddDiag(CodecDiagnostics& d, std::string message)
 {
     d.messages.push_back(std::move(message));
+}
+
+bool ParseBaselineSealState(std::string_view s, JourneyBaselineSealState& out)
+{
+    if (s == "unset") {
+        out = JourneyBaselineSealState::Unset;
+        return true;
+    }
+    if (s == "sealed") {
+        out = JourneyBaselineSealState::Sealed;
+        return true;
+    }
+    return false;
+}
+
+bool IsKnownBaselineSealState(JourneyBaselineSealState state)
+{
+    return state == JourneyBaselineSealState::Unset || state == JourneyBaselineSealState::Sealed;
+}
+
+bool BaselineSealStateToString(JourneyBaselineSealState state, const char*& out)
+{
+    switch (state) {
+        case JourneyBaselineSealState::Unset:
+            out = "unset";
+            return true;
+        case JourneyBaselineSealState::Sealed:
+            out = "sealed";
+            return true;
+    }
+    return false;
+}
+
+void SortUniqueIds(std::vector<uint32_t>& ids)
+{
+    std::sort(ids.begin(), ids.end());
+    ids.erase(std::unique(ids.begin(), ids.end()), ids.end());
+}
+
+void CanonicalizeIdSetBaseline(IdSetJourneyBaseline& baseline)
+{
+    if (baseline.state == JourneyBaselineSealState::Unset) {
+        baseline.ids.clear();
+        return;
+    }
+    SortUniqueIds(baseline.ids);
+}
+
+void CanonicalizeFlagBaseline(FlagJourneyBaseline& baseline)
+{
+    if (baseline.state == JourneyBaselineSealState::Unset) {
+        baseline.unlocked = false;
+    }
+}
+
+void CanonicalizePercentBaseline(PercentJourneyBaseline& baseline)
+{
+    if (baseline.state == JourneyBaselineSealState::Unset) {
+        baseline.percent = 0;
+    }
+}
+
+void CanonicalizeCharacterBaselines(CharacterJourneyBaselines& baselines)
+{
+    CanonicalizeIdSetBaseline(baselines.maps);
+    CanonicalizeIdSetBaseline(baselines.character_skills);
+    CanonicalizeIdSetBaseline(baselines.heroes);
+    CanonicalizeIdSetBaseline(baselines.professions);
+    CanonicalizeIdSetBaseline(baselines.vanquish_areas);
+    CanonicalizeFlagBaseline(baselines.hard_mode);
+    CanonicalizePercentBaseline(baselines.cartography);
+}
+
+bool ValidateIdSetBaseline(
+    const IdSetJourneyBaseline& in,
+    CodecDiagnostics& d,
+    std::string_view path)
+{
+    if (!IsKnownBaselineSealState(in.state)) {
+        AddDiag(d, std::string(path) + " unknown seal state");
+        return false;
+    }
+    if (in.state == JourneyBaselineSealState::Unset && !in.ids.empty()) {
+        AddDiag(d, std::string(path) + " unset baseline must not carry ids");
+        return false;
+    }
+    return true;
+}
+
+bool ValidateFlagBaseline(
+    const FlagJourneyBaseline& in,
+    CodecDiagnostics& d,
+    std::string_view path)
+{
+    if (!IsKnownBaselineSealState(in.state)) {
+        AddDiag(d, std::string(path) + " unknown seal state");
+        return false;
+    }
+    if (in.state == JourneyBaselineSealState::Unset && in.unlocked) {
+        AddDiag(d, std::string(path) + " unset baseline must not carry unlocked");
+        return false;
+    }
+    return true;
+}
+
+bool ValidateStateOnlyBaseline(
+    const StateOnlyJourneyBaseline& in,
+    CodecDiagnostics& d,
+    std::string_view path)
+{
+    if (!IsKnownBaselineSealState(in.state)) {
+        AddDiag(d, std::string(path) + " unknown seal state");
+        return false;
+    }
+    return true;
+}
+
+bool ValidatePercentBaseline(
+    const PercentJourneyBaseline& in,
+    CodecDiagnostics& d,
+    std::string_view path)
+{
+    if (!IsKnownBaselineSealState(in.state)) {
+        AddDiag(d, std::string(path) + " unknown seal state");
+        return false;
+    }
+    if (in.state == JourneyBaselineSealState::Unset && in.percent != 0) {
+        AddDiag(d, std::string(path) + " unset baseline must not carry percent");
+        return false;
+    }
+    if (in.state == JourneyBaselineSealState::Sealed && in.percent > 100) {
+        AddDiag(d, std::string(path) + " cartography percent must be 0..100");
+        return false;
+    }
+    return true;
+}
+
+bool ValidateCharacterBaselines(
+    const CharacterJourneyBaselines& in,
+    CodecDiagnostics& d,
+    std::string_view character_path)
+{
+    const auto path = [&](std::string_view leaf) {
+        return std::string(character_path) + ".journeyBaselines." + std::string(leaf);
+    };
+    return ValidateIdSetBaseline(in.maps, d, path("maps"))
+        && ValidateIdSetBaseline(in.character_skills, d, path("characterSkills"))
+        && ValidateIdSetBaseline(in.heroes, d, path("heroes"))
+        && ValidateIdSetBaseline(in.professions, d, path("professions"))
+        && ValidateIdSetBaseline(in.vanquish_areas, d, path("vanquishAreas"))
+        && ValidateFlagBaseline(in.hard_mode, d, path("hardMode"))
+        && ValidateStateOnlyBaseline(in.skill_points, d, path("skillPoints"))
+        && ValidateStateOnlyBaseline(in.factions, d, path("factions"))
+        && ValidateStateOnlyBaseline(in.hall_of_monuments, d, path("hallOfMonuments"))
+        && ValidatePercentBaseline(in.cartography, d, path("cartography"));
+}
+
+bool ValidateAccountStoreBaselines(const AccountProgressStore& store, CodecDiagnostics& d)
+{
+    if (!ValidateIdSetBaseline(store.account_skill_baseline, d, "accountSkillBaseline")) {
+        return false;
+    }
+    for (const auto& [ck, character] : store.characters) {
+        if (!ValidateCharacterBaselines(character.journey_baselines, d, "characters." + ck)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool ConvertIdSetBaseline(
+    const JsonIdSetBaseline& in,
+    IdSetJourneyBaseline& out,
+    CodecDiagnostics& d,
+    std::string_view path)
+{
+    if (!ParseBaselineSealState(in.state, out.state)) {
+        AddDiag(d, std::string(path) + " unknown seal state");
+        return false;
+    }
+    if (out.state == JourneyBaselineSealState::Unset) {
+        if (in.ids.has_value() && !in.ids->empty()) {
+            AddDiag(d, std::string(path) + " unset baseline must not carry ids");
+            return false;
+        }
+        out.ids.clear();
+        return true;
+    }
+    if (!in.ids.has_value()) {
+        AddDiag(d, std::string(path) + " sealed baseline requires ids");
+        return false;
+    }
+    out.ids = *in.ids;
+    SortUniqueIds(out.ids);
+    return true;
+}
+
+bool ConvertFlagBaseline(
+    const JsonFlagBaseline& in,
+    FlagJourneyBaseline& out,
+    CodecDiagnostics& d,
+    std::string_view path)
+{
+    if (!ParseBaselineSealState(in.state, out.state)) {
+        AddDiag(d, std::string(path) + " unknown seal state");
+        return false;
+    }
+    if (out.state == JourneyBaselineSealState::Unset) {
+        if (in.unlocked.has_value()) {
+            AddDiag(d, std::string(path) + " unset baseline must not carry unlocked");
+            return false;
+        }
+        out.unlocked = false;
+        return true;
+    }
+    if (!in.unlocked.has_value()) {
+        AddDiag(d, std::string(path) + " sealed hardMode requires unlocked");
+        return false;
+    }
+    out.unlocked = *in.unlocked;
+    return true;
+}
+
+bool ConvertStateOnlyBaseline(
+    const JsonStateOnlyBaseline& in,
+    StateOnlyJourneyBaseline& out,
+    CodecDiagnostics& d,
+    std::string_view path)
+{
+    if (!ParseBaselineSealState(in.state, out.state)) {
+        AddDiag(d, std::string(path) + " unknown seal state");
+        return false;
+    }
+    return true;
+}
+
+bool ConvertPercentBaseline(
+    const JsonPercentBaseline& in,
+    PercentJourneyBaseline& out,
+    CodecDiagnostics& d,
+    std::string_view path)
+{
+    if (!ParseBaselineSealState(in.state, out.state)) {
+        AddDiag(d, std::string(path) + " unknown seal state");
+        return false;
+    }
+    if (out.state == JourneyBaselineSealState::Unset) {
+        if (in.percent.has_value()) {
+            AddDiag(d, std::string(path) + " unset baseline must not carry percent");
+            return false;
+        }
+        out.percent = 0;
+        return true;
+    }
+    if (!in.percent.has_value()) {
+        AddDiag(d, std::string(path) + " sealed cartography requires percent");
+        return false;
+    }
+    if (*in.percent > 100) {
+        AddDiag(d, std::string(path) + " cartography percent must be 0..100");
+        return false;
+    }
+    out.percent = *in.percent;
+    return true;
+}
+
+bool ConvertCharacterBaselines(
+    const JsonCharacterJourneyBaselines& in,
+    CharacterJourneyBaselines& out,
+    CodecDiagnostics& d)
+{
+    if (in.maps.has_value()
+        && !ConvertIdSetBaseline(*in.maps, out.maps, d, "journeyBaselines.maps")) {
+        return false;
+    }
+    if (in.character_skills.has_value()
+        && !ConvertIdSetBaseline(
+               *in.character_skills, out.character_skills, d, "journeyBaselines.characterSkills")) {
+        return false;
+    }
+    if (in.heroes.has_value()
+        && !ConvertIdSetBaseline(*in.heroes, out.heroes, d, "journeyBaselines.heroes")) {
+        return false;
+    }
+    if (in.professions.has_value()
+        && !ConvertIdSetBaseline(
+               *in.professions, out.professions, d, "journeyBaselines.professions")) {
+        return false;
+    }
+    if (in.vanquish_areas.has_value()
+        && !ConvertIdSetBaseline(
+               *in.vanquish_areas, out.vanquish_areas, d, "journeyBaselines.vanquishAreas")) {
+        return false;
+    }
+    if (in.hard_mode.has_value()
+        && !ConvertFlagBaseline(*in.hard_mode, out.hard_mode, d, "journeyBaselines.hardMode")) {
+        return false;
+    }
+    if (in.skill_points.has_value()
+        && !ConvertStateOnlyBaseline(
+               *in.skill_points, out.skill_points, d, "journeyBaselines.skillPoints")) {
+        return false;
+    }
+    if (in.factions.has_value()
+        && !ConvertStateOnlyBaseline(*in.factions, out.factions, d, "journeyBaselines.factions")) {
+        return false;
+    }
+    if (in.hall_of_monuments.has_value()
+        && !ConvertStateOnlyBaseline(
+               *in.hall_of_monuments,
+               out.hall_of_monuments,
+               d,
+               "journeyBaselines.hallOfMonuments")) {
+        return false;
+    }
+    if (in.cartography.has_value()
+        && !ConvertPercentBaseline(
+               *in.cartography, out.cartography, d, "journeyBaselines.cartography")) {
+        return false;
+    }
+    return true;
+}
+
+JsonIdSetBaseline ToJsonIdSetBaseline(const IdSetJourneyBaseline& in)
+{
+    JsonIdSetBaseline out;
+    const char* state = nullptr;
+    BaselineSealStateToString(in.state, state);
+    out.state = state;
+    if (in.state == JourneyBaselineSealState::Sealed) {
+        out.ids = in.ids;
+    }
+    return out;
+}
+
+JsonFlagBaseline ToJsonFlagBaseline(const FlagJourneyBaseline& in)
+{
+    JsonFlagBaseline out;
+    const char* state = nullptr;
+    BaselineSealStateToString(in.state, state);
+    out.state = state;
+    if (in.state == JourneyBaselineSealState::Sealed) {
+        out.unlocked = in.unlocked;
+    }
+    return out;
+}
+
+JsonStateOnlyBaseline ToJsonStateOnlyBaseline(const StateOnlyJourneyBaseline& in)
+{
+    JsonStateOnlyBaseline out;
+    const char* state = nullptr;
+    BaselineSealStateToString(in.state, state);
+    out.state = state;
+    return out;
+}
+
+JsonPercentBaseline ToJsonPercentBaseline(const PercentJourneyBaseline& in)
+{
+    JsonPercentBaseline out;
+    const char* state = nullptr;
+    BaselineSealStateToString(in.state, state);
+    out.state = state;
+    if (in.state == JourneyBaselineSealState::Sealed) {
+        out.percent = in.percent;
+    }
+    return out;
+}
+
+JsonCharacterJourneyBaselines ToJsonCharacterBaselines(const CharacterJourneyBaselines& in)
+{
+    JsonCharacterJourneyBaselines out;
+    out.maps = ToJsonIdSetBaseline(in.maps);
+    out.character_skills = ToJsonIdSetBaseline(in.character_skills);
+    out.heroes = ToJsonIdSetBaseline(in.heroes);
+    out.professions = ToJsonIdSetBaseline(in.professions);
+    out.vanquish_areas = ToJsonIdSetBaseline(in.vanquish_areas);
+    out.hard_mode = ToJsonFlagBaseline(in.hard_mode);
+    out.skill_points = ToJsonStateOnlyBaseline(in.skill_points);
+    out.factions = ToJsonStateOnlyBaseline(in.factions);
+    out.hall_of_monuments = ToJsonStateOnlyBaseline(in.hall_of_monuments);
+    out.cartography = ToJsonPercentBaseline(in.cartography);
+    return out;
 }
 
 bool ParseState(std::string_view s, ProgressState& out)
@@ -640,6 +1104,11 @@ bool ConvertCharacter(const JsonCharacter& in, StoredCharacter& out, CodecDiagno
         event.observed_at = je.observed_at;
         out.journey_events.push_back(std::move(event));
     }
+    if (in.journey_baselines.has_value()) {
+        if (!ConvertCharacterBaselines(*in.journey_baselines, out.journey_baselines, d)) {
+            return false;
+        }
+    }
     return true;
 }
 
@@ -749,6 +1218,7 @@ JsonCharacter ToJsonCharacter(const StoredCharacter& in)
             }
             return a.subject_key < b.subject_key;
         });
+    out.journey_baselines = ToJsonCharacterBaselines(in.journey_baselines);
     return out;
 }
 
@@ -757,6 +1227,19 @@ bool Migrate_1_0_to_1_1(AccountProgressStore& store, CodecDiagnostics& d)
     CanonicalizeAccountStore(store);
     AddDiag(d, "migrated store minor 1.0 -> 1.1");
     store.store_version.minor = 1;
+    return true;
+}
+
+bool Migrate_1_1_to_1_2(AccountProgressStore& store, CodecDiagnostics& d)
+{
+    for (auto& [ck, character] : store.characters) {
+        (void)ck;
+        character.journey_baselines = CharacterJourneyBaselines{};
+    }
+    store.account_skill_baseline = IdSetJourneyBaseline{};
+    CanonicalizeAccountStore(store);
+    AddDiag(d, "migrated store minor 1.1 -> 1.2");
+    store.store_version.minor = 2;
     return true;
 }
 
@@ -874,7 +1357,9 @@ void CanonicalizeAccountStore(AccountProgressStore& store)
                 }
                 return a.subject_key < b.subject_key;
             });
+        CanonicalizeCharacterBaselines(character.journey_baselines);
     }
+    CanonicalizeIdSetBaseline(store.account_skill_baseline);
 }
 
 bool MigrateAccountStoreToCurrent(AccountProgressStore& store, CodecDiagnostics& diagnostics)
@@ -894,6 +1379,13 @@ bool MigrateAccountStoreToCurrent(AccountProgressStore& store, CodecDiagnostics&
     while (store.store_version.minor < kStoreFormatMinor) {
         if (store.store_version.minor == 0) {
             if (!Migrate_1_0_to_1_1(store, diagnostics)) {
+                return false;
+            }
+            diagnostics.migrated = true;
+            continue;
+        }
+        if (store.store_version.minor == 1) {
+            if (!Migrate_1_1_to_1_2(store, diagnostics)) {
                 return false;
             }
             diagnostics.migrated = true;
@@ -966,6 +1458,16 @@ CodecParseResult ParseAccountStoreJson(
     store.store_version.major = raw.store_version.major;
     store.store_version.minor = raw.store_version.minor;
     store.account_key = normalized_file;
+    if (raw.account_skill_baseline.has_value()) {
+        if (!ConvertIdSetBaseline(
+                *raw.account_skill_baseline,
+                store.account_skill_baseline,
+                result.diagnostics,
+                "accountSkillBaseline")) {
+            result.status = CodecStatus::ValidationError;
+            return result;
+        }
+    }
 
     for (const auto& jc : raw.characters) {
         StoredCharacter character;
@@ -995,6 +1497,11 @@ CodecSerializeResult SerializeAccountStoreJson(const AccountProgressStore& store
 {
     CodecSerializeResult result;
     auto copy = store;
+    if (!ValidateAccountStoreBaselines(copy, result.diagnostics)) {
+        result.status = CodecStatus::ValidationError;
+        result.utf8_json.clear();
+        return result;
+    }
     CanonicalizeAccountStore(copy);
     copy.store_format = kStoreFormatId;
     copy.store_version.major = kStoreFormatMajor;
@@ -1002,6 +1509,7 @@ CodecSerializeResult SerializeAccountStoreJson(const AccountProgressStore& store
 
     if (!IsValidNormalizedAccountKey(copy.account_key)) {
         result.status = CodecStatus::ValidationError;
+        result.utf8_json.clear();
         AddDiag(result.diagnostics, "invalid accountKey for serialize");
         return result;
     }
@@ -1011,6 +1519,7 @@ CodecSerializeResult SerializeAccountStoreJson(const AccountProgressStore& store
     raw.store_version.major = copy.store_version.major;
     raw.store_version.minor = copy.store_version.minor;
     raw.account_key = copy.account_key;
+    raw.account_skill_baseline = ToJsonIdSetBaseline(copy.account_skill_baseline);
     for (const auto& [ck, character] : copy.characters) {
         (void)ck;
         raw.characters.push_back(ToJsonCharacter(character));
@@ -1022,6 +1531,7 @@ CodecSerializeResult SerializeAccountStoreJson(const AccountProgressStore& store
 
     if (glz::write<kWriteOpts>(raw, result.utf8_json)) {
         result.status = CodecStatus::ParseError;
+        result.utf8_json.clear();
         AddDiag(result.diagnostics, "glaze write failed");
         return result;
     }

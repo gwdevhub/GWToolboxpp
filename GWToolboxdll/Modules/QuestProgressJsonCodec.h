@@ -16,12 +16,82 @@ namespace QuestProgress {
 
 inline constexpr char kStoreFormatId[] = "gwtoolbox-quest-progress";
 inline constexpr uint32_t kStoreFormatMajor = 1;
-// Minor 1: identity migration from 1.0 (normalizes ordering / defaults). Current write version.
-inline constexpr uint32_t kStoreFormatMinor = 1;
+inline constexpr uint32_t kStoreFormatMinor = 2;
 
 struct StoreVersion {
     uint32_t major = kStoreFormatMajor;
     uint32_t minor = kStoreFormatMinor;
+};
+
+enum class JourneyBaselineSealState : uint8_t {
+    Unset = 0,
+    Sealed = 1,
+};
+
+struct IdSetJourneyBaseline {
+    JourneyBaselineSealState state = JourneyBaselineSealState::Unset;
+    std::vector<uint32_t> ids;
+
+    friend bool operator==(const IdSetJourneyBaseline& a, const IdSetJourneyBaseline& b)
+    {
+        return a.state == b.state && a.ids == b.ids;
+    }
+};
+
+struct FlagJourneyBaseline {
+    JourneyBaselineSealState state = JourneyBaselineSealState::Unset;
+    bool unlocked = false;
+
+    friend bool operator==(const FlagJourneyBaseline& a, const FlagJourneyBaseline& b)
+    {
+        return a.state == b.state && a.unlocked == b.unlocked;
+    }
+};
+
+struct StateOnlyJourneyBaseline {
+    JourneyBaselineSealState state = JourneyBaselineSealState::Unset;
+
+    friend bool operator==(const StateOnlyJourneyBaseline& a, const StateOnlyJourneyBaseline& b)
+    {
+        return a.state == b.state;
+    }
+};
+
+struct PercentJourneyBaseline {
+    JourneyBaselineSealState state = JourneyBaselineSealState::Unset;
+    uint32_t percent = 0;
+
+    friend bool operator==(const PercentJourneyBaseline& a, const PercentJourneyBaseline& b)
+    {
+        return a.state == b.state && a.percent == b.percent;
+    }
+};
+
+struct CharacterJourneyBaselines {
+    IdSetJourneyBaseline maps;
+    IdSetJourneyBaseline character_skills;
+    IdSetJourneyBaseline heroes;
+    IdSetJourneyBaseline professions;
+    IdSetJourneyBaseline vanquish_areas;
+    FlagJourneyBaseline hard_mode;
+    StateOnlyJourneyBaseline skill_points;
+    StateOnlyJourneyBaseline factions;
+    StateOnlyJourneyBaseline hall_of_monuments;
+    PercentJourneyBaseline cartography;
+
+    friend bool operator==(const CharacterJourneyBaselines& a, const CharacterJourneyBaselines& b)
+    {
+        return a.maps == b.maps
+            && a.character_skills == b.character_skills
+            && a.heroes == b.heroes
+            && a.professions == b.professions
+            && a.vanquish_areas == b.vanquish_areas
+            && a.hard_mode == b.hard_mode
+            && a.skill_points == b.skill_points
+            && a.factions == b.factions
+            && a.hall_of_monuments == b.hall_of_monuments
+            && a.cartography == b.cartography;
+    }
 };
 
 struct MissionRecord {
@@ -52,12 +122,14 @@ struct StoredCharacter {
     std::optional<uint32_t> last_known_level;
     std::optional<uint32_t> last_map_id;
     std::vector<JourneyEventRecord> journey_events;
+    CharacterJourneyBaselines journey_baselines;
 };
 
 struct AccountProgressStore {
     std::string store_format = kStoreFormatId;
     StoreVersion store_version{};
     std::string account_key;
+    IdSetJourneyBaseline account_skill_baseline;
     std::map<std::string, StoredCharacter> characters;
 };
 

@@ -293,6 +293,83 @@ void MergeJourneyFields(StoredCharacter& out, const StoredCharacter& disk, const
 
     out.journey_events = disk.journey_events;
     AppendUniqueJourneyEvents(out.journey_events, memory.journey_events);
+
+    const auto merge_id_set = [](const IdSetJourneyBaseline& a, const IdSetJourneyBaseline& b) {
+        IdSetJourneyBaseline out_baseline;
+        const bool a_sealed = a.state == JourneyBaselineSealState::Sealed;
+        const bool b_sealed = b.state == JourneyBaselineSealState::Sealed;
+        if (!a_sealed && !b_sealed) {
+            return out_baseline;
+        }
+        out_baseline.state = JourneyBaselineSealState::Sealed;
+        out_baseline.ids = a_sealed ? a.ids : std::vector<uint32_t>{};
+        if (b_sealed) {
+            out_baseline.ids.insert(out_baseline.ids.end(), b.ids.begin(), b.ids.end());
+        }
+        std::sort(out_baseline.ids.begin(), out_baseline.ids.end());
+        out_baseline.ids.erase(
+            std::unique(out_baseline.ids.begin(), out_baseline.ids.end()),
+            out_baseline.ids.end());
+        return out_baseline;
+    };
+    const auto merge_flag = [](const FlagJourneyBaseline& a, const FlagJourneyBaseline& b) {
+        FlagJourneyBaseline out_baseline;
+        const bool a_sealed = a.state == JourneyBaselineSealState::Sealed;
+        const bool b_sealed = b.state == JourneyBaselineSealState::Sealed;
+        if (!a_sealed && !b_sealed) {
+            return out_baseline;
+        }
+        out_baseline.state = JourneyBaselineSealState::Sealed;
+        out_baseline.unlocked = (a_sealed && a.unlocked) || (b_sealed && b.unlocked);
+        return out_baseline;
+    };
+    const auto merge_state_only = [](const StateOnlyJourneyBaseline& a, const StateOnlyJourneyBaseline& b) {
+        StateOnlyJourneyBaseline out_baseline;
+        if (a.state == JourneyBaselineSealState::Sealed
+            || b.state == JourneyBaselineSealState::Sealed) {
+            out_baseline.state = JourneyBaselineSealState::Sealed;
+        }
+        return out_baseline;
+    };
+    const auto merge_percent = [](const PercentJourneyBaseline& a, const PercentJourneyBaseline& b) {
+        PercentJourneyBaseline out_baseline;
+        const bool a_sealed = a.state == JourneyBaselineSealState::Sealed;
+        const bool b_sealed = b.state == JourneyBaselineSealState::Sealed;
+        if (!a_sealed && !b_sealed) {
+            return out_baseline;
+        }
+        out_baseline.state = JourneyBaselineSealState::Sealed;
+        if (a_sealed && b_sealed) {
+            out_baseline.percent = std::max(a.percent, b.percent);
+        }
+        else if (a_sealed) {
+            out_baseline.percent = a.percent;
+        }
+        else {
+            out_baseline.percent = b.percent;
+        }
+        return out_baseline;
+    };
+
+    out.journey_baselines.maps = merge_id_set(disk.journey_baselines.maps, memory.journey_baselines.maps);
+    out.journey_baselines.character_skills =
+        merge_id_set(disk.journey_baselines.character_skills, memory.journey_baselines.character_skills);
+    out.journey_baselines.heroes =
+        merge_id_set(disk.journey_baselines.heroes, memory.journey_baselines.heroes);
+    out.journey_baselines.professions =
+        merge_id_set(disk.journey_baselines.professions, memory.journey_baselines.professions);
+    out.journey_baselines.vanquish_areas =
+        merge_id_set(disk.journey_baselines.vanquish_areas, memory.journey_baselines.vanquish_areas);
+    out.journey_baselines.hard_mode =
+        merge_flag(disk.journey_baselines.hard_mode, memory.journey_baselines.hard_mode);
+    out.journey_baselines.skill_points =
+        merge_state_only(disk.journey_baselines.skill_points, memory.journey_baselines.skill_points);
+    out.journey_baselines.factions =
+        merge_state_only(disk.journey_baselines.factions, memory.journey_baselines.factions);
+    out.journey_baselines.hall_of_monuments = merge_state_only(
+        disk.journey_baselines.hall_of_monuments, memory.journey_baselines.hall_of_monuments);
+    out.journey_baselines.cartography =
+        merge_percent(disk.journey_baselines.cartography, memory.journey_baselines.cartography);
 }
 
 StoredCharacter MergeCharacter(const StoredCharacter& disk, const StoredCharacter& memory, StoreDiagnostics& d, bool& conflict)
@@ -762,6 +839,31 @@ MergeStoreResult MergeAccountStores(
     out.store_format = kStoreFormatId;
     out.store_version = {kStoreFormatMajor, kStoreFormatMinor};
     out.account_key = !memory.account_key.empty() ? memory.account_key : disk.account_key;
+
+    {
+        const bool disk_sealed =
+            disk.account_skill_baseline.state == JourneyBaselineSealState::Sealed;
+        const bool memory_sealed =
+            memory.account_skill_baseline.state == JourneyBaselineSealState::Sealed;
+        if (disk_sealed || memory_sealed) {
+            out.account_skill_baseline.state = JourneyBaselineSealState::Sealed;
+            if (disk_sealed) {
+                out.account_skill_baseline.ids = disk.account_skill_baseline.ids;
+            }
+            if (memory_sealed) {
+                out.account_skill_baseline.ids.insert(
+                    out.account_skill_baseline.ids.end(),
+                    memory.account_skill_baseline.ids.begin(),
+                    memory.account_skill_baseline.ids.end());
+            }
+            std::sort(
+                out.account_skill_baseline.ids.begin(), out.account_skill_baseline.ids.end());
+            out.account_skill_baseline.ids.erase(
+                std::unique(
+                    out.account_skill_baseline.ids.begin(), out.account_skill_baseline.ids.end()),
+                out.account_skill_baseline.ids.end());
+        }
+    }
 
     std::map<std::string, char> keys;
     for (const auto& [k, _] : disk.characters) {
