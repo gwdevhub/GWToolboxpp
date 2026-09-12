@@ -207,6 +207,7 @@ jobs:
 
     - name: Disconnect Certum SimplySign
       if: always() && steps.version.outputs.should_release == 'true' && env.HAS_CERTUM_CREDENTIALS == 'true'
+      continue-on-error: true
       shell: pwsh
       run: ./.github/scripts/disconnect-simplysign.ps1
 
