@@ -221,9 +221,15 @@ private:
         std::chrono::steady_clock::time_point steady_now);
     void ExpireEvidence(std::chrono::steady_clock::time_point steady_now);
     bool SnapshotPassesIdentityBarrier(const QuestSnapshot& snap) const;
+    bool JourneyFloodPassesIdentityFence(const JourneySnapshotResult& snapshot) const;
     void ApplyIdentityMetadataBackfill();
     void ClearJourneyBaselineCandidates();
     void OpenJourneyBaselineCandidatesForActiveIdentity();
+    void ApplyCharacterJourneyBaselineTransitions(
+        StoredCharacter& stored,
+        CharacterJourneyBaselineCandidates& candidates,
+        const RawJourneyFloodObservation& raw_flood,
+        bool& changed);
     void ReduceFromSnapshot(
         const QuestSnapshot& snap,
         std::chrono::system_clock::time_point wall_now,

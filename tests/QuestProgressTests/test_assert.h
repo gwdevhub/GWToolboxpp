@@ -22,6 +22,7 @@ void RunBatch2CServiceTests();
 void RunJourneyRawObservationTests();
 void RunJourneyBaselineTransitionTests();
 void RunJourneyBaselineCandidateLifecycleTests();
+void RunJourneyBaselineServiceIngestTests();
 void RunAbandonProbeTests();
 void RunChatEvidenceTests();
 void RunContractExporterTests();

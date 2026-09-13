@@ -168,11 +168,14 @@ void TestMissingProfessionOnly()
     Expect(observation.professions.value.empty(), "raw_prof_missing_value");
 }
 
-JourneySnapshotResult MakeRawOnlySnapshot(RawJourneyFloodObservation raw)
+JourneySnapshotResult MakeRawOnlySnapshot(RawJourneyFloodObservation raw, const SessionIdentity& id)
 {
     JourneySnapshotResult snapshot;
     snapshot.raw_flood = std::move(raw);
     NormalizeRawJourneyFloodObservation(snapshot.raw_flood);
+    snapshot.identity_captured = true;
+    snapshot.account_key = id.account_key;
+    snapshot.character_key = id.character_key;
     return snapshot;
 }
 
@@ -182,7 +185,8 @@ void TestRawFloodIngestCreatesNoEventsAndLeavesBaselinesUnset()
     QuestProgressService svc;
     svc.Initialize();
     svc.SetStoreDirectory(dir);
-    svc.BindIdentity(PersistentId());
+    const auto id = PersistentId();
+    svc.BindIdentity(id);
 
     RawJourneyFloodObservation raw;
     raw.observed_at = "2026-09-12T10:00:00.000Z";
@@ -200,7 +204,7 @@ void TestRawFloodIngestCreatesNoEventsAndLeavesBaselinesUnset()
     factions.luxon = 5000;
     raw.factions = MakeRawFactionFamilyObservation(true, true, factions);
 
-    auto snapshot = MakeRawOnlySnapshot(std::move(raw));
+    auto snapshot = MakeRawOnlySnapshot(std::move(raw), id);
     snapshot.experience_total = 12345;
     snapshot.skill_points_earned = 50;
     snapshot.faction_totals = factions;
@@ -221,6 +225,8 @@ void TestRawFloodIngestCreatesNoEventsAndLeavesBaselinesUnset()
     Expect(character.faction_totals.has_value(), "raw_ingest_factions_present");
     Expect(character.faction_totals->kurzick == 10000u, "raw_ingest_faction_kurzick");
     Expect(character.faction_totals->luxon == 5000u, "raw_ingest_faction_luxon");
+    Expect(svc.JourneyBaselineCandidates() != nullptr, "raw_ingest_candidates_open");
+    Expect(svc.JourneyBaselineCandidates()->maps.consecutive_matches == 1, "raw_ingest_maps_streak_one");
 }
 
 void TestNonFloodEventsStillIngest()
@@ -229,7 +235,8 @@ void TestNonFloodEventsStillIngest()
     QuestProgressService svc;
     svc.Initialize();
     svc.SetStoreDirectory(dir);
-    svc.BindIdentity(PersistentId());
+    const auto id = PersistentId();
+    svc.BindIdentity(id);
 
     JourneySnapshotResult snapshot;
     snapshot.level = 5;
@@ -238,6 +245,9 @@ void TestNonFloodEventsStillIngest()
     snapshot.raw_flood.observed_at = "2026-09-12T11:00:00.000Z";
     snapshot.raw_flood.maps = MakeRawIdSetFamilyObservation(true, true, {73});
     NormalizeRawJourneyFloodObservation(snapshot.raw_flood);
+    snapshot.identity_captured = true;
+    snapshot.account_key = id.account_key;
+    snapshot.character_key = id.character_key;
 
     JourneyEventRecord level_up;
     level_up.kind = "level_up";

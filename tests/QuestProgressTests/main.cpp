@@ -898,6 +898,7 @@ int main()
     RunJourneyRawObservationTests();
     RunJourneyBaselineTransitionTests();
     RunJourneyBaselineCandidateLifecycleTests();
+    RunJourneyBaselineServiceIngestTests();
     RunAbandonProbeTests();
     RunChatEvidenceTests();
     RunContractExporterTests();

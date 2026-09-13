@@ -148,6 +148,9 @@ struct JourneySnapshotResult {
     std::optional<FactionTotalsRecord> faction_totals;
     std::vector<JourneyEventRecord> new_events;
     RawJourneyFloodObservation raw_flood;
+    bool identity_captured = false;
+    std::string account_key;
+    std::string character_key;
 };
 
 enum class JourneyUnlockIdKind : uint8_t {

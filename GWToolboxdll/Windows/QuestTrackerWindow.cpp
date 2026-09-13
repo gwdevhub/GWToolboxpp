@@ -194,12 +194,15 @@ void QuestTrackerWindow::Update(float delta)
                     }
                     return nullptr;
                 }();
-                const auto journey = QuestProgress::SampleLiveJourneySnapshot(
+                auto journey = QuestProgress::SampleLiveJourneySnapshot(
                     wall_now,
                     stored ? stored->titles : std::map<uint32_t, QuestProgress::TitleStateRecord>{},
                     stored ? stored->last_known_level : std::nullopt,
                     stored ? stored->last_map_id : std::nullopt,
                     stored ? stored->journey_events : std::vector<QuestProgress::JourneyEventRecord>{});
+                journey.identity_captured = true;
+                journey.account_key = progress_.identity().account_key;
+                journey.character_key = progress_.identity().character_key;
                 progress_.IngestJourneySnapshot(std::move(journey));
 
                 std::vector<JourneyMilestoneHint> hints;

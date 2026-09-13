@@ -2,6 +2,7 @@
 #include <Modules/QuestMissionSnapshot.h>
 #include <Modules/QuestCharacterJourney.h>
 #include <Modules/QuestJourneyBaselineCandidates.h>
+#include <Modules/QuestJourneyBaselineTransition.h>
 
 #include <algorithm>
 #include <cstdio>
@@ -345,6 +346,7 @@ StoredCharacter QuestProgressService::BuildOutgoingStoredCharacter() const
         stored.faction_totals = existing->faction_totals;
         stored.hall_of_monuments = existing->hall_of_monuments;
         stored.journey_events = existing->journey_events;
+        stored.journey_baselines = existing->journey_baselines;
     }
     return stored;
 }
@@ -1184,6 +1186,106 @@ bool QuestProgressService::SnapshotPassesIdentityBarrier(const QuestSnapshot& sn
     return true;
 }
 
+bool QuestProgressService::JourneyFloodPassesIdentityFence(const JourneySnapshotResult& snapshot) const
+{
+    if (identity_.kind != IdentityKind::Persistent || identity_.character_key.empty()) {
+        return false;
+    }
+    if (awaiting_post_bind_snapshot_) {
+        return false;
+    }
+    if (!snapshot.identity_captured) {
+        return false;
+    }
+    return snapshot.account_key == identity_.account_key
+        && snapshot.character_key == identity_.character_key;
+}
+
+void QuestProgressService::ApplyCharacterJourneyBaselineTransitions(
+    StoredCharacter& stored,
+    CharacterJourneyBaselineCandidates& candidates,
+    const RawJourneyFloodObservation& raw_flood,
+    bool& changed)
+{
+    const auto apply_id_set = [&](
+                                  const RawIdSetFamilyObservation& observation,
+                                  IdSetJourneyBaseline& baseline,
+                                  IdSetBaselineCandidate& candidate,
+                                  std::string_view kind,
+                                  JourneyUnlockIdKind id_kind) {
+        const auto previous_baseline = baseline;
+        auto step = TransitionIdSetJourneyBaseline(
+            observation,
+            baseline,
+            candidate,
+            stored.journey_events,
+            kind,
+            id_kind,
+            raw_flood.observed_at);
+        baseline = std::move(step.baseline);
+        candidate = std::move(step.candidate);
+        if (baseline != previous_baseline) {
+            changed = true;
+        }
+        const auto before_events = stored.journey_events.size();
+        AppendUniqueJourneyEvents(stored.journey_events, step.new_events);
+        if (stored.journey_events.size() != before_events) {
+            changed = true;
+        }
+    };
+
+    apply_id_set(
+        raw_flood.maps,
+        stored.journey_baselines.maps,
+        candidates.maps,
+        "map_unlock",
+        JourneyUnlockIdKind::Map);
+    apply_id_set(
+        raw_flood.character_skills,
+        stored.journey_baselines.character_skills,
+        candidates.character_skills,
+        "skill_unlock",
+        JourneyUnlockIdKind::Skill);
+    apply_id_set(
+        raw_flood.heroes,
+        stored.journey_baselines.heroes,
+        candidates.heroes,
+        "hero_unlock",
+        JourneyUnlockIdKind::Hero);
+    apply_id_set(
+        raw_flood.professions,
+        stored.journey_baselines.professions,
+        candidates.professions,
+        "profession_unlock",
+        JourneyUnlockIdKind::Profession);
+    apply_id_set(
+        raw_flood.vanquish_areas,
+        stored.journey_baselines.vanquish_areas,
+        candidates.vanquish_areas,
+        "vanquish_area",
+        JourneyUnlockIdKind::Map);
+
+    {
+        const auto previous_baseline = stored.journey_baselines.hard_mode;
+        auto step = TransitionHardModeJourneyBaseline(
+            raw_flood.hard_mode,
+            stored.journey_baselines.hard_mode,
+            candidates.hard_mode,
+            stored.journey_events,
+            raw_flood.observed_at);
+        stored.journey_baselines.hard_mode = std::move(step.baseline);
+        candidates.hard_mode = std::move(step.candidate);
+        if (stored.journey_baselines.hard_mode != previous_baseline) {
+            changed = true;
+        }
+        const auto before_events = stored.journey_events.size();
+        AppendUniqueJourneyEvents(stored.journey_events, step.new_events);
+        if (stored.journey_events.size() != before_events) {
+            changed = true;
+        }
+    }
+}
+
 void QuestProgressService::IngestSnapshot(
     const QuestSnapshot& snap,
     std::chrono::system_clock::time_point wall_now,
@@ -1263,6 +1365,14 @@ void QuestProgressService::IngestJourneySnapshot(JourneySnapshotResult snapshot)
         stored->faction_totals = snapshot.faction_totals;
         changed = true;
     }
+
+    if (JourneyFloodPassesIdentityFence(snapshot)) {
+        if (auto* candidates = MutableJourneyBaselineCandidates()) {
+            ApplyCharacterJourneyBaselineTransitions(
+                *stored, *candidates, snapshot.raw_flood, changed);
+        }
+    }
+
     const auto before = stored->journey_events.size();
     AppendUniqueJourneyEvents(stored->journey_events, snapshot.new_events);
     if (stored->journey_events.size() != before) {
