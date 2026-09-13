@@ -1,0 +1,10 @@
+---
+description: Prepare bounded Cursor-to-ChatGPT review handoffs and apply review repairs without scope creep.
+alwaysApply: false
+---
+
+Read `AGENTS.md` and `docs/ai/REVIEW_GOVERNANCE.md` whenever a task asks for a review handoff or a ChatGPT review repair.
+
+A repair batch is bounded work. Validate each finding, make the smallest safe repair, run affected checks, and update the handoff. Do not add cleanup, refactors, CI/dependency/generated-asset changes, PR-state changes, or a new review request. Preserve stricter Quest Tracker observation, transition, identity, persistence, and inter-repo contract rules.
+
+After a prior review, prepare a delta handoff, not a new full audit. Include exact SHAs, changed paths, concise check results, risks, and deferred items.
