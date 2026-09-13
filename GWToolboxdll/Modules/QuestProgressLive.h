@@ -21,7 +21,6 @@ std::map<uint32_t, MissionRecord> SampleLiveMissionCompletion(
     std::chrono::system_clock::time_point wall_now,
     const std::map<uint32_t, MissionRecord>* previous = nullptr);
 
-// Sample title tiers + character level for journey milestones.
 JourneySnapshotResult SampleLiveJourneySnapshot(
     std::chrono::system_clock::time_point wall_now,
     const std::map<uint32_t, TitleStateRecord>& previous_titles,

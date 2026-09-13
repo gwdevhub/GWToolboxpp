@@ -837,8 +837,8 @@ int main()
         Expect(profs.at(0).profession_id == 5, "profession_unlock_id");
 
         const uint32_t bits[1] = {0xFFu};
-        Expect(ComputeCartographyCoveragePercent(bits, 1, 8, 1) == 100, "carto_full");
-        Expect(ComputeCartographyCoveragePercent(bits, 1, 32, 32) >= 1, "carto_partial");
+        Expect(ComputeCartographyCoveragePercent(bits, 1, 1, 8, 1) == 100, "carto_full");
+        Expect(ComputeCartographyCoveragePercent(bits, 1, 1, 32, 32) >= 1, "carto_partial");
 
         const auto carto = BuildCartographyThresholdEvents(
             0, 50, 73, {}, "2026-07-25T20:11:00.000Z");
@@ -895,6 +895,7 @@ int main()
 
     RunBatch2BStoreTests();
     RunBatch2CServiceTests();
+    RunJourneyRawObservationTests();
     RunAbandonProbeTests();
     RunChatEvidenceTests();
     RunContractExporterTests();

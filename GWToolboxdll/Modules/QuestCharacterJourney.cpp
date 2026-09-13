@@ -2,6 +2,7 @@
 
 #include <Modules/QuestProgressDomain.h>
 
+#include <algorithm>
 #include <bit>
 #include <format>
 #include <set>
@@ -293,13 +294,232 @@ std::vector<JourneyEventRecord> BuildHardModeUnlockEvents(
     return out;
 }
 
-uint32_t ComputeCartographyCoveragePercent(
+void CanonicalizeSortedUniqueIds(std::vector<uint32_t>& ids)
+{
+    std::sort(ids.begin(), ids.end());
+    ids.erase(std::unique(ids.begin(), ids.end()), ids.end());
+}
+
+void NormalizeRawIdSetFamilyObservation(RawIdSetFamilyObservation& family)
+{
+    if (!family.context_available) {
+        family.sample_usable = false;
+        family.value.clear();
+        return;
+    }
+    if (!family.sample_usable) {
+        family.value.clear();
+        return;
+    }
+    CanonicalizeSortedUniqueIds(family.value);
+}
+
+void NormalizeRawFlagFamilyObservation(RawFlagFamilyObservation& family)
+{
+    if (!family.context_available) {
+        family.sample_usable = false;
+        family.value = false;
+        return;
+    }
+    if (!family.sample_usable) {
+        family.value = false;
+    }
+}
+
+void NormalizeRawPercentFamilyObservation(RawPercentFamilyObservation& family)
+{
+    if (!family.context_available) {
+        family.sample_usable = false;
+        family.value = 0;
+        return;
+    }
+    if (!family.sample_usable) {
+        family.value = 0;
+    }
+}
+
+void NormalizeRawAmountFamilyObservation(RawAmountFamilyObservation& family)
+{
+    if (!family.context_available) {
+        family.sample_usable = false;
+        family.value = 0;
+        return;
+    }
+    if (!family.sample_usable) {
+        family.value = 0;
+    }
+}
+
+void NormalizeRawFactionFamilyObservation(RawFactionFamilyObservation& family)
+{
+    if (!family.context_available) {
+        family.sample_usable = false;
+        family.value = FactionTotalsRecord{};
+        return;
+    }
+    if (!family.sample_usable) {
+        family.value = FactionTotalsRecord{};
+    }
+}
+
+void NormalizeRawJourneyFloodObservation(RawJourneyFloodObservation& observation)
+{
+    NormalizeRawIdSetFamilyObservation(observation.maps);
+    NormalizeRawIdSetFamilyObservation(observation.character_skills);
+    NormalizeRawIdSetFamilyObservation(observation.account_skills);
+    NormalizeRawIdSetFamilyObservation(observation.heroes);
+    NormalizeRawIdSetFamilyObservation(observation.professions);
+    NormalizeRawFlagFamilyObservation(observation.hard_mode);
+    NormalizeRawIdSetFamilyObservation(observation.vanquish_areas);
+    NormalizeRawPercentFamilyObservation(observation.cartography);
+    NormalizeRawAmountFamilyObservation(observation.skill_points);
+    NormalizeRawFactionFamilyObservation(observation.factions);
+}
+
+RawIdSetFamilyObservation MakeRawIdSetFamilyObservation(
+    bool context_available,
+    bool sample_usable,
+    std::vector<uint32_t> ids)
+{
+    RawIdSetFamilyObservation family;
+    family.context_available = context_available;
+    family.sample_usable = sample_usable;
+    family.value = std::move(ids);
+    NormalizeRawIdSetFamilyObservation(family);
+    return family;
+}
+
+RawFlagFamilyObservation MakeRawFlagFamilyObservation(
+    bool context_available,
+    bool sample_usable,
+    bool value)
+{
+    RawFlagFamilyObservation family;
+    family.context_available = context_available;
+    family.sample_usable = sample_usable;
+    family.value = value;
+    NormalizeRawFlagFamilyObservation(family);
+    return family;
+}
+
+RawPercentFamilyObservation MakeRawPercentFamilyObservation(
+    bool context_available,
+    bool sample_usable,
+    uint32_t percent)
+{
+    RawPercentFamilyObservation family;
+    family.context_available = context_available;
+    family.sample_usable = sample_usable;
+    family.value = percent;
+    NormalizeRawPercentFamilyObservation(family);
+    return family;
+}
+
+RawAmountFamilyObservation MakeRawAmountFamilyObservation(
+    bool context_available,
+    bool sample_usable,
+    uint32_t amount)
+{
+    RawAmountFamilyObservation family;
+    family.context_available = context_available;
+    family.sample_usable = sample_usable;
+    family.value = amount;
+    NormalizeRawAmountFamilyObservation(family);
+    return family;
+}
+
+RawFactionFamilyObservation MakeRawFactionFamilyObservation(
+    bool context_available,
+    bool sample_usable,
+    FactionTotalsRecord totals)
+{
+    RawFactionFamilyObservation family;
+    family.context_available = context_available;
+    family.sample_usable = sample_usable;
+    family.value = totals;
+    NormalizeRawFactionFamilyObservation(family);
+    return family;
+}
+
+bool IsGwcaArrayStructurallyValid(const void* buffer, size_t size, size_t capacity)
+{
+    const auto address = reinterpret_cast<uintptr_t>(buffer);
+    return (buffer == nullptr || (address & 0x3u) == 0u) && size <= capacity;
+}
+
+bool IsCartographyBufferUsable(
     const uint32_t* bits,
     size_t dword_count,
+    size_t capacity,
     uint32_t width,
     uint32_t height)
 {
-    if (!bits || dword_count == 0 || width == 0 || height == 0) {
+    return bits != nullptr
+        && dword_count > 0
+        && width > 0
+        && height > 0
+        && IsGwcaArrayStructurallyValid(bits, dword_count, capacity);
+}
+
+bool IsBitsetStorageUsable(const uint32_t* words, size_t word_count, size_t capacity)
+{
+    return words != nullptr
+        && word_count > 0
+        && IsGwcaArrayStructurallyValid(words, word_count, capacity);
+}
+
+bool IsListStorageUsable(const void* buffer, size_t element_count)
+{
+    return element_count == 0 || buffer != nullptr;
+}
+
+RawIdSetFamilyObservation AssembleRawIdSetBitsetObservation(
+    bool context_available,
+    const uint32_t* words,
+    size_t word_count,
+    size_t capacity)
+{
+    if (!context_available) {
+        return MakeRawIdSetFamilyObservation(false, false, {});
+    }
+    if (!IsBitsetStorageUsable(words, word_count, capacity)) {
+        return MakeRawIdSetFamilyObservation(true, false, {});
+    }
+    std::vector<uint32_t> ids;
+    const auto max_id = static_cast<uint32_t>(word_count * 32);
+    ids.reserve(32);
+    for (uint32_t id = 0; id < max_id; ++id) {
+        const auto word_index = id / 32;
+        const auto bit_index = id % 32;
+        if ((words[word_index] & (1u << bit_index)) != 0) {
+            ids.push_back(id);
+        }
+    }
+    return MakeRawIdSetFamilyObservation(true, true, std::move(ids));
+}
+
+RawIdSetFamilyObservation AssembleRawIdSetListObservation(
+    bool context_available,
+    bool storage_usable,
+    std::vector<uint32_t> ids)
+{
+    if (!context_available) {
+        return MakeRawIdSetFamilyObservation(false, false, {});
+    }
+    if (!storage_usable) {
+        return MakeRawIdSetFamilyObservation(true, false, {});
+    }
+    return MakeRawIdSetFamilyObservation(true, true, std::move(ids));
+}
+
+uint32_t ComputeCartographyCoveragePercent(
+    const uint32_t* bits,
+    size_t dword_count,
+    size_t capacity,
+    uint32_t width,
+    uint32_t height)
+{
+    if (!IsCartographyBufferUsable(bits, dword_count, capacity, width, height)) {
         return 0;
     }
     const uint64_t total_bits = static_cast<uint64_t>(width) * static_cast<uint64_t>(height);

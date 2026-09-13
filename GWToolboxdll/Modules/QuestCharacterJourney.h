@@ -90,6 +90,55 @@ struct FactionTotalsRecord {
     }
 };
 
+template <typename T>
+struct RawFamilyObservation {
+    bool context_available = false;
+    bool sample_usable = false;
+    T value{};
+
+    friend bool operator==(const RawFamilyObservation& a, const RawFamilyObservation& b)
+    {
+        return a.context_available == b.context_available
+            && a.sample_usable == b.sample_usable
+            && a.value == b.value;
+    }
+};
+
+using RawIdSetFamilyObservation = RawFamilyObservation<std::vector<uint32_t>>;
+using RawFlagFamilyObservation = RawFamilyObservation<bool>;
+using RawPercentFamilyObservation = RawFamilyObservation<uint32_t>;
+using RawAmountFamilyObservation = RawFamilyObservation<uint32_t>;
+using RawFactionFamilyObservation = RawFamilyObservation<FactionTotalsRecord>;
+
+struct RawJourneyFloodObservation {
+    std::string observed_at;
+    RawIdSetFamilyObservation maps;
+    RawIdSetFamilyObservation character_skills;
+    RawIdSetFamilyObservation account_skills;
+    RawIdSetFamilyObservation heroes;
+    RawIdSetFamilyObservation professions;
+    RawFlagFamilyObservation hard_mode;
+    RawIdSetFamilyObservation vanquish_areas;
+    RawPercentFamilyObservation cartography;
+    RawAmountFamilyObservation skill_points;
+    RawFactionFamilyObservation factions;
+
+    friend bool operator==(const RawJourneyFloodObservation& a, const RawJourneyFloodObservation& b)
+    {
+        return a.observed_at == b.observed_at
+            && a.maps == b.maps
+            && a.character_skills == b.character_skills
+            && a.account_skills == b.account_skills
+            && a.heroes == b.heroes
+            && a.professions == b.professions
+            && a.hard_mode == b.hard_mode
+            && a.vanquish_areas == b.vanquish_areas
+            && a.cartography == b.cartography
+            && a.skill_points == b.skill_points
+            && a.factions == b.factions;
+    }
+};
+
 struct JourneySnapshotResult {
     std::map<uint32_t, TitleStateRecord> titles;
     std::optional<uint32_t> level;
@@ -98,6 +147,7 @@ struct JourneySnapshotResult {
     std::optional<uint32_t> skill_points_earned;
     std::optional<FactionTotalsRecord> faction_totals;
     std::vector<JourneyEventRecord> new_events;
+    RawJourneyFloodObservation raw_flood;
 };
 
 enum class JourneyUnlockIdKind : uint8_t {
@@ -152,9 +202,63 @@ std::vector<JourneyEventRecord> BuildHardModeUnlockEvents(
     const std::vector<JourneyEventRecord>& existing_events,
     std::string_view observed_at_utc);
 
+void CanonicalizeSortedUniqueIds(std::vector<uint32_t>& ids);
+
+void NormalizeRawIdSetFamilyObservation(RawIdSetFamilyObservation& family);
+void NormalizeRawFlagFamilyObservation(RawFlagFamilyObservation& family);
+void NormalizeRawPercentFamilyObservation(RawPercentFamilyObservation& family);
+void NormalizeRawAmountFamilyObservation(RawAmountFamilyObservation& family);
+void NormalizeRawFactionFamilyObservation(RawFactionFamilyObservation& family);
+void NormalizeRawJourneyFloodObservation(RawJourneyFloodObservation& observation);
+
+RawIdSetFamilyObservation MakeRawIdSetFamilyObservation(
+    bool context_available,
+    bool sample_usable,
+    std::vector<uint32_t> ids);
+RawFlagFamilyObservation MakeRawFlagFamilyObservation(
+    bool context_available,
+    bool sample_usable,
+    bool value);
+RawPercentFamilyObservation MakeRawPercentFamilyObservation(
+    bool context_available,
+    bool sample_usable,
+    uint32_t percent);
+RawAmountFamilyObservation MakeRawAmountFamilyObservation(
+    bool context_available,
+    bool sample_usable,
+    uint32_t amount);
+RawFactionFamilyObservation MakeRawFactionFamilyObservation(
+    bool context_available,
+    bool sample_usable,
+    FactionTotalsRecord totals);
+
+bool IsGwcaArrayStructurallyValid(const void* buffer, size_t size, size_t capacity);
+
+bool IsCartographyBufferUsable(
+    const uint32_t* bits,
+    size_t dword_count,
+    size_t capacity,
+    uint32_t width,
+    uint32_t height);
+
+bool IsBitsetStorageUsable(const uint32_t* words, size_t word_count, size_t capacity);
+bool IsListStorageUsable(const void* buffer, size_t element_count);
+
+RawIdSetFamilyObservation AssembleRawIdSetBitsetObservation(
+    bool context_available,
+    const uint32_t* words,
+    size_t word_count,
+    size_t capacity);
+
+RawIdSetFamilyObservation AssembleRawIdSetListObservation(
+    bool context_available,
+    bool storage_usable,
+    std::vector<uint32_t> ids);
+
 uint32_t ComputeCartographyCoveragePercent(
     const uint32_t* bits,
     size_t dword_count,
+    size_t capacity,
     uint32_t width,
     uint32_t height);
 

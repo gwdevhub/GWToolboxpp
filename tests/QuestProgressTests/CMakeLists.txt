@@ -2,6 +2,7 @@ add_executable(QuestProgressTests
     "${CMAKE_SOURCE_DIR}/tests/QuestProgressTests/main.cpp"
     "${CMAKE_SOURCE_DIR}/tests/QuestProgressTests/store_tests.cpp"
     "${CMAKE_SOURCE_DIR}/tests/QuestProgressTests/service_tests.cpp"
+    "${CMAKE_SOURCE_DIR}/tests/QuestProgressTests/journey_raw_observation_tests.cpp"
     "${CMAKE_SOURCE_DIR}/tests/QuestProgressTests/abandon_probe_tests.cpp"
     "${CMAKE_SOURCE_DIR}/tests/QuestProgressTests/chat_evidence_tests.cpp"
     "${CMAKE_SOURCE_DIR}/tests/QuestProgressTests/exporter_tests.cpp"
