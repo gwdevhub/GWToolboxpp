@@ -1,6 +1,7 @@
 #include <Modules/QuestProgressService.h>
 #include <Modules/QuestMissionSnapshot.h>
 #include <Modules/QuestCharacterJourney.h>
+#include <Modules/QuestJourneyBaselineCandidates.h>
 
 #include <algorithm>
 #include <cstdio>
@@ -151,6 +152,7 @@ void QuestProgressService::Initialize()
     if (initialized_) {
         return;
     }
+    ClearJourneyBaselineCandidates();
     // Re-enable in the same process: keep detached_sessions_ (dirty gens + latch intact).
     initialized_ = true;
     terminate_signaled_ = false;
@@ -200,6 +202,7 @@ void QuestProgressService::Terminate()
     ClearCharacter(character_);
     account_store_ = {};
     identity_ = {};
+    ClearJourneyBaselineCandidates();
     load_status_ = StoreOpStatus::Empty;
     persistence_allowed_ = false;
     semantic_dirty_ = false;
@@ -230,6 +233,26 @@ void QuestProgressService::ClearActiveSessionMemory()
     has_reduced_once_ = false;
     last_reduced_revision_ = 0;
     ResetActivePersistLatch();
+}
+
+void QuestProgressService::ClearJourneyBaselineCandidates()
+{
+    journey_baseline_candidates_.Clear();
+}
+
+void QuestProgressService::OpenJourneyBaselineCandidatesForActiveIdentity()
+{
+    journey_baseline_candidates_.OpenForPersistentIdentity(identity_);
+}
+
+CharacterJourneyBaselineCandidates* QuestProgressService::MutableJourneyBaselineCandidates()
+{
+    return journey_baseline_candidates_.Active();
+}
+
+const CharacterJourneyBaselineCandidates* QuestProgressService::JourneyBaselineCandidates() const
+{
+    return journey_baseline_candidates_.Active();
 }
 
 void QuestProgressService::ApplyIdentityMetadataBackfill()
@@ -729,6 +752,7 @@ void QuestProgressService::BindIdentity(
             }
         }
         ClearActiveSessionMemory();
+        ClearJourneyBaselineCandidates();
     }
 
     const bool account_changed = !SameAccount(identity_, next);
@@ -761,6 +785,7 @@ void QuestProgressService::BindIdentity(
         persistence_allowed_ = false;
         ResetActivePersistLatch();
         awaiting_post_bind_snapshot_ = false;
+        ClearJourneyBaselineCandidates();
         AddDiag("identity unbound");
         return;
     }
@@ -774,6 +799,7 @@ void QuestProgressService::BindIdentity(
             character_.display_name = identity_.display_name;
         }
         ResetActivePersistLatch();
+        ClearJourneyBaselineCandidates();
         AddDiag("ephemeral identity; no persistent file I/O");
         return;
     }
@@ -805,6 +831,7 @@ void QuestProgressService::BindIdentity(
     }
     EnsureCharacterRecord();
     ApplyIdentityMetadataBackfill();
+    OpenJourneyBaselineCandidatesForActiveIdentity();
 }
 
 void QuestProgressService::UnbindIdentity()
@@ -827,6 +854,7 @@ void QuestProgressService::UnbindIdentity()
     ClearActiveSessionMemory();
     account_store_ = {};
     identity_ = {};
+    ClearJourneyBaselineCandidates();
     ++character_generation_;
     ++account_generation_;
     load_status_ = StoreOpStatus::Empty;

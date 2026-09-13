@@ -7,6 +7,7 @@
 #include <Modules/QuestProgressReducer.h>
 #include <Modules/QuestProgressStore.h>
 #include <Modules/QuestSessionIdentity.h>
+#include <Modules/QuestJourneyBaselineCandidates.h>
 
 #include <chrono>
 #include <cstdint>
@@ -148,6 +149,9 @@ public:
     void IngestJourneyEvents(std::vector<JourneyEventRecord> events);
     void IngestHomSnapshot(HomSnapshotRecord snapshot);
 
+    CharacterJourneyBaselineCandidates* MutableJourneyBaselineCandidates();
+    const CharacterJourneyBaselineCandidates* JourneyBaselineCandidates() const;
+
     bool Flush(bool session_boundary);
 
     // Snapshot of the currently bound persistent character for Contract export (identity-scoped).
@@ -218,6 +222,8 @@ private:
     void ExpireEvidence(std::chrono::steady_clock::time_point steady_now);
     bool SnapshotPassesIdentityBarrier(const QuestSnapshot& snap) const;
     void ApplyIdentityMetadataBackfill();
+    void ClearJourneyBaselineCandidates();
+    void OpenJourneyBaselineCandidatesForActiveIdentity();
     void ReduceFromSnapshot(
         const QuestSnapshot& snap,
         std::chrono::system_clock::time_point wall_now,
@@ -267,6 +273,7 @@ private:
     std::chrono::steady_clock::time_point last_tick_steady_{};
 
     std::map<DetachedSessionKey, DetachedDirtySession> detached_sessions_;
+    JourneyBaselineCandidateOwner journey_baseline_candidates_;
 
     std::vector<std::string> diagnostics_;
     size_t successful_save_count_ = 0;

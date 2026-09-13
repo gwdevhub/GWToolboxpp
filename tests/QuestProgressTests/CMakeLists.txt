@@ -4,6 +4,7 @@ add_executable(QuestProgressTests
     "${CMAKE_SOURCE_DIR}/tests/QuestProgressTests/service_tests.cpp"
     "${CMAKE_SOURCE_DIR}/tests/QuestProgressTests/journey_raw_observation_tests.cpp"
     "${CMAKE_SOURCE_DIR}/tests/QuestProgressTests/journey_baseline_transition_tests.cpp"
+    "${CMAKE_SOURCE_DIR}/tests/QuestProgressTests/journey_baseline_candidate_lifecycle_tests.cpp"
     "${CMAKE_SOURCE_DIR}/tests/QuestProgressTests/abandon_probe_tests.cpp"
     "${CMAKE_SOURCE_DIR}/tests/QuestProgressTests/chat_evidence_tests.cpp"
     "${CMAKE_SOURCE_DIR}/tests/QuestProgressTests/exporter_tests.cpp"
@@ -17,6 +18,7 @@ add_executable(QuestProgressTests
     "${CMAKE_SOURCE_DIR}/GWToolboxdll/Modules/QuestMissionSnapshot.cpp"
     "${CMAKE_SOURCE_DIR}/GWToolboxdll/Modules/QuestCharacterJourney.cpp"
     "${CMAKE_SOURCE_DIR}/GWToolboxdll/Modules/QuestJourneyBaselineTransition.cpp"
+    "${CMAKE_SOURCE_DIR}/GWToolboxdll/Modules/QuestJourneyBaselineCandidates.cpp"
     "${CMAKE_SOURCE_DIR}/GWToolboxdll/Modules/QuestProgressContractExporter.cpp"
     "${CMAKE_SOURCE_DIR}/GWToolboxdll/Utils/AtomicJsonFile.cpp"
 )
@@ -45,6 +47,7 @@ set_source_files_properties(
     "${CMAKE_SOURCE_DIR}/GWToolboxdll/Modules/QuestMissionSnapshot.cpp"
     "${CMAKE_SOURCE_DIR}/GWToolboxdll/Modules/QuestCharacterJourney.cpp"
     "${CMAKE_SOURCE_DIR}/GWToolboxdll/Modules/QuestJourneyBaselineTransition.cpp"
+    "${CMAKE_SOURCE_DIR}/GWToolboxdll/Modules/QuestJourneyBaselineCandidates.cpp"
     "${CMAKE_SOURCE_DIR}/GWToolboxdll/Modules/QuestProgressContractExporter.cpp"
     "${CMAKE_SOURCE_DIR}/GWToolboxdll/Utils/AtomicJsonFile.cpp"
     PROPERTIES SKIP_PRECOMPILE_HEADERS ON
