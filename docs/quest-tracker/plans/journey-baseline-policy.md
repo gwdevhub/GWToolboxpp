@@ -203,6 +203,8 @@ Bitset / list completeness on first Persistent tick remains empirically **unknow
 3. Seal only after stable consecutive eligible samples (exact N conservative; tune in-game).
 4. While `Unset`, **never** emit-all against empty event priors.
 5. Partial/uncertain → `Unset`; never invent catch-up milestones.
+6. ID `0` is never a meaningful unlock observation (strip before seal/delta); `{0}` / bit0-only samples do not seal.
+7. After `Sealed`, a usable id-set sample that omits any **persisted live inventory** id is **partial**: emit nothing and do not expand the baseline. Only a sample that contains the full live inventory may emit newly seen ids and union them into the inventory.
 
 ### 3.7 W5 — Threshold / HoM single-source + read-before-write
 
@@ -255,12 +257,13 @@ For an unlock/vanquish/hero/profession/account/hard_mode family in `Unset`:
 1. If observation fails C3 / context gates → remain `Unset`; **no events**; no seal.
 2. Else compute:
    - `legacy =` ids (or flag) reconstructed from existing journey evidence for that family (may be empty or partial);
-   - `current =` gated observation value;
-   - `sealed_baseline = legacy ∪ current` (for flags: sealed to observed unlocked state without emitting).
-3. Mark family `Sealed` with that baseline.
+   - `current =` gated observation value (zeros stripped for id-sets);
+   - **persisted live inventory** `sealed_baseline = seen_union ∪ current` (id-sets) — **do not** persist orphan `legacy`-only ids into the inventory used for later completeness checks;
+   - **emit-suppression prior** for later sealed deltas = `sealed_baseline ∪ legacy` (reconstruct `legacy` from journey evidence on each sealed ingest; flags: seal unlocked from legacy/`seen_true`/current without emitting).
+3. Mark family `Sealed` with that **live inventory** baseline.
 4. Emit **zero** journey events on this bootstrap ingest — even when `current` is a strict superset of partial `legacy`.
 5. **Normal delta builder must not run** for that family before seal completes in this ingest.
-6. Only a **later** sealed observation that introduces ids/flags beyond `sealed_baseline` may export deltas.
+6. Only a **later** sealed observation that (a) contains the full live inventory and (b) introduces ids beyond `sealed_baseline ∪ legacy` may export deltas. Legacy-only orphans must not block those deltas; when a legacy id later appears live it is absorbed into inventory without re-flooding.
 
 Equivalent for threshold/HoM families on bootstrap:
 
@@ -319,7 +322,7 @@ Observed today: dossier timeline `entries.take(40)`.
 | New character, empty store | Per-family bootstrap seal on first gated observation; 0 flood events; non-flood as today |
 | Veteran first Toolbox session | Bootstrap seal (`∅ ∪ current`); 0 flood events |
 | Store wipe | Re-bootstrap; C1 inventory gap accepted |
-| Upgrade 1.1 → 1.2 with partial legacy unlock events | Keep events; A9 `legacy ∪ current` seal; 0 new catch-up |
+| Upgrade 1.1 → 1.2 with partial legacy unlock events | Keep events; A9 live-inventory seal + legacy emit-suppression; 0 new catch-up |
 | Character / account switch | Drop foreign C3 candidates; no baseline bleed; account_skills shared per account |
 | Missing / unstable context | `Unset`; no seal; no events |
 | Old 1.1 Toolbox opens 1.2 store | Reject (A10); no auto `.bak` downgrade |
@@ -352,7 +355,8 @@ Pure logic:
 4. Thresholds: W5 read-before-write; sealed crossing emits correct new events using pre-write prior.
 5. HoM: first gated fetch seals with 0 `hom_points` flood; later increase emits.
 6. C3: shrink/empty/unstable → no seal, no emit-all; streak reset on bad context.
-7. **A9:** legacy events proper subset of current unlocks → bootstrap 0 events; baseline = union.
+7. **A9:** legacy events proper subset of current unlocks → bootstrap 0 events; live inventory = current (legacy does not need to enlarge inventory).
+7b. **A9:** legacy-only orphan id absent from live samples → inventory excludes it; post-seal +1 live id still emits; orphan resurfacing later does not re-flood.
 8. **A9:** 1.1 family with no legacy events → gated seal from current; 0 events.
 9. **A8:** unstable candidate changes during `Unset` fold into baseline; no later replay of those ids.
 10. Identity switch: no candidate/baseline leakage across characters/accounts.
@@ -393,7 +397,7 @@ Do not combine with unlock-array Contract expansions or automation.
 - **C1–C3, W4–W6** as previously amended.
 - **A7:** Live = raw flood observations; service BaselineTransition = bootstrap → C3 → seal/delta → events → persist in one ingest; Live must not flood-build.
 - **A8:** transient identity-scoped candidates; persisted enum only `Unset|Sealed`; `DeltaObserved` is transition-only; Unset-window changes fold into baseline (accepted tradeoff).
-- **A9:** bootstrap sealed baseline ≥ `legacy ∪ current`; 0 events on bootstrap; no normal delta builder before seal.
+- **A9:** bootstrap persists **live inventory** `seen_union ∪ current` (not orphan legacy-only ids); emit-suppression prior = inventory ∪ legacy-from-events; 0 events on bootstrap; no normal delta builder before seal; sealed completeness checks inventory only.
 - **A10:** 1.2 reads 1.0/1.1; 1.1 rejects 1.2; no automatic `.bak` downgrade; unknown keys tolerated but newer minor still rejected.
 - Contaminated-store hygiene ≠ journey baseline.
 

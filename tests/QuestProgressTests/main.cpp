@@ -896,6 +896,7 @@ int main()
     RunBatch2BStoreTests();
     RunBatch2CServiceTests();
     RunJourneyRawObservationTests();
+    RunJourneyBaselineTransitionTests();
     RunAbandonProbeTests();
     RunChatEvidenceTests();
     RunContractExporterTests();
