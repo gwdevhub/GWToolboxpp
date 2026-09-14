@@ -57,6 +57,74 @@ namespace {
     GWToolboxRelease latest_release;
     GWToolboxRelease current_release;
 
+    int CompareBaseVersions(const std::string_view left, const std::string_view right)
+    {
+        size_t left_pos = 0;
+        size_t right_pos = 0;
+        while (true) {
+            uint64_t left_component = 0;
+            while (left_pos < left.size() && std::isdigit(static_cast<unsigned char>(left[left_pos]))) {
+                left_component = left_component * 10 + left[left_pos++] - '0';
+            }
+            uint64_t right_component = 0;
+            while (right_pos < right.size() && std::isdigit(static_cast<unsigned char>(right[right_pos]))) {
+                right_component = right_component * 10 + right[right_pos++] - '0';
+            }
+            if (left_component != right_component) return left_component < right_component ? -1 : 1;
+
+            const bool left_has_next = left_pos + 1 < left.size() && left[left_pos] == '.' && std::isdigit(static_cast<unsigned char>(left[left_pos + 1]));
+            const bool right_has_next = right_pos + 1 < right.size() && right[right_pos] == '.' && std::isdigit(static_cast<unsigned char>(right[right_pos + 1]));
+            if (!left_has_next && !right_has_next) return 0;
+            if (left_has_next) ++left_pos;
+            if (right_has_next) ++right_pos;
+        }
+    }
+
+    std::string_view VersionSuffix(const std::string_view version)
+    {
+        size_t position = 0;
+        while (position < version.size() && (std::isdigit(static_cast<unsigned char>(version[position])) || version[position] == '.')) {
+            ++position;
+        }
+        return version.substr(position);
+    }
+
+    int CompareNaturalVersions(const std::string_view left, const std::string_view right)
+    {
+        size_t left_pos = 0;
+        size_t right_pos = 0;
+        while (left_pos < left.size() && right_pos < right.size()) {
+            if (std::isdigit(static_cast<unsigned char>(left[left_pos])) && std::isdigit(static_cast<unsigned char>(right[right_pos]))) {
+                const auto left_start = left_pos;
+                const auto right_start = right_pos;
+                while (left_pos < left.size() && std::isdigit(static_cast<unsigned char>(left[left_pos]))) ++left_pos;
+                while (right_pos < right.size() && std::isdigit(static_cast<unsigned char>(right[right_pos]))) ++right_pos;
+
+                const auto left_number = left.substr(left_start, left_pos - left_start);
+                const auto right_number = right.substr(right_start, right_pos - right_start);
+                const auto left_nonzero = left_number.find_first_not_of('0');
+                const auto right_nonzero = right_number.find_first_not_of('0');
+                const auto normalized_left = left_number.substr(left_nonzero == std::string_view::npos ? left_number.size() : left_nonzero);
+                const auto normalized_right = right_number.substr(right_nonzero == std::string_view::npos ? right_number.size() : right_nonzero);
+                if (normalized_left.size() != normalized_right.size()) return normalized_left.size() < normalized_right.size() ? -1 : 1;
+                if (normalized_left != normalized_right) return normalized_left < normalized_right ? -1 : 1;
+                continue;
+            }
+            if (left[left_pos] != right[right_pos]) return left[left_pos] < right[right_pos] ? -1 : 1;
+            ++left_pos;
+            ++right_pos;
+        }
+        if (left_pos == left.size() && right_pos == right.size()) return 0;
+        return left_pos == left.size() ? -1 : 1;
+    }
+
+    int CompareReleases(const GWToolboxRelease& left, const GWToolboxRelease& right)
+    {
+        if (const auto result = CompareBaseVersions(left.version, right.version); result != 0) return result;
+        if (left.prerelease != right.prerelease) return left.prerelease ? -1 : 1;
+        return left.prerelease ? CompareNaturalVersions(VersionSuffix(left.version), VersionSuffix(right.version)) : 0;
+    }
+
     GWToolboxRelease* GetLatestRelease(GWToolboxRelease* release)
     {
         std::string response;
@@ -95,6 +163,7 @@ namespace {
                 if (js.prerelease) {
                     release->version += js.tag_name.substr(version_number_len + 1);
                 }
+                release->prerelease = js.prerelease;
                 std::ranges::transform(release->version, release->version.begin(), [](const auto chr) { return static_cast<char>(std::tolower(chr)); });
                 release->body = js.body.value_or("");
                 const auto size_bytes = static_cast<uintmax_t>(asset.size); // Slight rounding, GitHub isn't always correct down to the byte.
@@ -253,6 +322,7 @@ const GWToolboxRelease* Updater::GetCurrentVersionInfo(GWToolboxRelease* out)
     out->size = static_cast<uintmax_t>(std::ceil(size_bytes / 16.0) * 16);
     out->version = GWTOOLBOXDLL_VERSION;
     out->version.append(GWTOOLBOXDLL_VERSION_BETA);
+    out->prerelease = !std::string_view(GWTOOLBOXDLL_VERSION_BETA).empty();
     std::ranges::transform(out->version, out->version.begin(), [](const auto chr) {
         return static_cast<char>(std::tolower(chr));
     });
@@ -332,8 +402,9 @@ void Updater::CheckForUpdate(const bool forced)
             return;
         }
 
-        if (latest_release.version == current_release.version
-            && latest_release.size == current_release.size) {
+        const auto release_comparison = CompareReleases(latest_release, current_release);
+        if (release_comparison < 0
+            || (release_comparison == 0 && latest_release.size == current_release.size)) {
             step = Done;
             is_latest_version = true;
             if (forced) {
