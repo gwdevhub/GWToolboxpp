@@ -247,7 +247,6 @@ namespace {
         {GW::Constants::SkillID::Heal_Area, GW::Constants::SkillID::Kareis_Healing_Circle},
         {GW::Constants::SkillID::Heal_Other, GW::Constants::SkillID::Jameis_Gaze},
         {GW::Constants::SkillID::Holy_Strike, GW::Constants::SkillID::Stonesoul_Strike},
-        {GW::Constants::SkillID::Symbol_of_Wrath, GW::Constants::SkillID::Kirins_Wrath},
 
         {GW::Constants::SkillID::Desecrate_Enchantments, GW::Constants::SkillID::Defile_Enchantments},
         {GW::Constants::SkillID::Shadow_Strike, GW::Constants::SkillID::Lifebane_Strike},
