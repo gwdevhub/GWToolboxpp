@@ -985,8 +985,9 @@ void ObjectiveTimerWindow::Draw(IDirect3DDevice9*)
                         continue;
                     }
                     if (os->IsCollapsedRow()) {
-                        const float y = ImGui::GetCursorScreenPos().y + (skipped_height > 0.f ? skipped_height + spacing : 0.f);
-                        if (!ImGui::IsRectVisible({0.f, y}, {1.f, y + row_height})) {
+                        const auto cursor = ImGui::GetCursorScreenPos();
+                        const float y = cursor.y + (skipped_height > 0.f ? skipped_height + spacing : 0.f);
+                        if (!ImGui::IsRectVisible({cursor.x, y}, {cursor.x, y + row_height})) {
                             skipped_height = skipped_height > 0.f ? skipped_height + spacing + row_height : row_height;
                             continue;
                         }
