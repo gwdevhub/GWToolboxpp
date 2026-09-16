@@ -41,6 +41,7 @@ namespace {
     GW::HookEntry PostProcess_Entry;
     GW::HookEntry GenericValue_Entry;
     GW::HookEntry AgentState_Entry;
+    GW::HookEntry CinematicPlay_Entry;
     GW::HookEntry SpeechBubble_Entry;
     GW::HookEntry ObjectiveDone_Entry;
     GW::HookEntry VanquishComplete_Entry;
@@ -432,6 +433,7 @@ void PconsWindow::Initialize()
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(&GenericValue_Entry, &OnGenericValue);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentState>(&AgentState_Entry, &OnAgentState);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::CinematicPlay>(&CinematicPlay_Entry, &OnCinematic);
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"pcons", &CmdPcons);
 }
 
@@ -485,6 +487,13 @@ void PconsWindow::OnAgentState(GW::HookStatus*, GW::Packet::StoC::AgentState* pa
 {
     if (PconAlcohol::suppress_drunk_emotes && pak->agent_id == GW::Agents::GetObservingId() && pak->state & 0x2000) {
         pak->state ^= 0x2000;
+    }
+}
+
+void PconsWindow::OnCinematic(const GW::HookStatus*, const GW::Packet::StoC::CinematicPlay* pak)
+{
+    if (pak->play && enabled && Instance().settings.disable_cons_on_cinematic) {
+        Instance().SetEnabled(false);
     }
 }
 
@@ -956,6 +965,8 @@ void PconsWindow::DrawSettingsInternal()
     ImGui::Checkbox("Auto Disable on Dungeon completion", &settings.disable_cons_on_dungeon_completion);
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Auto Disable on Mission completion", &settings.disable_cons_on_mission_completion);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Auto Disable on cinematic", &settings.disable_cons_on_cinematic);
     ImGui::NextSpacedElement();
     ImGui::CheckboxWithHelp("Auto Disable in final room of Urgoz/Deep", &settings.disable_cons_in_final_room, disable_cons_in_final_room_hint);
     ImGui::NextSpacedElement();

@@ -33,6 +33,7 @@ public:
         bool disable_cons_on_vanquish_completion = true;
         bool disable_cons_on_dungeon_completion = true;
         bool disable_cons_on_mission_completion = true;
+        bool disable_cons_on_cinematic = false;
         bool disable_cons_in_final_room = false;
         bool disable_cons_on_objective_completion = false;
         std::string order;
@@ -62,6 +63,7 @@ public:
 
     static void OnAgentState(GW::HookStatus*, GW::Packet::StoC::AgentState* pak);
     static void OnGenericValue(GW::HookStatus*, GW::Packet::StoC::GenericValue* pak);
+    static void OnCinematic(const GW::HookStatus*, const GW::Packet::StoC::CinematicPlay* pak);
     static void OnAddExternalBond(GW::HookStatus* status, const GW::Packet::StoC::AddExternalBond* pak);
     static void CHAT_CMD_FUNC(CmdPcons);
 
