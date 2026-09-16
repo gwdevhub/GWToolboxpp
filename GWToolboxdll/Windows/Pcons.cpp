@@ -213,7 +213,7 @@ void Pcon::Update(int delay)
         pcon_quantity_checked = true;
     }
     // === Use item if possible ===
-    if (IsEnabled() && PconsWindow::Instance().GetEnabled()) {
+    if (IsEnabled() && PconsWindow::Instance().GetEnabled() && !GW::Map::GetIsInCinematic()) {
         if (delay < 0) {
             delay = pcons_delay;
         }

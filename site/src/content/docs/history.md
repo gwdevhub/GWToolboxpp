@@ -8,6 +8,7 @@ Previous releases are available on Github as dll files. There is no support for 
 the latest version, go to the [Home Page](./) instead.
 
 ## Version 8.34
+* [New] Pcons can now be automatically disabled when a cinematic starts.
 * [Fix] Minimap: pings now use Guild Wars' own graphics and stay correctly aligned when the minimap is rotated. The inner ping indicator clamps to the minimap edge when its location is out of view, and the **Player Pings** setting controls their opacity with a less-obtrusive default.
 * [New] Armory: search armor and weapon previews by name.
 * [New] Hero Builds: the hero selector now shows profession icons, can optionally group heroes by profession, and shows each mercenary hero's in-game name while you are in an outpost.
