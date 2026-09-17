@@ -171,6 +171,24 @@ private:
     const GW::Constants::SkillID effectID;
 };
 
+// Generic pcon with different requirements around usage
+class PconFeasts : public PconGeneric {
+public:
+    PconFeasts(const char* chat,
+                const char* abbrev,
+                const char* ini,
+                const wchar_t* file,
+                const ImVec2 uv0, const ImVec2 uv1,
+                const DWORD item,
+                const int threshold,
+                const char* desc = nullptr)
+        : PconGeneric(chat, abbrev, ini, file, uv0, uv1, item, GW::Constants::SkillID::No_Skill, threshold, desc) { }
+
+    PconFeasts(const PconFeasts&) = delete;
+
+    [[nodiscard]] bool CanUseByEffect() const override;
+};
+
 // Same as generic pcon, but with more restrictions on usage
 class PconCons : public PconGeneric {
 public:
@@ -185,6 +203,24 @@ public:
         : PconGeneric(chat, abbrev, ini, file, uv0, uv1, item, effect, threshold, desc) { }
 
     PconCons(const PconCons&) = delete;
+
+    [[nodiscard]] bool CanUseByEffect() const override;
+};
+
+// Same as PconCons, but with different restrictions on usage
+class PconTrifecta : public PconCons {
+public:
+    PconTrifecta(const char* chat,
+             const char* abbrev,
+             const char* ini,
+             const wchar_t* file,
+             const ImVec2 uv0, const ImVec2 uv1,
+             const DWORD item,
+             const int threshold,
+             const char* desc = nullptr)
+        : PconCons(chat, abbrev, ini, file, uv0, uv1, item, GW::Constants::SkillID::No_Skill, threshold, desc) { }
+
+    PconTrifecta(const PconTrifecta&) = delete;
 
     [[nodiscard]] bool CanUseByEffect() const override;
 };
