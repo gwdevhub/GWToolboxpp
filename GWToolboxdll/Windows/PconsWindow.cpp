@@ -283,6 +283,13 @@ namespace {
 PconsWindow::PconsWindow()
 {
     constexpr float s = 64.0f; // all icons are 64x64
+    pcons.push_back(new PconTrifecta("Heroes' Trifecta", "Trifecta", "trifecta", L"Heroes' Trifecta",
+                                 ImVec2(6 / s, 5 / s), ImVec2(56 / s, 58 / s),
+                                 ItemID::ConsTrifecta, 5));
+
+    pcons.push_back(new PconFeasts("Empowering Feast", "Feast", "feast", L"Empowering Feast",
+                                 ImVec2(11 / s, 3 / s), ImVec2(56 / s, 61 / s),
+                                 ItemID::ConsEmpoweringFeast, 5));
 
     pcons.push_back(new PconCons("Essence of Celerity", "Essence", "essence", L"Essence of Celerity",
                                  ImVec2(5 / s, 10 / s), ImVec2(46 / s, 51 / s),
@@ -422,9 +429,9 @@ void PconsWindow::Initialize()
         GW::UI::UIMessage::kMissionComplete,
         GW::UI::UIMessage::kPostProcessingEffect,
         GW::UI::UIMessage::kObjectiveComplete,
-        GW::UI::UIMessage::kEffectAdd,       
-        GW::UI::UIMessage::kInventorySlotCleared, 
-        GW::UI::UIMessage::kItemUpdated,     
+        GW::UI::UIMessage::kEffectAdd,
+        GW::UI::UIMessage::kInventorySlotCleared,
+        GW::UI::UIMessage::kItemUpdated,
         GW::UI::UIMessage::kInventorySlotUpdated
     };
     for (auto message_id : ui_messages) {
@@ -915,7 +922,7 @@ void PconsWindow::DrawSettingsInternal()
                     ImGui::SameLine();
                 }
                 ImGui::TextUnformatted(pcon->chat.c_str());
-                
+
                 ImGui::TableNextColumn();
                 if (ImGui::InputInt("###threshold", &pcon->threshold, 1, 10)) {
                     if (pcon->threshold < 0) {

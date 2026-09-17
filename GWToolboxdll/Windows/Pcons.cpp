@@ -122,7 +122,7 @@ IDirect3DTexture9** Pcon::GetTexture()
         texture = Resources::GetItemImage(filename);
     }
     return texture;
-}   
+}
 
 void Pcon::Draw(IDirect3DDevice9*)
 {
@@ -721,6 +721,53 @@ bool PconCons::CanUseByEffect() const
         }
         if (mapAgents->at(currentPlayerAgID).GetIsDead()) {
             return false;
+        }
+    }
+
+    return true;
+}
+
+bool PconFeasts::CanUseByEffect() const
+{
+    using namespace GW::Constants;
+    GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
+    if (!effects) {
+        return true;
+    }
+
+    for (auto& effect : *effects) {
+        if (effect.GetTimeRemaining() < 1000) {
+            continue;
+        }
+        if (effect.skill_id == SkillID::Well_Supplied
+            || effect.skill_id == SkillID::Candy_Apple_skill
+            || effect.skill_id == SkillID::Candy_Corn_skill
+            || effect.skill_id == SkillID::Pie_Induced_Ecstasy
+            || effect.skill_id == SkillID::Golden_Egg_skill
+            || effect.skill_id == SkillID::Birthday_Cupcake_skill) {
+            return false; // already on
+        }
+    }
+    return true;
+}
+
+bool PconTrifecta::CanUseByEffect() const
+{
+    using namespace GW::Constants;
+    GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
+    if (!effects) {
+        return true;
+    }
+
+    for (auto& effect : *effects) {
+        if (effect.GetTimeRemaining() < 1000) {
+            continue;
+        }
+
+        if (effect.skill_id == SkillID::Armor_of_Salvation_item_effect
+            || effect.skill_id == SkillID::Grail_of_Might_item_effect
+            || effect.skill_id == SkillID::Essence_of_Celerity_item_effect) {
+            return false; // already on
         }
     }
 
