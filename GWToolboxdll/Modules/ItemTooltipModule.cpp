@@ -343,7 +343,7 @@ namespace {
     // Callbacks
     // -------------------------------------------------------------------------
 
-    std::wstring tmp_item_description;
+    thread_local std::wstring tmp_item_description;
     void OnGetItemDescription(uint32_t item_id, uint32_t, uint32_t, uint32_t, wchar_t**, wchar_t** out_desc)
     {
         bool block_description = settings.disable_item_descriptions_in_outpost && ToolboxUtils::IsOutpost() || settings.disable_item_descriptions_in_explorable && ToolboxUtils::IsExplorable();
@@ -370,7 +370,7 @@ namespace {
     }
 
     GW::HookEntry UIMessage_HookEntry;
-    std::wstring tmp_item_name_tag;
+    thread_local std::wstring tmp_item_name_tag;
     struct NameTagSections {
         time_t built_time = 0;
         std::wstring encoded;
