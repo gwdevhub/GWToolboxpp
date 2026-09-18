@@ -753,7 +753,12 @@ bool PconFeasts::CanUseByEffect() const
 
 bool PconTrifecta::CanUseByEffect() const
 {
+    if (!GW::PartyMgr::GetIsPartyLoaded()) {
+        return false;
+    }
+
     using namespace GW::Constants;
+
     GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
     if (!effects) {
         return true;
