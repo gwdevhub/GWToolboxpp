@@ -420,6 +420,8 @@ void PconsWindow::Initialize()
     SettingsRegistry::RegisterField(this, "suppress_air_of_superiority_text", &Pcon::suppress_air_of_superiority_text);
     SettingsRegistry::RegisterField(this, "suppress_drunk_emotes", &Pcon::suppress_drunk_emotes);
     SettingsRegistry::RegisterField(this, "suppress_lunar_skills", &Pcon::suppress_lunar_skills);
+    SettingsRegistry::RegisterField(this, "trifecta_missing_cons_threshold", &PconTrifecta::missing_cons_threshold);
+    SettingsRegistry::RegisterField(this, "feast_missing_pcons_threshold", &PconFeasts::missing_pcons_threshold);
     AlcoholWidget::Instance().Initialize(); // Pcons depend on alcohol widget to track current drunk level.
 
     const GW::UI::UIMessage ui_messages[] = {
@@ -886,6 +888,11 @@ void PconsWindow::DrawSettingsInternal()
         "It is needed to prevent toolbox from using a pcon twice, before it activates.\n"
         "Decrease the value if you have good ping and you die a lot.");
     ImGui::SliderInt("Lunars delay", &Pcon::lunar_delay, 100, 500, "%d milliseconds");
+    ImGui::SliderInt("Use Trifecta when missing", &PconTrifecta::missing_cons_threshold, 0, 3, "%d cons");
+    ImGui::ShowHelp("Heroes' Trifecta covers Essence of Celerity, Grail of Might and Armor of Salvation.\nOnly use it once at least this many of those three buffs are missing.");
+    ImGui::SliderInt("Use Empowering Feast when missing", &PconFeasts::missing_pcons_threshold, 0, 6, "%d foods");
+    ImGui::ShowHelp("Empowering Feast covers War Supplies, Candy Apple, Candy Corn, Slice of Pumpkin Pie, Golden Egg and Birthday Cupcake.\nOnly use it once at least this many of those six buffs are missing.\n"
+        "Default is 5 (one fewer than the full 6): War Supplies' buff survives death, unlike the other five, so it's normal for it to still be active when the rest have worn off.");
 
     ImGui::Separator();
     ImGui::Text("Interface:");

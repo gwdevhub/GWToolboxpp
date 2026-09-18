@@ -37,6 +37,8 @@ int Pcon::lunar_delay = 500;
 bool Pcon::disable_when_not_found = true;
 bool Pcon::refill_if_below_threshold = false;
 Colors::SettingColor Pcon::enabled_bg_color = Colors::ARGB(102, 0, 255, 0);
+int PconTrifecta::missing_cons_threshold = 3;
+int PconFeasts::missing_pcons_threshold = 5;
 
 DWORD Pcon::alcohol_level = 0;
 bool Pcon::suppress_drunk_effect = false;
@@ -99,6 +101,9 @@ void Pcon::SetEnabled(const bool b)
     *enabled = b;
     ResetCounts();
     Refill(refill_if_below_threshold && IsEnabled() && PconsWindow::Instance().GetEnabled());
+    if (b) {
+        OnEnabled();
+    }
 }
 
 bool Pcon::IsVisible() const
@@ -730,25 +735,46 @@ bool PconCons::CanUseByEffect() const
 bool PconFeasts::CanUseByEffect() const
 {
     using namespace GW::Constants;
+    static constexpr SkillID covered_skills[] = {
+        SkillID::Well_Supplied,
+        SkillID::Candy_Apple_skill,
+        SkillID::Candy_Corn_skill,
+        SkillID::Pie_Induced_Ecstasy,
+        SkillID::Golden_Egg_skill,
+        SkillID::Birthday_Cupcake_skill
+    };
+
     GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
     if (!effects) {
         return true;
     }
 
+    size_t missing = std::size(covered_skills);
     for (auto& effect : *effects) {
         if (effect.GetTimeRemaining() < 1000) {
             continue;
         }
-        if (effect.skill_id == SkillID::Well_Supplied
-            || effect.skill_id == SkillID::Candy_Apple_skill
-            || effect.skill_id == SkillID::Candy_Corn_skill
-            || effect.skill_id == SkillID::Pie_Induced_Ecstasy
-            || effect.skill_id == SkillID::Golden_Egg_skill
-            || effect.skill_id == SkillID::Birthday_Cupcake_skill) {
-            return false; // already on
+        if (std::ranges::find(covered_skills, effect.skill_id) != std::end(covered_skills)) {
+            --missing;
         }
     }
-    return true;
+
+    return missing >= static_cast<size_t>(std::max(0, missing_pcons_threshold));
+}
+
+void PconFeasts::OnEnabled()
+{
+    using namespace GW::Constants;
+    static constexpr DWORD covered_items[] = {
+        ItemID::Warsupplies, ItemID::Apples, ItemID::Corns,
+        ItemID::Pies, ItemID::Eggs, ItemID::Cupcakes
+    };
+    for (Pcon* other : PconsWindow::Instance().pcons) {
+        auto* generic = dynamic_cast<PconGeneric*>(other);
+        if (generic && generic != this && std::ranges::find(covered_items, generic->GetItemID()) != std::end(covered_items)) {
+            generic->SetEnabled(false);
+        }
+    }
 }
 
 bool PconTrifecta::CanUseByEffect() const
@@ -758,25 +784,40 @@ bool PconTrifecta::CanUseByEffect() const
     }
 
     using namespace GW::Constants;
+    static constexpr SkillID covered_skills[] = {
+        SkillID::Essence_of_Celerity_item_effect,
+        SkillID::Grail_of_Might_item_effect,
+        SkillID::Armor_of_Salvation_item_effect
+    };
 
     GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
     if (!effects) {
         return true;
     }
 
+    size_t missing = std::size(covered_skills);
     for (auto& effect : *effects) {
         if (effect.GetTimeRemaining() < 1000) {
             continue;
         }
-
-        if (effect.skill_id == SkillID::Armor_of_Salvation_item_effect
-            || effect.skill_id == SkillID::Grail_of_Might_item_effect
-            || effect.skill_id == SkillID::Essence_of_Celerity_item_effect) {
-            return false; // already on
+        if (std::ranges::find(covered_skills, effect.skill_id) != std::end(covered_skills)) {
+            --missing;
         }
     }
 
-    return true;
+    return missing >= static_cast<size_t>(std::max(0, missing_cons_threshold));
+}
+
+void PconTrifecta::OnEnabled()
+{
+    using namespace GW::Constants;
+    static constexpr DWORD covered_items[] = {ItemID::ConsEssence, ItemID::ConsGrail, ItemID::ConsArmor};
+    for (Pcon* other : PconsWindow::Instance().pcons) {
+        auto* generic = dynamic_cast<PconGeneric*>(other);
+        if (generic && generic != this && std::ranges::find(covered_items, generic->GetItemID()) != std::end(covered_items)) {
+            generic->SetEnabled(false);
+        }
+    }
 }
 
 void PconRefiller::Draw(IDirect3DDevice9* device)

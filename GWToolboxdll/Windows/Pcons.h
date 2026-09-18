@@ -134,6 +134,7 @@ protected:
     [[nodiscard]] virtual bool CanUseByEffect() const = 0;
     virtual void OnButtonClick() { Toggle(); }
     virtual size_t PointsPerUse(const GW::Item* item) const = 0;
+    virtual void OnEnabled() { } // Called after this pcon transitions to enabled, by any path (click, chat command, team build load...)
 
 private:
     IDirect3DTexture9** texture = nullptr;
@@ -161,6 +162,8 @@ public:
 
     PconGeneric(const PconGeneric&) = delete;
 
+    [[nodiscard]] DWORD GetItemID() const { return itemID; }
+
 protected:
     [[nodiscard]] bool CanUseByEffect() const override;
     size_t PointsPerUse(const GW::Item* item) const override;
@@ -186,7 +189,12 @@ public:
 
     PconFeasts(const PconFeasts&) = delete;
 
+    static int missing_pcons_threshold;
+
     [[nodiscard]] bool CanUseByEffect() const override;
+
+protected:
+    void OnEnabled() override;
 };
 
 // Same as generic pcon, but with more restrictions on usage
@@ -222,7 +230,12 @@ public:
 
     PconTrifecta(const PconTrifecta&) = delete;
 
+    static int missing_cons_threshold;
+
     [[nodiscard]] bool CanUseByEffect() const override;
+
+protected:
+    void OnEnabled() override;
 };
 
 class PconCity : public Pcon {
