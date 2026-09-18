@@ -296,52 +296,52 @@ PconsWindow::PconsWindow()
                                  ItemID::ConsEmpoweringFeast, 5));
 
     pcons.push_back(new PconCons("Essence of Celerity", "Essence", "essence", L"Essence of Celerity",
-                                 ImVec2(5 / s, 10 / s), ImVec2(46 / s, 51 / s),
-                                 ItemID::ConsEssence, SkillID::Essence_of_Celerity_item_effect, 5));
+                                  ImVec2(5 / s, 10 / s), ImVec2(46 / s, 51 / s),
+                                  ItemID::ConsEssence, {SkillID::Essence_of_Celerity_item_effect}, 5));
 
     pcons.push_back(new PconCons("Grail of Might", "Grail", "grail", L"Grail of Might",
-                                 ImVec2(5 / s, 12 / s), ImVec2(49 / s, 56 / s),
-                                 ItemID::ConsGrail, SkillID::Grail_of_Might_item_effect, 5));
+                                  ImVec2(5 / s, 12 / s), ImVec2(49 / s, 56 / s),
+                                  ItemID::ConsGrail, {SkillID::Grail_of_Might_item_effect}, 5));
 
     pcons.push_back(new PconCons("Armor of Salvation", "Armor", "armor", L"Armor of Salvation",
-                                 ImVec2(0 / s, 2 / s), ImVec2(56 / s, 58 / s),
-                                 ItemID::ConsArmor, SkillID::Armor_of_Salvation_item_effect, 5));
+                                  ImVec2(0 / s, 2 / s), ImVec2(56 / s, 58 / s),
+                                  ItemID::ConsArmor, {SkillID::Armor_of_Salvation_item_effect}, 5));
 
     pcons.push_back(new PconGeneric("Red Rock Candy", "Red Rock", "redrock", L"Red Rock Candy",
-                                    ImVec2(0 / s, 4 / s), ImVec2(52 / s, 56 / s),
-                                    ItemID::RRC, SkillID::Red_Rock_Candy_Rush, 5));
+                                     ImVec2(0 / s, 4 / s), ImVec2(52 / s, 56 / s),
+                                     ItemID::RRC, {SkillID::Red_Rock_Candy_Rush}, 5));
 
     pcons.push_back(new PconGeneric("Blue Rock Candy", "Blue Rock", "bluerock", L"Blue Rock Candy",
-                                    ImVec2(0 / s, 4 / s), ImVec2(52 / s, 56 / s),
-                                    ItemID::BRC, SkillID::Blue_Rock_Candy_Rush, 10));
+                                     ImVec2(0 / s, 4 / s), ImVec2(52 / s, 56 / s),
+                                     ItemID::BRC, {SkillID::Blue_Rock_Candy_Rush}, 10));
 
     pcons.push_back(new PconGeneric("Green Rock Candy", "Green Rock", "greenrock", L"Green Rock Candy",
-                                    ImVec2(0 / s, 4 / s), ImVec2(52 / s, 56 / s),
-                                    ItemID::GRC, SkillID::Green_Rock_Candy_Rush, 15));
+                                     ImVec2(0 / s, 4 / s), ImVec2(52 / s, 56 / s),
+                                     ItemID::GRC, {SkillID::Green_Rock_Candy_Rush}, 15));
 
     pcons.push_back(new PconGeneric("Golden Egg", "Egg", "egg", L"Golden Egg",
-                                    ImVec2(1 / s, 8 / s), ImVec2(48 / s, 55 / s),
-                                    ItemID::Eggs, SkillID::Golden_Egg_skill, 20));
+                                     ImVec2(1 / s, 8 / s), ImVec2(48 / s, 55 / s),
+                                     ItemID::Eggs, {SkillID::Golden_Egg_skill}, 20));
 
     pcons.push_back(new PconGeneric("Candy Apple", "Apple", "apple", L"Candy Apple",
-                                    ImVec2(0 / s, 7 / s), ImVec2(50 / s, 57 / s),
-                                    ItemID::Apples, SkillID::Candy_Apple_skill, 10));
+                                     ImVec2(0 / s, 7 / s), ImVec2(50 / s, 57 / s),
+                                     ItemID::Apples, {SkillID::Candy_Apple_skill}, 10));
 
     pcons.push_back(new PconGeneric("Candy Corn", "Corn", "corn", L"Candy Corn",
-                                    ImVec2(5 / s, 10 / s), ImVec2(48 / s, 53 / s),
-                                    ItemID::Corns, SkillID::Candy_Corn_skill, 10));
+                                     ImVec2(5 / s, 10 / s), ImVec2(48 / s, 53 / s),
+                                     ItemID::Corns, {SkillID::Candy_Corn_skill}, 10));
 
     pcons.push_back(new PconGeneric("Birthday Cupcake", "Cupcake", "cupcake", L"Birthday Cupcake",
-                                    ImVec2(1 / s, 5 / s), ImVec2(51 / s, 55 / s),
-                                    ItemID::Cupcakes, SkillID::Birthday_Cupcake_skill, 10));
+                                     ImVec2(1 / s, 5 / s), ImVec2(51 / s, 55 / s),
+                                     ItemID::Cupcakes, {SkillID::Birthday_Cupcake_skill}, 10));
 
     pcons.push_back(new PconGeneric("Slice of Pumpkin Pie", "Pie", "pie", L"Slice of Pumpkin Pie",
-                                    ImVec2(0 / s, 7 / s), ImVec2(52 / s, 59 / s),
-                                    ItemID::Pies, SkillID::Pie_Induced_Ecstasy, 10));
+                                     ImVec2(0 / s, 7 / s), ImVec2(52 / s, 59 / s),
+                                     ItemID::Pies, {SkillID::Pie_Induced_Ecstasy}, 10));
 
     pcons.push_back(new PconGeneric("War Supplies", "War Supply", "warsupply", L"War Supplies",
-                                    ImVec2(0 / s, 0 / s), ImVec2(63 / s, 63 / s),
-                                    ItemID::Warsupplies, SkillID::Well_Supplied, 20));
+                                     ImVec2(0 / s, 0 / s), ImVec2(63 / s, 63 / s),
+                                     ItemID::Warsupplies, {SkillID::Well_Supplied}, 20));
 
     pcons.push_back(pcon_alcohol = new PconAlcohol("Alcohol", "Alcohol", "alcohol", L"Dwarven Ale",
                                                    ImVec2(-5 / s, 1 / s), ImVec2(57 / s, 63 / s),
@@ -356,16 +356,16 @@ PconsWindow::PconsWindow()
                                  20));
 
     pcons.push_back(new PconGeneric("Drake Kabob", "Kabob", "kabob", L"Drake Kabob",
-                                    ImVec2(0 / s, 0 / s), ImVec2(64 / s, 64 / s),
-                                    ItemID::Kabobs, SkillID::Drake_Skin, 10));
+                                     ImVec2(0 / s, 0 / s), ImVec2(64 / s, 64 / s),
+                                     ItemID::Kabobs, {SkillID::Drake_Skin}, 10));
 
     pcons.push_back(new PconGeneric("Bowl of Skalefin Soup", "Soup", "soup", L"Bowl of Skalefin Soup",
-                                    ImVec2(2 / s, 5 / s), ImVec2(51 / s, 54 / s),
-                                    ItemID::SkalefinSoup, SkillID::Skale_Vigor, 10));
+                                     ImVec2(2 / s, 5 / s), ImVec2(51 / s, 54 / s),
+                                     ItemID::SkalefinSoup, {SkillID::Skale_Vigor}, 10));
 
     pcons.push_back(new PconGeneric("Pahnai Salad", "Salad", "salad", L"Pahnai Salad",
-                                    ImVec2(0 / s, 5 / s), ImVec2(49 / s, 54 / s),
-                                    ItemID::PahnaiSalad, SkillID::Pahnai_Salad_item_effect, 10));
+                                     ImVec2(0 / s, 5 / s), ImVec2(49 / s, 54 / s),
+                                     ItemID::PahnaiSalad, {SkillID::Pahnai_Salad_item_effect}, 10));
 
     pcons.push_back(new PconScroll("XP scroll", "XP scroll", "scroll", L"Scroll of Hunter's Insight",
                                    {0, 0}, {1, 1}, 20));

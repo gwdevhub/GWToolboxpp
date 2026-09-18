@@ -149,21 +149,6 @@ private:
 
 class PconGeneric : public Pcon {
 public:
-    PconGeneric(const wchar_t* file, const DWORD item, const GW::Constants::SkillID effect, const int threshold = 20)
-        : Pcon(file, threshold),
-          itemID(item), effectIDs{effect} { }
-
-    PconGeneric(const char* chat,
-                const char* abbrev,
-                const char* ini,
-                const wchar_t* file,
-                const ImVec2 uv0, const ImVec2 uv1,
-                 const DWORD item, const GW::Constants::SkillID effect,
-                 const int threshold,
-                 const char* desc = nullptr)
-        : Pcon(chat, abbrev, ini, file, uv0, uv1, threshold, desc),
-          itemID(item), effectIDs{effect} { }
-
     PconGeneric(const char* chat,
                 const char* abbrev,
                 const char* ini,
@@ -213,16 +198,6 @@ public:
 // Same as generic pcon, but with more restrictions on usage
 class PconCons : public PconGeneric {
 public:
-    PconCons(const char* chat,
-             const char* abbrev,
-             const char* ini,
-             const wchar_t* file,
-             const ImVec2 uv0, const ImVec2 uv1,
-             const DWORD item, const GW::Constants::SkillID effect,
-             const int threshold,
-             const char* desc = nullptr)
-        : PconGeneric(chat, abbrev, ini, file, uv0, uv1, item, effect, threshold, desc) { }
-
     PconCons(const char* chat,
              const char* abbrev,
              const char* ini,
