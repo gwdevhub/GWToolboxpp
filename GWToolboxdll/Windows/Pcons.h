@@ -146,23 +146,33 @@ private:
     const ImVec2 uv1 = {1, 1};
 };
 
-// A generic Pcon has an item_id and effect_id
 class PconGeneric : public Pcon {
 public:
     PconGeneric(const wchar_t* file, const DWORD item, const GW::Constants::SkillID effect, const int threshold = 20)
         : Pcon(file, threshold),
-          itemID(item), effectID(effect) { }
+          itemID(item), effectIDs{effect} { }
 
     PconGeneric(const char* chat,
                 const char* abbrev,
                 const char* ini,
                 const wchar_t* file,
                 const ImVec2 uv0, const ImVec2 uv1,
-                const DWORD item, const GW::Constants::SkillID effect,
+                 const DWORD item, const GW::Constants::SkillID effect,
+                 const int threshold,
+                 const char* desc = nullptr)
+        : Pcon(chat, abbrev, ini, file, uv0, uv1, threshold, desc),
+          itemID(item), effectIDs{effect} { }
+
+    PconGeneric(const char* chat,
+                const char* abbrev,
+                const char* ini,
+                const wchar_t* file,
+                const ImVec2 uv0, const ImVec2 uv1,
+                const DWORD item, const std::initializer_list<GW::Constants::SkillID> effects,
                 const int threshold,
                 const char* desc = nullptr)
         : Pcon(chat, abbrev, ini, file, uv0, uv1, threshold, desc),
-          itemID(item), effectID(effect) { }
+          itemID(item), effectIDs(effects) { }
 
     PconGeneric(const PconGeneric&) = delete;
 
@@ -174,7 +184,7 @@ protected:
 
 private:
     const DWORD itemID;
-    const GW::Constants::SkillID effectID;
+    const std::vector<GW::Constants::SkillID> effectIDs;
 };
 
 // Generic pcon with different requirements around usage
@@ -188,12 +198,15 @@ public:
                 const DWORD item,
                 const int threshold,
                 const char* desc = nullptr)
-        : PconGeneric(chat, abbrev, ini, file, uv0, uv1, item, GW::Constants::SkillID::No_Skill, threshold, desc) { }
+        : PconGeneric(chat, abbrev, ini, file, uv0, uv1, item,
+                      {GW::Constants::SkillID::Well_Supplied,
+                       GW::Constants::SkillID::Candy_Apple_skill,
+                       GW::Constants::SkillID::Candy_Corn_skill,
+                       GW::Constants::SkillID::Pie_Induced_Ecstasy,
+                       GW::Constants::SkillID::Golden_Egg_skill,
+                       GW::Constants::SkillID::Birthday_Cupcake_skill}, threshold, desc) { }
 
     PconFeasts(const PconFeasts&) = delete;
-
-    [[nodiscard]] bool CanUseByEffect() const override;
-    void RecordExpectedEffects() override;
 };
 
 // Same as generic pcon, but with more restrictions on usage
@@ -209,10 +222,19 @@ public:
              const char* desc = nullptr)
         : PconGeneric(chat, abbrev, ini, file, uv0, uv1, item, effect, threshold, desc) { }
 
+    PconCons(const char* chat,
+             const char* abbrev,
+             const char* ini,
+             const wchar_t* file,
+             const ImVec2 uv0, const ImVec2 uv1,
+             const DWORD item, const std::initializer_list<GW::Constants::SkillID> effects,
+             const int threshold,
+             const char* desc = nullptr)
+        : PconGeneric(chat, abbrev, ini, file, uv0, uv1, item, effects, threshold, desc) { }
+
     PconCons(const PconCons&) = delete;
 
     [[nodiscard]] bool CanUseByEffect() const override;
-    void RecordExpectedEffects() override;
 };
 
 // Same as PconCons, but with different restrictions on usage
@@ -223,10 +245,13 @@ public:
              const char* ini,
              const wchar_t* file,
              const ImVec2 uv0, const ImVec2 uv1,
-             const DWORD item,
-             const int threshold,
-             const char* desc = nullptr)
-        : PconCons(chat, abbrev, ini, file, uv0, uv1, item, GW::Constants::SkillID::No_Skill, threshold, desc) { }
+              const DWORD item,
+              const int threshold,
+              const char* desc = nullptr)
+        : PconCons(chat, abbrev, ini, file, uv0, uv1, item,
+                   {GW::Constants::SkillID::Armor_of_Salvation_item_effect,
+                    GW::Constants::SkillID::Grail_of_Might_item_effect,
+                    GW::Constants::SkillID::Essence_of_Celerity_item_effect}, threshold, desc) { }
 
     PconTrifecta(const PconTrifecta&) = delete;
 

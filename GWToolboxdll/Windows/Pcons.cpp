@@ -51,23 +51,6 @@ bool Pcon::hide_city_pcons_in_explorable_areas = false;
 std::array<std::array<clock_t, 25>, 22> Pcon::reserved_bag_slots{};
 std::map<GW::Constants::SkillID, clock_t> Pcon::effect_triggered_at{};
 
-namespace {
-    constexpr std::array feast_effects{
-        GW::Constants::SkillID::Well_Supplied,
-        GW::Constants::SkillID::Candy_Apple_skill,
-        GW::Constants::SkillID::Candy_Corn_skill,
-        GW::Constants::SkillID::Pie_Induced_Ecstasy,
-        GW::Constants::SkillID::Golden_Egg_skill,
-        GW::Constants::SkillID::Birthday_Cupcake_skill
-    };
-
-    constexpr std::array trifecta_effects{
-        GW::Constants::SkillID::Armor_of_Salvation_item_effect,
-        GW::Constants::SkillID::Grail_of_Might_item_effect,
-        GW::Constants::SkillID::Essence_of_Celerity_item_effect
-    };
-}
-
 // ================================================
 Pcon::Pcon(const char* chatname,
            const char* abbrevname,
@@ -708,7 +691,9 @@ void PconGeneric::OnButtonClick()
 
 void PconGeneric::RecordExpectedEffects()
 {
-    RecordEffectTrigger(effectID);
+    for (const auto skill_id : effectIDs) {
+        RecordEffectTrigger(skill_id);
+    }
 }
 
 bool PconGeneric::CanUseByEffect() const
@@ -716,7 +701,7 @@ bool PconGeneric::CanUseByEffect() const
     if (!GW::Agents::GetControlledCharacter()) {
         return false; // player doesn't exist?
     }
-    if (IsEffectTriggerPending(effectID)) {
+    if (std::ranges::any_of(effectIDs, [this](const auto skill_id) { return IsEffectTriggerPending(skill_id); })) {
         return false;
     }
 
@@ -725,12 +710,11 @@ bool PconGeneric::CanUseByEffect() const
         return true;
     }
 
-    for (const auto& effect : *effects) {
-        if (effect.skill_id == effectID) {
-            return effect.GetTimeRemaining() < 1000;
-        }
-    }
-    return true;
+    return std::ranges::any_of(effectIDs, [effects](const auto skill_id) {
+        return std::ranges::none_of(*effects, [skill_id](const auto& effect) {
+            return effect.skill_id == skill_id && effect.GetTimeRemaining() >= 1000;
+        });
+    });
 }
 
 // ================================================
@@ -765,57 +749,12 @@ bool PconCons::CanUseByEffect() const
     return true;
 }
 
-bool PconFeasts::CanUseByEffect() const
-{
-    if (std::ranges::any_of(feast_effects, [this](const auto skill_id) { return IsEffectTriggerPending(skill_id); })) {
-        return false;
-    }
-    GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
-    if (!effects) {
-        return true;
-    }
-
-    return std::ranges::any_of(feast_effects, [effects](const auto skill_id) {
-        return std::ranges::none_of(*effects, [skill_id](const auto& effect) {
-            return effect.skill_id == skill_id && effect.GetTimeRemaining() >= 1000;
-        });
-    });
-}
-
-void PconFeasts::RecordExpectedEffects()
-{
-    for (const auto skill_id : feast_effects) {
-        RecordEffectTrigger(skill_id);
-    }
-}
-
 bool PconTrifecta::CanUseByEffect() const
 {
     if (!GW::PartyMgr::GetIsPartyLoaded()) {
         return false;
     }
-
-    if (std::ranges::any_of(trifecta_effects, [this](const auto skill_id) { return IsEffectTriggerPending(skill_id); })) {
-        return false;
-    }
-
-    GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
-    if (!effects) {
-        return true;
-    }
-
-    return std::ranges::any_of(trifecta_effects, [effects](const auto skill_id) {
-        return std::ranges::none_of(*effects, [skill_id](const auto& effect) {
-            return effect.skill_id == skill_id && effect.GetTimeRemaining() >= 1000;
-        });
-    });
-}
-
-void PconTrifecta::RecordExpectedEffects()
-{
-    for (const auto skill_id : trifecta_effects) {
-        RecordEffectTrigger(skill_id);
-    }
+    return PconGeneric::CanUseByEffect();
 }
 
 void PconRefiller::Draw(IDirect3DDevice9* device)
