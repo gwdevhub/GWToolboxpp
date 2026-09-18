@@ -94,6 +94,7 @@ public:
     const bool IsEnabled() const { return IsVisible() && *enabled; }
     [[nodiscard]] virtual bool IsVisible() const;
     void AfterUsed(bool used, int qty);
+    static void RemoveAppliedEffectTriggers();
     void Toggle() { SetEnabled(!IsEnabled()); }
     // Resets pcon counters so it needs to recalc number and refill.
     void ResetCounts();

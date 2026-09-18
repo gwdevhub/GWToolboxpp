@@ -202,6 +202,7 @@ namespace {
     }
 
     GW::HookEntry OnUIMessage_HookEntry;
+    GW::HookEntry OnPostUIMessage_HookEntry;
 
     void OnUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*)
     {
@@ -276,6 +277,17 @@ namespace {
                     pcon->ItemUpdated(current_item);
                 }
             } break;
+        }
+    }
+
+    void OnPostUIMessage(GW::HookStatus* status, const GW::UI::UIMessage message_id, void* wparam, void*)
+    {
+        if (status->blocked || message_id != GW::UI::UIMessage::kEffectAdd) {
+            return;
+        }
+        const auto packet = static_cast<GW::UI::UIPacket::kEffectAdd*>(wparam);
+        if (packet->agent_id == GW::Agents::GetControlledCharacterId()) {
+            Pcon::RemoveAppliedEffectTriggers();
         }
     }
 }
@@ -437,6 +449,7 @@ void PconsWindow::Initialize()
     for (auto message_id : ui_messages) {
         RegisterUIMessageCallback(&OnUIMessage_HookEntry, message_id, OnUIMessage);
     }
+    RegisterUIMessageCallback(&OnPostUIMessage_HookEntry, GW::UI::UIMessage::kEffectAdd, OnPostUIMessage, 0x8000);
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(&GenericValue_Entry, &OnGenericValue);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentState>(&AgentState_Entry, &OnAgentState);
@@ -448,6 +461,7 @@ void PconsWindow::Terminate()
 {
     ToolboxWindow::Terminate();
     GW::UI::RemoveUIMessageCallback(&OnUIMessage_HookEntry);
+    GW::UI::RemoveUIMessageCallback(&OnPostUIMessage_HookEntry);
     for (Pcon* pcon : pcons) {
         delete pcon;
     }

@@ -306,6 +306,17 @@ bool Pcon::IsEffectTriggerPending(const GW::Constants::SkillID skill_id) const
     return found != effect_triggered_at.end() && TIMER_DIFF(found->second) < 1000;
 }
 
+void Pcon::RemoveAppliedEffectTriggers()
+{
+    const auto effects = GW::Effects::GetPlayerEffects();
+    if (!effects) {
+        return;
+    }
+    for (const auto& effect : *effects) {
+        effect_triggered_at.erase(effect.skill_id);
+    }
+}
+
 bool Pcon::FindVacantStackOrSlotInInventory(const GW::Item* likeItem, GW::Item* result)
 {
     GW::Bag** bags = GW::Items::GetBagArray();
