@@ -202,7 +202,6 @@ namespace {
     }
 
     GW::HookEntry OnUIMessage_HookEntry;
-    GW::HookEntry OnPostUIMessage_HookEntry;
 
     void OnUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*)
     {
@@ -252,8 +251,16 @@ namespace {
                     && (packet->effect->skill_id == SkillID::Spiritual_Possession || packet->effect->skill_id == SkillID::Lucky_Aura)) {
                     status->blocked = true;
                 }
+                if (!status->blocked && packet->agent_id == GW::Agents::GetControlledCharacterId()) {
+                    Pcon::RemoveAppliedEffectTriggers();
+                }
             }
             break;
+            case GW::UI::UIMessage::kEffectRenew:
+                if (!status->blocked) {
+                    Pcon::RemoveAppliedEffectTriggers();
+                }
+                break;
             case GW::UI::UIMessage::kInventorySlotUpdated:
             case GW::UI::UIMessage::kInventorySlotCleared: {
                 struct Packet {
@@ -280,25 +287,6 @@ namespace {
         }
     }
 
-    void OnPostUIMessage(GW::HookStatus* status, const GW::UI::UIMessage message_id, void* wparam, void*)
-    {
-        if (status->blocked) {
-            return;
-        }
-        switch (message_id) {
-            case GW::UI::UIMessage::kEffectAdd: {
-                const auto packet = static_cast<GW::UI::UIPacket::kEffectAdd*>(wparam);
-                if (packet->agent_id != GW::Agents::GetControlledCharacterId()) {
-                    return;
-                }
-            } break;
-            case GW::UI::UIMessage::kEffectRenew:
-                break;
-            default:
-                return;
-        }
-        Pcon::RemoveAppliedEffectTriggers();
-    }
 }
 
 PconsWindow::PconsWindow()
@@ -451,6 +439,7 @@ void PconsWindow::Initialize()
         GW::UI::UIMessage::kPostProcessingEffect,
         GW::UI::UIMessage::kObjectiveComplete,
         GW::UI::UIMessage::kEffectAdd,
+        GW::UI::UIMessage::kEffectRenew,
         GW::UI::UIMessage::kInventorySlotCleared,
         GW::UI::UIMessage::kItemUpdated,
         GW::UI::UIMessage::kInventorySlotUpdated
@@ -458,9 +447,6 @@ void PconsWindow::Initialize()
     for (auto message_id : ui_messages) {
         RegisterUIMessageCallback(&OnUIMessage_HookEntry, message_id, OnUIMessage);
     }
-    RegisterUIMessageCallback(&OnPostUIMessage_HookEntry, GW::UI::UIMessage::kEffectAdd, OnPostUIMessage, 0x8000);
-    RegisterUIMessageCallback(&OnPostUIMessage_HookEntry, GW::UI::UIMessage::kEffectRenew, OnPostUIMessage, 0x8000);
-
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(&GenericValue_Entry, &OnGenericValue);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentState>(&AgentState_Entry, &OnAgentState);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::CinematicPlay>(&CinematicPlay_Entry, &OnCinematic);
@@ -471,7 +457,6 @@ void PconsWindow::Terminate()
 {
     ToolboxWindow::Terminate();
     GW::UI::RemoveUIMessageCallback(&OnUIMessage_HookEntry);
-    GW::UI::RemoveUIMessageCallback(&OnPostUIMessage_HookEntry);
     for (Pcon* pcon : pcons) {
         delete pcon;
     }
