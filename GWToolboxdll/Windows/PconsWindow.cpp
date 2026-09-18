@@ -895,9 +895,9 @@ void PconsWindow::DrawSettingsInternal()
     ImGui::SliderInt("Lunars delay", &Pcon::lunar_delay, 100, 500, "%d milliseconds");
     ImGui::SliderInt("Use Trifecta when missing", &PconTrifecta::missing_cons_threshold, 0, 3, "%d cons");
     ImGui::ShowHelp("Heroes' Trifecta covers Essence of Celerity, Grail of Might and Armor of Salvation.\nOnly use it once at least this many of those three buffs are missing.");
-    ImGui::SliderInt("Use Empowering Feast when missing", &PconFeasts::missing_pcons_threshold, 0, 6, "%d foods");
+    ImGui::SliderInt("Use Empowering Feast when missing", &PconFeasts::missing_pcons_threshold, 0, 6, "%d pcons");
     ImGui::ShowHelp("Empowering Feast covers War Supplies, Candy Apple, Candy Corn, Slice of Pumpkin Pie, Golden Egg and Birthday Cupcake.\nOnly use it once at least this many of those six buffs are missing.\n"
-        "Default is 5 (one fewer than the full 6): War Supplies' buff survives death, unlike the other five, so it's normal for it to still be active when the rest have worn off.");
+        "Default is 5: War Supplies' buff survives death so it will persist when other pcons don't.");
 
     ImGui::Separator();
     ImGui::Text("Interface:");
