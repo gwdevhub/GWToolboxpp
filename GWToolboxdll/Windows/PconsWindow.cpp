@@ -422,6 +422,7 @@ void PconsWindow::Initialize()
     SettingsRegistry::RegisterField(this, "suppress_lunar_skills", &Pcon::suppress_lunar_skills);
     SettingsRegistry::RegisterField(this, "trifecta_missing_cons_threshold", &PconTrifecta::missing_cons_threshold);
     SettingsRegistry::RegisterField(this, "feast_missing_pcons_threshold", &PconFeasts::missing_pcons_threshold);
+    SettingsRegistry::RegisterField(this, "auto_deselect_covered_pcons_on_enable", &Pcon::auto_deselect_covered_pcons_on_enable);
     AlcoholWidget::Instance().Initialize(); // Pcons depend on alcohol widget to track current drunk level.
 
     const GW::UI::UIMessage ui_messages[] = {
@@ -882,6 +883,10 @@ void PconsWindow::DrawSettingsInternal()
     ImGui::CheckboxWithHelp("Show auto disable pcons checkboxes", &settings.show_auto_disable_pcons_tickbox, "Will show a tickbox in the pcons window when in an elite area");
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Hide city Pcons in explorable areas", &Pcon::hide_city_pcons_in_explorable_areas);
+    ImGui::NextSpacedElement();
+    ImGui::CheckboxWithHelp("Deselect covered pcons when enabling Trifecta/Feast", &Pcon::auto_deselect_covered_pcons_on_enable,
+        "When you enable Heroes' Trifecta, automatically disable Essence of Celerity, Grail of Might and Armor of Salvation.\n"
+        "When you enable Empowering Feast, automatically disable War Supplies, Candy Apple, Candy Corn, Slice of Pumpkin Pie, Golden Egg and Birthday Cupcake.");
 
     ImGui::SliderInt("Pcons delay", &Pcon::pcons_delay, 100, 5000, "%d milliseconds");
     ImGui::ShowHelp("After using a pcon, toolbox will not use it again for this amount of time.\n"

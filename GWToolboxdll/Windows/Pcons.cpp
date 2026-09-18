@@ -39,6 +39,7 @@ bool Pcon::refill_if_below_threshold = false;
 Colors::SettingColor Pcon::enabled_bg_color = Colors::ARGB(102, 0, 255, 0);
 int PconTrifecta::missing_cons_threshold = 3;
 int PconFeasts::missing_pcons_threshold = 5;
+bool Pcon::auto_deselect_covered_pcons_on_enable = true;
 
 DWORD Pcon::alcohol_level = 0;
 bool Pcon::suppress_drunk_effect = false;
@@ -764,6 +765,9 @@ bool PconFeasts::CanUseByEffect() const
 
 void PconFeasts::OnEnabled()
 {
+    if (!auto_deselect_covered_pcons_on_enable) {
+        return;
+    }
     using namespace GW::Constants;
     static constexpr DWORD covered_items[] = {
         ItemID::Warsupplies, ItemID::Apples, ItemID::Corns,
@@ -810,6 +814,9 @@ bool PconTrifecta::CanUseByEffect() const
 
 void PconTrifecta::OnEnabled()
 {
+    if (!auto_deselect_covered_pcons_on_enable) {
+        return;
+    }
     using namespace GW::Constants;
     static constexpr DWORD covered_items[] = {ItemID::ConsEssence, ItemID::ConsGrail, ItemID::ConsArmor};
     for (Pcon* other : PconsWindow::Instance().pcons) {

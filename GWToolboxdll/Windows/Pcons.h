@@ -37,6 +37,8 @@ public:
 
     static std::array<std::array<clock_t, 25>, 22> reserved_bag_slots;
     static bool hide_city_pcons_in_explorable_areas;
+    // When enabling Heroes' Trifecta or Empowering Feast, deselect the individual pcons they cover
+    static bool auto_deselect_covered_pcons_on_enable;
 
 protected:
     Pcon(const char* chatname,
