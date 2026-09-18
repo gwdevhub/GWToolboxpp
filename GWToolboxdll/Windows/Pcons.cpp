@@ -760,14 +760,6 @@ bool PconCons::CanUseByEffect() const
     return true;
 }
 
-bool PconTrifecta::CanUseByEffect() const
-{
-    if (!GW::PartyMgr::GetIsPartyLoaded()) {
-        return false;
-    }
-    return PconGeneric::CanUseByEffect();
-}
-
 void PconRefiller::Draw(IDirect3DDevice9* device)
 {
     if (maptype == GW::Constants::InstanceType::Explorable) {

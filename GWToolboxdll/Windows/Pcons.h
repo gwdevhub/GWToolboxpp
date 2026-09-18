@@ -255,8 +255,6 @@ public:
                     GW::Constants::SkillID::Essence_of_Celerity_item_effect}, threshold, desc) { }
 
     PconTrifecta(const PconTrifecta&) = delete;
-
-    [[nodiscard]] bool CanUseByEffect() const override;
 };
 
 class PconCity : public Pcon {
