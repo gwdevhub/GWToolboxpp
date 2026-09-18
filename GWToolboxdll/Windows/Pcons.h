@@ -39,6 +39,10 @@ public:
     static bool hide_city_pcons_in_explorable_areas;
 
 protected:
+    void RecordEffectTrigger(GW::Constants::SkillID skill_id);
+    [[nodiscard]] bool IsEffectTriggerPending(GW::Constants::SkillID skill_id) const;
+    virtual void RecordExpectedEffects() { }
+
     Pcon(const char* chatname,
          const char* abbrevname,
          const char* ininame,
@@ -136,6 +140,7 @@ protected:
     virtual size_t PointsPerUse(const GW::Item* item) const = 0;
 
 private:
+    static std::map<GW::Constants::SkillID, clock_t> effect_triggered_at;
     IDirect3DTexture9** texture = nullptr;
     const ImVec2 uv0 = {0, 0};
     const ImVec2 uv1 = {1, 1};
@@ -165,6 +170,7 @@ protected:
     [[nodiscard]] bool CanUseByEffect() const override;
     size_t PointsPerUse(const GW::Item* item) const override;
     void OnButtonClick() override;
+    void RecordExpectedEffects() override;
 
 private:
     const DWORD itemID;
@@ -187,6 +193,7 @@ public:
     PconFeasts(const PconFeasts&) = delete;
 
     [[nodiscard]] bool CanUseByEffect() const override;
+    void RecordExpectedEffects() override;
 };
 
 // Same as generic pcon, but with more restrictions on usage
@@ -205,6 +212,7 @@ public:
     PconCons(const PconCons&) = delete;
 
     [[nodiscard]] bool CanUseByEffect() const override;
+    void RecordExpectedEffects() override;
 };
 
 // Same as PconCons, but with different restrictions on usage

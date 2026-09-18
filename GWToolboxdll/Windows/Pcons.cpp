@@ -49,6 +49,24 @@ bool Pcon::hide_city_pcons_in_explorable_areas = false;
 
 // 22 is the highest bag index. 25 is the most slots in any single bag.
 std::array<std::array<clock_t, 25>, 22> Pcon::reserved_bag_slots{};
+std::map<GW::Constants::SkillID, clock_t> Pcon::effect_triggered_at{};
+
+namespace {
+    constexpr std::array feast_effects{
+        GW::Constants::SkillID::Well_Supplied,
+        GW::Constants::SkillID::Candy_Apple_skill,
+        GW::Constants::SkillID::Candy_Corn_skill,
+        GW::Constants::SkillID::Pie_Induced_Ecstasy,
+        GW::Constants::SkillID::Golden_Egg_skill,
+        GW::Constants::SkillID::Birthday_Cupcake_skill
+    };
+
+    constexpr std::array trifecta_effects{
+        GW::Constants::SkillID::Armor_of_Salvation_item_effect,
+        GW::Constants::SkillID::Grail_of_Might_item_effect,
+        GW::Constants::SkillID::Essence_of_Celerity_item_effect
+    };
+}
 
 // ================================================
 Pcon::Pcon(const char* chatname,
@@ -268,6 +286,7 @@ void Pcon::AfterUsed(const bool used, const int qty)
         quantity = qty;
         if (used) {
             timer = TIMER_INIT();
+            RecordExpectedEffects();
             if (quantity == 0) {
                 mapid = GW::Map::GetMapID();
                 maptype = GW::Map::GetInstanceType();
@@ -291,6 +310,17 @@ void Pcon::AfterUsed(const bool used, const int qty)
             }
         }
     }
+}
+
+void Pcon::RecordEffectTrigger(const GW::Constants::SkillID skill_id)
+{
+    effect_triggered_at[skill_id] = TIMER_INIT();
+}
+
+bool Pcon::IsEffectTriggerPending(const GW::Constants::SkillID skill_id) const
+{
+    const auto found = effect_triggered_at.find(skill_id);
+    return found != effect_triggered_at.end() && TIMER_DIFF(found->second) < 1000;
 }
 
 bool Pcon::FindVacantStackOrSlotInInventory(const GW::Item* likeItem, GW::Item* result)
@@ -676,10 +706,18 @@ void PconGeneric::OnButtonClick()
     }
 }
 
+void PconGeneric::RecordExpectedEffects()
+{
+    RecordEffectTrigger(effectID);
+}
+
 bool PconGeneric::CanUseByEffect() const
 {
     if (!GW::Agents::GetControlledCharacter()) {
         return false; // player doesn't exist?
+    }
+    if (IsEffectTriggerPending(effectID)) {
+        return false;
     }
 
     GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
@@ -729,26 +767,26 @@ bool PconCons::CanUseByEffect() const
 
 bool PconFeasts::CanUseByEffect() const
 {
-    using namespace GW::Constants;
+    if (std::ranges::any_of(feast_effects, [this](const auto skill_id) { return IsEffectTriggerPending(skill_id); })) {
+        return false;
+    }
     GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
     if (!effects) {
         return true;
     }
 
-    for (auto& effect : *effects) {
-        if (effect.GetTimeRemaining() < 1000) {
-            continue;
-        }
-        if (effect.skill_id == SkillID::Well_Supplied
-            || effect.skill_id == SkillID::Candy_Apple_skill
-            || effect.skill_id == SkillID::Candy_Corn_skill
-            || effect.skill_id == SkillID::Pie_Induced_Ecstasy
-            || effect.skill_id == SkillID::Golden_Egg_skill
-            || effect.skill_id == SkillID::Birthday_Cupcake_skill) {
-            return false; // already on
-        }
+    return std::ranges::any_of(feast_effects, [effects](const auto skill_id) {
+        return std::ranges::none_of(*effects, [skill_id](const auto& effect) {
+            return effect.skill_id == skill_id && effect.GetTimeRemaining() >= 1000;
+        });
+    });
+}
+
+void PconFeasts::RecordExpectedEffects()
+{
+    for (const auto skill_id : feast_effects) {
+        RecordEffectTrigger(skill_id);
     }
-    return true;
 }
 
 bool PconTrifecta::CanUseByEffect() const
@@ -757,26 +795,27 @@ bool PconTrifecta::CanUseByEffect() const
         return false;
     }
 
-    using namespace GW::Constants;
+    if (std::ranges::any_of(trifecta_effects, [this](const auto skill_id) { return IsEffectTriggerPending(skill_id); })) {
+        return false;
+    }
 
     GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
     if (!effects) {
         return true;
     }
 
-    for (auto& effect : *effects) {
-        if (effect.GetTimeRemaining() < 1000) {
-            continue;
-        }
+    return std::ranges::any_of(trifecta_effects, [effects](const auto skill_id) {
+        return std::ranges::none_of(*effects, [skill_id](const auto& effect) {
+            return effect.skill_id == skill_id && effect.GetTimeRemaining() >= 1000;
+        });
+    });
+}
 
-        if (effect.skill_id == SkillID::Armor_of_Salvation_item_effect
-            || effect.skill_id == SkillID::Grail_of_Might_item_effect
-            || effect.skill_id == SkillID::Essence_of_Celerity_item_effect) {
-            return false; // already on
-        }
+void PconTrifecta::RecordExpectedEffects()
+{
+    for (const auto skill_id : trifecta_effects) {
+        RecordEffectTrigger(skill_id);
     }
-
-    return true;
 }
 
 void PconRefiller::Draw(IDirect3DDevice9* device)
