@@ -251,11 +251,8 @@ namespace {
                     && (packet->effect->skill_id == SkillID::Spiritual_Possession || packet->effect->skill_id == SkillID::Lucky_Aura)) {
                     status->blocked = true;
                 }
-                if (!status->blocked) {
-                    Pcon::RemoveAppliedEffectTriggers();
-                }
             }
-            break;
+            [[fallthrough]];
             case GW::UI::UIMessage::kEffectRenew:
                 Pcon::RemoveAppliedEffectTriggers();
                 break;
