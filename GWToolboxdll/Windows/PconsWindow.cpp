@@ -294,9 +294,15 @@ PconsWindow::PconsWindow()
                                   SkillID::Grail_of_Might_item_effect,
                                   SkillID::Essence_of_Celerity_item_effect}, 5));
 
-    pcons.push_back(new PconFeasts("Empowering Feast", "Feast", "feast", L"Empowering Feast",
-                                 ImVec2(11 / s, 3 / s), ImVec2(56 / s, 61 / s),
-                                 ItemID::ConsEmpoweringFeast, 5));
+    pcons.push_back(new PconGeneric("Empowering Feast", "Feast", "feast", L"Empowering Feast",
+                                    ImVec2(11 / s, 3 / s), ImVec2(56 / s, 61 / s),
+                                    ItemID::ConsEmpoweringFeast,
+                                    {SkillID::Well_Supplied,
+                                     SkillID::Candy_Apple_skill,
+                                     SkillID::Candy_Corn_skill,
+                                     SkillID::Pie_Induced_Ecstasy,
+                                     SkillID::Golden_Egg_skill,
+                                     SkillID::Birthday_Cupcake_skill}, 5));
 
     pcons.push_back(new PconCons("Essence of Celerity", "Essence", "essence", L"Essence of Celerity",
                                   ImVec2(5 / s, 10 / s), ImVec2(46 / s, 51 / s),

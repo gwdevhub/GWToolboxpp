@@ -173,28 +173,6 @@ private:
     const std::vector<GW::Constants::SkillID> effectIDs;
 };
 
-// Generic pcon with different requirements around usage
-class PconFeasts : public PconGeneric {
-public:
-    PconFeasts(const char* chat,
-                const char* abbrev,
-                const char* ini,
-                const wchar_t* file,
-                const ImVec2 uv0, const ImVec2 uv1,
-                const DWORD item,
-                const int threshold,
-                const char* desc = nullptr)
-        : PconGeneric(chat, abbrev, ini, file, uv0, uv1, item,
-                      {GW::Constants::SkillID::Well_Supplied,
-                       GW::Constants::SkillID::Candy_Apple_skill,
-                       GW::Constants::SkillID::Candy_Corn_skill,
-                       GW::Constants::SkillID::Pie_Induced_Ecstasy,
-                       GW::Constants::SkillID::Golden_Egg_skill,
-                       GW::Constants::SkillID::Birthday_Cupcake_skill}, threshold, desc) { }
-
-    PconFeasts(const PconFeasts&) = delete;
-};
-
 // Same as generic pcon, but with more restrictions on usage
 class PconCons : public PconGeneric {
 public:
