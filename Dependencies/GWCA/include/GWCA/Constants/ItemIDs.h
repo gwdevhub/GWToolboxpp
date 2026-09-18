@@ -84,6 +84,8 @@ namespace GW {
             constexpr int ConsEssence = 24859;
             constexpr int ConsArmor = 24860;
             constexpr int ConsGrail = 24861;
+            constexpr int ConsTrifecta = 38619;
+            constexpr int ConsEmpoweringFeast = 38618;
             constexpr int ResScrolls = 26501;
             constexpr int Mobstopper = 32558;
             constexpr int Powerstone = 24862;

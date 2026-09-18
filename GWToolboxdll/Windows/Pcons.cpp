@@ -49,6 +49,7 @@ bool Pcon::hide_city_pcons_in_explorable_areas = false;
 
 // 22 is the highest bag index. 25 is the most slots in any single bag.
 std::array<std::array<clock_t, 25>, 22> Pcon::reserved_bag_slots{};
+std::map<GW::Constants::SkillID, clock_t> Pcon::effect_triggered_at{};
 
 // ================================================
 Pcon::Pcon(const char* chatname,
@@ -122,7 +123,7 @@ IDirect3DTexture9** Pcon::GetTexture()
         texture = Resources::GetItemImage(filename);
     }
     return texture;
-}   
+}
 
 void Pcon::Draw(IDirect3DDevice9*)
 {
@@ -268,6 +269,7 @@ void Pcon::AfterUsed(const bool used, const int qty)
         quantity = qty;
         if (used) {
             timer = TIMER_INIT();
+            RecordExpectedEffects();
             if (quantity == 0) {
                 mapid = GW::Map::GetMapID();
                 maptype = GW::Map::GetInstanceType();
@@ -290,6 +292,28 @@ void Pcon::AfterUsed(const bool used, const int qty)
                 Log::Error("Cannot find %s", chat.c_str());
             }
         }
+    }
+}
+
+void Pcon::RecordEffectTrigger(const GW::Constants::SkillID skill_id)
+{
+    effect_triggered_at[skill_id] = TIMER_INIT();
+}
+
+bool Pcon::IsEffectTriggerPending(const GW::Constants::SkillID skill_id) const
+{
+    const auto found = effect_triggered_at.find(skill_id);
+    return found != effect_triggered_at.end() && TIMER_DIFF(found->second) < 1000;
+}
+
+void Pcon::RemoveAppliedEffectTriggers()
+{
+    const auto effects = GW::Effects::GetPlayerEffects();
+    if (!effects) {
+        return;
+    }
+    for (const auto& effect : *effects) {
+        effect_triggered_at.erase(effect.skill_id);
     }
 }
 
@@ -676,10 +700,20 @@ void PconGeneric::OnButtonClick()
     }
 }
 
+void PconGeneric::RecordExpectedEffects()
+{
+    for (const auto skill_id : effectIDs) {
+        RecordEffectTrigger(skill_id);
+    }
+}
+
 bool PconGeneric::CanUseByEffect() const
 {
     if (!GW::Agents::GetControlledCharacter()) {
         return false; // player doesn't exist?
+    }
+    if (std::ranges::any_of(effectIDs, [this](const auto skill_id) { return IsEffectTriggerPending(skill_id); })) {
+        return false;
     }
 
     GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
@@ -687,12 +721,11 @@ bool PconGeneric::CanUseByEffect() const
         return true;
     }
 
-    for (const auto& effect : *effects) {
-        if (effect.skill_id == effectID) {
-            return effect.GetTimeRemaining() < 1000;
-        }
-    }
-    return true;
+    return std::ranges::any_of(effectIDs, [effects](const auto skill_id) {
+        return std::ranges::none_of(*effects, [skill_id](const auto& effect) {
+            return effect.skill_id == skill_id && effect.GetTimeRemaining() >= 1000;
+        });
+    });
 }
 
 // ================================================
