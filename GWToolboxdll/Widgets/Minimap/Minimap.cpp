@@ -870,10 +870,11 @@ void Minimap::OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessage msgid,
             break;
         case GW::UI::UIMessage::kCompassDraw: {
             ASSERT(wParam);
-            if (hide_compass_drawings) status->blocked = true;
+            const auto packet = (GW::UI::UIPacket::kCompassDraw*)wParam;
+            status->blocked |= packet->number_of_points > 1 ? hide_compass_drawings : hide_compass_pings;
         } break;
         case GW::UI::UIMessage::kCompassPing:
-            if (hide_compass_pings) status->blocked = true;
+            status->blocked |= hide_compass_pings;
             break;
         case GW::UI::UIMessage::kMapLoaded: {
             in_interface_settings = false;
