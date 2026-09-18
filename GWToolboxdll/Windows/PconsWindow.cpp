@@ -251,7 +251,7 @@ namespace {
                     && (packet->effect->skill_id == SkillID::Spiritual_Possession || packet->effect->skill_id == SkillID::Lucky_Aura)) {
                     status->blocked = true;
                 }
-                if (!status->blocked && packet->agent_id == GW::Agents::GetControlledCharacterId()) {
+                if (!status->blocked) {
                     Pcon::RemoveAppliedEffectTriggers();
                 }
             }
