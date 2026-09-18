@@ -287,9 +287,12 @@ namespace {
 PconsWindow::PconsWindow()
 {
     constexpr float s = 64.0f; // all icons are 64x64
-    pcons.push_back(new PconTrifecta("Heroes' Trifecta", "Trifecta", "trifecta", L"Heroes' Trifecta",
+    pcons.push_back(new PconCons("Heroes' Trifecta", "Trifecta", "trifecta", L"Heroes' Trifecta",
                                  ImVec2(6 / s, 5 / s), ImVec2(56 / s, 58 / s),
-                                 ItemID::ConsTrifecta, 5));
+                                 ItemID::ConsTrifecta,
+                                 {SkillID::Armor_of_Salvation_item_effect,
+                                  SkillID::Grail_of_Might_item_effect,
+                                  SkillID::Essence_of_Celerity_item_effect}, 5));
 
     pcons.push_back(new PconFeasts("Empowering Feast", "Feast", "feast", L"Empowering Feast",
                                  ImVec2(11 / s, 3 / s), ImVec2(56 / s, 61 / s),

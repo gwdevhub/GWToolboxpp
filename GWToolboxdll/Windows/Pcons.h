@@ -213,25 +213,6 @@ public:
     [[nodiscard]] bool CanUseByEffect() const override;
 };
 
-// Same as PconCons, but with different restrictions on usage
-class PconTrifecta : public PconCons {
-public:
-    PconTrifecta(const char* chat,
-             const char* abbrev,
-             const char* ini,
-             const wchar_t* file,
-             const ImVec2 uv0, const ImVec2 uv1,
-              const DWORD item,
-              const int threshold,
-              const char* desc = nullptr)
-        : PconCons(chat, abbrev, ini, file, uv0, uv1, item,
-                   {GW::Constants::SkillID::Armor_of_Salvation_item_effect,
-                    GW::Constants::SkillID::Grail_of_Might_item_effect,
-                    GW::Constants::SkillID::Essence_of_Celerity_item_effect}, threshold, desc) { }
-
-    PconTrifecta(const PconTrifecta&) = delete;
-};
-
 class PconCity : public Pcon {
 public:
     PconCity(const char* chat,
