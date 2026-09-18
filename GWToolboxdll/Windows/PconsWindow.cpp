@@ -257,9 +257,7 @@ namespace {
             }
             break;
             case GW::UI::UIMessage::kEffectRenew:
-                if (!status->blocked) {
-                    Pcon::RemoveAppliedEffectTriggers();
-                }
+                Pcon::RemoveAppliedEffectTriggers();
                 break;
             case GW::UI::UIMessage::kInventorySlotUpdated:
             case GW::UI::UIMessage::kInventorySlotCleared: {
