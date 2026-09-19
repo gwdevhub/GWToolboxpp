@@ -8,6 +8,7 @@ Previous releases are available on Github as dll files. There is no support for 
 the latest version, go to the [Home Page](./) instead.
 
 ## Version 8.34
+* [New] Loot Beacons: custom item beacon rules can now require a specific rarity, so you can beacon a named item only when it is, for example, Purple or Gold. New rules accept any rarity by default; their colour is also optional, with transparent using the item's normal name-tag colour.
 * [New] Pcons: Heroes' Trifecta and Empowering Feast can now be automatically used. Each is used when any of its constituent effects is absent or about to expire.
 * [New] Pcons can now be automatically disabled when a cinematic starts.
 * [Fix] Minimap: pings now use Guild Wars' own graphics and stay correctly aligned when the minimap is rotated. The inner ping indicator clamps to the minimap edge when its location is out of view, and the **Player Pings** setting controls their opacity with a less-obtrusive default.
