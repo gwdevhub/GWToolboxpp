@@ -343,7 +343,13 @@ namespace {
     // Callbacks
     // -------------------------------------------------------------------------
 
-    std::wstring tmp_item_description;
+    void ReleaseEncodedString(std::shared_ptr<std::wstring> encoded_string)
+    {
+        GW::GameThread::Enqueue([encoded_string = std::move(encoded_string)]() mutable {
+            encoded_string.reset();
+        }, true);
+    }
+
     void OnGetItemDescription(uint32_t item_id, uint32_t, uint32_t, uint32_t, wchar_t**, wchar_t** out_desc)
     {
         bool block_description = settings.disable_item_descriptions_in_outpost && ToolboxUtils::IsOutpost() || settings.disable_item_descriptions_in_explorable && ToolboxUtils::IsExplorable();
@@ -355,22 +361,20 @@ namespace {
         }
 
         if (!out_desc) return;
-        if (*out_desc != tmp_item_description.data()) {
-            tmp_item_description.assign(*out_desc ? *out_desc : L"");
-        }
-        if (settings.show_salvage_info) AppendSalvageInfo(item_id, tmp_item_description);
-        if (settings.show_trader_prices) AppendPriceInfo(item_id, tmp_item_description);
-        if (settings.show_nicholas_info) AppendNicholasInfo(item_id, tmp_item_description);
+        const auto description = std::make_shared<std::wstring>(*out_desc ? *out_desc : L"");
+        if (settings.show_salvage_info) AppendSalvageInfo(item_id, *description);
+        if (settings.show_trader_prices) AppendPriceInfo(item_id, *description);
+        if (settings.show_nicholas_info) AppendNicholasInfo(item_id, *description);
 
-        if (!tmp_item_description.empty()) {
-            if (GW::UI::IsValidEncStr(tmp_item_description.data())) {
-                *out_desc = tmp_item_description.data();
+        if (!description->empty()) {
+            if (GW::UI::IsValidEncStr(description->data())) {
+                *out_desc = description->data();
+                ReleaseEncodedString(description);
             }
         }
     }
 
     GW::HookEntry UIMessage_HookEntry;
-    std::wstring tmp_item_name_tag;
     struct NameTagSections {
         time_t built_time = 0;
         std::wstring encoded;
@@ -389,30 +393,31 @@ namespace {
 
         const auto item_id = agent->item_id;
         const auto current_time = time(nullptr);
-        if (packet->extra_info_enc != tmp_item_name_tag.data()) {
-            tmp_item_name_tag.assign(packet->extra_info_enc ? packet->extra_info_enc : L"");
-            auto cached = name_tag_sections_cache.find(item_id);
-            if (cached != name_tag_sections_cache.end() && current_time - cached->second.built_time < 60) {
-                tmp_item_name_tag += cached->second.encoded;
+        const auto name_tag = std::make_shared<std::wstring>(packet->extra_info_enc ? packet->extra_info_enc : L"");
+        auto cached = name_tag_sections_cache.find(item_id);
+        const bool already_extended = cached != name_tag_sections_cache.end() && !cached->second.encoded.empty() && name_tag->ends_with(cached->second.encoded);
+        if (!already_extended && cached != name_tag_sections_cache.end() && current_time - cached->second.built_time < 60) {
+            *name_tag += cached->second.encoded;
+        }
+        else if (!already_extended) {
+            if (cached == name_tag_sections_cache.end() && name_tag_sections_cache.size() > 64) {
+                std::erase_if(name_tag_sections_cache, [current_time](const auto& entry) {
+                    return current_time - entry.second.built_time >= 60;
+                });
+                cached = name_tag_sections_cache.end();
             }
-            else {
-                if (cached == name_tag_sections_cache.end() && name_tag_sections_cache.size() > 64) {
-                    std::erase_if(name_tag_sections_cache, [current_time](const auto& entry) {
-                        return current_time - entry.second.built_time >= 60;
-                    });
-                }
-                const auto sections_start = tmp_item_name_tag.size();
-                if (settings.show_salvage_info) AppendSalvageInfo(item_id, tmp_item_name_tag);
-                if (settings.show_trader_prices) AppendPriceInfo(item_id, tmp_item_name_tag);
-                if (settings.show_nicholas_info) AppendNicholasInfo(item_id, tmp_item_name_tag);
-                if (cached == name_tag_sections_cache.end())
-                    cached = name_tag_sections_cache.emplace(item_id, NameTagSections{}).first;
-                cached->second.built_time = current_time;
-                cached->second.encoded.assign(tmp_item_name_tag, sections_start);
-            }
+            const auto sections_start = name_tag->size();
+            if (settings.show_salvage_info) AppendSalvageInfo(item_id, *name_tag);
+            if (settings.show_trader_prices) AppendPriceInfo(item_id, *name_tag);
+            if (settings.show_nicholas_info) AppendNicholasInfo(item_id, *name_tag);
+            if (cached == name_tag_sections_cache.end())
+                cached = name_tag_sections_cache.emplace(item_id, NameTagSections{}).first;
+            cached->second.built_time = current_time;
+            cached->second.encoded.assign(*name_tag, sections_start);
         }
 
-        packet->extra_info_enc = tmp_item_name_tag.data();
+        packet->extra_info_enc = name_tag->data();
+        ReleaseEncodedString(name_tag);
     }
 
 } // namespace
