@@ -114,13 +114,13 @@ namespace {
                 currency_string = L"\xAC2\x100";
             }
             else if (plat > 0 && gold > 0) {
-                currency_string = std::format(L"\xAC4\x101{}\x102{}", (wchar_t)(0x100 + plat), (wchar_t)(0x100 + gold));
+                currency_string = std::format(L"\xAC4\x101{}\x102{}", TextUtils::EncodedNumericWord(plat), TextUtils::EncodedNumericWord(gold));
             }
             else if (gold > 0) {
-                currency_string = std::format(L"\xAC2\x101{}", (wchar_t)(0x100 + gold));
+                currency_string = std::format(L"\xAC2\x101{}", TextUtils::EncodedNumericWord(gold));
             }
             else {
-                currency_string = std::format(L"\xAC3\x101{}", (wchar_t)(0x100 + plat));
+                currency_string = std::format(L"\xAC3\x101{}", TextUtils::EncodedNumericWord(plat));
             }
         }
 
@@ -412,7 +412,9 @@ namespace {
             }
         }
 
-        packet->extra_info_enc = tmp_item_name_tag.data();
+        if (GW::UI::IsValidEncStr(tmp_item_name_tag.data())) {
+            packet->extra_info_enc = tmp_item_name_tag.data();
+        }
     }
 
 } // namespace

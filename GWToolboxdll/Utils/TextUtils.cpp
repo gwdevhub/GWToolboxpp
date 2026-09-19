@@ -4,6 +4,8 @@
 #include "TextUtils_Time.h"
 #include <cwchar>
 
+#include <GWCA/Managers/UIMgr.h>
+
 bool wcseq(const wchar_t* a, const wchar_t* b)
 {
     return a && b && wcscmp(a, b) == 0;
@@ -618,6 +620,14 @@ namespace TextUtils {
         }
         const std::wstring name(start, end);
         return SanitizePlayerName(name);
+    }
+
+    // A raw (wchar_t)(0x100 + value) cast silently sets WORD_BIT_MORE without a continuation word once value >= 0x7F00; go through GWCA's chained encoder instead.
+    std::wstring EncodedNumericWord(uint32_t value)
+    {
+        wchar_t buf[8]{};
+        GW::UI::UInt32ToEncStr(value, buf, _countof(buf));
+        return std::wstring(buf, wcslen(buf));
     }
 
     bool ParseInt(const char* str, int* val, int base)

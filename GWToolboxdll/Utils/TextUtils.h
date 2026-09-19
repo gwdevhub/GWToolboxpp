@@ -228,6 +228,7 @@ namespace TextUtils {
     std::wstring SanitizeForCSV(const std::wstring_view str);
     std::string SanitizePlayerName(std::string_view str);
     std::wstring GetPlayerNameFromEncodedString(const wchar_t* message, const wchar_t** start_pos_out = nullptr, const wchar_t** end_pos_out = nullptr);
+    std::wstring EncodedNumericWord(uint32_t value);
 
     template <typename CharT, typename NumT>
     bool Parse(const CharT* str, NumT* val, int base = 10);
