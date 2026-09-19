@@ -16,7 +16,7 @@ public:
     [[nodiscard]] const char* Name() const override { return "Loot Beacons"; }
     [[nodiscard]] const char* Description() const override
     {
-        return "Draws a pillar of light in the game world on valuable drops (by rarity or trader price).";
+        return "Draws a pillar of light in the game world on drops selected by rarity, trader price, or custom item rules.";
     }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_GEM; }
 

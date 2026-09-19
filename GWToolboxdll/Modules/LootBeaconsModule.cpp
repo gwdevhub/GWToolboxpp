@@ -33,7 +33,8 @@
 // namespace) so glaze's reflection can create the required external-linkage template specialisation.
 struct NameBeacon {
     std::string match;
-    Colors::SettingColor color = Colors::ARGB(170, 0, 255, 255);
+    Colors::SettingColor color = Colors::Empty();
+    GW::Constants::Rarity rarity = GW::Constants::Rarity::Unknown;
     bool enabled = true;
 };
 
@@ -99,13 +100,13 @@ namespace {
         return &cached.decoded;
     }
 
-    // Parsed form of the enabled rules; rebuilt only when the list changes, since building a regex isn't free.
     struct CompiledNameBeacon {
         TextUtils::SearchPattern<wchar_t> pattern;
         Color color = 0;
+        GW::Constants::Rarity rarity = GW::Constants::Rarity::Unknown;
     };
     std::vector<CompiledNameBeacon> compiled_name_beacons;
-    std::vector<size_t> invalid_name_beacons; // rules whose regex didn't parse, flagged in the settings panel
+    std::vector<size_t> invalid_name_beacons;
     bool name_beacons_dirty = true;
 
     void CompileNameBeacons()
@@ -121,11 +122,11 @@ namespace {
                 invalid_name_beacons.push_back(i);
                 continue;
             }
-            compiled_name_beacons.emplace_back(std::move(pattern), name_beacon.color.value);
+            compiled_name_beacons.emplace_back(std::move(pattern), name_beacon.color.value, name_beacon.rarity);
         }
     }
 
-    constexpr int kRarityBeaconAlpha = 170; // beam/ring alpha; the palette itself is opaque (0xFF)
+    constexpr int kRarityBeaconAlpha = 170;
 
     // A rarity beacon isn't user-colourable: it always takes the exact hue the client paints the
     // item's name (GW::Chat::TextColor), so the beacon matches the nametag drawn for that drop.
@@ -291,12 +292,12 @@ namespace {
         Color color = 0;
         bool draw = false;
         if (mine || show_reserved_for_others) {
-            // Name rules outrank value and rarity, and the first one that matches wins - so the user
-            // can order the list by priority.
+            const auto rarity = GW::Items::GetRarity(&item);
             if (const auto* item_name = compiled_name_beacons.empty() ? nullptr : DecodedItemName(item)) {
                 for (const auto& name_beacon : compiled_name_beacons) {
+                    if (name_beacon.rarity != GW::Constants::Rarity::Unknown && name_beacon.rarity != rarity) continue;
                     if (!name_beacon.pattern.Matches(*item_name)) continue;
-                    beacon.color = name_beacon.color;
+                    beacon.color = Colors::IsVisible(name_beacon.color) ? name_beacon.color : RarityBeaconColor(rarity);
                     beacon.draw = true;
                     return;
                 }
@@ -313,7 +314,6 @@ namespace {
                 draw = true;
             }
             else {
-                const auto rarity = GW::Items::GetRarity(&item);
                 const RarityBeacon* by_rarity = nullptr;
                 switch (rarity) {
                     case GW::Constants::Rarity::White: by_rarity = &rarity_white; break;
@@ -586,12 +586,13 @@ void LootBeaconsModule::DrawSettingsInternal()
         ImGui::PopID();
     }
     ImGui::Separator();
-    ImGui::TextUnformatted("Beacon by item name");
-    ImGui::ShowHelp("Any drop whose name contains the text gets a beacon in the colour next to it, whatever its rarity or value.\n"
+    ImGui::TextUnformatted("Custom item beacons");
+    ImGui::ShowHelp("Any drop whose name contains the text gets a beacon in its rarity colour by default, whatever its value.\n"
                     "Matching ignores case and uses the item name as it's shown in-game, e.g. \"scroll\" or \"glob of ectoplasm\".\n"
                     "Text wrapped in slashes is a regular expression instead, e.g. /^Superb Charr Carving$/ - add flags after\n"
                     "the closing slash as in the chat filter (I turns case sensitivity back on).\n"
-                    "Name rules are checked first; the first matching rule in this list wins.");
+                    "Use the colour picker to override the default colour; transparent uses the default. Name rules are checked first;\n"
+                    "the first matching rule in this list wins.");
     if (name_beacons_dirty) CompileNameBeacons();
     for (size_t i = 0; i < name_beacons.size(); i++) {
         auto& name_beacon = name_beacons[i];
@@ -601,7 +602,15 @@ void LootBeaconsModule::DrawSettingsInternal()
         ImGui::SetNextItemWidth(160.f);
         changed |= ImGui::InputText("##match", name_beacon.match, 64);
         ImGui::SameLine(240.f);
-        changed |= Colors::DrawSettingHueWheel("##color", &name_beacon.color.value);
+        changed |= Colors::DrawSettingHueWheel("##color", &name_beacon.color.value, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_AlphaBar);
+        ImGui::SameLine();
+        int rarity_index = name_beacon.rarity == GW::Constants::Rarity::Unknown ? 0 : static_cast<int>(name_beacon.rarity) + 1;
+        constexpr const char* rarity_names[] = {"Any Rarity", "White", "Blue", "Purple", "Gold", "Green"};
+        ImGui::SetNextItemWidth(100.f);
+        if (ImGui::Combo("##rarity", &rarity_index, rarity_names, std::size(rarity_names))) {
+            name_beacon.rarity = rarity_index ? static_cast<GW::Constants::Rarity>(rarity_index - 1) : GW::Constants::Rarity::Unknown;
+            changed = true;
+        }
         ImGui::SameLine();
         const bool remove = ImGui::Button("x##delete");
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Delete");
@@ -621,7 +630,7 @@ void LootBeaconsModule::DrawSettingsInternal()
             break;
         }
     }
-    if (ImGui::Button("Add item name")) {
+    if (ImGui::Button("Add item beacon")) {
         name_beacons.emplace_back();
         beacons_dirty = true;
         name_beacons_dirty = true;
