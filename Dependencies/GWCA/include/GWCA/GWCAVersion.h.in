@@ -1,0 +1,15 @@
+#pragma once
+
+#define GWCA_VERSION_MAJOR @GWCA_VERSION_MAJOR@
+#define GWCA_VERSION_MINOR @GWCA_VERSION_MINOR@
+#define GWCA_VERSION_PATCH @GWCA_VERSION_PATCH@
+#define GWCA_VERSION_BUILD @GWCA_VERSION_BUILD@
+#define GWCA_VERSION "@GWCA_VERSION@"
+
+namespace GWCA {
+    constexpr int VersionMajor = GWCA_VERSION_MAJOR;
+    constexpr int VersionMinor = GWCA_VERSION_MINOR;
+    constexpr int VersionPatch = GWCA_VERSION_PATCH;
+    constexpr int VersionBuild = GWCA_VERSION_BUILD;
+    constexpr const char* Version = GWCA_VERSION;
+}

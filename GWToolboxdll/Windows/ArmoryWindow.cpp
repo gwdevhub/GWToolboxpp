@@ -40,6 +40,8 @@ namespace GWArmory {
 
     bool use_global_color;
     std::array<GW::DyeColor, 4> global_dyes = {};
+    char search_buffer[128] = {};
+    std::string search_term;
 
     constexpr size_t costume_count = 0x17;
     struct CostumeData {
@@ -478,26 +480,25 @@ namespace GWArmory {
         if (!me) return nullptr;
         size_t armor_cnt = 0;
         const auto armors = GetArmorsPerProfession((GW::Constants::Profession)me->primary, &armor_cnt);
-        const auto lower_name = TextUtils::ToLower(item_name.data());
         for (size_t i = 0; i < armor_cnt && armors; i++) {
             const auto& armor = armors[i];
-            if (TextUtils::ToLower(armor.label) == lower_name) return &armor;
+            if (TextUtils::Stricmp(armor.label, item_name) == 0) return &armor;
         }
         for (size_t i = 0; i < _countof(costumes); i++) {
             const auto& armor = costumes[i];
-            if (TextUtils::ToLower(armor.label) == lower_name) return &armor;
+            if (TextUtils::Stricmp(armor.label, item_name) == 0) return &armor;
         }
         for (size_t i = 0; i < _countof(costume_heads); i++) {
             const auto& armor = costume_heads[i];
-            if (TextUtils::ToLower(armor.label) == lower_name) return &armor;
+            if (TextUtils::Stricmp(armor.label, item_name) == 0) return &armor;
         }
         for (size_t i = 0; i < _countof(weapons); i++) {
             const auto& weapon = weapons[i];
-            if (TextUtils::ToLower(weapon.label) == lower_name) return &weapon;
+            if (TextUtils::Stricmp(weapon.label, item_name) == 0) return &weapon;
         }
         for (size_t i = 0; i < _countof(unequipped_armors); i++) {
             const auto& armor = unequipped_armors[i];
-            if (TextUtils::ToLower(armor.label) == lower_name) return &armor;
+            if (TextUtils::Stricmp(armor.label, item_name) == 0) return &armor;
         }
         return nullptr;
     }
@@ -524,6 +525,8 @@ namespace GWArmory {
                 if (!IsEquipmentSlotSupportedByArmory(slot))
                     continue;
                 if (c != Campaign::BonusMissionPack && armor.campaign != c)
+                    continue;
+                if (!search_term.empty() && TextUtils::ToLower(armor.label).find(search_term) == std::string::npos)
                     continue;
                 ASSERT(slot != ItemSlot::Unknown);
                 const auto piece = &drawn_pieces[slot];
@@ -758,6 +761,11 @@ namespace GWArmory {
         const auto state = &combo_list_states[slot];
         const auto player_piece = &imgui_armor_pieces[slot];
         bool value_changed = false;
+
+        if (!search_term.empty() && state->pieces.empty()) {
+            ImGui::PopID();
+            return false;
+        }
 
         const float scale = ImGui::FontScale();
 
@@ -1424,6 +1432,10 @@ void ArmoryWindow::Draw(IDirect3DDevice9*)
         }
 
         if (ImGui::MyCombo("##filter", "All", reinterpret_cast<int*>(&current_campaign), armor_filter_array_getter, nullptr, 6)) {
+            UpdateArmorsFilter();
+        }
+        if (ImGui::InputTextWithHint("##search", "Search armour and weapons...", search_buffer, sizeof(search_buffer))) {
+            search_term = TextUtils::ToLower(search_buffer);
             UpdateArmorsFilter();
         }
         const auto armor_order = {Headpiece, Chestpiece, Gloves, Leggings, Boots, CostumeHead, CostumeBody};

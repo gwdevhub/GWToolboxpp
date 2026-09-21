@@ -4,6 +4,8 @@
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Packets/StoC.h>
 
+#include <Modules/GwDatModule.h>
+
 #include <Color.h>
 #include <Timer.h>
 
@@ -15,6 +17,9 @@ class PingsLinesRenderer : public D3DVertexBuffer {
     friend class Minimap;
     const float drawing_scale = 96.0f;
     const clock_t drawing_timeout = 5000;
+
+    const uint32_t PING_INNER_FILE_ID = 50468;
+    const uint32_t PING_OUTER_FILE_ID = 49225;
 
     struct DrawingLine {
         DrawingLine()
@@ -43,16 +48,21 @@ class PingsLinesRenderer : public D3DVertexBuffer {
         [[nodiscard]] virtual float GetScale() const { return 1.0f; }
         [[nodiscard]] virtual bool ShowInner() const { return true; }
         [[nodiscard]] virtual DWORD GetAgentID() const { return 0; }
+        [[nodiscard]] virtual Color GetColor() const { return 0; }
     };
 
     struct TerrainPing : Ping {
         TerrainPing(const float _x, const float _y)
-            : x(_x), y(_y) { }
+            : TerrainPing(_x, _y, Colors::Empty()) { }
+        TerrainPing(const float _x, const float _y, const Color _color)
+            : x(_x), y(_y), color(_color) { }
 
         const float x, y;
+        const Color color;
         [[nodiscard]] float GetX() const override { return x; }
         [[nodiscard]] float GetY() const override { return y; }
         [[nodiscard]] float GetScale() const override { return 2.0f; }
+        [[nodiscard]] Color GetColor() const override { return color; }
     };
 
     struct AgentPing : Ping {
@@ -86,6 +96,9 @@ class PingsLinesRenderer : public D3DVertexBuffer {
 
     public:
         Color color = Colors::ARGB(128, 255, 0, 0);
+        IDirect3DTexture9* texture = nullptr;
+
+        void Render(IDirect3DDevice9* device) override;
     };
 
     class Marker : public D3DVertexBuffer {
@@ -174,6 +187,7 @@ private:
     std::vector<GW::UI::CompassPoint> queue{};
 
     Color color_drawings = Colors::ARGB(0xFF, 0xFF, 0xFF, 0xFF);
+    Color color_pings = Colors::ARGB(104, 255, 0, 0);
     Color color_shadowstep_line = Colors::ARGB(155, 128, 0, 128);
     Color color_shadowstep_line_maxrange = Colors::ARGB(255, 255, 0, 128);
     float maxrange_interp_begin = 0.85f;

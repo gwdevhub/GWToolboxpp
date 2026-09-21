@@ -2,7 +2,7 @@ include_guard()
 include(FetchContent)
 
 # apply_patch.bat can't run directly when configuring from a non-Windows host (e.g. the
-# wine cross-compile toolchain in scripts/build-wine-prefix.sh); use the POSIX equivalent there.
+# clang/xwin cross-compile toolchain in scripts/build-xwin.sh); use the POSIX equivalent there.
 if(CMAKE_HOST_WIN32)
     set(_IMGUI_PATCH_COMMAND "${CMAKE_CURRENT_LIST_DIR}/patches/apply_patch.bat")
 else()

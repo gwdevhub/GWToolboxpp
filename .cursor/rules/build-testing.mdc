@@ -1,0 +1,11 @@
+---
+description: Build and validation requirements
+alwaysApply: true
+---
+# Build/testing
+- Discover and follow documented build commands; preserve VS/CMake conventions.
+- Add pure-logic tests where game behavior cannot be unit tested.
+- Compilation alone does not verify game-state behavior.
+- Review callback registration/teardown explicitly.
+- Persistence parsers need malformed/old-version tests.
+- Do not declare completion while relevant build/tests fail.

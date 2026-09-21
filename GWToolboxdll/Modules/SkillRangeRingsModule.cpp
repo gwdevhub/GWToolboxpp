@@ -280,8 +280,12 @@ void SkillRangeRingsModule::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 void SkillRangeRingsModule::DrawSettingsInternal()
 {
     const auto red = ImGui::ColorConvertU32ToFloat4(Colors::Red());
-    if (!GameWorldCompositor::IsActive())
-        ImGui::TextColored(red, GameWorldCompositor::HasFailed() ? "In-world compositor FAILED to install." : "In-world compositor: not installed yet.");
+    if (GameWorldCompositor::HasFailed())
+        ImGui::TextColored(red, "In-world compositor FAILED to install.");
+    else if (GameWorldCompositor::IsActive())
+        ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(Colors::Green()), "In-world compositor active.");
+    else
+        ImGui::TextDisabled("In-world compositor: not installed yet.");
 
     ImGui::TextUnformatted("Hover any skill (skillbar, skills window...) to see its ranges on the ground.");
     if (ImGui::Checkbox("Show AoE ring at your current target", &aoe_at_target)) rings_dirty = true;

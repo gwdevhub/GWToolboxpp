@@ -1,24 +1,22 @@
 #!/usr/bin/env bash
-# Build a Docker image with a headless Wine + real MSVC (x86 v143+) + vcpkg toolchain,
-# then configure and build GWToolboxdll inside it.
+# Build a Docker image with a clang-cl + xwin (x86 Windows) + vcpkg toolchain, then
+# configure and build GWToolboxdll inside it. clang targets i686-pc-windows-msvc directly,
+# so nothing Microsoft-built ever executes.
 #
-# Why Docker: MSVC-under-wine needs a fair pile of host state (a wine prefix, the
-# unpacked MSVC/WinSDK trees, a bootstrapped vcpkg) - keeping all of that inside an
-# image/container makes the whole thing disposable: `docker image rm` wipes it cleanly,
-# and it never touches the host's actual Wine setup (if the machine has one for gaming).
+# You do not need Docker for this toolchain - scripts/xwin/setup-toolchain.sh provisions it
+# straight onto the host. Docker just keeps the ~800MB SDK and the vkd3d build disposable.
 #
-# See scripts/wine-msvc/Dockerfile for how the toolchain itself is assembled
-# (mstorsjo/msvc-wine downloads the real MSVC + Windows SDK under the VS Build Tools
-# EULA, and wraps cl/link/lib/rc to run under wine).
+# See scripts/xwin/Dockerfile for how the toolchain is assembled.
 set -euo pipefail
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 REPO_ROOT=$(cd -- "${SCRIPT_DIR}/.." && pwd)
-IMAGE_NAME="gwtoolboxpp-wine-msvc"
+IMAGE_NAME="gwtoolboxpp-xwin"
 
 CONFIG="RelWithDebInfo"
 TARGET="GWToolboxdll"
 CMAKE_ARGS=""
+JOBS=""
 REBUILD_IMAGE=0
 SHELL_ONLY=0
 
@@ -30,6 +28,7 @@ Options:
   --config <Debug|RelWithDebInfo|Release>   CMake config to build (default: ${CONFIG})
   --target <name>                           CMake build target (default: ${TARGET}; use "all" for everything)
   --cmake-arg <value>                       Extra argument to pass through to CMake configure
+  --jobs <n>                                Parallel build jobs (default: all cores)
   --rebuild-image                           Force a clean rebuild of the docker image
   --shell                                   Drop into an interactive shell in the container instead of building
   -h, --help                                Show this help
@@ -41,6 +40,7 @@ while [ $# -gt 0 ]; do
         --config) CONFIG="$2"; shift 2 ;;
         --target) TARGET="$2"; shift 2 ;;
         --cmake-arg) CMAKE_ARGS="${CMAKE_ARGS} $2"; shift 2 ;;
+        --jobs) JOBS="$2"; shift 2 ;;
         --rebuild-image) REBUILD_IMAGE=1; shift ;;
         --shell) SHELL_ONLY=1; shift ;;
         -h|--help) usage; exit 0 ;;
@@ -54,8 +54,8 @@ if ! command -v docker >/dev/null 2>&1; then
 fi
 
 if [ "${REBUILD_IMAGE}" -eq 1 ] || ! docker image inspect "${IMAGE_NAME}" >/dev/null 2>&1; then
-    echo "[build-wine-prefix] building docker image '${IMAGE_NAME}' (this downloads MSVC + Windows SDK; expect it to take a while the first time)..."
-    docker build "${REBUILD_IMAGE:+--no-cache}" -t "${IMAGE_NAME}" -f "${SCRIPT_DIR}/wine-msvc/Dockerfile" "${SCRIPT_DIR}/wine-msvc"
+    echo "[build-xwin] building docker image '${IMAGE_NAME}' (this downloads the MSVC + Windows SDK headers/libs and builds vkd3d; expect it to take a while the first time)..."
+    docker build "${REBUILD_IMAGE:+--no-cache}" -t "${IMAGE_NAME}" -f "${SCRIPT_DIR}/xwin/Dockerfile" "${SCRIPT_DIR}/xwin"
 fi
 
 TTY_FLAGS=""
@@ -63,7 +63,7 @@ if [ -t 0 ] && [ -t 1 ]; then
     TTY_FLAGS="-it"
 fi
 
-RUN_ARGS=(--rm ${TTY_FLAGS} -v "${REPO_ROOT}:/src" -w /src -e CONFIG="${CONFIG}" -e TARGET="${TARGET}" -e CMAKE_ARGS="${CMAKE_ARGS}" -e HOST_UID="$(id -u)" -e HOST_GID="$(id -g)" "${IMAGE_NAME}")
+RUN_ARGS=(--rm ${TTY_FLAGS} -v "${REPO_ROOT}:/src" -w /src -e CONFIG="${CONFIG}" -e TARGET="${TARGET}" -e CMAKE_ARGS="${CMAKE_ARGS}" -e JOBS="${JOBS}" -e HOST_UID="$(id -u)" -e HOST_GID="$(id -g)" "${IMAGE_NAME}")
 
 if [ "${SHELL_ONLY}" -eq 1 ]; then
     exec docker run "${RUN_ARGS[@]}" bash
@@ -76,7 +76,5 @@ fix_ownership() {
 }
 trap fix_ownership EXIT
 
-# Keep the build toolchain alive across the configure/build steps, and pin the compile/link
-# jobs to Ninja's `console` pool so Wine doesn't inherit a capture pipe from ninja.
-echo "[build-wine-prefix] configuring (preset: wine, config: ${CONFIG})..."
-exec docker run "${RUN_ARGS[@]}" /src/scripts/wine-msvc/build-in-container.sh
+echo "[build-xwin] configuring (preset: xwin, config: ${CONFIG})..."
+exec docker run "${RUN_ARGS[@]}" /src/scripts/xwin/build-in-container.sh

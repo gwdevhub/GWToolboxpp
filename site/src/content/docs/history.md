@@ -7,6 +7,21 @@ section: meta
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
+## Version 8.34
+* [Fix] Minimap: pings now use Guild Wars' own graphics and stay correctly aligned when the minimap is rotated. The inner ping indicator clamps to the minimap edge when its location is out of view, and the **Player Pings** setting controls their opacity with a less-obtrusive default.
+* [New] Armory: search armor and weapon previews by name.
+* [New] Hero Builds: the hero selector now shows profession icons, can optionally group heroes by profession, and shows each mercenary hero's in-game name while you are in an outpost.
+* [Fix] Hero Builds now applies saved disabled skill states at a controlled rate, so loading teams with more than 16 disabled hero skills no longer leaves later skills enabled.
+* [Fix] Effects Monitor now tracks Shadowsong, Dissonance, Wanderlust, Anguish, Gaze of Fury and Vampirism after you summon them. These spirit timers also highlight their matching skill and appear in the Skillbar widget's effect monitor. Timers use each spirit's actual lifespan, including Shadowsong's fixed 30 seconds and Vampirism's Sunspear-rank scaling.
+* [Fix] Cartographer now detects the Bird's Eye View effect automatically and adjusts its reveal range while the effect is active, replacing the manual Bird's Eye Compass setting.
+* [Fix] Cartographer now uses the current map's pathing data after transitions between missions and outposts, and no longer periodically rebuilds continent-wide fog while the mission map is open.
+* [Fix] Automatic title selection (`/title` and the Reapply Title hotkey) now uses Lightbringer instead of Sunspear in Turai's Procession, Jennur's Horde, Nundu Bay, Dzagonur Bastion, Yatendi Canyons, Vehtendi Valley, Forum Highlands and The Mirror of Lyss, where Margonites make Lightbringer the useful title.
+* [Fix] Fixed a crash while replacing the fallback font during Toolbox startup.
+* [Fix] Audio Settings no longer crashes Guild Wars when an audio handle has already been released.
+* [Fix] Game Settings: in-game name tag colour overrides can now be disabled so the colours configured in Guild Wars are used instead. The overrides are off by default.
+* [Minor] Mouse Settings: disabled the "Enable cursor fix" camera-glitch workaround because an August 2026 Guild Wars update changed lookaround speed. Cursor-size scaling remains available.
+* [Minor] Breakout buttons are now available only for modules with an icon, preventing ambiguous text-only buttons.
+
 ## Version 8.33
 * [New] Cartographer widget: helps you finish the Cartographer titles. It shades the parts of the world map you still have to uncover, and — using the game's own cartography rules — marks the exact squares you need to *stand in* to clear them, rather than just the fog itself. Reachability is derived from real pathing (travel portals count as walls, so it won't suggest a square you can only reach by zoning), the whole continent is shown rather than just your current map, and hovering a fog patch names the map you have to travel to in order to uncover it. Squares you can get close to but still can't uncover are drawn in grey.
 * [New] Armory: 830 additional weapon models, found by scanning `Gw.dat`, are now available to preview. **NOTE: There are loads of unnamed weapons/items now - not all of them are actually weapons, and might be in the wrong place, but I've left them in so the community can help label them/filter them for us**
@@ -212,7 +227,7 @@ the latest version, go to the [Home Page](./) instead.
 * [New] `/transmo` NPC list is now fully user-configurable in settings — add your current target as a named entry, edit or remove existing entries, and reset to built-in defaults; also added `/transmo model NPC_ID MODEL_FILE_ID MODEL_FILE FLAGS [SCALE]` subcommand for direct model specification
 * [New] Inventory Sorting: new `/sortinventory` and `/sortstorage` chat commands to sort character or storage inventory from chat; sorting now automatically deprioritises Nicholas The Traveller collectibles until the week they are needed
 * [New] Notifications: added Team Chat as an option for toast notifications and window flash; new "Change window title on notification" option — the GW window title changes to show pending unread notifications when the game is minimised or running in the background
-* [New] Effects Monitor widget: new option to track nearby spirit effect timers (Bloodsong, Vampirism, etc.) and display their remaining duration alongside your own effects
+* [New] Effects Monitor widget: new option to track spirit effect timers for spirits you summon and display their remaining duration alongside your own effects
 * [New] Item Drops: new "Always hide items for player" and "Always hide items for party" lists — items on these lists are always hidden from the drop overlay regardless of rarity or other filter settings
 * [New] Added `/disableheroskill <hero_number> <slot_number> [0|1]` chat command to enable or disable a specific hero's skill slot from chat
 * [New] Added `/custommarker <x> <y>` chat command to place a custom quest marker at exact world coordinates; `/custommarker clear` removes it

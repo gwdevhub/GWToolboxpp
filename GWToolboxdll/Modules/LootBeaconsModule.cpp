@@ -566,8 +566,12 @@ void LootBeaconsModule::SaveSettings(SettingsDoc& doc)
 void LootBeaconsModule::DrawSettingsInternal()
 {
     const auto red = ImGui::ColorConvertU32ToFloat4(Colors::Red());
-    if (!GameWorldCompositor::IsActive())
-        ImGui::TextColored(red, GameWorldCompositor::HasFailed() ? "In-world compositor FAILED to install." : "In-world compositor: not installed yet.");
+    if (GameWorldCompositor::HasFailed())
+        ImGui::TextColored(red, "In-world compositor FAILED to install.");
+    else if (GameWorldCompositor::IsActive())
+        ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(Colors::Green()), "In-world compositor active.");
+    else
+        ImGui::TextDisabled("In-world compositor: not installed yet.");
 
     ImGui::TextUnformatted("Beacon by gold value");
     ImGui::ShowHelp("Any drop whose trader price (Kamadan, or presearing.com's price sheet while pre-searing) meets a threshold gets a beacon,\nregardless of rarity - catches ectos, gemstones, dyes and other white-rarity valuables.\nAn item that clears both thresholds uses the higher tier's colour.");

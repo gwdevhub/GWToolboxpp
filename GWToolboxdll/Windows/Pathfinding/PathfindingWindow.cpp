@@ -430,30 +430,37 @@ namespace {
             return nullptr;
         }
 
-        // Fast path: file already resident. readFromDat routes into the game's serialized file subsystem, so re-reading it every recompute stalls the game thread; file_id alone keys the map within a session (mirrors GetMilepathForMap).
+        const auto live_map_context = map_id == GW::Map::GetMapID() ? GW::GetMapContext() : nullptr;
+        const auto matches_live_bounds = [live_map_context](const Pathing::PathingMapData* data) {
+            return !live_map_context || (data
+                && data->bounds_min.x == live_map_context->start_pos.x
+                && data->bounds_min.y == live_map_context->start_pos.y
+                && data->bounds_max.x == live_map_context->end_pos.x
+                && data->bounds_max.y == live_map_context->end_pos.y);
+        };
+
         for (const auto& [hash, mp] : mile_paths_by_coords) {
             if (static_cast<uint32_t>(hash & 0xFFFFFFFF) == fid) {
+                if (!matches_live_bounds(mp->GetMapData())) continue;
                 TouchLru(hash);
                 return mp;
             }
         }
 
-        // A ctx-fallback entry (bounds mismatch below) is keyed by map_id + live node count, not fid — probe for it
-        // or the resident-only path never sees it and the prewarm loop re-reads the DAT forever.
         if (map_id == GW::Map::GetMapID()) {
             if (const auto mc = GW::GetMapContext(); mc && mc->path && mc->path->staticData) {
                 const auto ctx_hash = static_cast<uint64_t>(map_id) | (static_cast<uint64_t>(mc->path->pathNodes.size()) << 32);
                 if (const auto it = mile_paths_by_coords.find(ctx_hash); it != mile_paths_by_coords.end()) {
-                    TouchLru(ctx_hash);
-                    return it->second;
+                    if (matches_live_bounds(it->second->GetMapData())) {
+                        TouchLru(ctx_hash);
+                        return it->second;
+                    }
                 }
             }
         }
 
-        // Not resident: the DAT read + parse below blocks the caller. Refuse on the game thread.
         if (!allow_load) return nullptr;
 
-        // Already known unreadable this session — skip the blocking re-read and the repeat log.
         if (dat_load_failed_fids.contains(fid)) return nullptr;
 
         PATH_LOG_INFO("LoadMapFromDAT: map=%d file_id=%u (0x%X)", (int)map_id, fid, fid);
@@ -465,15 +472,14 @@ namespace {
             return nullptr;
         }
 
-        // For the current map, cross-check DAT against live memory: a bounds mismatch means a stale file_id, so use the MapContext copy.
         Pathing::PathingMapData ctx_data;
         Pathing::PathingMapData* chosen = &dat_data;
         if (map_id == GW::Map::GetMapID()) {
             if (!Pathing::LoadFromMapContext(GW::GetMapContext(), fid, &ctx_data)) {
                 PATH_LOG_ERROR("LoadMapFromDAT: Context parse failed for map %d file_id=%u", (int)map_id, fid);
             }
-            else if (ctx_data.bounds_max.x != dat_data.bounds_max.x || ctx_data.bounds_max.y != dat_data.bounds_max.y) {
-                PATH_LOG_ERROR("LoadMapFromDAT: Context bounds_max dont match DAT portals for the current map, file_id=%u - check InfoWindow to update the map file id for this map! Using map context data for now.", fid);
+            else if (!matches_live_bounds(&dat_data)) {
+                PATH_LOG_ERROR("LoadMapFromDAT: Context bounds dont match DAT portals for the current map, file_id=%u - check InfoWindow to update the map file id for this map! Using map context data for now.", fid);
                 chosen = &ctx_data;
             }
         }

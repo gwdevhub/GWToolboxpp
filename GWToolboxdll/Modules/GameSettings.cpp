@@ -65,7 +65,7 @@
 #include <Utils/TextUtils.h>
 
 #pragma warning(disable : 6011)
-#pragma comment(lib, "Version.lib")
+#pragma comment(lib, "version.lib")
 
 using namespace GuiUtils;
 using namespace ToolboxUtils;
@@ -2001,8 +2001,11 @@ void GameSettings::DrawSettingsInternal()
     ImGui::Unindent();
     ImGui::NewLine();
     ImGui::Checkbox("Show 'You have N Lockpicks' on Locked Chest name tags", &settings.show_amount_of_lockpicks_under_locked_chest_nametag);
-    ImGui::Text("In-game name tag colors:");
+    if (ImGui::Checkbox("In-game name tag colors", &settings.override_name_tag_colors)) {
+        nametag_color_cache.clear();
+    }
     ImGui::ShowHelp("These set global name tag colors by category.\nTo set a custom color for a specific agent, see Minimap > Custom Agents > Text Color.");
+    ImGui::BeginDisabled(!settings.override_name_tag_colors);
     ImGui::Indent();
     ImGui::StartSpacedElements(checkbox_w);
     constexpr uint32_t flags = ImGuiColorEditFlags_NoInputs;
@@ -2011,6 +2014,7 @@ void GameSettings::DrawSettingsInternal()
         Colors::DrawSettingHueWheel(c.label, c.ptr, flags);
     }
     ImGui::Unindent();
+    ImGui::EndDisabled();
 
     ImGui::NewLine();
     ImGui::Text("Hide skill descriptions in:");
@@ -2428,7 +2432,7 @@ void GameSettings::OnWriteChat(GW::HookStatus* status, GW::UI::UIMessage, void* 
 // Auto-drop UA when recasting
 void GameSettings::OnAgentStartCast(GW::HookStatus*, GW::UI::UIMessage, void* wParam, void*)
 {
-    const auto packet = static_cast<GW::UI::UIPacket::kAgentSkillPacket*>(wParam);
+    const auto packet = static_cast<GW::UI::UIPacket::kAgentSkillStartedCast*>(wParam);
     if (settings.drop_ua_on_cast && packet && packet->skill_id == GW::Constants::SkillID::Unyielding_Aura) {
         const auto buffs = GW::Effects::GetAgentBuffs(packet->agent_id);
         if (buffs) {
@@ -2495,46 +2499,44 @@ void GameSettings::OnUpdateSkillCount(GW::HookStatus*, void* packet)
     }
 }
 
-// Default colour for agent name tags
 void GameSettings::OnAgentNameTag(GW::HookStatus*, const GW::UI::UIMessage msgid, void* wParam, void*)
 {
     if (msgid != GW::UI::UIMessage::kShowAgentNameTag && msgid != GW::UI::UIMessage::kSetAgentNameTagAttribs) {
         return;
     }
     const auto tag = static_cast<GW::UI::AgentNameTagInfo*>(wParam);
-    // Apply default colors for nametags
-    for (const auto& c : nametag_color_settings) {
-        if (c.player_override) {
-            continue;
-        }
-        if (tag->text_color == static_cast<Color>(c.default_val)) {
-            tag->text_color = *c.ptr;
-            break;
-        }
-    }
-    // Override colors for friends, guildies and party members
-    if (tag->name_enc) {
-        const auto player_name = TextUtils::GetPlayerNameFromEncodedString(tag->name_enc);
-        if (!player_name.empty() && player_name != GetPlayerName()) {
-            const auto cached = nametag_color_cache.find(player_name);
-            if (cached != nametag_color_cache.end()) {
-                tag->text_color = cached->second;
+    if (settings.override_name_tag_colors) {
+        for (const auto& c : nametag_color_settings) {
+            if (c.player_override) {
+                continue;
             }
-            else {
-                if (GW::FriendListMgr::GetFriend(nullptr, player_name.c_str(), GW::FriendType::Friend)) {
-                    tag->text_color = settings.nametag_color_friends;
-                }
-                else if (IsGuildMemberPlayer(player_name.c_str())) {
-                    tag->text_color = settings.nametag_color_guild_members;
-                }
-                else if (IsAgentInMyParty(tag->agent_id)) {
-                    tag->text_color = settings.nametag_color_player_in_my_party;
-                }
-                nametag_color_cache[player_name] = tag->text_color;
+            if (tag->text_color == static_cast<Color>(c.default_val)) {
+                tag->text_color = *c.ptr;
+                break;
             }
         }
+        if (tag->name_enc) {
+            const auto player_name = TextUtils::GetPlayerNameFromEncodedString(tag->name_enc);
+            if (!player_name.empty() && player_name != GetPlayerName()) {
+                const auto cached = nametag_color_cache.find(player_name);
+                if (cached != nametag_color_cache.end()) {
+                    tag->text_color = cached->second;
+                }
+                else {
+                    if (GW::FriendListMgr::GetFriend(nullptr, player_name.c_str(), GW::FriendType::Friend)) {
+                        tag->text_color = settings.nametag_color_friends;
+                    }
+                    else if (IsGuildMemberPlayer(player_name.c_str())) {
+                        tag->text_color = settings.nametag_color_guild_members;
+                    }
+                    else if (IsAgentInMyParty(tag->agent_id)) {
+                        tag->text_color = settings.nametag_color_player_in_my_party;
+                    }
+                    nametag_color_cache[player_name] = tag->text_color;
+                }
+            }
+        }
     }
-    // Show amount of lockpicks under locked chest nametag
     if (settings.show_amount_of_lockpicks_under_locked_chest_nametag && tag->name_enc && wcseq(tag->name_enc, GW::EncStrings::LockedChest) && !tag->underline) {
         static wchar_t you_have_n_lockpicks[12];
         const auto count = GW::Items::CountItemByModelId(GW::Constants::ItemID::Lockpick, (int)GW::Constants::Bag::Backpack, (int)GW::Constants::Bag::Bag_2);

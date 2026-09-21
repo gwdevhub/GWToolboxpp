@@ -48,6 +48,7 @@ namespace {
     bool is_latest_version = true;
     bool notified = false;
     bool forced_ask = false;
+    bool fork_confirm_official_update = false;
     clock_t last_check = 0;
 
     // Set once on launch when the running version differs from the version we
@@ -56,6 +57,122 @@ namespace {
 
     GWToolboxRelease latest_release;
     GWToolboxRelease current_release;
+
+    int CompareBaseVersions(const std::string_view left, const std::string_view right)
+    {
+        size_t left_pos = 0;
+        size_t right_pos = 0;
+        while (true) {
+            uint64_t left_component = 0;
+            while (left_pos < left.size() && std::isdigit(static_cast<unsigned char>(left[left_pos]))) {
+                left_component = left_component * 10 + left[left_pos++] - '0';
+            }
+            uint64_t right_component = 0;
+            while (right_pos < right.size() && std::isdigit(static_cast<unsigned char>(right[right_pos]))) {
+                right_component = right_component * 10 + right[right_pos++] - '0';
+            }
+            if (left_component != right_component) return left_component < right_component ? -1 : 1;
+
+            const bool left_has_next = left_pos + 1 < left.size() && left[left_pos] == '.' && std::isdigit(static_cast<unsigned char>(left[left_pos + 1]));
+            const bool right_has_next = right_pos + 1 < right.size() && right[right_pos] == '.' && std::isdigit(static_cast<unsigned char>(right[right_pos + 1]));
+            if (!left_has_next && !right_has_next) return 0;
+            if (left_has_next) ++left_pos;
+            if (right_has_next) ++right_pos;
+        }
+    }
+
+    std::string_view VersionSuffix(const std::string_view version)
+    {
+        size_t position = 0;
+        while (position < version.size() && (std::isdigit(static_cast<unsigned char>(version[position])) || version[position] == '.')) {
+            ++position;
+        }
+        return version.substr(position);
+    }
+
+    int CompareNaturalVersions(const std::string_view left, const std::string_view right)
+    {
+        size_t left_pos = 0;
+        size_t right_pos = 0;
+        while (left_pos < left.size() && right_pos < right.size()) {
+            if (std::isdigit(static_cast<unsigned char>(left[left_pos])) && std::isdigit(static_cast<unsigned char>(right[right_pos]))) {
+                const auto left_start = left_pos;
+                const auto right_start = right_pos;
+                while (left_pos < left.size() && std::isdigit(static_cast<unsigned char>(left[left_pos]))) ++left_pos;
+                while (right_pos < right.size() && std::isdigit(static_cast<unsigned char>(right[right_pos]))) ++right_pos;
+
+                const auto left_number = left.substr(left_start, left_pos - left_start);
+                const auto right_number = right.substr(right_start, right_pos - right_start);
+                const auto left_nonzero = left_number.find_first_not_of('0');
+                const auto right_nonzero = right_number.find_first_not_of('0');
+                const auto normalized_left = left_number.substr(left_nonzero == std::string_view::npos ? left_number.size() : left_nonzero);
+                const auto normalized_right = right_number.substr(right_nonzero == std::string_view::npos ? right_number.size() : right_nonzero);
+                if (normalized_left.size() != normalized_right.size()) return normalized_left.size() < normalized_right.size() ? -1 : 1;
+                if (normalized_left != normalized_right) return normalized_left < normalized_right ? -1 : 1;
+                continue;
+            }
+            if (left[left_pos] != right[right_pos]) return left[left_pos] < right[right_pos] ? -1 : 1;
+            ++left_pos;
+            ++right_pos;
+        }
+        if (left_pos == left.size() && right_pos == right.size()) return 0;
+        return left_pos == left.size() ? -1 : 1;
+    }
+
+    int CompareReleases(const GWToolboxRelease& left, const GWToolboxRelease& right)
+    {
+        if (const auto result = CompareBaseVersions(left.version, right.version); result != 0) return result;
+        if (left.prerelease != right.prerelease) return left.prerelease ? -1 : 1;
+        return left.prerelease ? CompareNaturalVersions(VersionSuffix(left.version), VersionSuffix(right.version)) : 0;
+    }
+
+    GWToolboxRelease UpstreamComparableRelease()
+    {
+        GWToolboxRelease comparable{};
+        comparable.version = GWTOOLBOXDLL_VERSION;
+        comparable.version.append(GWTOOLBOXDLL_VERSION_BETA);
+        comparable.prerelease = !std::string_view(GWTOOLBOXDLL_VERSION_BETA).empty();
+        comparable.size = current_release.size;
+        std::ranges::transform(comparable.version, comparable.version.begin(), [](const auto chr) {
+            return static_cast<char>(std::tolower(chr));
+        });
+        return comparable;
+    }
+
+    std::string UpstreamBaseVersion()
+    {
+        std::string version = GWTOOLBOXDLL_VERSION;
+        std::ranges::transform(version, version.begin(), [](const auto chr) {
+            return static_cast<char>(std::tolower(chr));
+        });
+        return version;
+    }
+
+    void AppendForkVersionSuffix(std::string& version)
+    {
+#ifdef GWTOOLBOX_FORK_BUILD
+        version.append(GWTOOLBOXDLL_VERSION_FORK_SUFFIX);
+#endif
+    }
+
+    bool ForkBuildEnabled()
+    {
+#ifdef GWTOOLBOX_FORK_BUILD
+        return true;
+#else
+        return false;
+#endif
+    }
+
+    const char* ForkMergeCommand()
+    {
+        return "git fetch upstream && git rebase upstream/master";
+    }
+
+    const char* ForkRebuildCommand()
+    {
+        return "scripts\\sync-upstream-rebase.ps1";
+    }
 
     GWToolboxRelease* GetLatestRelease(GWToolboxRelease* release)
     {
@@ -95,6 +212,7 @@ namespace {
                 if (js.prerelease) {
                     release->version += js.tag_name.substr(version_number_len + 1);
                 }
+                release->prerelease = js.prerelease;
                 std::ranges::transform(release->version, release->version.begin(), [](const auto chr) { return static_cast<char>(std::tolower(chr)); });
                 release->body = js.body.value_or("");
                 const auto size_bytes = static_cast<uintmax_t>(asset.size); // Slight rounding, GitHub isn't always correct down to the byte.
@@ -182,6 +300,78 @@ namespace {
             });
     }
 
+    void DrawForkUpdateDialog()
+    {
+        auto& updater = Updater::Instance();
+        if (!updater.visible) {
+            updater.visible = true;
+        }
+        ImGui::SetNextWindowSize(ImVec2(520.0f * ImGui::FontScale(), -1), ImGuiCond_Appearing);
+        ImGui::SetNextWindowCenter(ImGuiCond_Appearing);
+        ImGui::Begin("Toolbox Update!", &updater.visible);
+        ImGui::TextUnformatted("Upstream GWToolbox++ update is available.");
+        ImGui::TextUnformatted(UpdateAvailableText());
+        ImGui::Spacing();
+        ImGui::PushTextWrapPos();
+        ImGui::TextUnformatted(
+            "This is a custom build with Quest Tracker and other fork features.\n"
+            "Installing the official GitHub DLL removes those features.");
+        ImGui::Spacing();
+        ImGui::TextUnformatted("To pull upstream fixes and keep fork features:");
+        ImGui::BulletText("%s", ForkRebuildCommand());
+        ImGui::BulletText("%s", ForkMergeCommand());
+        ImGui::PopTextWrapPos();
+        ImGui::Spacing();
+        ImGui::TextUnformatted("Upstream changes:");
+        ImGui::TextUnformatted(latest_release.body.c_str());
+        ImGui::Spacing();
+        if (ImGui::Button("Later###gwtoolbox_fork_later", ImVec2(100, 0))) {
+            settings.dismissed_upstream_size = latest_release.size;
+            step = Done;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Copy merge command", ImVec2(140, 0))) {
+            ImGui::SetClipboardText(ForkMergeCommand());
+            Log::Flash("Merge command copied to clipboard");
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Merged upstream", ImVec2(140, 0))) {
+            settings.dismissed_upstream_size = latest_release.size;
+            is_latest_version = true;
+            step = Done;
+            Log::Flash("Marked upstream %s as merged — rebuild when ready", latest_release.version.c_str());
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Official DLL...", ImVec2(110, 0))) {
+            fork_confirm_official_update = true;
+        }
+        if (fork_confirm_official_update) {
+            ImGui::OpenPopup("Install official DLL?");
+        }
+        if (ImGui::BeginPopupModal("Install official DLL?", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+            ImGui::TextUnformatted("This replaces your custom build with the official release.\nQuest Tracker and other fork features will be removed.");
+            if (ImGui::Button("Cancel###fork_official_cancel", ImVec2(100, 0))) {
+                fork_confirm_official_update = false;
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Install###fork_official_ok", ImVec2(100, 0))) {
+                fork_confirm_official_update = false;
+                ImGui::CloseCurrentPopup();
+                DoUpdate();
+            }
+            ImGui::EndPopup();
+        }
+        ImGui::End();
+        if (!updater.visible) {
+            step = Done;
+        }
+    }
+
+    // Shown once, the first time a freshly-updated build runs. A heartfelt, human
+    // ask — Toolbox gets flagged as a false positive because it injects into Gw.exe,
+    // and a lively, well-starred GitHub project reads as more trustworthy to AV
+    // vendors over time, which means fewer false detections for everyone.
     void DrawStarRequest()
     {
         if (!show_star_request) {
@@ -253,10 +443,17 @@ const GWToolboxRelease* Updater::GetCurrentVersionInfo(GWToolboxRelease* out)
     out->size = static_cast<uintmax_t>(std::ceil(size_bytes / 16.0) * 16);
     out->version = GWTOOLBOXDLL_VERSION;
     out->version.append(GWTOOLBOXDLL_VERSION_BETA);
+    out->prerelease = !std::string_view(GWTOOLBOXDLL_VERSION_BETA).empty();
+    AppendForkVersionSuffix(out->version);
     std::ranges::transform(out->version, out->version.begin(), [](const auto chr) {
         return static_cast<char>(std::tolower(chr));
     });
     return out;
+}
+
+bool Updater::IsForkBuild()
+{
+    return ForkBuildEnabled();
 }
 
 void Updater::Initialize()
@@ -280,6 +477,14 @@ void Updater::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
     if (doc.Get(Name(), "dllversion", previous_version) && !previous_version.empty() && previous_version != GWTOOLBOXDLL_VERSION && !settings.has_starred) {
         show_star_request = true;
     }
+    if (ForkBuildEnabled()) {
+        uintmax_t saved_dll_size = 0;
+        GWToolboxRelease running{};
+        if (GetCurrentVersionInfo(&running) && doc.Get(Name(), "dllfilesize", saved_dll_size)
+            && saved_dll_size != running.size) {
+            settings.dismissed_upstream_size = 0;
+        }
+    }
 #endif
     CheckForUpdate();
 }
@@ -295,6 +500,12 @@ void Updater::SaveSettings(SettingsDoc& doc)
     CHAR dllfile[MAX_PATH];
     const DWORD size = GetModuleFileName(module, dllfile, MAX_PATH);
     doc.Set(Name(), "dllpath", std::string(size > 0 ? dllfile : "error"));
+    if (ForkBuildEnabled()) {
+        GWToolboxRelease running{};
+        if (GetCurrentVersionInfo(&running)) {
+            doc.Set(Name(), "dllfilesize", running.size);
+        }
+    }
 #endif
 }
 
@@ -332,8 +543,10 @@ void Updater::CheckForUpdate(const bool forced)
             return;
         }
 
-        if (latest_release.version == current_release.version
-            && latest_release.size == current_release.size) {
+        const auto comparable = UpstreamComparableRelease();
+        const auto release_comparison = CompareReleases(latest_release, comparable);
+        if (release_comparison < 0
+            || (release_comparison == 0 && latest_release.size == current_release.size)) {
             step = Done;
             is_latest_version = true;
             if (forced) {
@@ -341,7 +554,29 @@ void Updater::CheckForUpdate(const bool forced)
             }
             return;
         }
-        is_latest_version = false;
+
+        if (ForkBuildEnabled()) {
+            const auto upstream_base = UpstreamBaseVersion();
+            if (latest_release.version == upstream_base
+                && latest_release.size == settings.dismissed_upstream_size) {
+                step = Done;
+                is_latest_version = true;
+                if (forced) {
+                    Log::Flash("Fork build matches dismissed upstream release");
+                }
+                return;
+            }
+            if (latest_release.version != upstream_base) {
+                is_latest_version = false;
+            }
+            else {
+                // Same upstream tag — hotfix/rebuild at new DLL size.
+                is_latest_version = false;
+            }
+        }
+        else {
+            is_latest_version = false;
+        }
         if (!forced && settings.update_mode == Mode::DontCheckForUpdates) {
             step = Done;
             return; // Do not check for updates
@@ -350,6 +585,9 @@ void Updater::CheckForUpdate(const bool forced)
         // we have a new version!
         Mode iMode = forced ? Mode::CheckAndAsk : settings.update_mode;
         if constexpr (!std::string_view(GWTOOLBOXDLL_VERSION_BETA).empty()) {
+            iMode = Mode::CheckAndAsk;
+        }
+        if (ForkBuildEnabled() && iMode == Mode::CheckAndAutoUpdate) {
             iMode = Mode::CheckAndAsk;
         }
         switch (iMode) {
@@ -380,6 +618,10 @@ void Updater::Draw(IDirect3DDevice9*)
             step = Done;
             break;
         case CheckAndAsk: {
+            if (ForkBuildEnabled()) {
+                DrawForkUpdateDialog();
+                break;
+            }
             if (!visible) {
                 visible = true;
             }
@@ -404,7 +646,12 @@ void Updater::Draw(IDirect3DDevice9*)
         }
         break;
         case CheckAndAutoUpdate:
-            DoUpdate();
+            if (ForkBuildEnabled()) {
+                step = CheckAndAsk;
+            }
+            else {
+                DoUpdate();
+            }
             break;
         case Downloading: {
             if (!visible) {

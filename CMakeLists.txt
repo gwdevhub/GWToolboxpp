@@ -8,9 +8,12 @@ project(gwtoolbox)
 
 set(GWTOOLBOXEXE_VERSION "4.8")
 set(GWTOOLBOXEXE_MODULE_VERSION "4,8,0,0") # used for exe module info. See GWToolbox/GWToolbox.rc
-set(GWTOOLBOXDLL_VERSION "8.33")
-set(GWTOOLBOXDLL_VERSION_BETA "") # can be anything. Marks beta version if not empty.
-set(GWTOOLBOX_MODULE_VERSION "8,33,0,0") # used for Dll module info. See GWToolboxdll/GWToolbox.rc
+set(GWTOOLBOXDLL_VERSION "8.34")
+set(GWTOOLBOXDLL_VERSION_BETA "Beta2") # can be anything. Marks beta version if not empty.
+set(GWTOOLBOXDLL_VERSION_FORK_SUFFIX "+quest") # appended to updater version string on fork builds
+set(GWTOOLBOX_MODULE_VERSION "8,34,0,0") # used for Dll module info. See GWToolboxdll/GWToolbox.rc
+
+option(GWTOOLBOX_FORK_BUILD "Custom fork build (Quest Tracker, etc.) — updater merges upstream instead of replacing DLL" ON)
 
 
 # Everything below this point (toolset/arch checks, MSVC-only flags, native-only
@@ -72,6 +75,13 @@ add_compile_definitions(
     "GWTOOLBOXDLL_VERSION_BETA=\"${GWTOOLBOXDLL_VERSION_BETA}\""
     "GWTOOLBOX_MODULE_VERSION=${GWTOOLBOX_MODULE_VERSION}"
     )
+
+if(GWTOOLBOX_FORK_BUILD)
+    add_compile_definitions(
+        "GWTOOLBOX_FORK_BUILD=1"
+        "GWTOOLBOXDLL_VERSION_FORK_SUFFIX=\"${GWTOOLBOXDLL_VERSION_FORK_SUFFIX}\""
+    )
+endif()
 	
 add_compile_options(/permissive-)
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
@@ -197,6 +207,7 @@ add_subdirectory(GWToolboxdll)
 add_subdirectory(Core)
 add_subdirectory(RestClient)
 add_subdirectory(GWToolbox)
+add_subdirectory(tests/QuestProgressTests)
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT GWToolbox)
 

@@ -52,7 +52,7 @@
 #include <Widgets/Minimap/Minimap.h>
 #include <Widgets/PartyDamage.h>
 #include <Windows/InfoWindow.h>
-#include <Windows/NotepadWindow.h>
+#include <Windows/NotePadWindow.h>
 
 #include <Modules/DialogModule.h>
 #include <Modules/GwDatModule.h>
@@ -461,7 +461,7 @@ namespace {
                 InfoField("Animation code", "0x%X", living->animation_code);
                 InfoField("Animation id", "0x%X", living->animation_id);
                 InfoField("Animation type", "0x%X", living->animation_type);
-                InfoField("Animation code", "%.3f", living->animation_speed);
+                InfoField("Animation speed", "%.3f", living->animation_speed);
             }
             if (npc) {
                 ImGui::PushID("npc_info");

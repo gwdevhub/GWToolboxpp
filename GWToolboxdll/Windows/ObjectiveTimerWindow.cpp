@@ -22,6 +22,7 @@
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
+#include <GWCA/Managers/UIMgr.h>
 
 #include <GWToolbox.h>
 #include <Utils/GuiUtils.h>
@@ -286,6 +287,7 @@ void ObjectiveTimerWindow::Initialize()
     static GW::HookEntry AgentUpdateAllegiance_Entry;
     static GW::HookEntry DoACompleteZone_Entry;
     static GW::HookEntry DisplayDialogue_Entry;
+    static GW::HookEntry WriteToChatLog_Entry;
     static GW::HookEntry MessageServer_Entry;
     static GW::HookEntry InstanceLoadInfo_Entry;
     static GW::HookEntry ManipulateMapObject_Entry;
@@ -373,6 +375,12 @@ void ObjectiveTimerWindow::Initialize()
             // NB: All GW strings are null terminated, use wcslen to avoid having to check all 122 chars
             Event(EventType::DisplayDialogue, wcslen(packet->message), packet->message);
         });
+    GW::UI::RegisterUIMessageCallback(
+        &WriteToChatLog_Entry, GW::UI::UIMessage::kWriteToChatLogWithSender,
+        [this](GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*) {
+            const auto packet = (GW::UI::UIPacket::kWriteToChatLogWithSender*)wparam;
+            Event(EventType::DisplayDialogue, wcslen(packet->message), packet->message);
+        }, 0x4000);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ManipulateMapObject>(
         &ManipulateMapObject_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::ManipulateMapObject* packet) {
             if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {

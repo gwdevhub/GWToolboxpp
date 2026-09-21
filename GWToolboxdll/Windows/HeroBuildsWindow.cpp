@@ -87,6 +87,9 @@ namespace {
     // Bottom-left sprite (col 0, row 1) = semi-transparent cross = "disabled" overlay
     IDirect3DTexture9** skill_toggle_sprite = nullptr;
 
+    std::array<std::string, 8> merc_display_names{};
+    std::wstring merc_display_names_player_name{};
+
     using GW::Constants::HeroID;
 
     constexpr std::array HeroIndexToID = {
@@ -260,6 +263,41 @@ GW::HeroPartyMember* HeroBuildsWindow::GetPartyHeroByID(const GW::Constants::Her
     }
     return nullptr;
 }
+
+void HeroBuildsWindow::RefreshMercDisplayNames()
+{
+    if (!GW::Map::GetIsMapLoaded() || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) return;
+    const auto player_name = GW::AccountMgr::GetCurrentPlayerName();
+    if (!(player_name && *player_name) || merc_display_names_player_name == player_name) return;
+    const auto* world = GW::GetWorldContext();
+    if (!(world && world->hero_info.size())) return;
+
+    for (size_t i = 0; i < merc_display_names.size(); ++i) {
+        const auto hero_id = static_cast<GW::Constants::HeroID>(GW::Constants::HeroID::Merc1 + i);
+        merc_display_names[i] = Resources::GetHeroName(hero_id)->string();
+        for (const auto& hero : world->hero_info) {
+            if (hero.hero_id == hero_id && hero.name[0]) {
+                merc_display_names[i] = TextUtils::WStringToString(hero.name);
+                break;
+            }
+        }
+    }
+    merc_display_names_player_name = player_name;
+}
+
+const char* HeroBuildsWindow::GetMercDisplayName(const GW::Constants::HeroID hero_id)
+{
+    if (hero_id >= GW::Constants::HeroID::Merc1 && hero_id <= GW::Constants::HeroID::Merc8) {
+        const auto index = static_cast<size_t>(hero_id - GW::Constants::HeroID::Merc1);
+        if (!merc_display_names[index].empty()) return merc_display_names[index].c_str();
+    }
+    return Resources::GetHeroName(hero_id)->string().c_str();
+}
+
+bool HeroBuildsWindow::SortByProfession()
+{
+    return settings.sort_by_profession;
+}
 void HeroBuildsWindow::Initialize()
 {
     ToolboxWindow::Initialize();
@@ -284,6 +322,7 @@ void HeroBuildsWindow::Terminate()
 
 void HeroBuildsWindow::Draw(IDirect3DDevice9*)
 {
+    RefreshMercDisplayNames();
     if (visible) {
         ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowSize(ImVec2(300, 250), ImGuiCond_FirstUseEver);
@@ -612,6 +651,7 @@ void HeroBuildsWindow::DrawSettingsInternal()
 {
     ImGui::Checkbox("Hide Hero Build windows when entering explorable area", &settings.hide_when_entering_explorable);
     ImGui::CheckboxWithHelp("Only show one teambuild window at a time", &settings.one_teambuild_at_a_time, "Close other teambuild windows when you open a new one");
+    ImGui::CheckboxWithHelp("Sort heroes by profession", &settings.sort_by_profession, "Group heroes by profession in the hero selector dropdown.");
 }
 
 void HeroBuildsWindow::SaveSettings(SettingsDoc& doc)

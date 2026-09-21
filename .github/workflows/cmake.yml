@@ -1,8 +1,8 @@
 name: CMake
 
 on:
-  # push covers dev (post-merge validation) and master (release builds, gated
-  # below on should_release). pull_request covers PRs against dev - including
+  # push covers dev (post-merge validation and beta releases) and master
+  # (release builds). pull_request covers PRs against dev - including
   # from forks, where CERTUM_OTP_URI is unset and signing/release is skipped -
   # so branches only build once a PR is open instead of on every push.
   push:
@@ -45,12 +45,8 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: write
-    # Exposed at job level so the release steps can gate on `env.CERTUM_OTP_URI`
-    # (secrets can't be referenced directly in an `if:` expression).
     env:
-      CERTUM_OTP_URI: ${{ secrets.CERTUM_OTP_URI }}
-      CERTUM_USERID: ${{ secrets.CERTUM_USERID }}
-      CERTUM_CERT_SHA1: ${{ secrets.CERTUM_CERT_SHA1 }}
+      HAS_CERTUM_CREDENTIALS: ${{ secrets.CERTUM_OTP_URI != '' && secrets.CERTUM_USERID != '' && secrets.CERTUM_CERT_SHA1 != '' }}
 
     steps:
 #    - name: Setup Windows 10 SDK Action
@@ -141,7 +137,7 @@ jobs:
 
     - name: Determine release version
       id: version
-      if: github.ref == 'refs/heads/master'
+      if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/dev'
       shell: bash
       run: |
         VERSION=$(sed -n 's/.*set(GWTOOLBOXDLL_VERSION "\(.*\)").*/\1/p' CMakeLists.txt | tr -d '\r')
@@ -150,6 +146,12 @@ jobs:
         if [ -z "$VERSION" ]; then
           echo "Could not find version in CMakeLists.txt"
           exit 1
+        fi
+
+        if [ "$GITHUB_REF" = 'refs/heads/dev' ] && [ -z "$BETA" ]; then
+          echo "Dev builds require a beta version. Skipping release."
+          echo "should_release=false" >> "$GITHUB_OUTPUT"
+          exit 0
         fi
 
         if [ -z "$BETA" ]; then
@@ -163,6 +165,11 @@ jobs:
         echo "Target tag: $TAG_NAME"
         echo "tag_name=$TAG_NAME" >> "$GITHUB_OUTPUT"
         echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+        if [ -n "$BETA" ]; then
+          echo "prerelease=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "prerelease=false" >> "$GITHUB_OUTPUT"
+        fi
 
         if git ls-remote --tags origin "refs/tags/$TAG_NAME" | grep -q .; then
           echo "Tag $TAG_NAME already exists. Skipping release."
@@ -172,12 +179,8 @@ jobs:
           echo "should_release=true" >> "$GITHUB_OUTPUT"
         fi
 
-    # Certum SimplySign code signing. The binaries are signed in place in
-    # bin/RelWithDebInfo before the release upload. Each signing step is gated on
-    # the CERTUM_OTP_URI secret being present, so forks and un-provisioned
-    # environments still publish a release (unsigned) instead of failing.
     - name: Set up Certum SimplySign
-      if: steps.version.outputs.should_release == 'true' && env.CERTUM_OTP_URI != ''
+      if: steps.version.outputs.should_release == 'true' && env.HAS_CERTUM_CREDENTIALS == 'true'
       shell: bash
       run: |
         chmod +x ./.github/scripts/install-simplysign.sh
@@ -185,27 +188,39 @@ jobs:
         powershell -ExecutionPolicy Bypass -File "./.github/scripts/configure-simplysign.ps1"
 
     - name: Authenticate Certum SimplySign
-      if: steps.version.outputs.should_release == 'true' && env.CERTUM_OTP_URI != ''
+      if: steps.version.outputs.should_release == 'true' && env.HAS_CERTUM_CREDENTIALS == 'true'
       shell: bash
+      env:
+        CERTUM_OTP_URI: ${{ secrets.CERTUM_OTP_URI }}
+        CERTUM_USERID: ${{ secrets.CERTUM_USERID }}
+        CERTUM_CERT_SHA1: ${{ secrets.CERTUM_CERT_SHA1 }}
       run: powershell -ExecutionPolicy Bypass -File "./.github/scripts/connect-simplysign.ps1"
 
     - name: Sign release binaries
-      if: steps.version.outputs.should_release == 'true' && env.CERTUM_OTP_URI != ''
+      if: steps.version.outputs.should_release == 'true' && env.HAS_CERTUM_CREDENTIALS == 'true'
       shell: pwsh
+      env:
+        CERTUM_CERT_SHA1: ${{ secrets.CERTUM_CERT_SHA1 }}
       run: |
         $bin = "${{runner.workspace}}/GWToolboxpp/bin/RelWithDebInfo"
         ./.github/scripts/sign-certum.ps1 -Files @("$bin/GWToolbox.exe", "$bin/GWToolboxdll.dll")
+
+    - name: Disconnect Certum SimplySign
+      if: always() && steps.version.outputs.should_release == 'true' && env.HAS_CERTUM_CREDENTIALS == 'true'
+      continue-on-error: true
+      shell: pwsh
+      run: ./.github/scripts/disconnect-simplysign.ps1
 
     - name: Create release
       if: steps.version.outputs.should_release == 'true'
       shell: bash
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        TAG_NAME: ${{ steps.version.outputs.tag_name }}
+        VERSION: ${{ steps.version.outputs.version }}
+        PRERELEASE: ${{ steps.version.outputs.prerelease }}
+        BIN_DIR: ${{ runner.workspace }}/GWToolboxpp/bin/RelWithDebInfo
       run: |
-        TAG_NAME="${{ steps.version.outputs.tag_name }}"
-        VERSION="${{ steps.version.outputs.version }}"
-        BIN_DIR="${{runner.workspace}}/GWToolboxpp/bin/RelWithDebInfo"
-
         # Already built by compress.ps1 (GWToolboxdll/CMakeLists.txt POST_BUILD) - no need to re-gzip.
         cp "$BIN_DIR/GWToolboxdll.pdb.gz" GWToolboxdll.pdb.gz
 
@@ -227,7 +242,13 @@ jobs:
         git tag "$TAG_NAME"
         git push origin "$TAG_NAME"
 
+        release_args=()
+        if [ "$PRERELEASE" = 'true' ]; then
+          release_args+=(--prerelease)
+        fi
+
         gh release create "$TAG_NAME" \
           --title "$TAG_NAME" \
           --notes-file release_notes.md \
+          "${release_args[@]}" \
           "$BIN_DIR/GWToolbox.exe" "$BIN_DIR/GWToolboxdll.dll" GWToolboxdll.pdb.gz

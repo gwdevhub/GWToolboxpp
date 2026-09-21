@@ -513,8 +513,12 @@ void RiverModule::DrawSettings()
     const auto red = ImGui::ColorConvertU32ToFloat4(Colors::Red());
     const auto green = ImGui::ColorConvertU32ToFloat4(Colors::Green());
     ImGui::TextColored(red, "Warning: This is a beta feature.");
-    if (!GameWorldCompositor::IsActive())
-        ImGui::TextColored(red, GameWorldCompositor::HasFailed() ? "  in-world compositor FAILED to install." : "  in-world compositor: not installed yet.");
+    if (GameWorldCompositor::HasFailed())
+        ImGui::TextColored(red, "  in-world compositor FAILED to install.");
+    else if (GameWorldCompositor::IsActive())
+        ImGui::TextColored(green, "  in-world compositor active.");
+    else
+        ImGui::TextDisabled("  in-world compositor: not installed yet.");
 
     ImGui::TextUnformatted("Textures");
     ImGui::ShowHelp("The in-game lava textures (plus the water sheet). Pick one for a uniform surface, or several\nto mix them across the map in ~1024-unit patches. Nothing selected = nothing drawn.");

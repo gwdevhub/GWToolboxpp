@@ -1558,9 +1558,7 @@ namespace GWArmory {
         {"Fiery Blade Axe", 0x3850F, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Icy Blade Axe", 0x3852D, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Pyroclastic Axe", 0x49A6A, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x2E130441},
-        {"Serpentine Reaver", 0x53709, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Tormented Axe", 0x43481, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000},
-        {"Candy Cane Axe", 0x26AA3, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Gothic Dual Axe", 0x2B0CD, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Mallyx's Reaver", 0x38528, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000},
 
@@ -1578,8 +1576,6 @@ namespace GWArmory {
         {"Tormented Shortbow", 0x43499, Profession::None, ItemType::Bow, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Balthazar's Flatbow", 0x5C93E, Profession::None, ItemType::Bow, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Bramble Flatbow", 0x2B0F1, Profession::None, ItemType::Bow, Campaign::BonusMissionPack, 3, 0x20000000},
-        {"Candy Cane Bow", 0x26AA4, Profession::None, ItemType::Bow, Campaign::BonusMissionPack, 3, 0x20000000},
-        {"Half Moon", 0x18213, Profession::None, ItemType::Bow, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Ivory Bow", 0x17C3D, Profession::None, ItemType::Bow, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Keiran's Bow", 0x2B0E2, Profession::None, ItemType::Bow, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Oppressor's Recurve Bow", 0x57C20, Profession::None, ItemType::Bow, Campaign::BonusMissionPack, 3, 0x20000000},
@@ -1603,28 +1599,22 @@ namespace GWArmory {
         {"Forgotten Fan", 0x2B11F, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Grim Cesta", 0x1553D, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 0, 0x20000000},
         {"Heaven's Arch", 0x25487, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000},
-        {"Inscribed Chakram (metal)", 0x15DB2, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 0, 0x20000000},
-        {"Jeweled Chalice", 0x15DD8, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x2C020000},
         {"Jug", 0x2B14B, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Luminescent Lantern", 0x385CD, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Paper Fan / The Windcatcher", 0x2B125, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000},
-        {"Paper Lantern", 0x2B13C, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Plagueborn Focus", 0x28408, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 0, 0x20000000},
         {"Rose Focus", 0x49A60, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Storm Ember", 0x25484, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Tiger's Pride", 0x26948, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Tormented Focus", 0x4349C, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 0, 0x28020000},
-        {"Aureate Chalice", 0x18223, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Bleached Skull", 0x2B139, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Bogroot Focus", 0x385BA, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Channeling Focus", 0x2B146, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Destroyer Focus", 0x49CE0, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Gingerbread Focus", 0x26B48, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Gwen's Flute", 0x1B57D, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000},
-        {"Jeweled Chakram", 0x15DB5, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Majestic Focus", 0x385C0, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Oppressor's Focus", 0x57791, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000},
-        {"Restoration Focus", 0x2AEAA, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000},
         {"The Bison Cup", 0x499FD, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Zehtuka's Horn", 0x49A5B, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000},
 
@@ -1632,7 +1622,6 @@ namespace GWArmory {
         {"Anniversary Hammer \"Verdict\"", 0x2AFB1, Profession::None, ItemType::Hammer, Campaign::BonusMissionPack, 3, 0x2A221201},
         {"Kanaxai's Mallet", 0x2B16F, Profession::None, ItemType::Hammer, Campaign::BonusMissionPack, 0, 0x2231C210},
         {"Tormented Maul", 0x43484, Profession::None, ItemType::Hammer, Campaign::BonusMissionPack, 0, 0x20000000},
-        {"Candy Cane Hammer", 0x26AA8, Profession::None, ItemType::Hammer, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Copper Crusher", 0x385EA, Profession::None, ItemType::Hammer, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Destroyer Maul", 0x49CE3, Profession::None, ItemType::Hammer, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Ruby Maul", 0x38603, Profession::None, ItemType::Hammer, Campaign::BonusMissionPack, 3, 0x20000000},
@@ -1660,9 +1649,7 @@ namespace GWArmory {
         {"Diamond Aegis", 0x2AF2E, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Draconic Aegis", 0x53742, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x2C120641},
         {"Echovald Shield", 0x2B231, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
-        {"Embossed Aegis", 0x2B227, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x28020001},
         {"Eternal Shield", 0x21406, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
-        {"Exalted Aegis", 0x2B215, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Guardian of the Hunt", 0x2B218, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Iridescent Aegis", 0x2AF33, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Istani Shield", 0x38729, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
@@ -1671,17 +1658,14 @@ namespace GWArmory {
         {"Magmas Shield", 0x21412, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Mursaat Shield", 0x5274D, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Ominous Aegis", 0x2EBDE, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
-        {"Outcast Shield", 0x2AEBC, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Shadow Shield", 0x2140B, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Spider's Gluttony", 0x26962, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Tormented Shield", 0x43493, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Wintergreen Shield", 0x40E60, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Zodiac Shield", 0x2B1B6, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x2C020001},
         {"Destroyer Shield", 0x47A03, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
-        {"Gingerbread Shield", 0x26AAE, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Great Conch", 0x49B28, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Oppressor's Shield", 0x57778, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
-        {"Peppermint Shield", 0x26AB3, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Reefclaw's Refuge", 0x9F24, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
 
         // Spears
@@ -1698,7 +1682,6 @@ namespace GWArmory {
         {"Bo Staff", 0x2AE68, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Bone Dragon Staff", 0x53756, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Dragon's Envy", 0x26968, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000},
-        {"Envoy Staff", 0x2AE80, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Earthbound Staff/Magmus' Staff", 0x28405, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Firebrand", 0x5D84, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Holy Staff", 0x1B5D1, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000},
@@ -1714,8 +1697,6 @@ namespace GWArmory {
         {"Tormented Staff", 0x434A2, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Togo's Staff / Channeling Staff", 0x2AE0C, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 2, 0x2A200401},
         {"Asuran Staff", 0x49C71, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000},
-        {"Bone Staff", 0x17955, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000},
-        {"Candy Cane Staff", 0x26AB4, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Clairvoyant Staff", 0x2B27B, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Fuchsia Staff", 0x49B85, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Lotus Staff", 0x2B245, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000},
@@ -1729,8 +1710,6 @@ namespace GWArmory {
         {"Colossal Scimitar", 0x387F8, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Crystalline Sword", 0x383E, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Embersteel Blade", 0x49C17, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x2E134441},
-        {"Envoy Sword", 0x2AE83, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000},
-        {"Eternal Blade", 0x17B20, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Fellblade", 0x2142D, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x22030041},
         {"Glacial Blade", 0x49A56, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Icy Dragon Sword", 0x26ABA, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000},
@@ -1744,7 +1723,6 @@ namespace GWArmory {
         {"Vampiric Dragon Sword", 0x55777, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x2A024201},
         {"Vertebreaker", 0x2B2A4, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Wintergreen Sword", 0x40E63, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 0, 0x2A021600},
-        {"Candy Cane Sword", 0x26AB5, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Elemental Sword", 0x38807, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Etched Sword", 0x49BCE, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Mammoth Blade", 0x49C3A, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000},
@@ -1755,7 +1733,6 @@ namespace GWArmory {
         {"Amber Wand", 0x28415, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 2, 0x22020041},
         {"Channeling Rod", 0x2B208, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 2, 0x22020041},
         {"Frog Scepter", 0x53733, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x2E120641},
-        {"Holy Rod", 0x172B8, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 0, 0x22000001},
         {"Jade Wand", 0x28412, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 2, 0x22020041},
         {"Jellyfish Wand", 0x2B1B8, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Koi Scepter", 0x2B1BD, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000},
@@ -1771,8 +1748,6 @@ namespace GWArmory {
         {"Bogroot Rod", 0x49ADB, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Bone Spiral Rod", 0x2B1E5, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Brightclaw", 0x2B1EF, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000},
-        {"Candy Cane Wand", 0x26AA9, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000},
-        {"Cane", 0x16D68, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Destroyer Scepter", 0x49CE6, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Droknar's Scepter", 0x50950, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Hypnotic Scepter", 0x2B1B3, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000},
@@ -1790,7 +1765,7 @@ namespace GWArmory {
         // and put the model in the wrong dropdown at worst.
         // -------------------------------------------------------------------
 
-        // Discovered Axe (52)
+        // Discovered Axe (44)
         {"0x2B0AA", 0x2B0AA, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x2B0AF", 0x2B0AF, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x2B0B9", 0x2B0B9, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
@@ -1806,11 +1781,7 @@ namespace GWArmory {
         {"0x373A5", 0x373A5, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x373C6", 0x373C6, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x373ED", 0x373ED, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x38444", 0x38444, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x38449", 0x38449, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x3844C", 0x3844C, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x38453", 0x38453, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x38454", 0x38454, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x3845C", 0x3845C, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x3847E", 0x3847E, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x384F6", 0x384F6, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
@@ -1831,23 +1802,18 @@ namespace GWArmory {
         {"0x38586", 0x38586, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x38589", 0x38589, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x43474", 0x43474, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x499D4", 0x499D4, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0xA16264A1
-        {"0x499F0", 0x499F0, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0xA16264A1
         {"0x499F1", 0x499F1, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0xA16264A1
         {"0x49A65", 0x49A65, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x49A6F", 0x49A6F, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x49A74", 0x49A74, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x49A79", 0x49A79, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x49EB2", 0x49EB2, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0xA16264A1
-        {"0x5063E", 0x5063E, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0xA16264A1
         {"0x5789F", 0x5789F, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0xA16264A1
         {"0x5A523", 0x5A523, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0xA16264A1
         {"0x5A52B", 0x5A52B, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0xA16264A1
 
-        // Discovered Bow (61)
+        // Discovered Bow (59)
         {"0x2523", 0x2523, Profession::None, ItemType::Bow, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0xAF290816
         {"0x17C42", 0x17C42, Profession::None, ItemType::Bow, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0xAF290816
-        {"0x25818", 0x25818, Profession::None, ItemType::Bow, Campaign::BonusMissionPack, 3, 0x20000000}, // rig-pure rig=0xC02810C9
         {"0x283A8", 0x283A8, Profession::None, ItemType::Bow, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0xAF290816
         {"0x283AA", 0x283AA, Profession::None, ItemType::Bow, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0xAF290816
         {"0x283B4", 0x283B4, Profession::None, ItemType::Bow, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0xAF290816
@@ -1859,7 +1825,6 @@ namespace GWArmory {
         {"0x28435", 0x28435, Profession::None, ItemType::Bow, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0xAF290816
         {"0x28441", 0x28441, Profession::None, ItemType::Bow, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0xAF290816
         {"0x2AEA0", 0x2AEA0, Profession::None, ItemType::Bow, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0xAF290816
-        {"0x2AEAD", 0x2AEAD, Profession::None, ItemType::Bow, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0xAF290816
         {"0x2AEF4", 0x2AEF4, Profession::None, ItemType::Bow, Campaign::BonusMissionPack, 3, 0x20000000}, // rig-pure rig=0x7DEB68AE
         {"0x2AF7E", 0x2AF7E, Profession::None, ItemType::Bow, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0xAF290816
         {"0x2AF83", 0x2AF83, Profession::None, ItemType::Bow, Campaign::BonusMissionPack, 3, 0x20000000}, // rig-pure rig=0x7DEB68AE
@@ -1907,8 +1872,7 @@ namespace GWArmory {
         {"0x5789E", 0x5789E, Profession::None, ItemType::Bow, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0xAF290816
         {"0x5AB66", 0x5AB66, Profession::None, ItemType::Bow, Campaign::BonusMissionPack, 3, 0x20000000}, // rig-pure rig=0x7DEB68AE
 
-        // Discovered Daggers (20)
-        {"0x282B1", 0x282B1, Profession::None, ItemType::Daggers, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x1AE75860
+        // Discovered Daggers (19)
         {"0x283CA", 0x283CA, Profession::None, ItemType::Daggers, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x1AE75860
         {"0x283DA", 0x283DA, Profession::None, ItemType::Daggers, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x1AE75860
         {"0x283FD", 0x283FD, Profession::None, ItemType::Daggers, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x1AE75860
@@ -1929,10 +1893,9 @@ namespace GWArmory {
         {"0x49AA9", 0x49AA9, Profession::None, ItemType::Daggers, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x1AE75860
         {"0x49AAE", 0x49AAE, Profession::None, ItemType::Daggers, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x1AE75860
 
-        // Discovered Hammer (25)
+        // Discovered Hammer (24)
         {"0x2B15F", 0x2B15F, Profession::None, ItemType::Hammer, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x2B164", 0x2B164, Profession::None, ItemType::Hammer, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x2B167", 0x2B167, Profession::None, ItemType::Hammer, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x2B16C", 0x2B16C, Profession::None, ItemType::Hammer, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x2B174", 0x2B174, Profession::None, ItemType::Hammer, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x2B183", 0x2B183, Profession::None, ItemType::Hammer, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
@@ -1956,7 +1919,7 @@ namespace GWArmory {
         {"0x38612", 0x38612, Profession::None, ItemType::Hammer, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x38617", 0x38617, Profession::None, ItemType::Hammer, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
 
-        // Discovered Offhand (158)
+        // Discovered Offhand (128)
         {"0x2520", 0x2520, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x9B49", 0x9B49, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x9B50", 0x9B50, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
@@ -1964,17 +1927,7 @@ namespace GWArmory {
         {"0x9B5D", 0x9B5D, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0xF7C0", 0xF7C0, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x154EE", 0x154EE, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x159D9", 0x159D9, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x16FE3", 0x16FE3, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x16FE6", 0x16FE6, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x16FEB", 0x16FEB, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x16FFF", 0x16FFF, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x17C3C", 0x17C3C, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x18228", 0x18228, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x1A1BB", 0x1A1BB, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x1A6A9", 0x1A6A9, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x1B540", 0x1B540, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x1B544", 0x1B544, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x1B57E", 0x1B57E, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x1B5A2", 0x1B5A2, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x1E1AE", 0x1E1AE, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
@@ -1984,14 +1937,9 @@ namespace GWArmory {
         {"0x1E232", 0x1E232, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x1E254", 0x1E254, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x1E25E", 0x1E25E, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x235AA", 0x235AA, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x25155", 0x25155, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x2515C", 0x2515C, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x2548D", 0x2548D, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x2581B", 0x2581B, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x2581E", 0x2581E, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x2592A", 0x2592A, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x25932", 0x25932, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x2595C", 0x2595C, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x2595F", 0x2595F, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x2596B", 0x2596B, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
@@ -2005,7 +1953,6 @@ namespace GWArmory {
         {"0x2AE9B", 0x2AE9B, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x2AEA5", 0x2AEA5, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x2AEB7", 0x2AEB7, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x2AEBF", 0x2AEBF, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x2AEC4", 0x2AEC4, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x2AEC9", 0x2AEC9, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x2AECE", 0x2AECE, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
@@ -2055,16 +2002,8 @@ namespace GWArmory {
         {"0x48FD5", 0x48FD5, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x499BC", 0x499BC, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x499BD", 0x499BD, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x499C3", 0x499C3, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x499C7", 0x499C7, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x499CE", 0x499CE, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x499D1", 0x499D1, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x499D9", 0x499D9, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x499DC", 0x499DC, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x499DE", 0x499DE, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x499DF", 0x499DF, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x499ED", 0x499ED, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x499FF", 0x499FF, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x49CB3", 0x49CB3, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x49CB8", 0x49CB8, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x49CBB", 0x49CBB, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
@@ -2074,22 +2013,16 @@ namespace GWArmory {
         {"0x50367", 0x50367, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x5036E", 0x5036E, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x503B6", 0x503B6, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x5092F", 0x5092F, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x5093A", 0x5093A, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x50943", 0x50943, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x5094D", 0x5094D, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x50958", 0x50958, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x50962", 0x50962, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x5096A", 0x5096A, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x5096F", 0x5096F, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x50994", 0x50994, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x52627", 0x52627, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x52640", 0x52640, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x52645", 0x52645, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x5264A", 0x5264A, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x52659", 0x52659, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x52664", 0x52664, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x52665", 0x52665, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x5266F", 0x5266F, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x52683", 0x52683, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x52688", 0x52688, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
@@ -2116,8 +2049,7 @@ namespace GWArmory {
         {"0x52748", 0x52748, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x52757", 0x52757, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
 
-        // Discovered Scythe (55)
-        {"0x38457", 0x38457, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0xA16264A1
+        // Discovered Scythe (43)
         {"0x38647", 0x38647, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0xA16264A1
         {"0x38692", 0x38692, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x38697", 0x38697, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
@@ -2127,17 +2059,13 @@ namespace GWArmory {
         {"0x386AB", 0x386AB, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0xB4593E33
         {"0x386B5", 0x386B5, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x386BA", 0x386BA, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x386BF", 0x386BF, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x386C2", 0x386C2, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x386C7", 0x386C7, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x386CC", 0x386CC, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x38789", 0x38789, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0xA16264A1
         {"0x40E62", 0x40E62, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x40E6C", 0x40E6C, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x40E6E", 0x40E6E, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x43B71", 0x43B71, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x43B8D", 0x43B8D, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x44CA8", 0x44CA8, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x458E3", 0x458E3, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x458E9", 0x458E9, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0xA16264A1
         {"0x458EB", 0x458EB, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
@@ -2145,11 +2073,6 @@ namespace GWArmory {
         {"0x4590B", 0x4590B, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x4590C", 0x4590C, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x4590E", 0x4590E, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x45911", 0x45911, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x45982", 0x45982, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x4598B", 0x4598B, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x45998", 0x45998, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x45999", 0x45999, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x49AE5", 0x49AE5, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0xB4593E33
         {"0x49AED", 0x49AED, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0xB4593E33
         {"0x49AF7", 0x49AF7, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0xB4593E33
@@ -2157,8 +2080,6 @@ namespace GWArmory {
         {"0x49C64", 0x49C64, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0xB4593E33
         {"0x55653", 0x55653, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x5644B", 0x5644B, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x564F3", 0x564F3, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x564F4", 0x564F4, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x5AB63", 0x5AB63, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x5AB6C", 0x5AB6C, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x5AB6F", 0x5AB6F, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
@@ -2173,7 +2094,7 @@ namespace GWArmory {
         {"0x5C94D", 0x5C94D, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0xB4593E33
         {"0x5C956", 0x5C956, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
 
-        // Discovered Shield (65)
+        // Discovered Shield (64)
         {"0x24D2", 0x24D2, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000}, // rig-pure rig=0x781953BF
         {"0x381E", 0x381E, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000}, // rig-pure rig=0x781953BF
         {"0x3820", 0x3820, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000}, // rig-pure rig=0x781953BF
@@ -2236,7 +2157,6 @@ namespace GWArmory {
         {"0x52697", 0x52697, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000}, // rig-pure rig=0x781953BF
         {"0x52711", 0x52711, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000}, // rig-pure rig=0x781953BF
         {"0x57CA9", 0x57CA9, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000}, // rig-pure rig=0x781953BF
-        {"0x5A2CC", 0x5A2CC, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000}, // rig-pure rig=0x781953BF
         {"0x5AE0A", 0x5AE0A, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000}, // rig-pure rig=0x781953BF
         {"0x5C950", 0x5C950, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000}, // rig-pure rig=0x781953BF
 
@@ -2270,13 +2190,9 @@ namespace GWArmory {
         {"0x49CDD", 0x49CDD, Profession::None, ItemType::Spear, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x1AE75860
         {"0x49CF3", 0x49CF3, Profession::None, ItemType::Spear, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x1AE75860
 
-        // Discovered Staff (124)
+        // Discovered Staff (110)
         {"0x1B5CE", 0x1B5CE, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x63BBDC9F
-        {"0x1E236", 0x1E236, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x63BBDC9F
-        {"0x212E8", 0x212E8, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x212EC", 0x212EC, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x21368", 0x21368, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x213AD", 0x213AD, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x213BF", 0x213BF, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x213E4", 0x213E4, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x213F0", 0x213F0, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
@@ -2287,8 +2203,6 @@ namespace GWArmory {
         {"0x21475", 0x21475, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x22EEF", 0x22EEF, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x22EF2", 0x22EF2, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x262E6", 0x262E6, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x262E9", 0x262E9, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x2694B", 0x2694B, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x2694E", 0x2694E, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x26954", 0x26954, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
@@ -2309,21 +2223,16 @@ namespace GWArmory {
         {"0x2A4A5", 0x2A4A5, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x2A4AC", 0x2A4AC, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x2A4B3", 0x2A4B3, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x2ADAF", 0x2ADAF, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x2ADB4", 0x2ADB4, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x2ADC0", 0x2ADC0, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x2ADE6", 0x2ADE6, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x2AE02", 0x2AE02, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x2AE07", 0x2AE07, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x2AE34", 0x2AE34, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x2AE35", 0x2AE35, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x2AE6D", 0x2AE6D, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x2AE72", 0x2AE72, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x2AE77", 0x2AE77, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x2B19A", 0x2B19A, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x63BBDC9F
         {"0x2B20D", 0x2B20D, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x63BBDC9F
         {"0x2B23B", 0x2B23B, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x2B240", 0x2B240, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x2B24A", 0x2B24A, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x2B251", 0x2B251, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x2B25B", 0x2B25B, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
@@ -2337,12 +2246,9 @@ namespace GWArmory {
         {"0x2B294", 0x2B294, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x2B299", 0x2B299, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x2B29E", 0x2B29E, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x2B29F", 0x2B29F, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x2B2BA", 0x2B2BA, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x2EBD6", 0x2EBD6, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x2F301", 0x2F301, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x2F30B", 0x2F30B, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x2F30F", 0x2F30F, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x30708", 0x30708, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x38411", 0x38411, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x63BBDC9F
         {"0x38779", 0x38779, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
@@ -2396,12 +2302,11 @@ namespace GWArmory {
         {"0x54C87", 0x54C87, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x54C94", 0x54C94, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
 
-        // Discovered Sword (146)
+        // Discovered Sword (140)
         {"0x24EB", 0x24EB, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x1AE75860
         {"0x254D", 0x254D, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x1AE75860
         {"0x383C", 0x383C, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x1AE75860
         {"0x3841", 0x3841, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x1AE75860
-        {"0x4215", 0x4215, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x1AE75860
         {"0x9B72", 0x9B72, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x1AE75860
         {"0x9B75", 0x9B75, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x1AE75860
         {"0x9B7C", 0x9B7C, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0xCA65189D
@@ -2416,8 +2321,6 @@ namespace GWArmory {
         {"0x22F0E", 0x22F0E, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0xCA65189D
         {"0x2AE40", 0x2AE40, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x2AE52", 0x2AE52, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x2AE5D", 0x2AE5D, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x2AE63", 0x2AE63, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x2AE8B", 0x2AE8B, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0xCA65189D
         {"0x2AF47", 0x2AF47, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0xCA65189D
         {"0x2AF51", 0x2AF51, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0xCA65189D
@@ -2509,7 +2412,6 @@ namespace GWArmory {
         {"0x5097E", 0x5097E, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x1AE75860
         {"0x50981", 0x50981, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x1AE75860
         {"0x52636", 0x52636, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x1AE75860
-        {"0x52654", 0x52654, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x1AE75860
         {"0x5265E", 0x5265E, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x1AE75860
         {"0x5267E", 0x5267E, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x1AE75860
         {"0x5269C", 0x5269C, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x1AE75860
@@ -2533,8 +2435,6 @@ namespace GWArmory {
         {"0x59EF1", 0x59EF1, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x1AE75860
         {"0x59EF2", 0x59EF2, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x1AE75860
         {"0x59EF3", 0x59EF3, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x1AE75860
-        {"0x5A2CF", 0x5A2CF, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x1AE75860
-        {"0x5A2D0", 0x5A2D0, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x1AE75860
         {"0x5A522", 0x5A522, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0xCA65189D
         {"0x5AB69", 0x5AB69, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x1AE75860
         {"0x5AB78", 0x5AB78, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x1AE75860
@@ -2544,23 +2444,19 @@ namespace GWArmory {
         {"0x5C953", 0x5C953, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x1AE75860
         {"0x5C959", 0x5C959, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x1AE75860
 
-        // Discovered Wand (96)
+        // Discovered Wand (86)
         {"0x154F1", 0x154F1, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x63BBDC9F
-        {"0x15504", 0x15504, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x63BBDC9F
         {"0x15DBB", 0x15DBB, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x63BBDC9F
         {"0x16FFC", 0x16FFC, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0xA16264A1
         {"0x172DC", 0x172DC, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x63BBDC9F
-        {"0x1A6AF", 0x1A6AF, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0xA16264A1
         {"0x1E1FF", 0x1E1FF, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0xA16264A1
         {"0x213E9", 0x213E9, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0xA16264A1
         {"0x22ED8", 0x22ED8, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0xA16264A1
         {"0x22EDD", 0x22EDD, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0xA16264A1
         {"0x25495", 0x25495, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0xA16264A1
-        {"0x25821", 0x25821, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0xA16264A1
         {"0x2597B", 0x2597B, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x63BBDC9F
         {"0x26951", 0x26951, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0xA16264A1
         {"0x28439", 0x28439, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0xA16264A1
-        {"0x2AE7D", 0x2AE7D, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0xA16264A1
         {"0x2AF65", 0x2AF65, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0xA16264A1
         {"0x2AFB6", 0x2AFB6, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0xA16264A1
         {"0x2B0A0", 0x2B0A0, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0xA16264A1
@@ -2583,7 +2479,6 @@ namespace GWArmory {
         {"0x2B1F9", 0x2B1F9, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x2B1FE", 0x2B1FE, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x2B212", 0x2B212, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x2B270", 0x2B270, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0xA16264A1
         {"0x3861C", 0x3861C, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x38621", 0x38621, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x38626", 0x38626, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
@@ -2608,8 +2503,6 @@ namespace GWArmory {
         {"0x38681", 0x38681, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x38687", 0x38687, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x38688", 0x38688, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x40D87", 0x40D87, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x40D88", 0x40D88, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x40E58", 0x40E58, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x40E5B", 0x40E5B, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x40EA3", 0x40EA3, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x63BBDC9F
@@ -2618,8 +2511,6 @@ namespace GWArmory {
         {"0x458F2", 0x458F2, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x63BBDC9F
         {"0x458F3", 0x458F3, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x63BBDC9F
         {"0x458F4", 0x458F4, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x63BBDC9F
-        {"0x45906", 0x45906, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x63BBDC9F
-        {"0x45907", 0x45907, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x63BBDC9F
         {"0x49AB3", 0x49AB3, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x63BBDC9F
         {"0x49AB8", 0x49AB8, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x49ABD", 0x49ABD, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
@@ -2634,7 +2525,6 @@ namespace GWArmory {
         {"0x49CE9", 0x49CE9, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x49CF0", 0x49CF0, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x49EAD", 0x49EAD, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
-        {"0x49EB5", 0x49EB5, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x50979", 0x50979, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x63BBDC9F
         {"0x50992", 0x50992, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x63BBDC9F
         {"0x57773", 0x57773, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x63BBDC9F

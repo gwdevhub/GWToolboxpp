@@ -117,6 +117,7 @@ public:
 
     // Guaranteed to return a pointer, but may not yet be decoded.
     static GuiUtils::EncString* GetHeroName(GW::Constants::HeroID hero_id);
+    static GW::Constants::Profession GetHeroProfession(GW::Constants::HeroID hero_id);
 
     // Guaranteed to return a pointer, but may not yet be decoded. Does the region->name lookup.
     static GuiUtils::EncString* GetRegionName(GW::Region region);

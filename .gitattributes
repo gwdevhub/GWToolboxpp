@@ -1,0 +1,6 @@
+# Scripts that run inside the Linux build containers must keep LF endings even when the
+# repo is checked out on Windows with core.autocrlf=true (Git for Windows' default) and
+# bind-mounted into the container: CRLF turns the shebang into "/usr/bin/env bash\r",
+# which fails as `bad interpreter: No such file or directory`.
+*.sh text eol=lf
+Dockerfile text eol=lf

@@ -124,6 +124,7 @@ namespace {
 
     bool hide_compass_agents = false;
     bool hide_compass_drawings = false;
+    bool hide_compass_pings = false;
     bool hide_compass_quest_marker = false;
     bool render_all_quests = false;
 
@@ -787,6 +788,7 @@ void Minimap::Initialize()
     SettingsRegistry::RegisterField(this, "render_all_quests", &render_all_quests);
     SettingsRegistry::RegisterField(this, "hide_compass_quest_marker", &hide_compass_quest_marker);
     SettingsRegistry::RegisterField(this, "hide_compass_drawings", &hide_compass_drawings);
+    SettingsRegistry::RegisterField(this, "hide_compass_pings", &hide_compass_pings);
     SettingsRegistry::RegisterField(this, "hide_flagging_controls", &hide_flagging_controls);
     SettingsRegistry::RegisterField(this, "hide_compass_when_minimap_draws", &hide_compass_when_minimap_draws);
     register_color("color_map", &color_map);
@@ -836,6 +838,7 @@ void Minimap::Initialize()
                                           GW::UI::UIMessage::kChangeTarget,
                                           GW::UI::UIMessage::kSkillActivated,
                                           GW::UI::UIMessage::kCompassDraw,
+                                          GW::UI::UIMessage::kCompassPing,
                                           GW::UI::UIMessage::kEnableUIPositionOverlay,
                                           GW::UI::UIMessage::kDestroyUIPositionOverlay};
     for (const auto message_id : hook_messages) {
@@ -869,6 +872,9 @@ void Minimap::OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessage msgid,
             ASSERT(wParam);
             if (hide_compass_drawings) status->blocked = true;
         } break;
+        case GW::UI::UIMessage::kCompassPing:
+            if (hide_compass_pings) status->blocked = true;
+            break;
         case GW::UI::UIMessage::kMapLoaded: {
             in_interface_settings = false;
             EnsureCompassIsLoaded();
@@ -1031,6 +1037,7 @@ void Minimap::DrawSettingsInternal()
     ImGui::CheckboxWithHelp("Draw all quest markers", &render_all_quests, "Draw quest markers for all quests in your quest log, not just the active quest");
 
     ImGui::CheckboxWithHelp("Hide GW compass drawings", &hide_compass_drawings, "Drawings made by other players will be visible on the minimap, but not the compass");
+    ImGui::CheckboxWithHelp("Hide GW compass pings", &hide_compass_pings, "Pings made by other players will be visible on the minimap, but not the compass");
     if (ImGui::Checkbox("Hide GW compass when minimap is visible", &hide_compass_when_minimap_draws)) {
         GW::GameThread::Enqueue(OverrideCompassVisibility);
     }
@@ -1159,23 +1166,23 @@ void Minimap::DrawSettingsInternal()
     ImGui::SameLine();
     ImGui::TextDisabled(" - Define behaviour of holding keyboard keys and clicking the minimap.");
     ImGui::Indent();
-    ImGui::PushItemWidth(140.f);
+    ImGui::PushItemWidth(-1.f);
     ImGui::TextUnformatted("Draw: ");
     ImGui::ShowHelp("Ping and draw on the compass.");
-    ImGui::SameLine(140.f);
+    ImGui::SameLine(100.f);
     ImGui::Combo("##Draw_key", reinterpret_cast<int*>(&MinimapModifierBehaviour_Keymap[MinimapModifierBehaviour::Draw]), available_modifiers_combo, _countof(available_modifiers_combo));
     ImGui::TextUnformatted("Target: ");
     ImGui::ShowHelp("Click to target agents.");
-    ImGui::SameLine(140.f);
+    ImGui::SameLine(100.f);
     ImGui::Combo("##Target", reinterpret_cast<int*>(&MinimapModifierBehaviour_Keymap[MinimapModifierBehaviour::Target]), available_modifiers_combo, _countof(available_modifiers_combo));
     ImGui::CheckboxWithHelp("Target gadgets", &target_gadgets_on_ctrl_click, "Allow clicking the minimap to target gadgets (e.g. chests, signposts) as well as living agents.");
     ImGui::TextUnformatted("Drag: ");
     ImGui::ShowHelp("Drag the minimap outside of compass range.");
-    ImGui::SameLine(140.f);
+    ImGui::SameLine(100.f);
     ImGui::Combo("##Drag", reinterpret_cast<int*>(&MinimapModifierBehaviour_Keymap[MinimapModifierBehaviour::Drag]), available_modifiers_combo, _countof(available_modifiers_combo));
     ImGui::TextUnformatted("MoveTo: ");
     ImGui::ShowHelp("Start walking character to selected location.");
-    ImGui::SameLine(140.f);
+    ImGui::SameLine(100.f);
     ImGui::Combo("##MoveTo", reinterpret_cast<int*>(&MinimapModifierBehaviour_Keymap[MinimapModifierBehaviour::MoveTo]), available_modifiers_combo, _countof(available_modifiers_combo));
     ImGui::PopItemWidth();
     ImGui::Unindent();

@@ -29,28 +29,59 @@ If you are here to check toolbox features or for a download link, go to [https:/
 
 7. Run.
 
-## Building on Linux (Docker + Wine)
+## Building on Linux
 
-GWToolboxdll can also be cross-compiled from Linux using a real MSVC toolchain running under Wine, packaged in a Docker image.
+`clang` targets `i686-pc-windows-msvc` directly, linking with `lld-link`, against MSVC CRT
+and Windows SDK headers/libs fetched by [xwin](https://github.com/Jake-Shadle/xwin) from
+Microsoft's official installer manifests. Nothing Microsoft-built ever executes, so no Wine
+is involved and builds run at full `-j`. The twelve SM3 shaders are compiled by
+[vkd3d-shader](https://gitlab.winehq.org/wine/vkd3d) in place of `fxc.exe`, since `fxc` is
+the only Microsoft compiler still emitting shader model 1-3 and `dxc` dropped everything
+below SM6.
 
-### Requirements
-* [Docker](https://docs.docker.com/get-docker/)
+**With Docker** - the only requirement is [Docker](https://docs.docker.com/get-docker/):
 
-### Steps
-1. Clone the repository and `cd` into it.
-2. Build: `./scripts/build-wine-prefix.sh`
+```sh
+./scripts/build-xwin.sh
+```
 
-The first run builds the Docker image (downloads MSVC + Windows SDK, expect it to take a while), then configures and builds `GWToolboxdll` into `bin/GWToolboxdll.dll`. Later runs reuse the cached image and only rebuild changed files.
+The first run builds the image (downloads the SDK headers/libs and builds vkd3d, expect it to
+take a while), then configures and builds `GWToolboxdll` into `bin/GWToolboxdll.dll`. Later
+runs reuse the cached image and only rebuild changed files.
 
-Useful options (see `./scripts/build-wine-prefix.sh --help`):
+Options (see `./scripts/build-xwin.sh --help`):
 * `--target <name>` - build a different CMake target (default: `GWToolboxdll`; use `all` for everything)
 * `--config <Debug|RelWithDebInfo|Release>` - CMake config to build (default: `RelWithDebInfo`)
+* `--jobs <n>` - parallel build jobs (default: all cores)
 * `--shell` - drop into a shell in the build container instead of building
 * `--rebuild-image` - force a clean rebuild of the Docker image
 
-Notes:
-* The container runs as root; the script hands ownership of any files it writes back to your user once done.
-* Build output lives in `build-wine/` (gitignored). Delete it for a fully clean reconfigure, e.g. after switching `--config` or branches.
+The container runs as root; the script hands ownership of anything it writes back to your
+user once done. Build output lives in `build-xwin/` (gitignored) - delete it for a fully
+clean reconfigure, e.g. after switching `--config` or branches.
+
+On a Windows host, `scripts\build-xwin.ps1` drives the same container through Docker Desktop
+(`-Config`, `-Target`, `-Jobs`, `-Shell`, `-RebuildImage`). Use it to reproduce a CI result or
+to check a change builds clean under clang - for ordinary Windows development build with
+Visual Studio or `build-clang.bat` instead.
+
+**Directly on the host** - needs `clang` **19 or newer** (the MSVC STL rejects older ones
+outright with `error STL1000`; note Ubuntu 24.04 still ships 18), `lld`, `llvm` (for
+`llvm-rc`/`llvm-lib`/`llvm-mt`), `cmake` >= 3.29, `ninja`, `python3`, and a bootstrapped
+`vcpkg` in `$VCPKG_ROOT`. Some distros do not ship a `clang-cl`; it is the same binary as
+`clang` selected by name, so `ln -s $(command -v clang) /usr/local/bin/clang-cl` is enough.
+
+```sh
+./scripts/xwin/setup-toolchain.sh          # one-off: SDK (~800MB) + vkd3d-compiler
+export XWIN_SDK="$PWD/.xwin-toolchain/xwin-sdk"
+export VKD3D_COMPILER="$PWD/.xwin-toolchain/vkd3d-1.19/vkd3d-compiler"
+cmake --preset xwin -DCMAKE_BUILD_TYPE=RelWithDebInfo
+cmake --build build-xwin -j"$(nproc)"
+```
+
+Caveats: vkd3d-shader has no SM1-3 optimiser, so the shader bytecode is longer than `fxc`'s
+(register allocation is unaffected). Releases are still cut on Windows with MSVC - validate
+rendering changes in-game before shipping a clang-built DLL.
 
 ## Notes
 * GWToolbox compiles as a DLL (`GWToolboxdll.dll`) and EXE (`GWToolbox.exe`). The exe lets you select a Guild Wars Client and injects the dll, but you can also use other dll injectors of your choice.

@@ -1,0 +1,12 @@
+---
+description: C++ and Toolbox conventions
+alwaysApply: true
+---
+# C++ / Toolbox style
+- Follow surrounding repository style.
+- Reuse ToolboxWindow, ToolboxModule, settings, logging, lifecycle, and ImGui patterns.
+- Respect Initialize, Update, Draw, SignalTerminate, Terminate, LoadSettings, SaveSettings.
+- Do not block render/update; no network calls in Draw/Update.
+- Validate game pointers/state; prefer GWCA abstractions over direct memory access.
+- Keep callbacks lightweight and unregister them on termination.
+- Do not throw across game callback boundaries.

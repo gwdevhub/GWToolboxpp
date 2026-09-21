@@ -246,6 +246,23 @@ source_group(Generated FILES ${CMAKE_CURRENT_BINARY_DIR}/gwtoolboxdll_export.h)
 target_precompile_headers(GWToolboxdll PRIVATE "stdafx.h")
 source_group(Generated REGULAR_EXPRESSION cmake_pch)
 
+# Pure quest-progress TUs compile without DLL PCH so QuestProgressTests can reuse them.
+set_source_files_properties(
+    "${CMAKE_CURRENT_SOURCE_DIR}/Modules/QuestProgressReducer.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Modules/QuestProgressJsonCodec.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Modules/QuestProgressStore.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Modules/QuestSessionIdentity.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Modules/QuestProgressService.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Modules/QuestAbandonProbe.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Modules/QuestChatEvidence.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Modules/QuestMissionSnapshot.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Modules/QuestCharacterJourney.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Modules/QuestJourneyBaselineTransition.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Modules/QuestJourneyBaselineCandidates.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Modules/QuestProgressContractExporter.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Utils/AtomicJsonFile.cpp"
+    PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+
 target_compile_definitions(GWToolboxdll PRIVATE
     "_USRDLL"
     "GWCA_IMPORT"
@@ -311,16 +328,39 @@ target_link_libraries(GWToolboxdll PRIVATE
     RecastNavigation::Detour
 
     # libs:
-    Dbghelp.lib # for MiniDump
+    dbghelp.lib # for MiniDump
     bcrypt.lib  # for SHA256 (Resources.cpp)
 	delayimp # for delay loading gwca
     )
 
+# Only 1.19 has actually been validated against these shaders; 1.6 (the version most
+# distros still package) miscompiles them. Raise the floor, never lower it, without testing.
+set(VKD3D_MINIMUM_VERSION 1.19)
+
 file(GLOB FXC_PATHS "C:/Program Files (x86)/Windows Kits/10/bin/*/x86")
 find_program(FXC fxc DOC "hlsl compiler" PATHS ${FXC_PATHS})
-if(NOT FXC)
-    message(SEND_ERROR "unable to find Fxc.exe for HLSL compilation")
-endif(NOT FXC)
+if(FXC)
+    set(HLSL_COMPILE_COMMAND ${FXC})
+else()
+    # No fxc: fall back to vkd3d-shader, the only non-Windows HLSL compiler that emits
+    # d3dbc (shader model 1-3). dxc dropped every profile below SM6, so it can't be used.
+    if(NOT VKD3D_COMPILER AND DEFINED ENV{VKD3D_COMPILER})
+        set(VKD3D_COMPILER "$ENV{VKD3D_COMPILER}" CACHE FILEPATH "vkd3d-shader HLSL compiler, fxc stand-in")
+    endif()
+    find_program(VKD3D_COMPILER vkd3d-compiler DOC "vkd3d-shader HLSL compiler, fxc stand-in")
+    if(NOT VKD3D_COMPILER)
+        message(SEND_ERROR "no HLSL compiler found: need either fxc (Windows SDK) or vkd3d-compiler ${VKD3D_MINIMUM_VERSION}+")
+    else()
+        execute_process(COMMAND ${VKD3D_COMPILER} --version OUTPUT_VARIABLE VKD3D_VERSION_OUTPUT ERROR_QUIET)
+        string(REGEX MATCH "vkd3d-shader ([0-9]+\\.[0-9]+)" _ "${VKD3D_VERSION_OUTPUT}")
+        # Older releases silently miscompile these shaders ("Unhandled instruction type HLSL_IR_JUMP").
+        if(CMAKE_MATCH_1 VERSION_LESS ${VKD3D_MINIMUM_VERSION})
+            message(SEND_ERROR "vkd3d-compiler ${CMAKE_MATCH_1} is too old for SM3 HLSL; need ${VKD3D_MINIMUM_VERSION}+")
+        endif()
+        message(STATUS "HLSL: using vkd3d-compiler ${CMAKE_MATCH_1} (fxc not found)")
+    endif()
+    set(HLSL_COMPILE_COMMAND ${Python3_EXECUTABLE} "${PROJECT_SOURCE_DIR}/tools/hlsl_compile.py" --vkd3d-compiler ${VKD3D_COMPILER})
+endif()
 
 file(GLOB HLSL_VERTEX_SHADER_FILES CONFIGURE_DEPENDS
     Widgets/Minimap/Shaders/*_vs.hlsl
@@ -338,7 +378,7 @@ foreach(FILE ${HLSL_VERTEX_SHADER_FILES} ${HLSL_PIXEL_SHADER_FILES})
   get_source_file_property(shadertype ${FILE} ShaderType)
   set(OUTPUT_FILE ${FILE_DIR}/${FILE_NOEXT}.h)
   add_custom_command(OUTPUT ${OUTPUT_FILE}
-                     COMMAND ${FXC} /nologo /E main /T ${shadertype}_3_0 /Vn ${FILE_NOEXT} /O3 /Zi /Fh ${OUTPUT_FILE} ${FILE}
+                     COMMAND ${HLSL_COMPILE_COMMAND} /nologo /E main /T ${shadertype}_3_0 /Vn ${FILE_NOEXT} /O3 /Zi /Fh ${OUTPUT_FILE} ${FILE}
                      MAIN_DEPENDENCY ${FILE}
                      COMMENT "HLSL ${FILE}"
                      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
@@ -351,7 +391,7 @@ add_custom_target(compile_shaders DEPENDS ${SHADER_OUTPUTS})
 add_dependencies(GWToolboxdll compile_shaders) 
 
 # compress.ps1 needs PowerShell, which isn't available when configuring from a non-Windows
-# host (e.g. the wine cross-build in scripts/build-wine-prefix.sh); gzip is a POSIX
+# host (e.g. the clang/xwin cross-build in scripts/build-xwin.sh); gzip is a POSIX
 # equivalent for the RelWithDebInfo-only PDB compression it does.
 if(CMAKE_HOST_WIN32)
     add_custom_command(TARGET GWToolboxdll POST_BUILD

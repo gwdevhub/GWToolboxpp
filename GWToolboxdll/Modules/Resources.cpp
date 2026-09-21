@@ -52,6 +52,42 @@
 
 namespace {
 
+    using GW::Constants::HeroID;
+    using GW::Constants::Profession;
+
+    constexpr std::array hero_professions = {
+        std::pair{HeroID::Norgu, Profession::Mesmer},
+        std::pair{HeroID::Goren, Profession::Warrior},
+        std::pair{HeroID::Tahlkora, Profession::Monk},
+        std::pair{HeroID::MasterOfWhispers, Profession::Necromancer},
+        std::pair{HeroID::AcolyteJin, Profession::Ranger},
+        std::pair{HeroID::Koss, Profession::Warrior},
+        std::pair{HeroID::Dunkoro, Profession::Monk},
+        std::pair{HeroID::AcolyteSousuke, Profession::Elementalist},
+        std::pair{HeroID::Melonni, Profession::Dervish},
+        std::pair{HeroID::ZhedShadowhoof, Profession::Elementalist},
+        std::pair{HeroID::GeneralMorgahn, Profession::Paragon},
+        std::pair{HeroID::MargridTheSly, Profession::Ranger},
+        std::pair{HeroID::Zenmai, Profession::Assassin},
+        std::pair{HeroID::Olias, Profession::Necromancer},
+        std::pair{HeroID::MOX, Profession::Dervish},
+        std::pair{HeroID::KeiranThackeray, Profession::Paragon},
+        std::pair{HeroID::Jora, Profession::Warrior},
+        std::pair{HeroID::PyreFierceshot, Profession::Ranger},
+        std::pair{HeroID::Anton, Profession::Assassin},
+        std::pair{HeroID::Livia, Profession::Necromancer},
+        std::pair{HeroID::Hayda, Profession::Paragon},
+        std::pair{HeroID::Kahmu, Profession::Dervish},
+        std::pair{HeroID::Gwen, Profession::Mesmer},
+        std::pair{HeroID::Xandra, Profession::Ritualist},
+        std::pair{HeroID::Vekk, Profession::Elementalist},
+        std::pair{HeroID::Ogden, Profession::Monk},
+        std::pair{HeroID::Miku, Profession::Assassin},
+        std::pair{HeroID::ZeiRi, Profession::Ritualist},
+        std::pair{HeroID::Devona, Profession::Warrior},
+        std::pair{HeroID::GhostOfAlthea, Profession::Mesmer}
+    };
+
     DXGI_FORMAT ConvertD3D9FormatToDXGI(D3DFORMAT d3d9Format)
     {
         switch (d3d9Format) {
@@ -1204,6 +1240,19 @@ GuiUtils::EncString* Resources::GetHeroName(const GW::Constants::HeroID hero_id)
     const auto hero_data = GW::PartyMgr::GetHeroConstData(hero_id);
     hero_names[hero_id] = DecodeStringId(hero_data ? hero_data->name_id : 0x3);
     return hero_names[hero_id];
+}
+
+GW::Constants::Profession Resources::GetHeroProfession(const GW::Constants::HeroID hero_id)
+{
+    for (const auto& [id, profession] : hero_professions) {
+        if (id == hero_id) return profession;
+    }
+    if (hero_id < GW::Constants::HeroID::Merc1 || hero_id > GW::Constants::HeroID::Merc8
+        || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost || !GW::Map::GetIsMapLoaded()) {
+        return GW::Constants::Profession::None;
+    }
+    const auto* hero = GW::PartyMgr::GetHeroInfo(hero_id);
+    return hero ? hero->primary : GW::Constants::Profession::None;
 }
 
 GuiUtils::EncString* Resources::GetMapName(const GW::Constants::MapID map_id)

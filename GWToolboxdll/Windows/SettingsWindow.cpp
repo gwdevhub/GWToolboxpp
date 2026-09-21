@@ -397,6 +397,10 @@ void SettingsWindow::Draw(IDirect3DDevice9*)
         ImGui::Text("GWToolbox++");
         ImGui::SameLine(0, 0);
         ImGui::TextColored(sCol, " v%s ", GWTOOLBOXDLL_VERSION);
+#ifdef GWTOOLBOX_FORK_BUILD
+        ImGui::SameLine(0, 0);
+        ImGui::TextColored(sCol, "%s", GWTOOLBOXDLL_VERSION_FORK_SUFFIX);
+#endif
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Go to %s", GWTOOLBOX_WEBSITE);
         }
@@ -410,7 +414,16 @@ void SettingsWindow::Draw(IDirect3DDevice9*)
         else {
             const std::string server_version = Updater::GetServerVersion();
             if (!server_version.empty()) {
-                if (server_version == GWTOOLBOXDLL_VERSION) {
+                if (Updater::IsForkBuild()) {
+                    ImGui::SameLine();
+                    if (Updater::IsLatestVersion()) {
+                        ImGui::Text("(Fork — upstream merged)");
+                    }
+                    else {
+                        ImGui::Text("(Fork — upstream updates available)");
+                    }
+                }
+                else if (server_version == GWTOOLBOXDLL_VERSION) {
                     ImGui::SameLine();
                     ImGui::Text("(Up to date)");
                 }

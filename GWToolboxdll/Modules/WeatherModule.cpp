@@ -1364,7 +1364,12 @@ void WeatherModule::DrawSettings()
 {
     const auto red = ImGui::ColorConvertU32ToFloat4(Colors::Red());
     const auto green = ImGui::ColorConvertU32ToFloat4(Colors::Green());
-    if (!GameWorldCompositor::IsActive()) ImGui::TextColored(red, GameWorldCompositor::HasFailed() ? "  in-world compositor FAILED to install." : "  in-world compositor: not installed yet.");
+    if (GameWorldCompositor::HasFailed())
+        ImGui::TextColored(red, "  in-world compositor FAILED to install.");
+    else if (GameWorldCompositor::IsActive())
+        ImGui::TextColored(green, "  in-world compositor active.");
+    else
+        ImGui::TextDisabled("  in-world compositor: not installed yet.");
 
     // Info: the current map's climate, and which condition(s) are currently being shown.
     if (const GW::AreaInfo* info = GW::Map::GetCurrentMapInfo())

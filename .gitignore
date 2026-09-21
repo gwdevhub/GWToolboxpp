@@ -11,8 +11,9 @@ vcpkg_installed/
 /bin/
 build/
 build-clang/
-build-wine/
 build-wasm/
+build-xwin/
+.xwin-toolchain/
 
 # Cmake generated
 _deps/

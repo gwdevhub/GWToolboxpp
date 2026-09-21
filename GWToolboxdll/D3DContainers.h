@@ -8,6 +8,7 @@ struct IDirect3DVertexBuffer9;
 typedef unsigned long DWORD;
 
 #define D3DFVF_CUSTOMVERTEX D3DFVF_XYZ | D3DFVF_DIFFUSE
+#define D3DFVF_TEXTUREDVERTEX D3DFVF_XYZ | D3DFVF_DIFFUSE | D3DFVF_TEX1
 
 typedef GW::Vec2f D3DVec2f;
 
@@ -19,6 +20,15 @@ struct D3DVertex {
     D3DVertex() = default;
     D3DVertex(float x, float y, float z, DWORD color);
     D3DVertex(float x, float y, DWORD color);
+};
+
+struct D3DVertexTextured {
+    float x;
+    float y;
+    float z;
+    DWORD color;
+    float u;
+    float v;
 };
 
 struct D3DTriangle {

@@ -1,0 +1,7 @@
+---
+description: Investigation, planning, and implementation workflow
+alwaysApply: true
+---
+# Workflow
+Inspect existing code and GWCA lifecycle, record verified capabilities and unknowns, write a plan with exact integration points, split phases, implement only approved scope, build each coherent phase, avoid unrelated changes, and stop at phase completion.
+Report changed/upstream files, build/tests, required in-game verification, limitations, and deferred work.

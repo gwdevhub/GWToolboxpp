@@ -1,0 +1,1006 @@
+#include <Modules/QuestProgressStore.h>
+#include <Modules/QuestCharacterJourney.h>
+#include <Utils/AtomicJsonFile.h>
+
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <Windows.h>
+
+#include <algorithm>
+
+namespace QuestProgress {
+namespace {
+
+constexpr uint64_t kFnvOffset = 14695981039346656037ull;
+constexpr uint64_t kFnvPrime = 1099511628211ull;
+
+uint64_t Fnv1a64(std::string_view s)
+{
+    uint64_t hash = kFnvOffset;
+    for (unsigned char c : s) {
+        hash ^= c;
+        hash *= kFnvPrime;
+    }
+    return hash;
+}
+
+std::string ToHex64(uint64_t value)
+{
+    static constexpr char kHex[] = "0123456789abcdef";
+    std::string out(16, '0');
+    for (int i = 15; i >= 0; --i) {
+        out[static_cast<size_t>(i)] = kHex[value & 0xfu];
+        value >>= 4;
+    }
+    return out;
+}
+
+void AddDiag(StoreDiagnostics& d, std::string message)
+{
+    d.messages.push_back(std::move(message));
+}
+
+bool HistoryPayloadEqual(const QuestHistoryEvent& a, const QuestHistoryEvent& b)
+{
+    if (a.game_quest_id != b.game_quest_id
+        || a.event_type != b.event_type
+        || a.state != b.state
+        || a.source != b.source
+        || a.confidence != b.confidence
+        || a.evidence_kind != b.evidence_kind
+        || a.objectives.size() != b.objectives.size()) {
+        return false;
+    }
+    for (size_t i = 0; i < a.objectives.size(); ++i) {
+        if (a.objectives[i].index != b.objectives[i].index
+            || a.objectives[i].completed != b.objectives[i].completed
+            || a.objectives[i].content_fingerprint != b.objectives[i].content_fingerprint
+            || a.objectives[i].encoded_content != b.objectives[i].encoded_content) {
+            return false;
+        }
+    }
+    return true;
+}
+
+// Latest valid (canonical observedAt, semanticEventKey) over last_observed_at + history.
+// Insertion order is ignored; non-canonical timestamps are ineligible.
+struct ProjectionRecency {
+    std::string observed_at;
+    std::string tie_key;
+};
+
+ProjectionRecency QuestProjectionRecency(const QuestProgress& quest)
+{
+    ProjectionRecency best;
+    auto consider = [&](const std::string& observed_at, const std::string& tie_key) {
+        if (!IsCanonicalUtcTimestamp(observed_at)) {
+            return;
+        }
+        if (best.observed_at.empty()
+            || observed_at > best.observed_at
+            || (observed_at == best.observed_at && tie_key > best.tie_key)) {
+            best.observed_at = observed_at;
+            best.tie_key = tie_key;
+        }
+    };
+    consider(quest.last_observed_at, {});
+    for (const auto& ev : quest.history) {
+        consider(ev.observed_at, ev.semantic_event_key);
+    }
+    return best;
+}
+
+bool PreferMemoryProjection(const QuestProgress& disk, const QuestProgress& memory)
+{
+    const auto disk_r = QuestProjectionRecency(disk);
+    const auto mem_r = QuestProjectionRecency(memory);
+    if (mem_r.observed_at != disk_r.observed_at) {
+        return mem_r.observed_at > disk_r.observed_at;
+    }
+    if (mem_r.tie_key != disk_r.tie_key) {
+        return mem_r.tie_key > disk_r.tie_key;
+    }
+    return false; // stable: keep disk on total tie
+}
+
+QuestProgress ProjectQuest(const QuestProgress& disk, const QuestProgress& memory, StoreDiagnostics& d, bool& conflict)
+{
+    QuestProgress out = PreferMemoryProjection(disk, memory) ? memory : disk;
+
+    // Union history by semanticEventKey.
+    std::map<std::string, QuestHistoryEvent> by_key;
+    auto ingest = [&](const QuestHistoryEvent& ev) {
+        auto it = by_key.find(ev.semantic_event_key);
+        if (it == by_key.end()) {
+            by_key.emplace(ev.semantic_event_key, ev);
+            return;
+        }
+        if (!HistoryPayloadEqual(it->second, ev)) {
+            conflict = true;
+            AddDiag(d, "history semanticEventKey payload conflict: " + ev.semantic_event_key);
+        }
+    };
+    for (const auto& ev : disk.history) {
+        ingest(ev);
+    }
+    for (const auto& ev : memory.history) {
+        ingest(ev);
+    }
+    out.history.clear();
+    for (auto& [k, ev] : by_key) {
+        (void)k;
+        out.history.push_back(std::move(ev));
+    }
+    std::sort(out.history.begin(), out.history.end(),
+        [](const QuestHistoryEvent& a, const QuestHistoryEvent& b) {
+            if (a.observed_at != b.observed_at) {
+                return a.observed_at < b.observed_at;
+            }
+            return a.semantic_event_key < b.semantic_event_key;
+        });
+
+    // Projection fields from preferred side; first_observed_at = min of both when both set.
+    const QuestProgress& preferred = PreferMemoryProjection(disk, memory) ? memory : disk;
+    out.state = preferred.state;
+    out.source = preferred.source;
+    out.confidence = preferred.confidence;
+    out.objectives = preferred.objectives;
+    out.completed_at = preferred.completed_at;
+    out.last_observed_at = preferred.last_observed_at;
+    out.game_quest_id = preferred.game_quest_id;
+    if (disk.accepted_at.has_value() && memory.accepted_at.has_value()) {
+        out.accepted_at = std::min(*disk.accepted_at, *memory.accepted_at);
+    }
+    else if (disk.accepted_at.has_value()) {
+        out.accepted_at = disk.accepted_at;
+    }
+    else {
+        out.accepted_at = memory.accepted_at;
+    }
+    if (disk.first_observed_at.empty()) {
+        out.first_observed_at = memory.first_observed_at;
+    }
+    else if (memory.first_observed_at.empty()) {
+        out.first_observed_at = disk.first_observed_at;
+    }
+    else {
+        out.first_observed_at = std::min(disk.first_observed_at, memory.first_observed_at);
+    }
+    NormalizeObjectives(out.objectives);
+    return out;
+}
+
+// Mission completion flags are monotonic game facts: once observed true, merge never clears them.
+// Same mapId + same lastObservedAt + differing flags → order-independent OR (never invents false→clear).
+MissionRecord ProjectMission(const MissionRecord& disk, const MissionRecord& memory)
+{
+    if (memory.last_observed_at != disk.last_observed_at) {
+        return memory.last_observed_at > disk.last_observed_at ? memory : disk;
+    }
+    MissionRecord out = disk;
+    out.completed_normal = disk.completed_normal || memory.completed_normal;
+    out.completed_hard = disk.completed_hard || memory.completed_hard;
+    out.bonus_normal = disk.bonus_normal || memory.bonus_normal;
+    out.bonus_hard = disk.bonus_hard || memory.bonus_hard;
+    return out;
+}
+
+TitleStateRecord ProjectTitle(const TitleStateRecord& a, const TitleStateRecord& b)
+{
+    if (a.tier_index != b.tier_index) {
+        return a.tier_index > b.tier_index ? a : b;
+    }
+    if (a.current_points != b.current_points) {
+        return a.current_points > b.current_points ? a : b;
+    }
+    return a.last_observed_at >= b.last_observed_at ? a : b;
+}
+
+void MergeJourneyFields(StoredCharacter& out, const StoredCharacter& disk, const StoredCharacter& memory)
+{
+    std::map<uint32_t, char> title_ids;
+    for (const auto& [id, _] : disk.titles) {
+        (void)_;
+        title_ids[id] = 1;
+    }
+    for (const auto& [id, _] : memory.titles) {
+        (void)_;
+        title_ids[id] = 1;
+    }
+    for (const auto& [id, _] : title_ids) {
+        (void)_;
+        const auto d_it = disk.titles.find(id);
+        const auto m_it = memory.titles.find(id);
+        if (d_it == disk.titles.end()) {
+            out.titles.emplace(id, m_it->second);
+        }
+        else if (m_it == memory.titles.end()) {
+            out.titles.emplace(id, d_it->second);
+        }
+        else {
+            out.titles.emplace(id, ProjectTitle(d_it->second, m_it->second));
+        }
+    }
+
+    if (disk.last_known_level.has_value() && memory.last_known_level.has_value()) {
+        out.last_known_level = std::max(*disk.last_known_level, *memory.last_known_level);
+    }
+    else if (memory.last_known_level.has_value()) {
+        out.last_known_level = memory.last_known_level;
+    }
+    else {
+        out.last_known_level = disk.last_known_level;
+    }
+
+    if (memory.last_map_id.has_value()) {
+        out.last_map_id = memory.last_map_id;
+    }
+    else {
+        out.last_map_id = disk.last_map_id;
+    }
+
+    if (disk.experience_total.has_value() && memory.experience_total.has_value()) {
+        out.experience_total = std::max(*disk.experience_total, *memory.experience_total);
+    }
+    else if (memory.experience_total.has_value()) {
+        out.experience_total = memory.experience_total;
+    }
+    else {
+        out.experience_total = disk.experience_total;
+    }
+
+    if (disk.skill_points_earned.has_value() && memory.skill_points_earned.has_value()) {
+        out.skill_points_earned = std::max(*disk.skill_points_earned, *memory.skill_points_earned);
+    }
+    else if (memory.skill_points_earned.has_value()) {
+        out.skill_points_earned = memory.skill_points_earned;
+    }
+    else {
+        out.skill_points_earned = disk.skill_points_earned;
+    }
+
+    if (disk.faction_totals.has_value() && memory.faction_totals.has_value()) {
+        FactionTotalsRecord totals;
+        totals.kurzick = std::max(disk.faction_totals->kurzick, memory.faction_totals->kurzick);
+        totals.luxon = std::max(disk.faction_totals->luxon, memory.faction_totals->luxon);
+        totals.balthazar = std::max(disk.faction_totals->balthazar, memory.faction_totals->balthazar);
+        totals.imperial = std::max(disk.faction_totals->imperial, memory.faction_totals->imperial);
+        out.faction_totals = totals;
+    }
+    else if (memory.faction_totals.has_value()) {
+        out.faction_totals = memory.faction_totals;
+    }
+    else {
+        out.faction_totals = disk.faction_totals;
+    }
+
+    if (disk.hall_of_monuments.has_value() && memory.hall_of_monuments.has_value()) {
+        out.hall_of_monuments =
+            memory.hall_of_monuments->observed_at >= disk.hall_of_monuments->observed_at
+            ? memory.hall_of_monuments
+            : disk.hall_of_monuments;
+    }
+    else if (memory.hall_of_monuments.has_value()) {
+        out.hall_of_monuments = memory.hall_of_monuments;
+    }
+    else {
+        out.hall_of_monuments = disk.hall_of_monuments;
+    }
+
+    out.journey_events = disk.journey_events;
+    AppendUniqueJourneyEvents(out.journey_events, memory.journey_events);
+
+    const auto merge_id_set = [](const IdSetJourneyBaseline& a, const IdSetJourneyBaseline& b) {
+        IdSetJourneyBaseline out_baseline;
+        const bool a_sealed = a.state == JourneyBaselineSealState::Sealed;
+        const bool b_sealed = b.state == JourneyBaselineSealState::Sealed;
+        if (!a_sealed && !b_sealed) {
+            return out_baseline;
+        }
+        out_baseline.state = JourneyBaselineSealState::Sealed;
+        out_baseline.ids = a_sealed ? a.ids : std::vector<uint32_t>{};
+        if (b_sealed) {
+            out_baseline.ids.insert(out_baseline.ids.end(), b.ids.begin(), b.ids.end());
+        }
+        std::sort(out_baseline.ids.begin(), out_baseline.ids.end());
+        out_baseline.ids.erase(
+            std::unique(out_baseline.ids.begin(), out_baseline.ids.end()),
+            out_baseline.ids.end());
+        return out_baseline;
+    };
+    const auto merge_flag = [](const FlagJourneyBaseline& a, const FlagJourneyBaseline& b) {
+        FlagJourneyBaseline out_baseline;
+        const bool a_sealed = a.state == JourneyBaselineSealState::Sealed;
+        const bool b_sealed = b.state == JourneyBaselineSealState::Sealed;
+        if (!a_sealed && !b_sealed) {
+            return out_baseline;
+        }
+        out_baseline.state = JourneyBaselineSealState::Sealed;
+        out_baseline.unlocked = (a_sealed && a.unlocked) || (b_sealed && b.unlocked);
+        return out_baseline;
+    };
+    const auto merge_state_only = [](const StateOnlyJourneyBaseline& a, const StateOnlyJourneyBaseline& b) {
+        StateOnlyJourneyBaseline out_baseline;
+        if (a.state == JourneyBaselineSealState::Sealed
+            || b.state == JourneyBaselineSealState::Sealed) {
+            out_baseline.state = JourneyBaselineSealState::Sealed;
+        }
+        return out_baseline;
+    };
+    const auto merge_percent = [](const PercentJourneyBaseline& a, const PercentJourneyBaseline& b) {
+        PercentJourneyBaseline out_baseline;
+        const bool a_sealed = a.state == JourneyBaselineSealState::Sealed;
+        const bool b_sealed = b.state == JourneyBaselineSealState::Sealed;
+        if (!a_sealed && !b_sealed) {
+            return out_baseline;
+        }
+        out_baseline.state = JourneyBaselineSealState::Sealed;
+        if (a_sealed && b_sealed) {
+            out_baseline.percent = std::max(a.percent, b.percent);
+        }
+        else if (a_sealed) {
+            out_baseline.percent = a.percent;
+        }
+        else {
+            out_baseline.percent = b.percent;
+        }
+        return out_baseline;
+    };
+
+    out.journey_baselines.maps = merge_id_set(disk.journey_baselines.maps, memory.journey_baselines.maps);
+    out.journey_baselines.character_skills =
+        merge_id_set(disk.journey_baselines.character_skills, memory.journey_baselines.character_skills);
+    out.journey_baselines.heroes =
+        merge_id_set(disk.journey_baselines.heroes, memory.journey_baselines.heroes);
+    out.journey_baselines.professions =
+        merge_id_set(disk.journey_baselines.professions, memory.journey_baselines.professions);
+    out.journey_baselines.vanquish_areas =
+        merge_id_set(disk.journey_baselines.vanquish_areas, memory.journey_baselines.vanquish_areas);
+    out.journey_baselines.hard_mode =
+        merge_flag(disk.journey_baselines.hard_mode, memory.journey_baselines.hard_mode);
+    out.journey_baselines.skill_points =
+        merge_state_only(disk.journey_baselines.skill_points, memory.journey_baselines.skill_points);
+    out.journey_baselines.factions =
+        merge_state_only(disk.journey_baselines.factions, memory.journey_baselines.factions);
+    out.journey_baselines.hall_of_monuments = merge_state_only(
+        disk.journey_baselines.hall_of_monuments, memory.journey_baselines.hall_of_monuments);
+    out.journey_baselines.cartography =
+        merge_percent(disk.journey_baselines.cartography, memory.journey_baselines.cartography);
+}
+
+StoredCharacter MergeCharacter(const StoredCharacter& disk, const StoredCharacter& memory, StoreDiagnostics& d, bool& conflict)
+{
+    StoredCharacter out;
+    out.character_key = disk.character_key.empty() ? memory.character_key : disk.character_key;
+
+    const bool mem_newer = memory.last_observed_at > disk.last_observed_at
+        || (memory.last_observed_at == disk.last_observed_at
+            && memory.display_name >= disk.display_name);
+    const StoredCharacter& meta = mem_newer ? memory : disk;
+    out.display_name = meta.display_name;
+    out.profession = meta.profession;
+    out.secondary_profession = meta.secondary_profession;
+    out.is_pre_searing = meta.is_pre_searing;
+    out.is_pvp = meta.is_pvp;
+    out.last_observed_at = meta.last_observed_at;
+    if (disk.first_observed_at.empty()) {
+        out.first_observed_at = memory.first_observed_at;
+    }
+    else if (memory.first_observed_at.empty()) {
+        out.first_observed_at = disk.first_observed_at;
+    }
+    else {
+        out.first_observed_at = std::min(disk.first_observed_at, memory.first_observed_at);
+    }
+
+    std::map<uint32_t, char> ids;
+    for (const auto& [id, _] : disk.quests) {
+        (void)_;
+        ids[id] = 1;
+    }
+    for (const auto& [id, _] : memory.quests) {
+        (void)_;
+        ids[id] = 1;
+    }
+    for (const auto& [id, _] : ids) {
+        (void)_;
+        const auto d_it = disk.quests.find(id);
+        const auto m_it = memory.quests.find(id);
+        if (d_it == disk.quests.end()) {
+            out.quests.emplace(id, m_it->second);
+        }
+        else if (m_it == memory.quests.end()) {
+            out.quests.emplace(id, d_it->second);
+        }
+        else {
+            out.quests.emplace(id, ProjectQuest(d_it->second, m_it->second, d, conflict));
+        }
+    }
+
+    std::map<uint32_t, char> maps;
+    for (const auto& [id, _] : disk.missions) {
+        (void)_;
+        maps[id] = 1;
+    }
+    for (const auto& [id, _] : memory.missions) {
+        (void)_;
+        maps[id] = 1;
+    }
+    for (const auto& [id, _] : maps) {
+        (void)_;
+        const auto d_it = disk.missions.find(id);
+        const auto m_it = memory.missions.find(id);
+        if (d_it == disk.missions.end()) {
+            out.missions.emplace(id, m_it->second);
+        }
+        else if (m_it == memory.missions.end()) {
+            out.missions.emplace(id, d_it->second);
+        }
+        else {
+            out.missions.emplace(id, ProjectMission(d_it->second, m_it->second));
+        }
+    }
+    MergeJourneyFields(out, disk, memory);
+    return out;
+}
+
+namespace {
+
+void AppendConflictVariant(
+    std::map<std::string, std::vector<QuestHistoryEvent>>& conflicts,
+    const QuestHistoryEvent& canonical,
+    const QuestHistoryEvent& alternate)
+{
+    if (HistoryPayloadEqual(canonical, alternate)) {
+        return;
+    }
+    auto& variants = conflicts[canonical.semantic_event_key];
+    for (const auto& existing : variants) {
+        if (HistoryPayloadEqual(existing, alternate)) {
+            return;
+        }
+    }
+    variants.push_back(alternate);
+}
+
+// Like ProjectQuest, but retains alternate payloads under the same semanticEventKey.
+QuestProgress ProjectQuestKeepConflicts(
+    const QuestProgress& disk,
+    const QuestProgress& memory,
+    StoreDiagnostics& d,
+    bool& conflict,
+    std::map<std::string, std::vector<QuestHistoryEvent>>& conflict_variants)
+{
+    QuestProgress out = PreferMemoryProjection(disk, memory) ? memory : disk;
+
+    std::map<std::string, QuestHistoryEvent> by_key;
+    auto ingest = [&](const QuestHistoryEvent& ev) {
+        auto it = by_key.find(ev.semantic_event_key);
+        if (it == by_key.end()) {
+            by_key.emplace(ev.semantic_event_key, ev);
+            return;
+        }
+        if (!HistoryPayloadEqual(it->second, ev)) {
+            conflict = true;
+            AppendConflictVariant(conflict_variants, it->second, ev);
+            AddDiag(d, "history semanticEventKey payload conflict: " + ev.semantic_event_key);
+        }
+    };
+    for (const auto& ev : disk.history) {
+        ingest(ev);
+    }
+    for (const auto& ev : memory.history) {
+        ingest(ev);
+    }
+    out.history.clear();
+    for (auto& [k, ev] : by_key) {
+        (void)k;
+        out.history.push_back(std::move(ev));
+    }
+    std::sort(out.history.begin(), out.history.end(),
+        [](const QuestHistoryEvent& a, const QuestHistoryEvent& b) {
+            if (a.observed_at != b.observed_at) {
+                return a.observed_at < b.observed_at;
+            }
+            return a.semantic_event_key < b.semantic_event_key;
+        });
+
+    const QuestProgress& preferred = PreferMemoryProjection(disk, memory) ? memory : disk;
+    out.state = preferred.state;
+    out.source = preferred.source;
+    out.confidence = preferred.confidence;
+    out.objectives = preferred.objectives;
+    out.completed_at = preferred.completed_at;
+    out.last_observed_at = preferred.last_observed_at;
+    out.game_quest_id = preferred.game_quest_id;
+    if (disk.accepted_at.has_value() && memory.accepted_at.has_value()) {
+        out.accepted_at = std::min(*disk.accepted_at, *memory.accepted_at);
+    }
+    else if (disk.accepted_at.has_value()) {
+        out.accepted_at = disk.accepted_at;
+    }
+    else {
+        out.accepted_at = memory.accepted_at;
+    }
+    if (disk.first_observed_at.empty()) {
+        out.first_observed_at = memory.first_observed_at;
+    }
+    else if (memory.first_observed_at.empty()) {
+        out.first_observed_at = disk.first_observed_at;
+    }
+    else {
+        out.first_observed_at = std::min(disk.first_observed_at, memory.first_observed_at);
+    }
+    NormalizeObjectives(out.objectives);
+    return out;
+}
+
+} // namespace
+
+CoalesceCharacterResult CoalesceStoredCharactersImpl(
+    const StoredCharacter& existing,
+    const StoredCharacter& incoming)
+{
+    CoalesceCharacterResult result;
+    if (!existing.character_key.empty() && !incoming.character_key.empty()
+        && existing.character_key != incoming.character_key) {
+        result.status = StoreOpStatus::ValidationError;
+        AddDiag(result.diagnostics, "coalesce characterKey mismatch");
+        return result;
+    }
+
+    bool conflict = false;
+    StoredCharacter out;
+    out.character_key = existing.character_key.empty() ? incoming.character_key : existing.character_key;
+
+    const bool mem_newer = incoming.last_observed_at > existing.last_observed_at
+        || (incoming.last_observed_at == existing.last_observed_at
+            && incoming.display_name >= existing.display_name);
+    const StoredCharacter& meta = mem_newer ? incoming : existing;
+    out.display_name = meta.display_name;
+    out.profession = meta.profession;
+    out.secondary_profession = meta.secondary_profession;
+    out.is_pre_searing = meta.is_pre_searing;
+    out.is_pvp = meta.is_pvp;
+    out.last_observed_at = meta.last_observed_at;
+    if (existing.first_observed_at.empty()) {
+        out.first_observed_at = incoming.first_observed_at;
+    }
+    else if (incoming.first_observed_at.empty()) {
+        out.first_observed_at = existing.first_observed_at;
+    }
+    else {
+        out.first_observed_at = std::min(existing.first_observed_at, incoming.first_observed_at);
+    }
+
+    std::map<uint32_t, char> ids;
+    for (const auto& [id, _] : existing.quests) {
+        (void)_;
+        ids[id] = 1;
+    }
+    for (const auto& [id, _] : incoming.quests) {
+        (void)_;
+        ids[id] = 1;
+    }
+    for (const auto& [id, _] : ids) {
+        (void)_;
+        const auto e_it = existing.quests.find(id);
+        const auto i_it = incoming.quests.find(id);
+        if (e_it == existing.quests.end()) {
+            out.quests.emplace(id, i_it->second);
+        }
+        else if (i_it == incoming.quests.end()) {
+            out.quests.emplace(id, e_it->second);
+        }
+        else {
+            out.quests.emplace(
+                id,
+                ProjectQuestKeepConflicts(
+                    e_it->second, i_it->second, result.diagnostics, conflict, result.conflict_variants));
+        }
+    }
+
+    std::map<uint32_t, char> maps;
+    for (const auto& [id, _] : existing.missions) {
+        (void)_;
+        maps[id] = 1;
+    }
+    for (const auto& [id, _] : incoming.missions) {
+        (void)_;
+        maps[id] = 1;
+    }
+    for (const auto& [id, _] : maps) {
+        (void)_;
+        const auto e_it = existing.missions.find(id);
+        const auto i_it = incoming.missions.find(id);
+        if (e_it == existing.missions.end()) {
+            out.missions.emplace(id, i_it->second);
+        }
+        else if (i_it == incoming.missions.end()) {
+            out.missions.emplace(id, e_it->second);
+        }
+        else {
+            out.missions.emplace(id, ProjectMission(e_it->second, i_it->second));
+        }
+    }
+
+    MergeJourneyFields(out, existing, incoming);
+
+    result.character = std::move(out);
+    result.status = conflict ? StoreOpStatus::MergeConflict : StoreOpStatus::Ok;
+    if (conflict) {
+        AddDiag(result.diagnostics, "coalesce NeedsIntervention: semanticEventKey payload conflict");
+    }
+    return result;
+}
+
+class AccountMutex {
+public:
+    explicit AccountMutex(std::string mutex_name)
+        : name_(std::move(mutex_name))
+    {
+        // CreateMutexW returns handle; preexisting is OK.
+        const std::wstring wide(name_.begin(), name_.end());
+        handle_ = CreateMutexW(nullptr, FALSE, wide.c_str());
+        if (!handle_) {
+            create_error_ = GetLastError();
+        }
+    }
+
+    ~AccountMutex()
+    {
+        if (owned_ && handle_) {
+            ReleaseMutex(handle_);
+        }
+        if (handle_) {
+            CloseHandle(handle_);
+        }
+    }
+
+    AccountMutex(const AccountMutex&) = delete;
+    AccountMutex& operator=(const AccountMutex&) = delete;
+
+    WaitAcquireKind Acquire(DWORD timeout_ms)
+    {
+        if (!handle_) {
+            return WaitAcquireKind::Failed;
+        }
+        const auto wait = WaitForSingleObject(handle_, timeout_ms);
+        const auto kind = ClassifyWaitResult(wait);
+        if (kind == WaitAcquireKind::Acquired || kind == WaitAcquireKind::Abandoned) {
+            owned_ = true;
+        }
+        if (kind == WaitAcquireKind::Failed) {
+            create_error_ = GetLastError();
+        }
+        return kind;
+    }
+
+    DWORD create_error() const { return create_error_; }
+
+private:
+    std::string name_;
+    HANDLE handle_ = nullptr;
+    bool owned_ = false;
+    DWORD create_error_ = 0;
+};
+
+LoadStoreResult LoadFromPaths(const AccountStorePaths& paths, std::string_view account_key)
+{
+    LoadStoreResult result;
+    const auto normalized = NormalizeAccountKey(account_key);
+    if (normalized.empty()) {
+        result.status = StoreOpStatus::ValidationError;
+        AddDiag(result.diagnostics, "invalid account key");
+        return result;
+    }
+
+    auto try_parse = [&](std::string_view utf8, bool from_bak) -> bool {
+        auto parsed = ParseAccountStoreJson(utf8, normalized);
+        result.diagnostics.codec = parsed.diagnostics;
+        if (parsed.status == CodecStatus::Ok) {
+            result.store = std::move(parsed.store);
+            result.status = from_bak ? StoreOpStatus::RecoveredFromBak : StoreOpStatus::Ok;
+            if (from_bak) {
+                result.diagnostics.codec.recovered_from_bak = true;
+                AddDiag(result.diagnostics, "recovered from .bak");
+            }
+            return true;
+        }
+        if (parsed.status == CodecStatus::UnsupportedNewerMajor) {
+            result.status = StoreOpStatus::UnsupportedDiskMajor;
+            AddDiag(result.diagnostics, "unsupported newer major on disk");
+            return true; // handled terminal — do not fall back to older .bak
+        }
+        result.status = StoreOpStatus::CodecError;
+        return false;
+    };
+
+    const auto primary = AtomicJson::ReadFileUtf8(paths.primary);
+    const auto bak = AtomicJson::ReadFileUtf8(paths.backup);
+
+    auto try_backup = [&]() -> bool {
+        if (bak.ok && !bak.missing && !bak.empty && try_parse(bak.utf8, true)) {
+            return true;
+        }
+        return false;
+    };
+
+    if (primary.missing) {
+        if (try_backup()) {
+            return result;
+        }
+        // Present-but-unusable backup must not look like a never-created store.
+        if (!bak.missing && !bak.empty) {
+            result.status = StoreOpStatus::CodecError;
+            AddDiag(result.diagnostics, "primary missing; backup unusable; files preserved");
+            return result;
+        }
+        result.status = StoreOpStatus::Empty;
+        result.store.account_key = normalized;
+        result.store.store_format = kStoreFormatId;
+        result.store.store_version = {kStoreFormatMajor, kStoreFormatMinor};
+        AddDiag(result.diagnostics, "primary and backup missing; empty store");
+        return result;
+    }
+
+    // Primary exists: valid body → parse; unsupported major is terminal (no .bak downgrade).
+    if (primary.ok && !primary.empty && try_parse(primary.utf8, false)) {
+        return result;
+    }
+
+    if (primary.empty) {
+        AddDiag(result.diagnostics, "primary empty; attempting .bak");
+    }
+    else if (!primary.ok) {
+        AddDiag(result.diagnostics, "primary read failed; attempting .bak");
+    }
+    else {
+        AddDiag(result.diagnostics, "primary malformed; attempting .bak");
+    }
+
+    if (try_backup()) {
+        return result;
+    }
+
+    // Existing primary that is empty/whitespace/malformed with no usable bak → CodecError.
+    // Never return Empty for an existing zero-byte primary (would allow silent overwrite).
+    result.status = StoreOpStatus::CodecError;
+    AddDiag(result.diagnostics, "primary and .bak unusable; files preserved");
+    return result;
+}
+
+} // namespace
+
+CoalesceCharacterResult CoalesceStoredCharacters(
+    const StoredCharacter& existing,
+    const StoredCharacter& incoming)
+{
+    return CoalesceStoredCharactersImpl(existing, incoming);
+}
+
+AccountStorePaths BuildAccountStorePaths(
+    const std::filesystem::path& quest_progress_dir,
+    std::string_view normalized_account_key)
+{
+    AccountStorePaths paths;
+    paths.directory = quest_progress_dir;
+    const auto file = std::string(normalized_account_key) + ".json";
+    paths.primary = quest_progress_dir / file;
+    paths.backup = quest_progress_dir / (file + ".bak");
+    paths.tmp = quest_progress_dir / (file + ".tmp");
+    return paths;
+}
+
+std::string BuildAccountMutexName(std::string_view normalized_account_key)
+{
+    return std::string("Local\\GWToolbox.QuestProgress.") + ToHex64(Fnv1a64(normalized_account_key));
+}
+
+WaitAcquireKind ClassifyWaitResult(unsigned long wait_result)
+{
+    switch (wait_result) {
+        case WAIT_OBJECT_0:
+            return WaitAcquireKind::Acquired;
+        case WAIT_ABANDONED:
+            return WaitAcquireKind::Abandoned;
+        case WAIT_TIMEOUT:
+            return WaitAcquireKind::Timeout;
+        default:
+            return WaitAcquireKind::Failed;
+    }
+}
+
+MergeStoreResult MergeAccountStores(
+    const AccountProgressStore& disk,
+    const AccountProgressStore& memory)
+{
+    MergeStoreResult result;
+    if (!disk.account_key.empty() && !memory.account_key.empty()
+        && disk.account_key != memory.account_key) {
+        result.status = StoreOpStatus::ValidationError;
+        AddDiag(result.diagnostics, "merge accountKey mismatch");
+        return result;
+    }
+    if (disk.store_version.major > kStoreFormatMajor
+        || (disk.store_version.major == kStoreFormatMajor
+            && disk.store_version.minor > kStoreFormatMinor)) {
+        result.status = StoreOpStatus::UnsupportedDiskMajor;
+        AddDiag(result.diagnostics, "disk store newer than supported; refusing merge overwrite");
+        return result;
+    }
+
+    bool conflict = false;
+    AccountProgressStore out;
+    out.store_format = kStoreFormatId;
+    out.store_version = {kStoreFormatMajor, kStoreFormatMinor};
+    out.account_key = !memory.account_key.empty() ? memory.account_key : disk.account_key;
+
+    {
+        const bool disk_sealed =
+            disk.account_skill_baseline.state == JourneyBaselineSealState::Sealed;
+        const bool memory_sealed =
+            memory.account_skill_baseline.state == JourneyBaselineSealState::Sealed;
+        if (disk_sealed || memory_sealed) {
+            out.account_skill_baseline.state = JourneyBaselineSealState::Sealed;
+            if (disk_sealed) {
+                out.account_skill_baseline.ids = disk.account_skill_baseline.ids;
+            }
+            if (memory_sealed) {
+                out.account_skill_baseline.ids.insert(
+                    out.account_skill_baseline.ids.end(),
+                    memory.account_skill_baseline.ids.begin(),
+                    memory.account_skill_baseline.ids.end());
+            }
+            std::sort(
+                out.account_skill_baseline.ids.begin(), out.account_skill_baseline.ids.end());
+            out.account_skill_baseline.ids.erase(
+                std::unique(
+                    out.account_skill_baseline.ids.begin(), out.account_skill_baseline.ids.end()),
+                out.account_skill_baseline.ids.end());
+        }
+    }
+
+    std::map<std::string, char> keys;
+    for (const auto& [k, _] : disk.characters) {
+        (void)_;
+        keys[k] = 1;
+    }
+    for (const auto& [k, _] : memory.characters) {
+        (void)_;
+        keys[k] = 1;
+    }
+    for (const auto& [key, _] : keys) {
+        (void)_;
+        const auto d_it = disk.characters.find(key);
+        const auto m_it = memory.characters.find(key);
+        if (d_it == disk.characters.end()) {
+            out.characters.emplace(key, m_it->second);
+        }
+        else if (m_it == memory.characters.end()) {
+            out.characters.emplace(key, d_it->second);
+        }
+        else {
+            out.characters.emplace(key, MergeCharacter(d_it->second, m_it->second, result.diagnostics, conflict));
+        }
+    }
+
+    if (conflict) {
+        result.status = StoreOpStatus::MergeConflict;
+        result.merged.reset();
+        return result;
+    }
+    CanonicalizeAccountStore(out);
+    result.merged = std::move(out);
+    result.status = StoreOpStatus::Ok;
+    return result;
+}
+
+LoadStoreResult LoadAccountStore(
+    const std::filesystem::path& quest_progress_dir,
+    std::string_view account_key)
+{
+    const auto normalized = NormalizeAccountKey(account_key);
+    if (normalized.empty()) {
+        LoadStoreResult result;
+        result.status = StoreOpStatus::ValidationError;
+        AddDiag(result.diagnostics, "invalid account key");
+        return result;
+    }
+    return LoadFromPaths(BuildAccountStorePaths(quest_progress_dir, normalized), normalized);
+}
+
+SaveStoreResult SaveMergedAccountStore(
+    const std::filesystem::path& quest_progress_dir,
+    std::string_view account_key,
+    const AccountProgressStore& memory_store,
+    unsigned long lock_timeout_ms)
+{
+    SaveStoreResult result;
+    const auto normalized = NormalizeAccountKey(account_key);
+    if (normalized.empty() || (!memory_store.account_key.empty() && NormalizeAccountKey(memory_store.account_key) != normalized)) {
+        result.status = StoreOpStatus::ValidationError;
+        AddDiag(result.diagnostics, "invalid or mismatched account key");
+        result.diagnostics.dirty_retained = true;
+        return result;
+    }
+
+    auto memory = memory_store;
+    memory.account_key = normalized;
+
+    const auto paths = BuildAccountStorePaths(quest_progress_dir, normalized);
+    AccountMutex mutex(BuildAccountMutexName(normalized));
+    const auto wait_kind = mutex.Acquire(lock_timeout_ms);
+    if (wait_kind == WaitAcquireKind::Timeout) {
+        result.status = StoreOpStatus::LockTimeout;
+        AddDiag(result.diagnostics, "account mutex timeout; dirty retained");
+        result.diagnostics.dirty_retained = true;
+        return result;
+    }
+    if (wait_kind == WaitAcquireKind::Failed) {
+        result.status = StoreOpStatus::LockFailed;
+        result.diagnostics.win_error = mutex.create_error();
+        AddDiag(result.diagnostics, "account mutex wait failed; dirty retained");
+        result.diagnostics.dirty_retained = true;
+        return result;
+    }
+    if (wait_kind == WaitAcquireKind::Abandoned) {
+        result.diagnostics.abandoned_lock = true;
+        AddDiag(result.diagnostics, "WAIT_ABANDONED: re-read and validate before merge");
+    }
+
+    auto loaded = LoadFromPaths(paths, normalized);
+    if (loaded.status == StoreOpStatus::UnsupportedDiskMajor) {
+        result.status = StoreOpStatus::UnsupportedDiskMajor;
+        result.diagnostics = std::move(loaded.diagnostics);
+        result.diagnostics.dirty_retained = true;
+        AddDiag(result.diagnostics, "refusing overwrite of unsupported newer disk store");
+        return result;
+    }
+    if (loaded.status == StoreOpStatus::CodecError) {
+        result.status = StoreOpStatus::CodecError;
+        result.diagnostics = std::move(loaded.diagnostics);
+        result.diagnostics.dirty_retained = true;
+        return result;
+    }
+
+    auto merged = MergeAccountStores(loaded.store, memory);
+    if (merged.status != StoreOpStatus::Ok || !merged.merged.has_value()) {
+        result.status = merged.status;
+        result.diagnostics = std::move(merged.diagnostics);
+        result.diagnostics.dirty_retained = true;
+        result.merged.reset();
+        return result;
+    }
+
+    auto serialized = SerializeAccountStoreJson(*merged.merged);
+    if (serialized.status != CodecStatus::Ok) {
+        result.status = StoreOpStatus::CodecError;
+        result.diagnostics.codec = serialized.diagnostics;
+        result.diagnostics.dirty_retained = true;
+        AddDiag(result.diagnostics, "serialize failed");
+        return result;
+    }
+
+    const auto write = AtomicJson::WriteAtomicUtf8(paths.primary, paths.backup, serialized.utf8_json);
+    if (!write.ok) {
+        result.status = StoreOpStatus::IoError;
+        result.diagnostics.win_error = write.win_error;
+        result.diagnostics.dirty_retained = true;
+        AddDiag(result.diagnostics, write.message);
+        return result;
+    }
+
+    result.used_move_file_ex = write.used_move_file_ex;
+    result.used_replace_file = write.used_replace_file;
+    result.merged = std::move(*merged.merged);
+    result.status = StoreOpStatus::Ok;
+    AddDiag(result.diagnostics, write.message);
+    return result;
+}
+
+} // namespace QuestProgress

@@ -1,0 +1,86 @@
+{
+  "contract": "guild-wars-quest-progress",
+  "contractVersion": 1,
+  "producer": {
+    "name": "GWToolboxpp",
+    "version": "example-producer-0.0.0"
+  },
+  "exportedAt": "2026-07-25T20:00:00.000Z",
+  "characters": [
+    {
+      "characterKey": "example-char-key-001",
+      "displayName": "Example Hero",
+      "isPreSearing": false,
+      "quests": [
+        {
+          "gameQuestId": 900001,
+          "questName": "EXAMPLE synthetic quest title",
+          "state": "objective_progress",
+          "source": "game_snapshot",
+          "confidence": "confirmed",
+          "firstObservedAt": "2026-07-25T19:00:00.000Z",
+          "observedAt": "2026-07-25T20:00:00.000Z",
+          "objectives": [
+            {
+              "objectiveIndex": 0,
+              "text": "EXAMPLE speak with the placeholder NPC",
+              "isCompleted": true,
+              "observedAt": "2026-07-25T19:30:00.000Z"
+            },
+            {
+              "objectiveIndex": 1,
+              "text": "EXAMPLE deliver the placeholder item",
+              "isCompleted": false,
+              "observedAt": "2026-07-25T20:00:00.000Z"
+            }
+          ],
+          "history": [
+            {
+              "eventId": "example-event-uid-1001",
+              "eventType": "observation",
+              "observedAt": "2026-07-25T19:00:00.000Z",
+              "state": "active",
+              "source": "game_event",
+              "confidence": "confirmed",
+              "objectives": [
+                {
+                  "objectiveIndex": 0,
+                  "text": "EXAMPLE speak with the placeholder NPC",
+                  "isCompleted": false
+                },
+                {
+                  "objectiveIndex": 1,
+                  "text": "EXAMPLE deliver the placeholder item",
+                  "isCompleted": false
+                }
+              ],
+              "payload": {
+                "exampleEvidenceNote": "Synthetic payload object for Contract illustration only"
+              }
+            },
+            {
+              "eventType": "observation",
+              "observedAt": "2026-07-25T19:30:00.000Z",
+              "state": "objective_progress",
+              "source": "game_snapshot",
+              "confidence": "confirmed",
+              "objectives": [
+                {
+                  "objectiveIndex": 0,
+                  "text": "EXAMPLE speak with the placeholder NPC",
+                  "isCompleted": true,
+                  "observedAt": "2026-07-25T19:30:00.000Z"
+                },
+                {
+                  "objectiveIndex": 1,
+                  "text": "EXAMPLE deliver the placeholder item",
+                  "isCompleted": false
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

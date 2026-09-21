@@ -47,13 +47,6 @@ namespace GW {
 
 		enum class UIMessage : uint32_t;
 
-		struct CompassPoint {
-			CompassPoint() : x(0), y(0) {}
-			CompassPoint(int _x, int _y) : x(_x), y(_y) {}
-			int x;
-			int y;
-		};
-
 		typedef void(__cdecl* DecodeStr_Callback)(void* param, const wchar_t* s);
 
 		struct ChatTemplate {

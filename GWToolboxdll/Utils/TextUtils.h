@@ -30,6 +30,7 @@ namespace TextUtils {
     std::wstring SanitiseFilename(std::wstring_view str);
     std::string PrintFilename(std::string path);
     std::wstring PrintFilename(std::wstring path);
+    int Stricmp(std::string_view a, std::string_view b);
     std::wstring Replace(const std::wstring_view subject, const std::wstring& pattern, const std::wstring& replacement);
     std::string Replace(const std::string_view subject, const std::string& pattern, const std::string& replacement);
 

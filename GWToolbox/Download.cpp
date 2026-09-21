@@ -42,7 +42,7 @@ bool Download(std::string& content, const char* url, int timeout_sec = 5, bool f
         RestClient client;
         client.SetUrl(url);
         client.SetFollowLocation(true);
-        client.SetVerifyPeer(false);
+        client.SetVerifyPeer(true);
         client.SetTimeoutSec(timeout_sec);
         client.SetUserAgent("curl/7.71.1");
         client.Execute();
@@ -61,7 +61,7 @@ bool Download(std::string& content, const char* url, int timeout_sec = 5, bool f
 void AsyncDownload(const char* url, AsyncFileDownloader* downloader)
 {
     downloader->SetUrl(url);
-    downloader->SetVerifyPeer(false);
+    downloader->SetVerifyPeer(true);
     downloader->SetFollowLocation(true);
     downloader->SetUserAgent("curl/7.71.1");
     downloader->ExecuteAsync();
@@ -190,7 +190,6 @@ std::string GetGwmodVersion(const std::filesystem::path& gwmod_path)
     return parsed.version.value_or("");
 }
 
-// Lowercase hex sha256 of a file, streamed so we don't hold the whole file in memory; empty on failure.
 static std::string Sha256Hex(const std::filesystem::path& path)
 {
     BCRYPT_ALG_HANDLE alg = nullptr;
@@ -222,19 +221,69 @@ static std::string Sha256Hex(const std::filesystem::path& path)
     return result;
 }
 
-// True if the installed file already matches the release asset: prefers Github's sha256 digest, falls back to file size.
-static bool FileMatchesAsset(const std::filesystem::path& file_path, const Asset& asset, size_t file_size)
+static std::string Sha256HexContent(const std::string_view content)
+{
+    BCRYPT_ALG_HANDLE alg = nullptr;
+    if (BCryptOpenAlgorithmProvider(&alg, BCRYPT_SHA256_ALGORITHM, nullptr, 0) != 0) return {};
+
+    std::string result;
+    BCRYPT_HASH_HANDLE hash = nullptr;
+    if (BCryptCreateHash(alg, &hash, nullptr, 0, nullptr, 0, 0) == 0) {
+        auto remaining = content;
+        bool ok = true;
+        while (ok && !remaining.empty()) {
+            const auto count = std::min<size_t>(remaining.size(), 64 * 1024);
+            ok = BCryptHashData(hash, reinterpret_cast<PUCHAR>(const_cast<char*>(remaining.data())), static_cast<ULONG>(count), 0) == 0;
+            remaining.remove_prefix(count);
+        }
+
+        unsigned char digest[32];
+        if (ok && BCryptFinishHash(hash, digest, sizeof(digest), 0) == 0) {
+            char hex[2 * sizeof(digest) + 1];
+            for (size_t i = 0; i < sizeof(digest); ++i)
+                sprintf_s(hex + i * 2, 3, "%02x", digest[i]);
+            result = hex;
+        }
+        BCryptDestroyHash(hash);
+    }
+    BCryptCloseAlgorithmProvider(alg, 0);
+    return result;
+}
+
+static std::optional<std::string_view> AssetSha256(const Asset& asset)
+{
+    constexpr std::string_view prefix = "sha256:";
+    if (!asset.digest || !asset.digest->starts_with(prefix)) return std::nullopt;
+
+    const auto sha256 = std::string_view(*asset.digest).substr(prefix.size());
+    if (sha256.size() != 64) return std::nullopt;
+    if (!std::ranges::all_of(sha256, [](const char c) {
+            return c >= '0' && c <= '9' || c >= 'a' && c <= 'f' || c >= 'A' && c <= 'F';
+        }))
+        return std::nullopt;
+    return sha256;
+}
+
+static bool Sha256Matches(const std::string_view actual, const std::string_view expected)
+{
+    return std::ranges::equal(actual, expected, [](const char left, const char right) {
+        const auto normalized_left = left >= 'A' && left <= 'F' ? left + ('a' - 'A') : left;
+        const auto normalized_right = right >= 'A' && right <= 'F' ? right + ('a' - 'A') : right;
+        return normalized_left == normalized_right;
+    });
+}
+
+static bool FileMatchesAsset(const std::filesystem::path& file_path, const Asset& asset)
 {
     std::error_code ec;
     const auto current_size = std::filesystem::file_size(file_path, ec);
-    if (current_size != file_size) return false;
+    if (ec || current_size != asset.size) return false;
 
-    constexpr std::string_view sha_prefix = "sha256:";
-    if (asset.digest.starts_with(sha_prefix)) {
-        const std::string local = Sha256Hex(file_path);
-        if (!local.empty()) return local == asset.digest.substr(sha_prefix.size());
-    }
-    return false;
+    if (!asset.digest) return true;
+    const auto expected = AssetSha256(asset);
+    if (!expected) return false;
+    const auto actual = Sha256Hex(file_path);
+    return !actual.empty() && Sha256Matches(actual, *expected);
 }
 
 // Compares the installed dll against the latest release; doesn't download anything.
@@ -263,9 +312,7 @@ static DllUpdateInfo FindDllUpdate(const std::vector<Release>& releases)
     info.asset_found = true;
 
     if (std::filesystem::exists(info.dll_path)) {
-        std::error_code ec;
-        const auto current_filesize = std::filesystem::file_size(info.dll_path, ec);
-        if (!ec && FileMatchesAsset(info.dll_path, *release_dll_asset, current_filesize)) {
+        if (FileMatchesAsset(info.dll_path, *release_dll_asset)) {
             info.up_to_date = true;
             return info;
         }
@@ -308,9 +355,7 @@ static GwmodUpdateInfo FindGwmodUpdate(const std::vector<Release>& releases)
     info.asset_found = true;
 
     if (std::filesystem::exists(info.gwmod_path)) {
-        std::error_code ec;
-        const auto current_filesize = std::filesystem::file_size(info.gwmod_path, ec);
-        if (!ec && FileMatchesAsset(info.gwmod_path, *release_asset, current_filesize)) {
+        if (FileMatchesAsset(info.gwmod_path, *release_asset)) {
             info.up_to_date = true;
             return info;
         }
@@ -353,12 +398,9 @@ static ExeUpdateInfo FindExeUpdate(const std::vector<Release>& releases)
     }
     if (!exe_asset || exe_asset->browser_download_url.empty()) return info;
 
-    std::error_code ec;
-    const auto current_size = std::filesystem::file_size(exe_path, ec);
-
-    if (!installed_exe.empty() && std::filesystem::exists(installed_exe) && !FileMatchesAsset(installed_exe, *exe_asset, current_size))
+    if (!installed_exe.empty() && std::filesystem::exists(installed_exe) && !FileMatchesAsset(installed_exe, *exe_asset))
         info.targets.push_back(installed_exe);
-    if (!exe_path.empty() && exe_path != installed_exe && std::filesystem::exists(exe_path) && !FileMatchesAsset(exe_path, *exe_asset, current_size))
+    if (!exe_path.empty() && exe_path != installed_exe && std::filesystem::exists(exe_path) && !FileMatchesAsset(exe_path, *exe_asset))
         info.targets.push_back(exe_path);
 
     if (info.targets.empty()) return info; // up-to-date
@@ -404,8 +446,7 @@ static bool ReplaceExeFile(const std::filesystem::path& exe_path, const std::str
 
     // Confirm the new file actually landed; anti-virus has been seen to silently restore or quarantine the replacement.
     std::error_code ec;
-    const auto written_size = std::filesystem::file_size(exe_path, ec);
-    if (ec || !FileMatchesAsset(exe_path, asset, written_size))
+    if (!std::filesystem::exists(exe_path, ec) || ec || !FileMatchesAsset(exe_path, asset))
         return error = std::format(
                    L"The update didn't stick - {} still doesn't match the new version.\n\nAnti-virus software may be reverting or quarantining it. Add an exclusion for the GWToolbox folder, or download the latest version manually from {}.",
                    asset_filename.wstring(), kReleasesPage
@@ -436,10 +477,10 @@ static std::string BuildChangelog(const std::vector<Release>& releases, const Ex
     return changelog;
 }
 
-bool DownloadWindow::DownloadAssetWithProgress(DownloadWindow& window, const std::string& url, const size_t file_size, std::string& out_content, std::wstring& error)
+bool DownloadWindow::DownloadAssetWithProgress(DownloadWindow& window, const Asset& asset, std::string& out_content, std::wstring& error)
 {
     AsyncFileDownloader downloader;
-    AsyncDownload(url.c_str(), &downloader);
+    AsyncDownload(asset.browser_download_url.c_str(), &downloader);
 
     while (!downloader.IsCompleted()) {
         if (window.ShouldClose()) {
@@ -448,18 +489,25 @@ bool DownloadWindow::DownloadAssetWithProgress(DownloadWindow& window, const std
         }
         window.PollMessages(16);
         const size_t bytes_downloaded = downloader.GetDownloadCount();
-        const auto progress = file_size ? (bytes_downloaded * 100 / file_size) : 0;
+        const auto progress = asset.size ? (bytes_downloaded * 100 / asset.size) : 0;
         SendMessageW(window.m_hProgressBar, PBM_SETPOS, static_cast<WPARAM>(progress), 0);
     }
 
     if (!downloader.IsSuccessful()) {
-        std::wstring url_w(url.begin(), url.end());
+        std::wstring url_w(asset.browser_download_url.begin(), asset.browser_download_url.end());
         std::string status_str = downloader.GetStatusStr();
         std::wstring status_w(status_str.begin(), status_str.end());
         return error = std::format(L"Failed to download '{}'. (Status: {}, StatusCode: {})", url_w, status_w, downloader.GetStatusCode()), false;
     }
 
     out_content = std::move(downloader.GetContent());
+    const auto expected = AssetSha256(asset);
+    if (!expected) return error = std::format(L"GitHub did not provide a valid SHA-256 digest for {}.", std::wstring(asset.name.begin(), asset.name.end())), false;
+
+    const auto actual = Sha256HexContent(out_content);
+    if (actual.empty() || !Sha256Matches(actual, *expected))
+        return error = std::format(L"The SHA-256 digest for {} did not match the GitHub release metadata.", std::wstring(asset.name.begin(), asset.name.end())), false;
+
     SendMessageW(window.m_hProgressBar, PBM_SETPOS, 100, 0);
     return true;
 }
@@ -477,7 +525,7 @@ bool DownloadWindow::DownloadDll(const std::vector<Release>& releases, std::wstr
     window.SetChangelog(changelog.c_str(), changelog.size());
 
     std::string data;
-    if (!DownloadAssetWithProgress(window, info.asset->browser_download_url, info.asset->size, data, error)) return false;
+    if (!DownloadAssetWithProgress(window, *info.asset, data, error)) return false;
 
     if (!WriteEntireFile(info.dll_path.wstring().c_str(), data.c_str(), data.size()))
         return error = std::format(L"WriteEntireFile failed on '{}' with {} bytes", info.dll_path.wstring(), data.size()), false;
@@ -505,7 +553,7 @@ bool DownloadWindow::ApplyUpdates(const std::vector<Release>& releases, const Ex
     if (exe_available) {
         SetWindowTextW(window.m_hStatusLabel, L"Downloading GWToolbox.exe...");
         std::string data;
-        ok = DownloadAssetWithProgress(window, exe_info.asset->browser_download_url, exe_info.asset->size, data, error);
+        ok = DownloadAssetWithProgress(window, *exe_info.asset, data, error);
         for (size_t i = 0; ok && i < exe_info.targets.size(); i++) {
             ok = ReplaceExeFile(exe_info.targets[i], data, *exe_info.asset, error);
         }
@@ -515,7 +563,7 @@ bool DownloadWindow::ApplyUpdates(const std::vector<Release>& releases, const Ex
         SetWindowTextW(window.m_hStatusLabel, L"Downloading GWToolboxdll.dll...");
         SendMessageW(window.m_hProgressBar, PBM_SETPOS, 0, 0);
         std::string data;
-        ok = DownloadAssetWithProgress(window, dll_info.asset->browser_download_url, dll_info.asset->size, data, error);
+        ok = DownloadAssetWithProgress(window, *dll_info.asset, data, error);
         if (ok && !WriteEntireFile(dll_info.dll_path.wstring().c_str(), data.c_str(), data.size())) {
             error = std::format(L"WriteEntireFile failed on '{}' with {} bytes", dll_info.dll_path.wstring(), data.size());
             ok = false;
@@ -526,7 +574,7 @@ bool DownloadWindow::ApplyUpdates(const std::vector<Release>& releases, const Ex
         SetWindowTextW(window.m_hStatusLabel, L"Downloading gwtoolbox.gwmod...");
         SendMessageW(window.m_hProgressBar, PBM_SETPOS, 0, 0);
         std::string data;
-        ok = DownloadAssetWithProgress(window, gwmod_info.asset->browser_download_url, gwmod_info.asset->size, data, error);
+        ok = DownloadAssetWithProgress(window, *gwmod_info.asset, data, error);
         if (ok && !WriteEntireFile(gwmod_info.gwmod_path.wstring().c_str(), data.c_str(), data.size())) {
             error = std::format(L"WriteEntireFile failed on '{}' with {} bytes", gwmod_info.gwmod_path.wstring(), data.size());
             ok = false;
@@ -553,7 +601,7 @@ void UpdateChecker::Start(const bool check_exe, const bool check_dll)
 
     m_ReleasesFetch.SetUrl("https://api.github.com/repos/gwdevhub/GWToolboxpp/releases?per_page=30");
     m_ReleasesFetch.SetFollowLocation(true);
-    m_ReleasesFetch.SetVerifyPeer(false);
+    m_ReleasesFetch.SetVerifyPeer(true);
     m_ReleasesFetch.SetTimeoutSec(10);
     m_ReleasesFetch.SetUserAgent("curl/7.71.1");
     m_ReleasesFetch.ExecuteAsync();
