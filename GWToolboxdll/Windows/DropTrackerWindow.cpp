@@ -6,9 +6,12 @@
 
 #include <Timer.h>
 #include <Utils/GuiUtils.h>
+#include <ImGuiAddons.h>
 #include <Windows/DropTrackerWindow.h>
 #include <Modules/ItemDrops.h>
 #include <map>
+#include <fstream>
+#include <unordered_map>
 #include <Modules/Resources.h>
 
 #include "Utils/TextUtils.h"
@@ -16,53 +19,190 @@
 
 
 namespace {
-    enum class GroupMode { None, ItemName, Map, Rarity, Type, Weapon };
+    using GroupMode = ItemDrops::GroupMode;
 
     GroupMode current_group_mode = GroupMode::None;
     const char* group_mode_names[] = {"None", "Item Name", "Map", "Rarity", "Type", "Weapon"};
     DropTrackerWindow::Settings settings;
-    
-    bool IsWeapon(const ItemDrops::PendingDrop* drop)
+
+    // Uniform view over a drop row, whether it's a live in-memory PendingDrop (recent window) or a row
+    // parsed back out of the session CSV (older, already trimmed from memory). icon is null for
+    // disk-sourced rows — the original GW::Item is long gone, so there's nothing to look an icon up from.
+    struct DisplayRow {
+        time_t system_time = 0;
+        IDirect3DTexture9** icon = nullptr;
+        std::wstring item_name;
+        GW::Constants::MapID map_id = GW::Constants::MapID::None;
+        uint32_t quantity = 0;
+        uint32_t value = 0;
+        GW::Constants::ItemType type = GW::Constants::ItemType::Unknown;
+        GW::Constants::Rarity rarity = GW::Constants::Rarity::Unknown;
+        GW::Constants::DamageType damage_type = GW::Constants::DamageType::None;
+        uint16_t min_damage = 0;
+        uint16_t max_damage = 0;
+        GW::Constants::AttributeByte requirement_attribute = GW::Constants::AttributeByte::None;
+        uint8_t requirement_value = 0;
+    };
+
+    // Called only for rows an ImGuiListClipper actually draws (see DrawDefaultTable) - GetIcon() does a
+    // cache lookup/fetch, so this keeps that scoped to what's visible rather than the whole window.
+    DisplayRow ToDisplayRow(ItemDrops::PendingDrop* drop)
     {
-        switch (drop->type) {
-            case GW::Constants::ItemType::Axe:
-            case GW::Constants::ItemType::Sword:
-            case GW::Constants::ItemType::Shield:
-            case GW::Constants::ItemType::Scythe:
-            case GW::Constants::ItemType::Bow:
-            case GW::Constants::ItemType::Wand:
-            case GW::Constants::ItemType::Staff:
-            case GW::Constants::ItemType::Offhand:
-            case GW::Constants::ItemType::Daggers:
-            case GW::Constants::ItemType::Hammer:
-            case GW::Constants::ItemType::Spear:
-                return true;
-            default:
-                return false;
+        return {
+            drop->system_time, drop->GetIcon(), drop->GetItemName()->wstring(), drop->map_id,
+            drop->quantity, drop->value, drop->type, drop->rarity, drop->damage_type,
+            drop->min_damage, drop->max_damage, drop->requirement_attribute, drop->requirement_value
+        };
+    }
+
+    // Per-key-type overloads instead of a GroupMode switch: each tally dimension now uses its native
+    // game identifier as the key (see ItemDrops::GetTallyBy*), so there's no single "key" type to
+    // switch on any more. LabelFor turns a key into the text a group's row shows; RowMatchesKey filters
+    // parsed CSV rows during drill-down without needing to format/decode anything just to compare.
+    std::string LabelFor(const std::string& key) { return key.empty() ? "(Unknown)" : key; }
+    std::string LabelFor(GW::Constants::MapID key) { auto name = Resources::GetMapName(key)->string(); return name.empty() ? "(Unknown)" : name; }
+    std::string LabelFor(GW::Constants::Rarity key) { return GW::Items::GetRarityName(key); }
+    std::string LabelFor(GW::Constants::ItemType key) { return GW::Items::GetItemTypeName(key); }
+    std::string LabelFor(const ItemDrops::WeaponKey& key) { return ItemDrops::WeaponCategoryName(key.type, key.damage_type); }
+
+    bool RowMatchesKey(const DisplayRow& row, const std::string& key) { return TextUtils::WStringToString(row.item_name) == key; }
+    bool RowMatchesKey(const DisplayRow& row, GW::Constants::MapID key) { return row.map_id == key; }
+    bool RowMatchesKey(const DisplayRow& row, GW::Constants::Rarity key) { return row.rarity == key; }
+    bool RowMatchesKey(const DisplayRow& row, GW::Constants::ItemType key) { return row.type == key; }
+    bool RowMatchesKey(const DisplayRow& row, const ItemDrops::WeaponKey& key) { return row.type == key.type && row.damage_type == key.damage_type; }
+
+    std::string CacheKeyFor(GroupMode mode, const std::string& key) { return std::to_string(static_cast<int>(mode)) + "|" + key; }
+    std::string CacheKeyFor(GroupMode mode, GW::Constants::MapID key) { return std::to_string(static_cast<int>(mode)) + "|" + std::to_string(static_cast<int>(key)); }
+    std::string CacheKeyFor(GroupMode mode, GW::Constants::Rarity key) { return std::to_string(static_cast<int>(mode)) + "|" + std::to_string(static_cast<int>(key)); }
+    std::string CacheKeyFor(GroupMode mode, GW::Constants::ItemType key) { return std::to_string(static_cast<int>(mode)) + "|" + std::to_string(static_cast<int>(key)); }
+    std::string CacheKeyFor(GroupMode mode, const ItemDrops::WeaponKey& key)
+    {
+        return std::to_string(static_cast<int>(mode)) + "|" + std::to_string(static_cast<int>(key.type)) + "," + std::to_string(static_cast<int>(key.damage_type));
+    }
+
+    // RFC4180-ish: only ItemName is ever quoted (TextUtils::SanitizeForCSV), but a generic quote-aware
+    // splitter handles that without needing to know which column it is.
+    std::vector<std::wstring> SplitCsvLine(const std::wstring& line)
+    {
+        std::vector<std::wstring> cols;
+        std::wstring cur;
+        bool in_quotes = false;
+        for (size_t i = 0; i < line.size(); ++i) {
+            const wchar_t c = line[i];
+            if (in_quotes) {
+                if (c == L'"') {
+                    if (i + 1 < line.size() && line[i + 1] == L'"') {
+                        cur += L'"';
+                        ++i;
+                    }
+                    else {
+                        in_quotes = false;
+                    }
+                }
+                else {
+                    cur += c;
+                }
+            }
+            else if (c == L'"') {
+                in_quotes = true;
+            }
+            else if (c == L',') {
+                cols.push_back(std::move(cur));
+                cur.clear();
+            }
+            else {
+                cur += c;
+            }
+        }
+        cols.push_back(std::move(cur));
+        return cols;
+    }
+
+    // Column order per ItemDrops::PendingDrop::GetCSVHeader():
+    // SystemTime,InstanceTime,Map,ItemName,Quantity,Value,ItemType,Rarity,DamageType,MinDamage,MaxDamage,
+    // RequirementAttribute,RequirementValue,PlayerCount,HeroCount,HenchmanCount,HardMode,ModelFileID
+    bool ParseCsvRow(const std::wstring& line, DisplayRow& out)
+    {
+        const auto cols = SplitCsvLine(line);
+        if (cols.size() < 13) {
+            return false;
+        }
+        try {
+            out.system_time = static_cast<time_t>(std::stoll(cols[0]));
+            out.map_id = static_cast<GW::Constants::MapID>(std::stoul(cols[2]));
+            out.item_name = cols[3];
+            out.quantity = static_cast<uint32_t>(std::stoul(cols[4]));
+            out.value = static_cast<uint32_t>(std::stoul(cols[5]));
+            out.type = static_cast<GW::Constants::ItemType>(std::stoul(cols[6]));
+            out.rarity = static_cast<GW::Constants::Rarity>(std::stoul(cols[7]));
+            out.damage_type = static_cast<GW::Constants::DamageType>(std::stoul(cols[8]));
+            out.min_damage = static_cast<uint16_t>(std::stoul(cols[9]));
+            out.max_damage = static_cast<uint16_t>(std::stoul(cols[10]));
+            out.requirement_attribute = static_cast<GW::Constants::AttributeByte>(std::stoul(cols[11]));
+            out.requirement_value = static_cast<uint8_t>(std::stoul(cols[12]));
+        }
+        catch (const std::exception&) {
+            return false; // malformed/partial line (e.g. a write caught mid-flush); skip it
+        }
+        return true;
+    }
+
+    struct DrilldownCacheEntry {
+        uint64_t cached_count = 0;
+        std::vector<DisplayRow> rows;
+    };
+    std::unordered_map<std::string, DrilldownCacheEntry> drilldown_cache; // key: "<mode>|<group key>"
+
+    // Individual rows for one group, for the expandable per-item list. Sourced entirely from the
+    // session CSV (the single durable record of every drop, not just what's still in memory) rather
+    // than from drop_history, so drill-down works the same whether the group's drops are recent or
+    // long since trimmed. Cached per group and only re-read when that group's tally count changes.
+    template <typename Key>
+    const std::vector<DisplayRow>& GetDrilldownRows(GroupMode mode, const Key& key, uint64_t expected_count)
+    {
+        auto& entry = drilldown_cache[CacheKeyFor(mode, key)];
+        if (entry.cached_count == expected_count) {
+            return entry.rows;
+        }
+
+        entry.rows.clear();
+        entry.cached_count = expected_count;
+
+        const auto path = ItemDrops::Instance().GetSessionCsvPath();
+        std::wifstream file(path);
+        if (!file.is_open()) {
+            return entry.rows;
+        }
+        std::wstring line;
+        std::getline(file, line); // header
+        while (std::getline(file, line)) {
+            DisplayRow row;
+            if (!ParseCsvRow(line, row)) {
+                continue;
+            }
+            if (RowMatchesKey(row, key)) {
+                entry.rows.push_back(std::move(row));
+            }
+        }
+        return entry.rows;
+    }
+
+    void DrawItemIcon(const DisplayRow& row)
+    {
+        if (settings.icon_size > 0 && row.icon) {
+            ImGui::Image((ImTextureID)(intptr_t)*row.icon, ImVec2(settings.icon_size, settings.icon_size));
         }
     }
 
-    std::string GetWeaponCategory(const ItemDrops::PendingDrop* drop)
+    void DrawItemNameCell(const DisplayRow& drop)
     {
-        if (!IsWeapon(drop)) {
-            return "Non-Weapon";
-        }
-
-        std::string category = GW::Items::GetItemTypeName(drop->type);
-        if (drop->damage_type != GW::Constants::DamageType::None) {
-            category += std::format(" ({})",GW::Items::GetDamageTypeName(drop->damage_type));
-        }
-        return category;
+        ImGui::TextColoredUnformatted(GW::Items::GetRarityColor(drop.rarity), TextUtils::WStringToString(drop.item_name).c_str());
     }
 
-    void DrawItemIcon(const ItemDrops::PendingDrop* drop)
-    {
-        if (settings.icon_size > 0) {
-            ImGui::Image((ImTextureID)(intptr_t)*drop->icon, ImVec2(settings.icon_size, settings.icon_size));
-        }
-    }
-
-    void DrawDefaultTable(std::vector<ItemDrops::PendingDrop*>& drops)
+    // Takes the live PendingDrop list (not pre-converted DisplayRows) so ToDisplayRow - and the icon
+    // fetch/cache lookup inside it - only runs for rows the clipper actually decides to draw, instead
+    // of for the whole (up to ~2000-entry) rolling window every frame regardless of scroll position.
+    void DrawDefaultTable(const std::vector<ItemDrops::PendingDrop*>& drops)
     {
         if (ImGui::BeginTable("drops_table", 8, ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg)) {
             ImGui::TableSetupColumn("Icon", ImGuiTableColumnFlags_WidthFixed, 30.0f);
@@ -75,90 +215,95 @@ namespace {
             ImGui::TableSetupColumn("Map", ImGuiTableColumnFlags_WidthStretch);
             ImGui::TableHeadersRow();
 
-            for (auto drop : drops) {
-                std::tm tm_buf = TextUtils::Time::SafeLocaltime(drop->system_time);
-                char time_str[32];
-                std::strftime(time_str, sizeof(time_str), "%H:%M:%S", &tm_buf);
+            ImGuiListClipper clipper;
+            clipper.Begin(static_cast<int>(drops.size()));
+            while (clipper.Step()) {
+                for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; ++i) {
+                    const DisplayRow drop = ToDisplayRow(drops[i]);
 
-                ImGui::TableNextRow();
-                ImGui::TableNextColumn();
+                    std::tm tm_buf = TextUtils::Time::SafeLocaltime(drop.system_time);
+                    char time_str[32];
+                    std::strftime(time_str, sizeof(time_str), "%H:%M:%S", &tm_buf);
 
-                DrawItemIcon(drop);
+                    ImGui::TableNextRow();
+                    ImGui::TableNextColumn();
 
-                ImGui::TableNextColumn();
-                ImGui::Text("%s", time_str);
-                ImGui::TableNextColumn();
+                    DrawItemIcon(drop);
 
-                ImGui::TextColored(GW::Items::GetRarityColor(drop->rarity), "%s", drop->GetItemName()->string().c_str());
-                ImGui::TableNextColumn();
-                ImGui::Text("%s", GW::Items::GetItemTypeName(drop->type));
-                ImGui::TableNextColumn();
-                ImGui::Text("%s", GW::Items::GetRarityName(drop->rarity));
-                ImGui::TableNextColumn();
-                ImGui::Text("%d", drop->quantity);
-                ImGui::TableNextColumn();
-                ImGui::Text("%d", drop->value);
-                ImGui::TableNextColumn();
-                ImGui::Text("%s", Resources::GetMapName(drop->map_id)->string().c_str());
+                    ImGui::TableNextColumn();
+                    ImGui::TextUnformatted(time_str);
+                    ImGui::TableNextColumn();
+
+                    DrawItemNameCell(drop);
+                    ImGui::TableNextColumn();
+                    ImGui::TextUnformatted(GW::Items::GetItemTypeName(drop.type));
+                    ImGui::TableNextColumn();
+                    ImGui::TextUnformatted(GW::Items::GetRarityName(drop.rarity));
+                    ImGui::TableNextColumn();
+                    ImGui::Text("%d", drop.quantity);
+                    ImGui::TableNextColumn();
+                    ImGui::Text("%d", drop.value);
+                    ImGui::TableNextColumn();
+                    ImGui::TextUnformatted(Resources::GetMapName(drop.map_id)->string().c_str());
+                }
             }
+            clipper.End();
             ImGui::EndTable();
         }
     }
 
-    void DrawDefaultGroupTable(const std::map<std::string, std::vector<ItemDrops::PendingDrop*>>& grouped)
+    template <typename Key>
+    void DrawDefaultGroupTable(GroupMode mode, const std::unordered_map<Key, ItemDrops::DropTally>& tally)
     {
         if (ImGui::BeginTable("grouped_table", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg)) {
-            ImGui::TableSetupColumn(group_mode_names[static_cast<int>(current_group_mode)], ImGuiTableColumnFlags_WidthStretch);
+            ImGui::TableSetupColumn(group_mode_names[static_cast<int>(mode)], ImGuiTableColumnFlags_WidthStretch);
             ImGui::TableSetupColumn("Count", ImGuiTableColumnFlags_WidthFixed, 60.0f);
             ImGui::TableSetupColumn("Total Qty", ImGuiTableColumnFlags_WidthFixed, 70.0f);
             ImGui::TableHeadersRow();
 
-            int group_idx = 0; // Use a stable index for each group
-            for (const auto& [key, items] : grouped) {
-                uint32_t total_qty = 0;
-                for (const auto* item : items) {
-                    total_qty += item->quantity;
-                }
-
+            int group_idx = 0;
+            for (const auto& [key, totals] : tally) {
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn();
 
-                // Use the index as the ID, not the string content
                 ImGui::PushID(group_idx++);
 
-                bool open = ImGui::TreeNodeEx("##tree", ImGuiTreeNodeFlags_SpanAvailWidth, "%s", key.empty() ? "(Unknown)" : key.c_str());
+                const std::string label = LabelFor(key);
+                bool open = ImGui::TreeNodeEx("##tree", ImGuiTreeNodeFlags_SpanAvailWidth, "%s", label.c_str());
 
                 ImGui::TableNextColumn();
-                ImGui::Text("%zu", items.size());
+                ImGui::Text("%llu", static_cast<unsigned long long>(totals.count));
                 ImGui::TableNextColumn();
-                ImGui::Text("%d", total_qty);
+                ImGui::Text("%llu", static_cast<unsigned long long>(totals.quantity));
 
                 if (open) {
-                    int item_idx = 0;
-                    for (auto drop : items) {
-                        ImGui::PushID(item_idx++); // Unique ID for each sub-item
+                    const auto& items = GetDrilldownRows(mode, key, totals.count);
+                    ImGuiListClipper clipper;
+                    clipper.Begin(static_cast<int>(items.size()));
+                    while (clipper.Step()) {
+                        for (int item_idx = clipper.DisplayStart; item_idx < clipper.DisplayEnd; ++item_idx) {
+                            const auto& drop = items[item_idx];
+                            ImGui::PushID(item_idx);
 
-                        std::tm tm_buf = TextUtils::Time::SafeLocaltime(drop->system_time);
-                        char time_str[32];
-                        std::strftime(time_str, sizeof(time_str), "%H:%M:%S", &tm_buf);
+                            std::tm tm_buf = TextUtils::Time::SafeLocaltime(drop.system_time);
+                            char time_str[32];
+                            std::strftime(time_str, sizeof(time_str), "%H:%M:%S", &tm_buf);
 
-                        if (current_group_mode == GroupMode::ItemName) {
                             ImGui::TableNextRow();
                             ImGui::TableNextColumn();
-                            DrawItemIcon(drop);
-                        }
-                        else {
-                            ImGui::TableNextRow();
+                            if (mode == GroupMode::ItemName) {
+                                DrawItemIcon(drop);
+                            }
+                            ImGui::TextUnformatted(time_str);
+                            DrawItemNameCell(drop);
                             ImGui::TableNextColumn();
-                        }
-                        ImGui::Text("%s", time_str);
-                        ImGui::TextColored(GW::Items::GetRarityColor(drop->rarity), "%s", drop->GetItemName()->string().c_str());
-                        ImGui::TableNextColumn();
-                        ImGui::Text("%d", drop->quantity);
-                        ImGui::TableNextColumn();
+                            ImGui::Text("%d", drop.quantity);
+                            ImGui::TableNextColumn();
 
-                        ImGui::PopID();
+                            ImGui::PopID();
+                        }
                     }
+                    clipper.End();
                     ImGui::TreePop();
                 }
 
@@ -168,7 +313,7 @@ namespace {
         }
     }
 
-    void DrawWeaponsTable(const std::map<std::string, std::vector<ItemDrops::PendingDrop*>>& grouped)
+    void DrawWeaponsTable(GroupMode mode, const std::unordered_map<ItemDrops::WeaponKey, ItemDrops::DropTally, ItemDrops::WeaponKeyHash>& tally)
     {
         if (ImGui::BeginTable("grouped_table", 6, ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg)) {
             ImGui::TableSetupColumn("Weapon Type", ImGuiTableColumnFlags_WidthStretch);
@@ -180,92 +325,82 @@ namespace {
             ImGui::TableHeadersRow();
 
             int group_idx = 0;
-            for (const auto& [key, items] : grouped) {
-                uint32_t total_qty = 0;
-                uint32_t total_value = 0;
-                uint16_t min_damage_overall = UINT16_MAX;
-                uint16_t max_damage_overall = 0;
-                std::vector<std::string> requirements;
-
-                for (const auto* item : items) {
-                    total_qty += item->quantity;
-                    total_value += item->value;
-                    if (item->min_damage > 0 && item->min_damage < min_damage_overall) {
-                        min_damage_overall = item->min_damage;
-                    }
-                    if (item->max_damage > max_damage_overall) {
-                        max_damage_overall = item->max_damage;
-                    }
-                    if (item->requirement_attribute != GW::Constants::AttributeByte::None) {
-                        requirements.push_back(std::to_string(item->requirement_value) + " " + GW::Items::GetAttributeName(item->requirement_attribute));
-                    }
-                }
-
+            for (const auto& [key, totals] : tally) {
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn();
 
                 ImGui::PushID(group_idx++);
-                bool open = ImGui::TreeNodeEx("##tree", ImGuiTreeNodeFlags_SpanAvailWidth, "%s", key.empty() ? "(Unknown)" : key.c_str());
+                const std::string label = LabelFor(key);
+                bool open = ImGui::TreeNodeEx("##tree", ImGuiTreeNodeFlags_SpanAvailWidth, "%s", label.c_str());
 
                 ImGui::TableNextColumn();
-                ImGui::Text("%zu", items.size());
+                ImGui::Text("%llu", static_cast<unsigned long long>(totals.count));
 
+                // Damage range / requirement come straight from the running tally now - correct whether
+                // this row is expanded or not, no disk read needed just to show the summary.
                 ImGui::TableNextColumn();
-                if (min_damage_overall != UINT16_MAX && max_damage_overall > 0) {
-                    ImGui::Text("%d-%d", min_damage_overall, max_damage_overall);
+                if (totals.min_damage != UINT16_MAX && totals.max_damage > 0) {
+                    ImGui::Text("%d-%d", totals.min_damage, totals.max_damage);
                 }
                 else {
-                    ImGui::Text("-");
+                    ImGui::TextUnformatted("-");
                 }
 
                 ImGui::TableNextColumn();
-                if (!requirements.empty()) {
-                    std::string req_text = TextUtils::Join(requirements, ", ");
-                    ImGui::Text("%s", req_text.c_str());
+                if (!totals.requirements.empty()) {
+                    const std::string req_text = TextUtils::Join(std::vector(totals.requirements.begin(), totals.requirements.end()), ", ");
+                    ImGui::TextUnformatted(req_text.c_str());
                 }
                 else {
-                    ImGui::Text("-");
+                    ImGui::TextUnformatted("-");
                 }
 
                 ImGui::TableNextColumn();
-                ImGui::Text("%d", total_qty);
+                ImGui::Text("%llu", static_cast<unsigned long long>(totals.quantity));
 
                 ImGui::TableNextColumn();
-                ImGui::Text("%d", items.empty() ? 0 : total_value / static_cast<uint32_t>(items.size()));
+                ImGui::Text("%lld", totals.count ? totals.gold_value / static_cast<int64_t>(totals.count) : 0);
 
+                // The individual rows are still only needed (and only read from disk) when expanded.
                 if (open) {
-                    int item_idx = 0;
-                    for (auto drop : items) {
-                        ImGui::PushID(item_idx++);
+                    const auto& items = GetDrilldownRows(mode, key, totals.count);
+                    ImGuiListClipper clipper;
+                    clipper.Begin(static_cast<int>(items.size()));
+                    while (clipper.Step()) {
+                        for (int item_idx = clipper.DisplayStart; item_idx < clipper.DisplayEnd; ++item_idx) {
+                            const auto& drop = items[item_idx];
+                            ImGui::PushID(item_idx);
 
-                        std::tm tm_buf = TextUtils::Time::SafeLocaltime(drop->system_time);
-                        char time_str[32];
-                        std::strftime(time_str, sizeof(time_str), "%H:%M:%S", &tm_buf);
+                            std::tm tm_buf = TextUtils::Time::SafeLocaltime(drop.system_time);
+                            char time_str[32];
+                            std::strftime(time_str, sizeof(time_str), "%H:%M:%S", &tm_buf);
 
-                        ImGui::TableNextRow();
-                        ImGui::TableNextColumn();
+                            ImGui::TableNextRow();
+                            ImGui::TableNextColumn();
 
-                        ImGui::TextColored(GW::Items::GetRarityColor(drop->rarity), "%s", drop->GetItemName()->string().c_str());
-                        ImGui::TableNextColumn();
-                        ImGui::Text("%d", drop->quantity);
-                        ImGui::TableNextColumn();
-                        if (drop->min_damage > 0 && drop->max_damage > 0) {
-                            ImGui::Text("%d-%d", drop->min_damage, drop->max_damage);
+                            DrawItemNameCell(drop);
+                            ImGui::TableNextColumn();
+                            ImGui::Text("%d", drop.quantity);
+                            ImGui::TableNextColumn();
+                            if (drop.min_damage > 0 && drop.max_damage > 0) {
+                                ImGui::Text("%d-%d", drop.min_damage, drop.max_damage);
+                            }
+
+                            ImGui::TableNextColumn();
+                            if (drop.requirement_attribute != GW::Constants::AttributeByte::None) {
+                                ImGui::Text("%d %s", drop.requirement_value, GW::Items::GetAttributeName(drop.requirement_attribute));
+                            }
+
+                            ImGui::TableNextColumn();
+                            ImGui::Text("%d", drop.quantity);
+
+                            ImGui::TableNextColumn();
+                            ImGui::Text("%d", drop.value);
+
+                            ImGui::PopID();
                         }
-
-                        ImGui::TableNextColumn();
-                        if (drop->requirement_attribute != GW::Constants::AttributeByte::None) {
-                            ImGui::Text("%d %s", drop->requirement_value, GW::Items::GetAttributeName(drop->requirement_attribute));
-                        }
-
-                        ImGui::TableNextColumn();
-                        ImGui::Text("%d", drop->quantity);
-
-                        ImGui::TableNextColumn();
-                        ImGui::Text("%d", drop->value);
-
-                        ImGui::PopID();
                     }
+                    clipper.End();
                     ImGui::TreePop();
                 }
 
@@ -285,7 +420,7 @@ void DropTrackerWindow::Draw(IDirect3DDevice9*)
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(600, 400), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
-        auto& drops = ItemDrops::Instance().GetDropHistory();
+        auto& recent_drops = ItemDrops::Instance().GetDropHistory(); // rolling window; full session is in the tallies + on-disk CSV
 
         if (!ItemDrops::Instance().IsTrackingEnabled()) {
             ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "Drop tracking is disabled. Enable it in Item Settings to use this.");
@@ -294,6 +429,7 @@ void DropTrackerWindow::Draw(IDirect3DDevice9*)
 
         if (ImGui::Button("Clear")) {
             ItemDrops::Instance().ClearDropHistory();
+            drilldown_cache.clear();
         }
         ImGui::SameLine();
         if (ImGui::Button("Save to disk")) {
@@ -306,7 +442,7 @@ void DropTrackerWindow::Draw(IDirect3DDevice9*)
             }, "csv", filename.string().c_str());
         }
         ImGui::SameLine();
-        ImGui::Text("Total drops: %zu", drops.size());
+        ImGui::Text("Total drops: %llu", static_cast<unsigned long long>(ItemDrops::Instance().GetSessionDropCount()));
         ImGui::SameLine();
         ImGui::Text("Group By:");
         ImGui::SameLine();
@@ -321,40 +457,27 @@ void DropTrackerWindow::Draw(IDirect3DDevice9*)
         ImGui::Separator();
 
         if (current_group_mode == GroupMode::None) {
-            DrawDefaultTable(drops);
+            DrawDefaultTable(recent_drops);
         }
         else {
-            std::map<std::string, std::vector<ItemDrops::PendingDrop*>> grouped;
-
-            for (auto drop : drops) {
-                std::string key;
-                switch (current_group_mode) {
-                    case GroupMode::ItemName:
-                        key = drop->GetItemName()->string();
-                        break;
-                    case GroupMode::Map:
-                        key = Resources::GetMapName(drop->map_id)->string();
-                        break;
-                    case GroupMode::Rarity:
-                        key = GW::Items::GetRarityName(drop->rarity);
-                        break;
-                    case GroupMode::Type:
-                        key = GW::Items::GetItemTypeName(drop->type);
-                        break;
-                    case GroupMode::Weapon:
-                        key = GetWeaponCategory(drop);
-                        break;
-                    default:
-                        break;
-                }
-                grouped[key].push_back(drop);
-            }
-
-            if (current_group_mode == GroupMode::Weapon) {
-                DrawWeaponsTable(grouped);
-            }
-            else {
-                DrawDefaultGroupTable(grouped);
+            switch (current_group_mode) {
+                case GroupMode::ItemName:
+                    DrawDefaultGroupTable(current_group_mode, ItemDrops::Instance().GetTallyByItemName());
+                    break;
+                case GroupMode::Map:
+                    DrawDefaultGroupTable(current_group_mode, ItemDrops::Instance().GetTallyByMap());
+                    break;
+                case GroupMode::Rarity:
+                    DrawDefaultGroupTable(current_group_mode, ItemDrops::Instance().GetTallyByRarity());
+                    break;
+                case GroupMode::Type:
+                    DrawDefaultGroupTable(current_group_mode, ItemDrops::Instance().GetTallyByType());
+                    break;
+                case GroupMode::Weapon:
+                    DrawWeaponsTable(current_group_mode, ItemDrops::Instance().GetTallyByWeapon());
+                    break;
+                default:
+                    break;
             }
         }
     }

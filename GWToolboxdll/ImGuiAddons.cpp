@@ -207,6 +207,13 @@ namespace ImGui {
         return result;
     }
 
+    void TextColoredUnformatted(const ImVec4& col, const char* text)
+    {
+        ImGui::PushStyleColor(ImGuiCol_Text, col);
+        TextUnformatted(text);
+        ImGui::PopStyleColor();
+    }
+
     void TextShadowed(const char* label, const ImVec2 offset, const ImVec4& shadow_color)
     {
         const ImVec2 pos = GetCursorPos();

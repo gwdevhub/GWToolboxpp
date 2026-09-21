@@ -47,6 +47,9 @@ namespace ImGui {
     // Shows '(?)' and the helptext when hovered
     IMGUI_API void ShowHelp(const char* help);
     IMGUI_API bool CheckboxWithHelp(const char* label, bool* v, const char* help_text);
+    // TextColored(), but skips the printf pass for text that's already a plain string
+    IMGUI_API void TextColoredUnformatted(const ImVec4& col, const char* text);
+
     // Shows current text with a drop shadow
     IMGUI_API void TextShadowed(const char* label, ImVec2 offset = {1, 1}, const ImVec4& shadow_color = {0, 0, 0, 1});
 
