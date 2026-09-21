@@ -138,6 +138,10 @@ namespace {
     };
     NavmeshBatch navmesh_batch;
     float navmesh_sample_spacing = 5.f; // gw between surface samples when draping overlay edges (user-tunable)
+    // Hard ceiling on draped vertices: a long edge at the minimum 1.f spacing can demand far more samples than the
+    // process has memory for. Stop growing before that happens rather than let the allocator fail mid-build.
+    constexpr size_t kMaxNavmeshBatchVerts = 4'000'000;
+    bool navmesh_batch_capped_warned = false;
 
     // Full mesh (not draped) for the 2D top-down M-key world map. WorldMapWidget redraws these flat each frame.
     std::vector<GameWorldRenderer::BatchedLine> navmesh_worldmap_lines;
@@ -151,13 +155,21 @@ namespace {
         const GW::PathingMapArray* pm = GW::Map::GetPathingMap();
         const uint32_t num_planes = pm ? static_cast<uint32_t>(pm->size()) : 0;
         if (!num_planes) return; // pathing map not ready yet; retry next frame
+        if (b.staging.size() >= kMaxNavmeshBatchVerts) {
+            if (!navmesh_batch_capped_warned) {
+                navmesh_batch_capped_warned = true;
+                Log::Error("GameWorldRenderer: navmesh overlay hit the %zu-vertex cap; raise the sample spacing to see the rest of the mesh.", kMaxNavmeshBatchVerts);
+            }
+            b.build_cursor = b.lines.size(); // treat as complete so the partial batch still swaps in and draws
+        }
         const auto budget_timer = TIMER_INIT();
         const float spacing = std::max(1.f, navmesh_sample_spacing); // user-tunable: smaller = closer to the floor, more verts
         for (; b.build_cursor < b.lines.size(); ++b.build_cursor) {
             if (TIMER_DIFF(budget_timer) >= 2) break; // budget spent; resume next frame
+            if (b.staging.size() >= kMaxNavmeshBatchVerts) break; // cap hit mid-line; picked up by the check above next call
             const auto& ln = b.lines[b.build_cursor];
             const float dx = ln.b.x - ln.a.x, dy = ln.b.y - ln.a.y;
-            const int steps = std::max(1, static_cast<int>(std::sqrt(dx * dx + dy * dy) / spacing));
+            const int steps = std::min(1'000'000, std::max(1, static_cast<int>(std::sqrt(dx * dx + dy * dy) / spacing)));
             // Drape each sample on the edge's OWN plane (an edge lies on a single trapezoid, so that plane's heightfield
             // IS its surface): unlike a globally-closest query, an edge under a bridge stays on the ground.
             const uint32_t plane = ln.a.zplane; // == ln.b.zplane: both verts come from the same trapezoid
@@ -639,6 +651,7 @@ void GameWorldRenderer::SetNavmeshLines(GW::Constants::MapID map_id, std::vector
     b.staging.clear();
     b.build_cursor = 0;
     b.building = true;
+    navmesh_batch_capped_warned = false;
 }
 
 void GameWorldRenderer::SetNavmeshSampleSpacing(float gw)
@@ -656,6 +669,7 @@ void GameWorldRenderer::RedrapeNavmesh()
     b.staging.clear();
     b.build_cursor = 0;
     b.building = true;
+    navmesh_batch_capped_warned = false;
 }
 
 void GameWorldRenderer::SetNavmeshWorldMapLines(GW::Constants::MapID map_id, std::vector<BatchedLine> lines)
