@@ -263,14 +263,21 @@ namespace {
         }
     }
 
-    void Classify(const GW::AgentItem& agent_item, const GW::Item& item, const uint32_t my_agent_id, Beacon& beacon, const std::wstring_view item_name = {})
+    void Classify(const GW::AgentItem* agent_item, const GW::Item* item, const std::wstring_view item_name = {})
     {
-        const bool mine = !agent_item.owner || agent_item.owner == my_agent_id;
+        if (!(agent_item && item)) return;
+        if (name_beacons_dirty) CompileNameBeacons();
+        auto& beacon = beacons[agent_item->agent_id];
+        beacon.seen = scan_counter;
+        beacon.pos = {agent_item->pos.x, agent_item->pos.y};
+        beacon.z = agent_item->z;
+        beacon.zplane = agent_item->pos.zplane;
+        const bool mine = !agent_item->owner || agent_item->owner == GW::Agents::GetControlledCharacterId();
         beacon.dimmed = !mine;
         Color color = 0;
         bool draw = false;
         if (mine || show_reserved_for_others) {
-            const auto rarity = GW::Items::GetRarity(&item);
+            const auto rarity = GW::Items::GetRarity(item);
             if (!item_name.empty()) {
                 for (const auto& name_beacon : compiled_name_beacons) {
                     if (name_beacon.rarity != GW::Constants::Rarity::Unknown && name_beacon.rarity != rarity) continue;
@@ -280,7 +287,7 @@ namespace {
                     return;
                 }
             }
-            const uint32_t price = PriceCheckerModule::GetPriceByItem(&item);
+            const uint32_t price = PriceCheckerModule::GetPriceByItem(item);
             const ValueBeacon* by_value = nullptr;
             for (const auto* value : {&value_low, &value_high}) {
                 if (value->enabled && value->threshold > 0 && price >= static_cast<uint32_t>(value->threshold)) {
@@ -311,32 +318,22 @@ namespace {
         beacon.draw = draw;
     }
 
-    void ClassifyItemAgent(const GW::AgentItem& agent_item, const GW::Item& item, const std::wstring_view item_name = {})
-    {
-        if (name_beacons_dirty) CompileNameBeacons();
-        auto& beacon = beacons[agent_item.agent_id];
-        beacon.seen = scan_counter;
-        beacon.pos = {agent_item.pos.x, agent_item.pos.y};
-        beacon.z = agent_item.z;
-        beacon.zplane = agent_item.pos.zplane;
-        Classify(agent_item, item, GW::Agents::GetControlledCharacterId(), beacon, item_name);
-    }
-
     void OnItemNameDecoded(void* wparam, const wchar_t* decoded);
 
-    void ProcessItemAgent(const GW::AgentItem& agent_item, const GW::Item& item)
+    void ProcessItemAgent(const GW::AgentItem* agent_item, const GW::Item* item)
     {
+        if (!(agent_item && item)) return;
         if (name_beacons_dirty) CompileNameBeacons();
         if (compiled_name_beacons.empty()) {
-            ClassifyItemAgent(agent_item, item);
+            Classify(agent_item, item);
             return;
         }
-        const wchar_t* name_enc = item.single_item_name && *item.single_item_name ? item.single_item_name : item.name_enc;
+        const wchar_t* name_enc = item->single_item_name && *item->single_item_name ? item->single_item_name : item->name_enc;
         if (name_enc && *name_enc) {
-            GW::UI::AsyncDecodeStr(name_enc, OnItemNameDecoded, reinterpret_cast<void*>(static_cast<uintptr_t>(agent_item.agent_id)));
+            GW::UI::AsyncDecodeStr(name_enc, OnItemNameDecoded, reinterpret_cast<void*>(static_cast<uintptr_t>(agent_item->agent_id)));
             return;
         }
-        ClassifyItemAgent(agent_item, item);
+        Classify(agent_item, item);
     }
 
     void OnItemNameDecoded(void* wparam, const wchar_t* decoded)
@@ -345,9 +342,8 @@ namespace {
         const auto* agent = GW::Agents::GetAgentByID(agent_id);
         const auto* agent_item = agent ? agent->GetAsAgentItem() : nullptr;
         const auto* item = agent_item ? GW::Items::GetItemById(agent_item->item_id) : nullptr;
-        if (!item) return;
         const auto item_name = TextUtils::StripTags(TextUtils::Replace(decoded ? decoded : L"", L"<brx>", L"\n"));
-        ClassifyItemAgent(*agent_item, *item, item_name);
+        Classify(agent_item, item, item_name);
     }
 
     void ScanItems()
@@ -360,10 +356,7 @@ namespace {
         }
         for (const auto* agent : *agents) {
             const auto* agent_item = agent ? agent->GetAsAgentItem() : nullptr;
-            if (!agent_item) continue;
-            const auto* item = GW::Items::GetItemById(agent_item->item_id);
-            if (!item) continue;
-            ProcessItemAgent(*agent_item, *item);
+            ProcessItemAgent(agent_item, agent_item ? GW::Items::GetItemById(agent_item->item_id) : nullptr);
         }
         std::erase_if(beacons, [](const auto& entry) { return entry.second.seen != scan_counter; });
     }
@@ -375,8 +368,7 @@ namespace {
                 const auto agent_id = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(wparam));
                 const auto* agent = GW::Agents::GetAgentByID(agent_id);
                 const auto* agent_item = agent ? agent->GetAsAgentItem() : nullptr;
-                const auto* item = agent_item ? GW::Items::GetItemById(agent_item->item_id) : nullptr;
-                if (item) ProcessItemAgent(*agent_item, *item);
+                ProcessItemAgent(agent_item, agent_item ? GW::Items::GetItemById(agent_item->item_id) : nullptr);
                 break;
             }
             case GW::UI::UIMessage::kAgentDestroy:
@@ -402,7 +394,7 @@ namespace {
                 it = beacons.erase(it);
                 continue;
             }
-            ProcessItemAgent(*agent_item, *item);
+            ProcessItemAgent(agent_item, item);
             ++it;
         }
     }
