@@ -81,11 +81,7 @@ namespace {
 
     std::vector<NameBeacon> name_beacons;
 
-    struct CachedName {
-        GuiUtils::EncString enc;
-        std::wstring decoded;
-    };
-    std::map<std::wstring, CachedName> decoded_item_names; // keyed by the encoded name
+    std::map<std::wstring, GuiUtils::EncString> decoded_item_names; // keyed by the encoded name
 
     // Decoded item name, or nullptr while the async decode is still pending (a scan tick or two).
     const std::wstring* DecodedItemName(const GW::Item& item)
@@ -95,11 +91,9 @@ namespace {
         else if (item.name_enc && *item.name_enc) name_enc = item.name_enc;
         if (!name_enc) return nullptr;
         auto& cached = decoded_item_names[name_enc];
-        if (cached.decoded.empty()) {
-            cached.decoded = cached.enc.reset(name_enc)->wstring();
-            if (cached.decoded.empty()) return nullptr;
-        }
-        return &cached.decoded;
+        cached.reset(name_enc);
+        auto& decoded = cached.wstring();
+        return decoded.empty() ? nullptr : &decoded;
     }
 
     struct CompiledNameBeacon {
