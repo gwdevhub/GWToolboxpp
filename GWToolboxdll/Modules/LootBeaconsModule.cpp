@@ -82,8 +82,8 @@ namespace {
     std::vector<NameBeacon> name_beacons;
 
     std::map<std::wstring, GuiUtils::EncString> decoded_item_names; // keyed by the encoded name
+    clock_t last_item_scan_requested = 0;
 
-    // Decoded item name, or nullptr while the async decode is still pending (a scan tick or two).
     const std::wstring* DecodedItemName(const GW::Item& item)
     {
         const wchar_t* name_enc = nullptr;
@@ -93,7 +93,11 @@ namespace {
         auto& cached = decoded_item_names[name_enc];
         cached.reset(name_enc);
         auto& decoded = cached.wstring();
-        return decoded.empty() ? nullptr : &decoded;
+        if (decoded.empty()) {
+            if (cached.IsDecoding()) last_item_scan_requested = TIMER_INIT();
+            return nullptr;
+        }
+        return &decoded;
     }
 
     struct CompiledNameBeacon {
@@ -170,7 +174,6 @@ namespace {
     std::vector<BeaconVertex> scratch;
     std::vector<RingVertex> ring_scratch;
     uint32_t scan_counter = 0;
-    clock_t last_agent_ui_message = 0;
     bool beacons_dirty = false;
     GW::HookEntry agent_ui_message_entry;
     int compositor_token = 0;
@@ -357,7 +360,7 @@ namespace {
 
     void OnAgentUIMessage(GW::HookStatus*, GW::UI::UIMessage, void*, void*)
     {
-        last_agent_ui_message = TIMER_INIT();
+        last_item_scan_requested = TIMER_INIT();
     }
 
     void RefreshBeacons()
@@ -445,8 +448,8 @@ void LootBeaconsModule::DrawInWorld(IDirect3DDevice9* device)
         return;
     }
     const auto now = GetTickCount64();
-    if (last_agent_ui_message && TIMER_DIFF(last_agent_ui_message) >= kScanDeferMs) {
-        last_agent_ui_message = 0;
+    if (last_item_scan_requested && TIMER_DIFF(last_item_scan_requested) >= kScanDeferMs) {
+        last_item_scan_requested = 0;
         ScanItems();
     }
     RefreshBeacons();
@@ -570,7 +573,7 @@ void LootBeaconsModule::SignalTerminate()
         compositor_token = 0;
     }
     GW::UI::RemoveUIMessageCallback(&agent_ui_message_entry);
-    last_agent_ui_message = 0;
+    last_item_scan_requested = 0;
     beacons.clear();
     decoded_item_names.clear();
 }
