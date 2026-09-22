@@ -22,6 +22,7 @@ the latest version, go to the [Home Page](./) instead.
 * [Fix] Fixed a crash while replacing the fallback font during Toolbox startup.
 * [Fix] Audio Settings no longer crashes Guild Wars when an audio handle has already been released.
 * [Fix] Game Settings: in-game name tag colour overrides can now be disabled so the colours configured in Guild Wars are used instead. The overrides are off by default.
+* [Fix] Minimap: fixed a crash when reordering, adding or deleting custom markers or polygons, most likely to happen when clicking the controls rapidly.
 * [Minor] Mouse Settings: disabled the "Enable cursor fix" camera-glitch workaround because an August 2026 Guild Wars update changed lookaround speed. Cursor-size scaling remains available.
 * [Minor] Breakout buttons are now available only for modules with an icon, preventing ambiguous text-only buttons.
 
