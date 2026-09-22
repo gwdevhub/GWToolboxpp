@@ -19,6 +19,7 @@
 #include <Modules/GwDatModule.h>
 #include <Modules/LootBeaconsModule.h>
 #include <Modules/PriceCheckerModule.h>
+#include <Timer.h>
 #include <Utils/EncString.h>
 #include <Utils/GameWorldCompositor.h>
 #include <Utils/SettingsRegistry.h>
@@ -175,7 +176,7 @@ namespace {
     std::vector<BeaconVertex> scratch;
     std::vector<RingVertex> ring_scratch;
     uint32_t scan_counter = 0;
-    uint64_t last_agent_ui_message = 0;
+    clock_t last_agent_ui_message = 0;
     bool scan_pending = false;
     bool beacons_dirty = false;
     GW::HookEntry agent_ui_message_entry;
@@ -363,7 +364,7 @@ namespace {
 
     void OnAgentUIMessage(GW::HookStatus*, GW::UI::UIMessage, void*, void*)
     {
-        last_agent_ui_message = GetTickCount64();
+        last_agent_ui_message = TIMER_INIT();
         scan_pending = true;
     }
 
@@ -452,7 +453,7 @@ void LootBeaconsModule::DrawInWorld(IDirect3DDevice9* device)
         return;
     }
     const auto now = GetTickCount64();
-    if (scan_pending && now - last_agent_ui_message >= kScanDeferMs) {
+    if (scan_pending && TIMER_DIFF(last_agent_ui_message) >= kScanDeferMs) {
         scan_pending = false;
         ScanItems();
     }
