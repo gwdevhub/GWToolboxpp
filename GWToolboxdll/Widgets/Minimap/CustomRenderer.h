@@ -74,6 +74,13 @@ class CustomRenderer : public D3DVertexBuffer {
         explicit CustomMarker(const char* name);
         ~CustomMarker() { Terminate(); }
 
+        // fill_circle/line_circle own GPU resources; copying would alias two markers onto the
+        // same D3D9 buffer, and one's destructor (Terminate()) would free it under the other.
+        CustomMarker(const CustomMarker&) = delete;
+        CustomMarker& operator=(const CustomMarker&) = delete;
+        CustomMarker(CustomMarker&&) noexcept = default;
+        CustomMarker& operator=(CustomMarker&&) noexcept = default;
+
         GW::GamePos pos;
         float size = 1.f;
         Shape shape = Shape::LineCircle;
@@ -100,6 +107,13 @@ struct CustomPolygon final : D3DVertexBuffer {
         CustomPolygon(GW::Constants::MapID m, const char* n);
         explicit CustomPolygon(const char* name);
         ~CustomPolygon() { Terminate(); }
+
+        // Inherited D3DVertexBuffer::buffer is a live GPU resource; see CustomMarker for why
+        // this must move rather than copy.
+        CustomPolygon(const CustomPolygon&) = delete;
+        CustomPolygon& operator=(const CustomPolygon&) = delete;
+        CustomPolygon(CustomPolygon&&) noexcept = default;
+        CustomPolygon& operator=(CustomPolygon&&) noexcept = default;
         std::vector<GW::GamePos> points{};
         GW::Constants::MapID map;
         bool visible = true;

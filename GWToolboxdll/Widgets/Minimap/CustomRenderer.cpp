@@ -158,7 +158,7 @@ void CustomRenderer::LoadMarkers()
                 marker.color_sub = Colors::Load(&inifile, section, "color_sub", marker.color_sub);
                 marker.visible = inifile.GetBoolValue(section, "visible", true);
                 marker.draw_on_terrain = inifile.GetBoolValue(section, "draw_on_terrain", false);
-                markers.push_back(marker);
+                markers.push_back(std::move(marker));
             }
             else if (strncmp(section, "custompolygon", "custompolygon"s.length()) == 0) {
                 auto polygon = CustomPolygon(inifile.GetValue(section, "name", "polygon"));
@@ -181,7 +181,7 @@ void CustomRenderer::LoadMarkers()
                 polygon.map = static_cast<GW::Constants::MapID>(inifile.GetLongValue(section, "map", 0));
                 polygon.visible = inifile.GetBoolValue(section, "visible", true);
                 polygon.draw_on_terrain = inifile.GetBoolValue(section, "draw_on_terrain", false);
-                polygons.push_back(polygon);
+                polygons.push_back(std::move(polygon));
             }
         }
     }
