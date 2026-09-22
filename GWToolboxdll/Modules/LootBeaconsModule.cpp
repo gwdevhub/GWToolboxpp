@@ -43,6 +43,7 @@ namespace {
     constexpr int kMaxBuildsPerFrame = 4;   // caps terrain-drape heightfield builds spent per frame
     constexpr int kDrapeGrid = 16;          // heightfield resolution sampled across a beacon's footprint
     constexpr int kRingDivs = 16;           // ring quad subdivision, so the sprite bends to follow the ground
+    constexpr uint32_t kScanDeferMs = 250;
     constexpr uint32_t kRingTextureFileId = 0x2381; // GW dat texture for the pulsing ring sprite
 
     // Not user-configurable.
@@ -174,6 +175,8 @@ namespace {
     std::vector<BeaconVertex> scratch;
     std::vector<RingVertex> ring_scratch;
     uint32_t scan_counter = 0;
+    uint64_t last_agent_ui_message = 0;
+    bool scan_pending = false;
     bool beacons_dirty = false;
     GW::HookEntry agent_ui_message_entry;
     int compositor_token = 0;
@@ -360,7 +363,8 @@ namespace {
 
     void OnAgentUIMessage(GW::HookStatus*, GW::UI::UIMessage, void*, void*)
     {
-        ScanItems();
+        last_agent_ui_message = GetTickCount64();
+        scan_pending = true;
     }
 
     void RefreshBeacons()
@@ -448,6 +452,10 @@ void LootBeaconsModule::DrawInWorld(IDirect3DDevice9* device)
         return;
     }
     const auto now = GetTickCount64();
+    if (scan_pending && now - last_agent_ui_message >= kScanDeferMs) {
+        scan_pending = false;
+        ScanItems();
+    }
     RefreshBeacons();
     if (beacons.empty()) return;
 
@@ -569,6 +577,7 @@ void LootBeaconsModule::SignalTerminate()
         compositor_token = 0;
     }
     GW::UI::RemoveUIMessageCallback(&agent_ui_message_entry);
+    scan_pending = false;
     beacons.clear();
     decoded_item_names.clear();
 }
