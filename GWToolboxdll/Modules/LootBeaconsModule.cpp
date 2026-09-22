@@ -177,7 +177,6 @@ namespace {
     std::vector<RingVertex> ring_scratch;
     uint32_t scan_counter = 0;
     clock_t last_agent_ui_message = 0;
-    bool scan_pending = false;
     bool beacons_dirty = false;
     GW::HookEntry agent_ui_message_entry;
     int compositor_token = 0;
@@ -365,7 +364,6 @@ namespace {
     void OnAgentUIMessage(GW::HookStatus*, GW::UI::UIMessage, void*, void*)
     {
         last_agent_ui_message = TIMER_INIT();
-        scan_pending = true;
     }
 
     void RefreshBeacons()
@@ -453,8 +451,8 @@ void LootBeaconsModule::DrawInWorld(IDirect3DDevice9* device)
         return;
     }
     const auto now = GetTickCount64();
-    if (scan_pending && TIMER_DIFF(last_agent_ui_message) >= kScanDeferMs) {
-        scan_pending = false;
+    if (last_agent_ui_message && TIMER_DIFF(last_agent_ui_message) >= kScanDeferMs) {
+        last_agent_ui_message = 0;
         ScanItems();
     }
     RefreshBeacons();
@@ -578,7 +576,7 @@ void LootBeaconsModule::SignalTerminate()
         compositor_token = 0;
     }
     GW::UI::RemoveUIMessageCallback(&agent_ui_message_entry);
-    scan_pending = false;
+    last_agent_ui_message = 0;
     beacons.clear();
     decoded_item_names.clear();
 }
