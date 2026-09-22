@@ -10,6 +10,7 @@
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/ItemMgr.h>
 #include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/UIMgr.h>
 
 #include <Color.h>
 #include <D3DContainers.h>
@@ -18,6 +19,7 @@
 #include <Modules/GwDatModule.h>
 #include <Modules/LootBeaconsModule.h>
 #include <Modules/PriceCheckerModule.h>
+#include <Timer.h>
 #include <Utils/EncString.h>
 #include <Utils/GameWorldCompositor.h>
 #include <Utils/SettingsRegistry.h>
@@ -42,7 +44,7 @@ namespace {
     constexpr int kMaxBuildsPerFrame = 4;   // caps terrain-drape heightfield builds spent per frame
     constexpr int kDrapeGrid = 16;          // heightfield resolution sampled across a beacon's footprint
     constexpr int kRingDivs = 16;           // ring quad subdivision, so the sprite bends to follow the ground
-    constexpr uint32_t kScanIntervalMs = 250; // item agents don't move; classification only needs a coarse tick
+    constexpr uint32_t kScanDeferMs = 250;
     constexpr uint32_t kRingTextureFileId = 0x2381; // GW dat texture for the pulsing ring sprite
 
     // Not user-configurable.
@@ -174,8 +176,9 @@ namespace {
     std::vector<BeaconVertex> scratch;
     std::vector<RingVertex> ring_scratch;
     uint32_t scan_counter = 0;
-    uint64_t last_scan_tick = 0;
+    clock_t last_agent_ui_message = 0;
     bool beacons_dirty = false;
+    GW::HookEntry agent_ui_message_entry;
     int compositor_token = 0;
 
     IDirect3DVertexShader9* ring_vs = nullptr;
@@ -358,6 +361,30 @@ namespace {
         std::erase_if(beacons, [](const auto& entry) { return entry.second.seen != scan_counter; });
     }
 
+    void OnAgentUIMessage(GW::HookStatus*, GW::UI::UIMessage, void*, void*)
+    {
+        last_agent_ui_message = TIMER_INIT();
+    }
+
+    void RefreshBeacons()
+    {
+        if (!beacons_dirty) return;
+        beacons_dirty = false;
+        if (name_beacons_dirty) CompileNameBeacons();
+        const auto my_agent_id = GW::Agents::GetControlledCharacterId();
+        for (auto it = beacons.begin(); it != beacons.end();) {
+            const auto* agent = GW::Agents::GetAgentByID(it->first);
+            const auto* agent_item = agent ? agent->GetAsAgentItem() : nullptr;
+            const auto* item = agent_item ? GW::Items::GetItemById(agent_item->item_id) : nullptr;
+            if (!item) {
+                it = beacons.erase(it);
+                continue;
+            }
+            Classify(*agent_item, *item, my_agent_id, it->second);
+            ++it;
+        }
+    }
+
     constexpr float kBeamSolidFraction = 0.25f; // bottom fraction of the beam height that stays fully solid before fading
 
     void EmitBeamQuad(std::vector<BeaconVertex>& out, const GW::Vec2f& pos, const float ground_z, const float right_x, const float right_y, const Color base_color, const float base_alpha)
@@ -423,16 +450,12 @@ void LootBeaconsModule::DrawInWorld(IDirect3DDevice9* device)
         beacons.clear();
         return;
     }
-    if (beacons_dirty) {
-        last_scan_tick = 0;
-        beacons_dirty = false;
-    }
-
     const auto now = GetTickCount64();
-    if (now - last_scan_tick >= kScanIntervalMs) {
-        last_scan_tick = now;
+    if (last_agent_ui_message && TIMER_DIFF(last_agent_ui_message) >= kScanDeferMs) {
+        last_agent_ui_message = 0;
         ScanItems();
     }
+    RefreshBeacons();
     if (beacons.empty()) return;
 
     if (!ring_texture_requested) {
@@ -536,6 +559,13 @@ void LootBeaconsModule::Initialize()
 {
     ToolboxModule::Initialize();
     RegisterSettings(this);
+    const GW::UI::UIMessage agent_messages[] = {
+        GW::UI::UIMessage::kAgentUpdate,
+        GW::UI::UIMessage::kAgentDestroy,
+    };
+    for (const auto message_id : agent_messages) {
+        GW::UI::RegisterUIMessageCallback(&agent_ui_message_entry, message_id, OnAgentUIMessage, 0x4000);
+    }
     if (!compositor_token) compositor_token = GameWorldCompositor::RegisterDraw(&LootBeaconsModule::DrawInWorld);
 }
 
@@ -545,6 +575,8 @@ void LootBeaconsModule::SignalTerminate()
         GameWorldCompositor::UnregisterDraw(compositor_token);
         compositor_token = 0;
     }
+    GW::UI::RemoveUIMessageCallback(&agent_ui_message_entry);
+    last_agent_ui_message = 0;
     beacons.clear();
     decoded_item_names.clear();
 }
@@ -577,13 +609,14 @@ void LootBeaconsModule::DrawSettingsInternal()
     ImGui::ShowHelp("Any drop whose trader price (Kamadan, or presearing.com's price sheet while pre-searing) meets a threshold gets a beacon,\nregardless of rarity - catches ectos, gemstones, dyes and other white-rarity valuables.\nAn item that clears both thresholds uses the higher tier's colour.");
     for (auto* value : {&value_low, &value_high}) {
         ImGui::PushID(value->label);
-        if (ImGui::Checkbox("##enabled", &value->enabled)) beacons_dirty = true;
+        bool changed = ImGui::Checkbox("##enabled", &value->enabled);
         ImGui::SameLine();
         ImGui::SetNextItemWidth(100.f);
-        ImGui::DragInt("##threshold", &value->threshold, 50.f, 0, 1000000);
+        changed |= ImGui::DragInt("##threshold", &value->threshold, 50.f, 0, 1000000);
         ImGui::SameLine(180.f);
-        Colors::DrawSettingHueWheel("##color", &value->color);
+        changed |= Colors::DrawSettingHueWheel("##color", &value->color);
         ImGui::PopID();
+        if (changed) beacons_dirty = true;
     }
     ImGui::Separator();
     ImGui::TextUnformatted("Custom item beacons");
