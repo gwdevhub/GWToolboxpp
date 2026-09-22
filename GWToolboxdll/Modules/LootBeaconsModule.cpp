@@ -19,8 +19,6 @@
 #include <Modules/GwDatModule.h>
 #include <Modules/LootBeaconsModule.h>
 #include <Modules/PriceCheckerModule.h>
-#include <Timer.h>
-#include <Utils/EncString.h>
 #include <Utils/GameWorldCompositor.h>
 #include <Utils/SettingsRegistry.h>
 #include <Utils/TerrainDrape.h>
@@ -44,7 +42,6 @@ namespace {
     constexpr int kMaxBuildsPerFrame = 4;   // caps terrain-drape heightfield builds spent per frame
     constexpr int kDrapeGrid = 16;          // heightfield resolution sampled across a beacon's footprint
     constexpr int kRingDivs = 16;           // ring quad subdivision, so the sprite bends to follow the ground
-    constexpr uint32_t kScanDeferMs = 250;
     constexpr uint32_t kRingTextureFileId = 0x2381; // GW dat texture for the pulsing ring sprite
 
     // Not user-configurable.
@@ -80,25 +77,6 @@ namespace {
     RarityBeacon rarity_green = {"Green items", true};
 
     std::vector<NameBeacon> name_beacons;
-
-    std::map<std::wstring, GuiUtils::EncString> decoded_item_names; // keyed by the encoded name
-    clock_t last_item_scan_requested = 0;
-
-    const std::wstring* DecodedItemName(const GW::Item& item)
-    {
-        const wchar_t* name_enc = nullptr;
-        if (item.single_item_name && *item.single_item_name) name_enc = item.single_item_name;
-        else if (item.name_enc && *item.name_enc) name_enc = item.name_enc;
-        if (!name_enc) return nullptr;
-        auto& cached = decoded_item_names[name_enc];
-        cached.reset(name_enc);
-        auto& decoded = cached.wstring();
-        if (decoded.empty()) {
-            if (cached.IsDecoding()) last_item_scan_requested = TIMER_INIT();
-            return nullptr;
-        }
-        return &decoded;
-    }
 
     struct CompiledNameBeacon {
         TextUtils::SearchPattern<wchar_t> pattern;
@@ -285,7 +263,7 @@ namespace {
         }
     }
 
-    void Classify(const GW::AgentItem& agent_item, const GW::Item& item, const uint32_t my_agent_id, Beacon& beacon)
+    void Classify(const GW::AgentItem& agent_item, const GW::Item& item, const uint32_t my_agent_id, Beacon& beacon, const std::wstring_view item_name = {})
     {
         const bool mine = !agent_item.owner || agent_item.owner == my_agent_id;
         beacon.dimmed = !mine;
@@ -293,10 +271,10 @@ namespace {
         bool draw = false;
         if (mine || show_reserved_for_others) {
             const auto rarity = GW::Items::GetRarity(&item);
-            if (const auto* item_name = compiled_name_beacons.empty() ? nullptr : DecodedItemName(item)) {
+            if (!item_name.empty()) {
                 for (const auto& name_beacon : compiled_name_beacons) {
                     if (name_beacon.rarity != GW::Constants::Rarity::Unknown && name_beacon.rarity != rarity) continue;
-                    if (!name_beacon.pattern.Matches(*item_name)) continue;
+                    if (!name_beacon.pattern.Matches(item_name)) continue;
                     beacon.color = Colors::IsVisible(name_beacon.color) ? name_beacon.color : RarityBeaconColor(rarity);
                     beacon.draw = true;
                     return;
@@ -333,6 +311,40 @@ namespace {
         beacon.draw = draw;
     }
 
+    void ClassifyItemAgent(const GW::AgentItem& agent_item, const GW::Item& item, const std::wstring_view item_name = {})
+    {
+        if (name_beacons_dirty) CompileNameBeacons();
+        auto& beacon = beacons[agent_item.agent_id];
+        beacon.seen = scan_counter;
+        beacon.pos = {agent_item.pos.x, agent_item.pos.y};
+        beacon.z = agent_item.z;
+        beacon.zplane = agent_item.pos.zplane;
+        Classify(agent_item, item, GW::Agents::GetControlledCharacterId(), beacon, item_name);
+    }
+
+    void OnItemNameDecoded(void* wparam, const wchar_t* decoded);
+
+    void ProcessItemAgent(const GW::AgentItem& agent_item, const GW::Item& item)
+    {
+        ClassifyItemAgent(agent_item, item);
+        if (compiled_name_beacons.empty()) return;
+        const wchar_t* name_enc = item.single_item_name && *item.single_item_name ? item.single_item_name : item.name_enc;
+        if (name_enc && *name_enc) {
+            GW::UI::AsyncDecodeStr(name_enc, OnItemNameDecoded, reinterpret_cast<void*>(static_cast<uintptr_t>(agent_item.agent_id)));
+        }
+    }
+
+    void OnItemNameDecoded(void* wparam, const wchar_t* decoded)
+    {
+        const auto agent_id = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(wparam));
+        const auto* agent = GW::Agents::GetAgentByID(agent_id);
+        const auto* agent_item = agent ? agent->GetAsAgentItem() : nullptr;
+        const auto* item = agent_item ? GW::Items::GetItemById(agent_item->item_id) : nullptr;
+        if (!item) return;
+        const auto item_name = TextUtils::StripTags(TextUtils::Replace(decoded ? decoded : L"", L"<brx>", L"\n"));
+        ClassifyItemAgent(*agent_item, *item, item_name);
+    }
+
     void ScanItems()
     {
         ++scan_counter;
@@ -341,34 +353,42 @@ namespace {
             beacons.clear();
             return;
         }
-        const auto my_agent_id = GW::Agents::GetControlledCharacterId();
-        if (name_beacons_dirty) CompileNameBeacons();
         for (const auto* agent : *agents) {
             const auto* agent_item = agent ? agent->GetAsAgentItem() : nullptr;
             if (!agent_item) continue;
             const auto* item = GW::Items::GetItemById(agent_item->item_id);
             if (!item) continue;
-            auto& beacon = beacons[agent_item->agent_id];
-            beacon.seen = scan_counter;
-            beacon.pos = {agent_item->pos.x, agent_item->pos.y};
-            beacon.z = agent_item->z;
-            beacon.zplane = agent_item->pos.zplane;
-            Classify(*agent_item, *item, my_agent_id, beacon);
+            ProcessItemAgent(*agent_item, *item);
         }
         std::erase_if(beacons, [](const auto& entry) { return entry.second.seen != scan_counter; });
     }
 
-    void OnAgentUIMessage(GW::HookStatus*, GW::UI::UIMessage, void*, void*)
+    void OnPostUIMessage(GW::HookStatus*, const GW::UI::UIMessage message_id, void* wparam, void*)
     {
-        last_item_scan_requested = TIMER_INIT();
+        switch (message_id) {
+            case GW::UI::UIMessage::kAgentUpdate: {
+                const auto agent_id = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(wparam));
+                const auto* agent = GW::Agents::GetAgentByID(agent_id);
+                const auto* agent_item = agent ? agent->GetAsAgentItem() : nullptr;
+                const auto* item = agent_item ? GW::Items::GetItemById(agent_item->item_id) : nullptr;
+                if (item) ProcessItemAgent(*agent_item, *item);
+                break;
+            }
+            case GW::UI::UIMessage::kAgentDestroy:
+                beacons.erase(static_cast<uint32_t>(reinterpret_cast<uintptr_t>(wparam)));
+                break;
+            case GW::UI::UIMessage::kMapLoaded:
+                ScanItems();
+                break;
+            default:
+                break;
+        }
     }
 
     void RefreshBeacons()
     {
         if (!beacons_dirty) return;
         beacons_dirty = false;
-        if (name_beacons_dirty) CompileNameBeacons();
-        const auto my_agent_id = GW::Agents::GetControlledCharacterId();
         for (auto it = beacons.begin(); it != beacons.end();) {
             const auto* agent = GW::Agents::GetAgentByID(it->first);
             const auto* agent_item = agent ? agent->GetAsAgentItem() : nullptr;
@@ -377,7 +397,7 @@ namespace {
                 it = beacons.erase(it);
                 continue;
             }
-            Classify(*agent_item, *item, my_agent_id, it->second);
+            ProcessItemAgent(*agent_item, *item);
             ++it;
         }
     }
@@ -448,10 +468,6 @@ void LootBeaconsModule::DrawInWorld(IDirect3DDevice9* device)
         return;
     }
     const auto now = GetTickCount64();
-    if (last_item_scan_requested && TIMER_DIFF(last_item_scan_requested) >= kScanDeferMs) {
-        last_item_scan_requested = 0;
-        ScanItems();
-    }
     RefreshBeacons();
     if (beacons.empty()) return;
 
@@ -556,12 +572,13 @@ void LootBeaconsModule::Initialize()
 {
     ToolboxModule::Initialize();
     RegisterSettings(this);
-    const GW::UI::UIMessage agent_messages[] = {
+    const GW::UI::UIMessage ui_messages[] = {
         GW::UI::UIMessage::kAgentUpdate,
         GW::UI::UIMessage::kAgentDestroy,
+        GW::UI::UIMessage::kMapLoaded,
     };
-    for (const auto message_id : agent_messages) {
-        GW::UI::RegisterUIMessageCallback(&agent_ui_message_entry, message_id, OnAgentUIMessage, 0x4000);
+    for (const auto message_id : ui_messages) {
+        GW::UI::RegisterUIMessageCallback(&agent_ui_message_entry, message_id, OnPostUIMessage, 0x4000);
     }
     if (!compositor_token) compositor_token = GameWorldCompositor::RegisterDraw(&LootBeaconsModule::DrawInWorld);
 }
@@ -573,9 +590,7 @@ void LootBeaconsModule::SignalTerminate()
         compositor_token = 0;
     }
     GW::UI::RemoveUIMessageCallback(&agent_ui_message_entry);
-    last_item_scan_requested = 0;
     beacons.clear();
-    decoded_item_names.clear();
 }
 
 void LootBeaconsModule::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
