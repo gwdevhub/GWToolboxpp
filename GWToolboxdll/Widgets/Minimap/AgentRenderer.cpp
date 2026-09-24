@@ -42,19 +42,19 @@ constexpr auto AGENTCOLOR_JSONFILENAME = L"AgentColors.json";
 namespace {
 
     GW::HookEntry ChatCmd_HookEntry;
-    uint32_t GetAgentProfession(const GW::AgentLiving* agent)
+    GW::Constants::Profession GetAgentProfession(const GW::AgentLiving* agent)
     {
         if (!agent) {
-            return 0;
+            return GW::Constants::Profession::None;
         }
         if (agent->primary != GW::Constants::ProfessionByte::None) {
-            return (uint32_t)agent->primary;
+            return static_cast<GW::Constants::Profession>(agent->primary);
         }
         const GW::NPC* npc = GW::Agents::GetNPCByID(agent->player_number);
         if (!npc) {
-            return 0;
+            return GW::Constants::Profession::None;
         }
-        return (uint32_t)npc->primary;
+        return static_cast<GW::Constants::Profession>(npc->primary);
     }
 
     bool show_props_on_minimap = false;
@@ -373,9 +373,15 @@ void AgentRenderer::SeedAppearanceDefaults(const SettingsDoc& doc, const Toolbox
     auto* boss = add("Boss", NPC, 0, size_boss, Shape_None);
     boss->boss_state = 1;
     add("Hostile (dead)", NPC, color_hostile_dead, size_hostile, Shape_None, static_cast<int>(GW::Constants::Allegiance::Enemy), Dead);
-    constexpr const char* professions[] = {"", "Warrior", "Ranger", "Monk", "Necromancer", "Mesmer", "Elementalist", "Assassin", "Ritualist", "Paragon", "Dervish"};
-    for (int profession = 1; profession <= 10; ++profession) {
-        auto* rule = add(professions[profession], NPC, profession_colors[profession], 0.f, Shape_None, static_cast<int>(GW::Constants::Allegiance::Enemy), Alive);
+    using GW::Constants::Profession;
+    constexpr std::array<std::pair<Profession, const char*>, 10> professions = {{
+        {Profession::Warrior, "Warrior"}, {Profession::Ranger, "Ranger"}, {Profession::Monk, "Monk"},
+        {Profession::Necromancer, "Necromancer"}, {Profession::Mesmer, "Mesmer"}, {Profession::Elementalist, "Elementalist"},
+        {Profession::Assassin, "Assassin"}, {Profession::Ritualist, "Ritualist"}, {Profession::Paragon, "Paragon"},
+        {Profession::Dervish, "Dervish"}
+    }};
+    for (const auto& [profession, label] : professions) {
+        auto* rule = add(label, NPC, profession_colors[static_cast<size_t>(profession)], 0.f, Shape_None, static_cast<int>(GW::Constants::Allegiance::Enemy), Alive);
         rule->profession = profession;
         rule->boss_state = only_color_bosses ? 1 : 0;
         rule->active = enemies_colors_by_profession;
@@ -490,7 +496,7 @@ void AgentRenderer::SyncSeededDefaultsFromLegacyFields()
     for (const auto& [allegiance, values] : legacy_values) {
         for (CustomAgent* ca : custom_agents) {
             if (!ca->is_default || ca->agent_type != NPC || ca->allegiance != static_cast<int>(allegiance) ||
-                ca->dead_state != Alive || ca->quest_state == QuestGiver || ca->profession || ca->boss_state) {
+                ca->dead_state != Alive || ca->quest_state == QuestGiver || ca->profession != GW::Constants::Profession::None || ca->boss_state) {
                 continue;
             }
             ca->color = values.first;
@@ -866,13 +872,14 @@ AgentRenderer& AgentRenderer::Instance() { return *instance; }
 
 bool AgentRenderer::AppearanceRulesLoaded() { return instance && instance->custom_agents_loaded; }
 
-Color AgentRenderer::GetProfessionColor(const uint32_t profession) const
+Color AgentRenderer::GetProfessionColor(const GW::Constants::Profession profession) const
 {
-    if (profession >= profession_colors.size()) return 0;
+    const auto index = static_cast<size_t>(profession);
+    if (index >= profession_colors.size()) return 0;
     for (const auto* rule : custom_agents) {
-        if (rule->profession == static_cast<int>(profession) && Colors::IsVisible(rule->color)) return rule->color;
+        if (rule->profession == profession && Colors::IsVisible(rule->color)) return rule->color;
     }
-    return profession_colors[profession];
+    return profession_colors[index];
 }
 
 AgentRenderer::AgentRenderer()
@@ -1010,7 +1017,7 @@ void AgentRenderer::RefreshMatches(const GW::Agent* agent)
     const auto marked = GetMarkedTarget(agent->agent_id) != nullptr;
     const auto map_id = static_cast<uint32_t>(GW::Map::GetMapID());
     const auto allegiance = living ? static_cast<int>(living->allegiance) : -1;
-    const auto profession = living ? GetAgentProfession(living) : 0;
+    const auto profession = GetAgentProfession(living);
     const auto flags = (living && living->GetIsDead() ? 1u : 0u) | (living && living->GetHasQuest() ? 2u : 0u) |
         (living && living->GetInCombatStance() ? 4u : 0u) | (targeted ? 8u : 0u) | (marked ? 256u : 0u) |
         (living && living->weapon_type != 0 && living->weapon_type != 512 ? 16u : 0u) |
@@ -1063,7 +1070,7 @@ void AgentRenderer::RefreshMatches(const GW::Agent* agent)
         if (rule->agent_type != Any && rule->identifier_active && rule->identifier != identifier) continue;
         if (rule->allegiance >= 0 && (!living || rule->allegiance != static_cast<int>(living->allegiance))) continue;
         if (rule->target_state == Targeted && !targeted || rule->target_state == NotTargeted && targeted || rule->target_state == Marked && !marked) continue;
-        if (rule->profession && rule->profession != static_cast<int>(profession)) continue;
+        if (rule->profession != GW::Constants::Profession::None && rule->profession != profession) continue;
         if (rule->boss_state == 1 && !(flags & 128u) || rule->boss_state == 2 && (flags & 128u)) continue;
         if (rule->gadget_state != AnyGadget && (type != Gadget ||
             rule->gadget_state == ClosedChest && !(flags & 32u) || rule->gadget_state == OpenedChest && !(flags & 64u) ||
@@ -1823,7 +1830,7 @@ AgentRenderer::CustomAgent::CustomAgent(const ToolboxIni* ini, const char* secti
     outpost_only = ini->GetBoolValue(section, VAR_NAME(outpost_only), outpost_only);
     border_color = Colors::Load(ini, section, VAR_NAME(border_color), 0xFFFFFF00);
     gadget_state = static_cast<GadgetState>(ini->GetLongValue(section, VAR_NAME(gadget_state), gadget_state));
-    profession = static_cast<int>(ini->GetLongValue(section, VAR_NAME(profession), profession));
+    profession = static_cast<GW::Constants::Profession>(ini->GetLongValue(section, VAR_NAME(profession), static_cast<long>(profession)));
     boss_state = static_cast<int>(ini->GetLongValue(section, VAR_NAME(boss_state), boss_state));
 
     color = Colors::Load(ini, section, VAR_NAME(color), 0xFFF00000);
@@ -1866,7 +1873,7 @@ AgentRenderer::CustomAgent::CustomAgent(const Settings& settings)
     outpost_only = settings.outpost_only;
     border_color = settings.border_color;
     gadget_state = static_cast<GadgetState>(settings.gadget_state);
-    profession = settings.profession;
+    profession = static_cast<GW::Constants::Profession>(settings.profession);
     boss_state = settings.boss_state;
 
     color = settings.color;
@@ -1919,7 +1926,7 @@ AgentRenderer::CustomAgent::Settings AgentRenderer::CustomAgent::ToSettings() co
     settings.outpost_only = outpost_only;
     settings.border_color = border_color;
     settings.gadget_state = gadget_state;
-    settings.profession = profession;
+    settings.profession = static_cast<int>(profession);
     settings.boss_state = boss_state;
 
     settings.color = color;
@@ -2001,7 +2008,7 @@ bool AgentRenderer::CustomAgent::DrawSettings(Operation& op)
             modelId = 0;
             identifier = 0;
             identifier_active = false;
-            if (agent_type != NPC) { profession = 0; boss_state = 0; }
+            if (agent_type != NPC) { profession = GW::Constants::Profession::None; boss_state = 0; }
             if (agent_type != Gadget) gadget_state = AnyGadget;
             if (agent_type != Player) player_relation = AnyRelation;
             if (agent_type == Item || agent_type == Gadget) {
@@ -2043,7 +2050,11 @@ bool AgentRenderer::CustomAgent::DrawSettings(Operation& op)
         ImGui::SetCursorPosX(x);
         static const char* professions[] = {"Any", "Warrior", "Ranger", "Monk", "Necromancer", "Mesmer", "Elementalist", "Assassin", "Ritualist", "Paragon", "Dervish"};
         ImGui::BeginDisabled(agent_type != NPC);
-        if (ImGui::Combo("Profession", &profession, professions, _countof(professions))) changed = true;
+        auto profession_selection = static_cast<int>(profession);
+        if (ImGui::Combo("Profession", &profession_selection, professions, _countof(professions))) {
+            profession = static_cast<GW::Constants::Profession>(profession_selection);
+            changed = true;
+        }
         static const char* boss_states[] = {"Either", "Boss", "Not boss"};
         if (ImGui::Combo("Boss state", &boss_state, boss_states, _countof(boss_states))) changed = true;
         ImGui::EndDisabled();

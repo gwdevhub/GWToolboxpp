@@ -4,6 +4,7 @@
 
 #include <GWCA/Utilities/Hook.h>
 
+#include <GWCA/Constants/Constants.h>
 #include <GWCA/GameContainers/GamePos.h>
 
 #include <D3DContainers.h>
@@ -56,7 +57,7 @@ public:
     void ResetAppearanceSettings();
     void LoadLegacyAppearanceDefaults(const SettingsDoc& doc, const ToolboxIni* legacy);
 
-    Color GetProfessionColor(uint32_t profession) const;
+    Color GetProfessionColor(GW::Constants::Profession profession) const;
 
     bool show_hidden_npcs = false;
     bool show_quest_npcs_on_minimap = false;
@@ -182,7 +183,7 @@ private:
         PlayerRelation player_relation = AnyRelation;
         bool outpost_only = false;
         GadgetState gadget_state = AnyGadget;
-        int profession = 0;
+        GW::Constants::Profession profession = GW::Constants::Profession::None;
         int boss_state = 0;
         Color border_color = 0;
     };
@@ -243,7 +244,7 @@ private:
         uint32_t map_id = 0;
         uint32_t flags = 0;
         int allegiance = -1;
-        uint32_t profession = 0;
+        GW::Constants::Profession profession = GW::Constants::Profession::None;
         AgentType type = Any;
         bool valid = false;
         uint32_t relation_flags = 0;

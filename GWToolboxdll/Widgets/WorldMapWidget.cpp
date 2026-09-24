@@ -3,6 +3,7 @@
 #include <fstream>
 #include <sstream>
 
+#include <GWCA/Constants/Constants.h>
 #include <GWCA/Constants/Maps.h>
 
 #include <GWCA/Utilities/MemoryPatcher.h>
@@ -646,9 +647,9 @@ namespace {
         const float icon_size = std::lerp(16.f, 32.f, std::clamp(world_map_context->zoom, 0.f, 1.f)); // grow with zoom
         const auto half_size = icon_size / 2.f;
 
-        const auto prof_idx = static_cast<uint32_t>(skill->profession);
-        const auto prof_color = (settings.color_elite_icons_by_profession && prof_idx)
-            ? AgentRenderer::Instance().GetProfessionColor(prof_idx)
+        const auto profession = static_cast<GW::Constants::Profession>(skill->profession);
+        const auto prof_color = (settings.color_elite_icons_by_profession && profession != GW::Constants::Profession::None)
+            ? AgentRenderer::Instance().GetProfessionColor(profession)
             : 0u;
 
         bool hovered = false;
