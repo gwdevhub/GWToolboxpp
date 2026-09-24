@@ -44,6 +44,7 @@ public:
 
     void DrawSettings();
     void RegisterSettings(ToolboxModule* module);
+    void RegisterMinimapSettings(ToolboxModule* module);
     void LoadCustomAgents(SettingsDoc& doc, ToolboxIni* legacy);
     void SaveCustomAgents(SettingsDoc& doc) const;
     bool ApplyNameTagColor(const GW::Agent* agent, Color& color);

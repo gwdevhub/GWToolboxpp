@@ -798,7 +798,7 @@ void Minimap::Initialize()
     SettingsRegistry::RegisterField(this, "cardinal_offset", &cardinal_offset);
     SettingsRegistry::RegisterField(this, "cardinal_font_size", &cardinal_font_size);
     range_renderer.RegisterSettings(this);
-    agent_renderer.RegisterSettings(this);
+    agent_renderer.RegisterMinimapSettings(this);
     pingslines_renderer.RegisterSettings(this);
     symbols_renderer.RegisterSettings(this);
     custom_renderer.RegisterSettings(this);
@@ -1065,8 +1065,6 @@ void Minimap::DrawSettingsInternal()
         scale = a;
     }
     ImGui::Text("You can set the color alpha to 0 to disable any minimap feature.");
-    // agent_rendered has its own TreeNodes
-    agent_renderer.DrawSettings();
     if (SettingsWindow::SubSectionHeader(SettingsName(), "Ranges")) {
         range_renderer.DrawSettings();
         ImGui::TreePop();
@@ -1116,8 +1114,6 @@ void Minimap::DrawSettingsInternal()
     ImGui::NextSpacedElement();
     ImGui::CheckboxWithHelp("Show symbol for quest NPCs", &agent_renderer.show_quest_npcs_on_minimap, "Show a star for NPCs that have quest progress available");
 
-    ImGui::SliderFloat("Agent Border thickness", &agent_renderer.agent_border_thickness, 0.f, 100.f, "%.0f");
-    ImGui::SliderFloat("Target Border thickness", &agent_renderer.target_border_thickness, 0.f, 100.f, "%.0f");
 
     ImGui::Text("Allow mouse click-through in:");
     ImGui::Indent();
@@ -1185,7 +1181,6 @@ void Minimap::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
     hide_flagging_controls_patch.TogglePatch(hide_flagging_controls);
 
     range_renderer.LoadSettings(doc, legacy, Name());
-    if (!AgentRenderer::AppearanceRulesLoaded()) agent_renderer.LoadCustomAgents(doc, legacy);
     agent_renderer.Invalidate();
     pingslines_renderer.Invalidate();
     symbols_renderer.Invalidate();
@@ -1201,7 +1196,6 @@ void Minimap::SaveSettings(SettingsDoc& doc)
     ToolboxWidget::SaveSettings(doc);
     range_renderer.SaveSettings(doc, Name());
     EffectRenderer::SaveSettings(doc, Name());
-    agent_renderer.SaveCustomAgents(doc);
     custom_renderer.SaveMarkers();
 }
 

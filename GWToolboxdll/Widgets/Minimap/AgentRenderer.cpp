@@ -207,13 +207,8 @@ void AgentRenderer::RegisterSettings(ToolboxModule* module)
         // SettingColor is layout-compatible with Color; the cast lets the registry persist it as a hex string
         SettingsRegistry::RegisterField(module, key, reinterpret_cast<Colors::SettingColor*>(color));
     }
-    SettingsRegistry::RegisterField(module, "show_quest_npcs_on_minimap", &show_quest_npcs_on_minimap);
-    SettingsRegistry::RegisterField(module, "show_hidden_npcs", &show_hidden_npcs);
     SettingsRegistry::RegisterField(module, "custom_agent_defaults_seeded", &custom_agent_defaults_seeded);
     SettingsRegistry::RegisterField(module, "appearance_defaults_seeded", &appearance_defaults_seeded);
-#ifdef _DEBUG
-    SettingsRegistry::RegisterField(module, "show_props_on_minimap", &show_props_on_minimap);
-#endif
     SettingsRegistry::RegisterField(module, "size_default", &size_default);
     SettingsRegistry::RegisterField(module, "agent_border_thickness", &agent_border_thickness);
     SettingsRegistry::RegisterField(module, "target_border_thickness", &target_border_thickness);
@@ -227,6 +222,15 @@ void AgentRenderer::RegisterSettings(ToolboxModule* module)
     }
 }
 
+void AgentRenderer::RegisterMinimapSettings(ToolboxModule* module)
+{
+    SettingsRegistry::RegisterField(module, "show_quest_npcs_on_minimap", &show_quest_npcs_on_minimap);
+    SettingsRegistry::RegisterField(module, "show_hidden_npcs", &show_hidden_npcs);
+#ifdef _DEBUG
+    SettingsRegistry::RegisterField(module, "show_props_on_minimap", &show_props_on_minimap);
+#endif
+}
+
 void AgentRenderer::LoadCustomAgents(SettingsDoc& doc, ToolboxIni* legacy)
 {
     custom_agents_loaded = false;
@@ -237,10 +241,22 @@ void AgentRenderer::LoadCustomAgents(SettingsDoc& doc, ToolboxIni* legacy)
     }
     custom_agents.clear();
 
+    if (!doc.Has("Game Settings", "custom_agent_defaults_seeded")) {
+        if (!doc.Get("Minimap", "custom_agent_defaults_seeded", custom_agent_defaults_seeded) && legacy) {
+            custom_agent_defaults_seeded = legacy->GetBoolValue("Minimap", "custom_agent_defaults_seeded", false);
+        }
+    }
+    if (!doc.Has("Game Settings", "appearance_defaults_seeded")) {
+        if (!doc.Get("Minimap", "appearance_defaults_seeded", appearance_defaults_seeded) && legacy) {
+            appearance_defaults_seeded = legacy->GetBoolValue("Minimap", "appearance_defaults_seeded", false);
+        }
+    }
+
     std::vector<CustomAgent::Settings> saved;
-    if (doc.Has("Minimap", "appearance_rules")) {
-        if (!doc.Get("Minimap", "appearance_rules", saved)) {
-            Log::Error("Failed to parse Minimap appearance rules");
+    const auto rules_section = doc.Has("Game Settings", "appearance_rules") ? "Game Settings" : "Minimap";
+    if (doc.Has(rules_section, "appearance_rules")) {
+        if (!doc.Get(rules_section, "appearance_rules", saved)) {
+            Log::Error("Failed to parse appearance rules in %s", rules_section);
             return;
         }
         for (const auto& entry : saved) {
@@ -523,10 +539,16 @@ void AgentRenderer::SaveCustomAgents(SettingsDoc& doc) const
         for (const CustomAgent* ca : custom_agents) {
             entries.push_back(ca->ToSettings());
         }
-        doc.Set("Minimap", "appearance_rules", entries);
-        doc.Set("Minimap", "custom_agent_defaults_seeded", custom_agent_defaults_seeded);
-        doc.Set("Minimap", "appearance_defaults_seeded", appearance_defaults_seeded);
+        doc.Set("Game Settings", "appearance_rules", entries);
+        doc.Set("Game Settings", "custom_agent_defaults_seeded", custom_agent_defaults_seeded);
+        doc.Set("Game Settings", "appearance_defaults_seeded", appearance_defaults_seeded);
+        doc.EraseKey("Minimap", "appearance_rules");
+        doc.EraseKey("Minimap", "custom_agent_defaults_seeded");
+        doc.EraseKey("Minimap", "appearance_defaults_seeded");
         constexpr const char* migrated_keys[] = {
+            "color_agent_modifier", "color_agent_damaged_modifier", "color_eoe", "color_qz", "color_winnowing",
+            "color_frozen_soil", "color_symbiosis", "size_default", "default_shape",
+            "agent_border_thickness", "target_border_thickness",
             "color_player", "color_player_dead", "color_signpost", "color_locked_chest", "color_locked_chest_open",
             "color_item", "color_hostile", "color_hostile_dead", "color_neutral", "color_ally", "color_ally_npc",
             "color_ally_npc_quest", "color_ally_spirit", "color_ally_minion", "color_ally_dead",
@@ -577,6 +599,9 @@ void AgentRenderer::LoadLegacyAppearanceDefaults(const SettingsDoc& doc, const T
 {
     constexpr auto section = "Minimap";
     const std::pair<const char*, Color*> colors[] = {
+        {"color_agent_modifier", &color_agent_modifier}, {"color_agent_damaged_modifier", &color_agent_damaged_modifier},
+        {"color_eoe", &color_eoe}, {"color_qz", &color_qz}, {"color_winnowing", &color_winnowing},
+        {"color_frozen_soil", &color_frozen_soil}, {"color_symbiosis", &color_symbiosis},
         {"color_target", &color_target}, {"color_player", &color_player}, {"color_player_dead", &color_player_dead},
         {"color_signpost", &color_signpost}, {"color_locked_chest", &color_locked_chest},
         {"color_locked_chest_open", &color_locked_chest_open}, {"color_item", &color_item},
@@ -597,6 +622,8 @@ void AgentRenderer::LoadLegacyAppearanceDefaults(const SettingsDoc& doc, const T
         else if (legacy) *color = Colors::Load(legacy, section, key, *color);
     }
     const std::pair<const char*, float*> sizes[] = {
+        {"size_default", &size_default}, {"agent_border_thickness", &agent_border_thickness},
+        {"target_border_thickness", &target_border_thickness},
         {"size_player", &size_player}, {"size_signpost", &size_signpost}, {"size_locked_chest", &size_locked_chest},
         {"size_locked_chest_open", &size_locked_chest_open}, {"size_item", &size_item}, {"size_boss", &size_boss},
         {"size_minion", &size_minion}, {"size_marked_target", &size_marked_target}, {"size_hostile", &size_hostile},
@@ -612,7 +639,7 @@ void AgentRenderer::LoadLegacyAppearanceDefaults(const SettingsDoc& doc, const T
     if (!doc.Get(section, "only_color_bosses", only_color_bosses) && legacy) {
         only_color_bosses = legacy->GetBoolValue(section, "only_color_bosses", only_color_bosses);
     }
-    const std::pair<const char*, Shape_e*> shapes[] = {{"shape_player", &shape_player}, {"shape_players", &shape_players}};
+    const std::pair<const char*, Shape_e*> shapes[] = {{"default_shape", &default_shape}, {"shape_player", &shape_player}, {"shape_players", &shape_players}};
     for (const auto& [key, shape] : shapes) {
         auto value = static_cast<int>(*shape);
         if (!doc.Get(section, key, value) && legacy) value = static_cast<int>(legacy->GetLongValue(section, key, value));
@@ -732,7 +759,7 @@ void AgentRenderer::DrawSettings()
         ImGui::TreePop();
     }
 
-    if (ImGui::TreeNodeEx("Custom Agents", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+    if (ImGui::TreeNodeEx("Agent Appearance", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         static char group_filter[64] = "";
         ImGui::InputTextWithHint("Filter", "Filter by name or group...", group_filter, sizeof(group_filter));
         ImGui::ShowHelp("Only affects what's shown here. Rules are evaluated top to bottom, independently for each enabled colour, size and shape.");
@@ -817,7 +844,7 @@ void AgentRenderer::DrawSettings()
         if (changed) {
             BuildCustomAgentsMap();
         }
-        if (ImGui::Button("Add Agent Custom Color")) {
+        if (ImGui::Button("Add Appearance Rule")) {
             custom_agents.push_back(new CustomAgent(0, color_hostile, "<name>"));
             custom_agents.back()->index = custom_agents.size() - 1;
             rules_changed = true;

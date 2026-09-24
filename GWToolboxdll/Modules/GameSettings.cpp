@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include <Widgets/Minimap/AgentRenderer.h>
-#include <Widgets/Minimap/Minimap.h>
 
 #include <GWCA/Utilities/MemoryPatcher.h>
 #include <GWCA/Utilities/Scanner.h>
@@ -1448,6 +1447,7 @@ void GameSettings::Initialize()
 {
     ToolboxModule::Initialize();
     SettingsRegistry::Register(this, settings);
+    AgentRenderer::Instance().RegisterSettings(this);
     SettingsRegistry::Describe(this, "automatically_flag_pet_to_fight_called_target", "Automatically lock heroes and pets onto your called target");
     SettingsRegistry::Describe(this, "combine_overhead_numbers", "Combine floating numbers above character", combine_overhead_numbers_help);
 
@@ -1670,15 +1670,11 @@ void GameSettings::MessageOnPartyChange()
 
 void GameSettings::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
+    auto& renderer = AgentRenderer::Instance();
+    renderer.ResetAppearanceSettings();
+    renderer.LoadLegacyAppearanceDefaults(doc, legacy);
     ToolboxModule::LoadSettings(doc, legacy);
     doc.GetStruct(Name(), settings);
-    auto& minimap = Minimap::Instance();
-    auto& renderer = AgentRenderer::Instance();
-    renderer.RegisterSettings(&minimap);
-    renderer.ResetAppearanceSettings();
-    SettingsRegistry::LoadFieldsFromDoc(&minimap, doc);
-    SettingsRegistry::LoadFromIniFallback(&minimap, legacy, doc);
-    renderer.LoadLegacyAppearanceDefaults(doc, legacy);
     renderer.LoadCustomAgents(doc, legacy);
 
     for (const auto& [key, chan] : channel_color_settings)
@@ -1985,7 +1981,9 @@ void GameSettings::DrawSettingsInternal()
     ImGui::Unindent();
     ImGui::NewLine();
     ImGui::Checkbox("Show 'You have N Lockpicks' on Locked Chest name tags", &settings.show_amount_of_lockpicks_under_locked_chest_nametag);
-    ImGui::TextDisabled("Agent and name tag colours: Minimap > Custom Agents");
+    AgentRenderer::Instance().DrawSettings();
+    ImGui::SliderFloat("Agent Border thickness", &AgentRenderer::Instance().agent_border_thickness, 0.f, 100.f, "%.0f");
+    ImGui::SliderFloat("Target Border thickness", &AgentRenderer::Instance().target_border_thickness, 0.f, 100.f, "%.0f");
 
     ImGui::NewLine();
     ImGui::Text("Hide skill descriptions in:");

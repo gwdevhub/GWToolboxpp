@@ -1244,7 +1244,7 @@ void FriendListWindow::DrawSettingsInternal()
     Colors::DrawSettingHueWheel("Widget background hover color", &settings.hover_background_color.value);
     ImGui::CheckboxWithHelp("Show my status", &settings.show_my_status, "e.g. 'You are: Online'");
 
-    ImGui::TextDisabled("Friend name tag colours: Minimap > Custom Agents");
+    ImGui::TextDisabled("Friend name tag colours: Game Settings > Agent Appearance");
     DrawChatSettings();
 }
 
