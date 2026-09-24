@@ -103,7 +103,7 @@ Note that you will not see status changes on your own friend list, but your stat
 - **Agent Sizes** — fallback size and shape for agents without a matching size or shape rule. Player, boss, item, gadget and minion defaults are seeded in the rules below.
 - **Agent Appearance** — an ordered, filterable list of rules. The first matching enabled field wins; other fields fall through to later rules or the fallback. **Add Appearance Rule** creates a row. Seeded defaults for allies, enemies, players, items, gadgets, chests, marked targets and profession colours can be edited, moved or disabled, but not deleted.
 - Each rule can match an **Agent type** (`Item`, `Gadget`, `NPC`, `Player` or `Any`), an optional type-specific **Identifier** (item model ID, gadget ID or NPC model ID), **Allegiance**, **Map ID**, and **Match name**. Check **Match identifier** for an exact ID match, including ID `0`; leave it unchecked to match any ID of that type. Name matching uses the same case-insensitive substring or `/pattern/flags` regex syntax as Loot Beacons. During migration, old allegiance entries become NPC rules and old model-ID entries become adjacent NPC and gadget rules, preserving their order.
-- Optional state filters include **Target state**, **Dead state**, **Quest state**, **Combat**, **Weapon**, **Player relation**, **Gadget state**, **Profession**, **Boss state** and **Outposts only**. Rules can override minimap **Color**, **Size**, **Shape** and target border colour independently of in-game **Text color**. Unchecked fields inherit their value from later rules or Guild Wars.
+- Optional state filters include **Target state**, **Dead state**, **Quest state**, **Combat**, **Weapon**, **Player relation**, **Gadget state**, **Profession**, **Boss state** and **Outposts only**. Rules can override minimap **Color**, **Size**, **Shape** and target border colour independently of in-game **Text color**. Set a colour's alpha to `0`, size to `0`, or shape to **Inherit** to fall through to the next matching rule or default. Older per-field enable checkboxes are converted to these values when settings are migrated.
 
 ### Miscellaneous
 * **Show warning when earned faction reaches ___%** displays a warning when your faction reaches the specified percentage in challenge missions or elite areas.
@@ -130,7 +130,7 @@ Note that you will not see status changes on your own friend list, but your stat
 * **Block full screen message when entering a new area**
 * **Block full screen popup that shows when completing a vanquish**
 * **Block full screen popup that shows when opening a dungeon chest**
-* **Agent and name tag colours** are configured together under [Agent Appearance](#agent-appearance). Set a row's **Text color** for the in-game name tag; leave it unchecked to retain Guild Wars' colour.
+* **Agent and name tag colours** are configured together under [Agent Appearance](#agent-appearance). Set a row's **Text color** for the in-game name tag; set its alpha to `0` to inherit the next rule or Guild Wars' colour.
 * **Hide in-game store message on character select screen** removes the in-game store advertisement shown on the character selection screen.
 * **Show message in chat when you're the last player to resign** posts a chat message once everyone else in your party has resigned. See also the [Resign Log](/docs/info/#resign-log).
 * **Show experience progress instead of current level on your experience bar** displays your XP as progress toward the next level rather than your current level number.

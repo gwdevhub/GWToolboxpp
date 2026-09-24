@@ -288,8 +288,17 @@ void AgentRenderer::LoadCustomAgents(SettingsDoc& doc, ToolboxIni* legacy)
             Log::Error("Failed to parse appearance rules in %s", rules_section);
             return;
         }
-        for (const auto& entry : saved) {
-            append_rule(new CustomAgent(entry));
+        int rules_version = 0;
+        doc.Get(rules_section, "appearance_rules_version", rules_version);
+        std::vector<CustomAgent::LegacyFlags> flags;
+        if (rules_version < 2 && (!doc.Get(rules_section, "appearance_rules", flags) || flags.size() != saved.size())) {
+            Log::Error("Failed to migrate appearance rules in %s", rules_section);
+            return;
+        }
+        for (size_t i = 0; i < saved.size(); ++i) {
+            auto* rule = new CustomAgent(saved[i]);
+            if (rules_version < 2) rule->ApplyLegacyFlags(flags[i]);
+            append_rule(rule);
         }
         BuildCustomAgentsMap();
         custom_agents_loaded = true;
@@ -306,12 +315,16 @@ void AgentRenderer::LoadCustomAgents(SettingsDoc& doc, ToolboxIni* legacy)
         std::ifstream file(json_path, std::ios::binary);
         const std::string json_buf{std::istreambuf_iterator(file), {}};
         std::vector<CustomAgent::Settings> entries;
-        if (!file || glz::read<glz::opts{.error_on_unknown_keys = false}>(entries, json_buf)) {
+        std::vector<CustomAgent::LegacyFlags> flags;
+        if (!file || glz::read<glz::opts{.error_on_unknown_keys = false}>(entries, json_buf) ||
+            glz::read<glz::opts{.error_on_unknown_keys = false}>(flags, json_buf) || flags.size() != entries.size()) {
             Log::Error("Failed to parse AgentColors.json");
             return;
         }
-        for (const auto& entry : entries) {
-            append_rule(new CustomAgent(entry));
+        for (size_t i = 0; i < entries.size(); ++i) {
+            auto* rule = new CustomAgent(entries[i]);
+            rule->ApplyLegacyFlags(flags[i]);
+            append_rule(rule);
         }
     }
     else {
@@ -346,7 +359,6 @@ void AgentRenderer::SeedAppearanceDefaults(const SettingsDoc& doc, const Toolbox
         rule->allegiance = allegiance;
         rule->dead_state = dead;
         rule->size = size;
-        rule->size_active = true;
         rule->shape = shape;
         rule->is_default = true;
         std::snprintf(rule->group, sizeof(rule->group), "Defaults");
@@ -355,37 +367,36 @@ void AgentRenderer::SeedAppearanceDefaults(const SettingsDoc& doc, const Toolbox
     };
     add("Target", Any, color_target, size_default, default_shape);
     custom_agents.back()->target_state = Targeted;
-    custom_agents.back()->color_active = false;
-    custom_agents.back()->size_active = false;
-    custom_agents.back()->shape_active = false;
+    custom_agents.back()->color = 0;
+    custom_agents.back()->size = 0.f;
+    custom_agents.back()->shape = Shape_None;
     custom_agents.back()->border_color = color_target;
-    custom_agents.back()->border_color_active = true;
     add("Marked Target", Any, color_marked_target, size_marked_target, default_shape);
     custom_agents.back()->target_state = Marked;
     add("Boss", NPC, color_hostile, size_boss, Tear);
     custom_agents.back()->boss_state = 1;
-    custom_agents.back()->color_active = false;
-    custom_agents.back()->shape_active = false;
+    custom_agents.back()->color = 0;
+    custom_agents.back()->shape = Shape_None;
     add("Hostile (dead)", NPC, color_hostile_dead, size_hostile, Tear, static_cast<int>(GW::Constants::Allegiance::Enemy), Dead);
-    custom_agents.back()->shape_active = false;
+    custom_agents.back()->shape = Shape_None;
     constexpr const char* professions[] = {"", "Warrior", "Ranger", "Monk", "Necromancer", "Mesmer", "Elementalist", "Assassin", "Ritualist", "Paragon", "Dervish"};
     for (int profession = 1; profession <= 10; ++profession) {
         add(professions[profession], NPC, profession_colors[profession], size_hostile, Tear, static_cast<int>(GW::Constants::Allegiance::Enemy), Alive);
         auto* rule = custom_agents.back();
         rule->profession = profession;
         rule->boss_state = only_color_bosses ? 1 : 0;
-        rule->size_active = false;
-        rule->shape_active = false;
+        rule->size = 0.f;
+        rule->shape = Shape_None;
         rule->active = enemies_colors_by_profession;
     }
     add("Hostile", NPC, color_hostile, size_hostile, Tear, static_cast<int>(GW::Constants::Allegiance::Enemy), Alive);
-    custom_agents.back()->shape_active = false;
+    custom_agents.back()->shape = Shape_None;
     for (const auto allegiance : {GW::Constants::Allegiance::Ally_NonAttackable, GW::Constants::Allegiance::Npc_Minipet, GW::Constants::Allegiance::Spirit_Pet, GW::Constants::Allegiance::Minion}) {
         add("Ally (dead)", NPC, color_ally_dead, size_ally, Tear, static_cast<int>(allegiance), Dead);
-        custom_agents.back()->shape_active = false;
+        custom_agents.back()->shape = Shape_None;
         add("Ally (quest giver)", NPC, color_ally_npc_quest, size_ally_npc_quest, Tear, static_cast<int>(allegiance), Alive);
         custom_agents.back()->quest_state = QuestGiver;
-        custom_agents.back()->shape_active = false;
+        custom_agents.back()->shape = Shape_None;
     }
     add("Item", Item, color_item, size_item, Quad);
     add("Locked chest (closed)", Gadget, color_locked_chest, size_locked_chest, Quad);
@@ -416,11 +427,10 @@ void AgentRenderer::SeedAppearanceDefaults(const SettingsDoc& doc, const Toolbox
             rule->agent_type = type;
             rule->allegiance = allegiance;
             rule->player_relation = relation;
-            rule->color_active = false;
-            rule->shape_active = false;
-            rule->size_active = false;
+            rule->color = 0;
+            rule->shape = Shape_None;
+            rule->size = 0.f;
             rule->color_text = setting.value;
-            rule->color_text_active = true;
             rule->is_default = true;
             std::snprintf(rule->group, sizeof(rule->group), "Defaults");
             rule->index = custom_agents.size();
@@ -450,11 +460,10 @@ void AgentRenderer::SeedAppearanceDefaults(const SettingsDoc& doc, const Toolbox
         rule->agent_type = Player;
         rule->player_relation = Friend;
         rule->outpost_only = true;
-        rule->color_active = false;
-        rule->shape_active = false;
-        rule->size_active = false;
+        rule->color = 0;
+        rule->shape = Shape_None;
+        rule->size = 0.f;
         rule->color_text = setting.value;
-        rule->color_text_active = true;
         rule->is_default = true;
         std::snprintf(rule->group, sizeof(rule->group), "Defaults");
         rule->index = custom_agents.size();
@@ -495,10 +504,9 @@ void AgentRenderer::SeedDefaultCustomAgents()
         ca->agent_type = NPC;
         ca->quest_state = row.quest_state;
         ca->size = *row.size;
-        ca->size_active = true;
         ca->is_default = true;
         ca->dead_state = Alive;
-        ca->shape_active = false;
+        ca->shape = Shape_None;
         std::snprintf(ca->group, sizeof(ca->group), "Defaults");
         ca->index = custom_agents.size();
         custom_agents.push_back(ca);
@@ -526,7 +534,7 @@ void AgentRenderer::SyncSeededDefaultsFromLegacyFields()
         }
     }
     for (auto* rule : custom_agents) {
-        if (!rule->is_default || rule->color_text_active) continue;
+        if (!rule->is_default || Colors::IsVisible(rule->color_text)) continue;
         const std::string_view name = rule->name;
         if (name == "Hostile") { rule->color = color_hostile; rule->size = size_hostile; }
         else if (name == "Hostile (dead)") { rule->color = color_hostile_dead; rule->size = size_hostile; }
@@ -555,9 +563,11 @@ void AgentRenderer::SaveCustomAgents(SettingsDoc& doc) const
             entries.push_back(ca->ToSettings());
         }
         doc.Set("Game Settings", "appearance_rules", entries);
+        doc.Set("Game Settings", "appearance_rules_version", 2);
         doc.Set("Game Settings", "custom_agent_defaults_seeded", custom_agent_defaults_seeded);
         doc.Set("Game Settings", "appearance_defaults_seeded", appearance_defaults_seeded);
         doc.EraseKey("Minimap", "appearance_rules");
+        doc.EraseKey("Minimap", "appearance_rules_version");
         doc.EraseKey("Minimap", "custom_agent_defaults_seeded");
         doc.EraseKey("Minimap", "appearance_defaults_seeded");
         constexpr const char* migrated_keys[] = {
@@ -856,7 +866,7 @@ void AgentRenderer::DrawSettings()
             BuildCustomAgentsMap();
         }
         if (ImGui::Button("Add Appearance Rule")) {
-            custom_agents.push_back(new CustomAgent(0, color_hostile, "<name>"));
+            custom_agents.push_back(new CustomAgent(0, 0, "<name>"));
             custom_agents.back()->index = custom_agents.size() - 1;
             custom_agents.back()->active = false;
             rules_changed = true;
@@ -896,7 +906,7 @@ Color AgentRenderer::GetProfessionColor(const uint32_t profession) const
 {
     if (profession >= profession_colors.size()) return 0;
     for (const auto* rule : custom_agents) {
-        if (rule->profession == static_cast<int>(profession) && rule->color_active) return rule->color;
+        if (rule->profession == static_cast<int>(profession) && Colors::IsVisible(rule->color)) return rule->color;
     }
     return profession_colors[profession];
 }
@@ -1128,7 +1138,7 @@ bool AgentRenderer::ApplyNameTagColor(const GW::Agent* agent, Color& color)
     const auto matches = GetCustomAgentsToDraw(agent);
     if (!matches) return false;
     for (const auto* rule : *matches) {
-        if (!rule->color_text_active) continue;
+        if (!Colors::IsVisible(rule->color_text)) continue;
         color = rule->color_text;
         return true;
     }
@@ -1368,15 +1378,15 @@ void AgentRenderer::Enqueue(const GW::Agent* agent, const CustomAgent* ca)
         const auto matches = GetCustomAgentsToDraw(agent);
         bool found_color = false, found_size = false, found_shape = false;
         if (matches) for (const auto* rule : *matches) {
-            if (!found_color && rule->color_active) {
+            if (!found_color && Colors::IsVisible(rule->color)) {
                 color = GetColor(agent, rule);
                 found_color = true;
             }
-            if (!found_size && rule->size_active && rule->size >= 0) {
+            if (!found_size && rule->size > 0.f) {
                 size = rule->size;
                 found_size = true;
             }
-            if (!found_shape && rule->shape_active) {
+            if (!found_shape && rule->shape != Shape_None) {
                 shape = rule->shape;
                 found_shape = true;
             }
@@ -1430,7 +1440,7 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
     if (dead_npc && (dead_npc->model_file_id == 0x22A34 || dead_npc->model_file_id == 0x2D0E4 || dead_npc->model_file_id == 0x2D07E)) {
         return IM_COL32(0, 0, 0, 0);
     }
-    if (ca && ca->color_active) {
+    if (ca && Colors::IsVisible(ca->color)) {
         if (living && !is_dead && ca->target_state != Marked && living->allegiance == GW::Constants::Allegiance::Enemy && living->hp <= 0.9f) {
             return Colors::Sub(ca->color, color_agent_damaged_modifier);
         }
@@ -1541,7 +1551,7 @@ float AgentRenderer::GetSeededDefaultSize(const GW::Constants::Allegiance allegi
         return fallback;
     }
     for (const CustomAgent* ca : it->second) {
-        if (ca->is_default && ca->active && ca->size_active && ca->size >= 0) {
+        if (ca->is_default && ca->active && ca->size > 0.f) {
             return ca->size;
         }
     }
@@ -1550,7 +1560,7 @@ float AgentRenderer::GetSeededDefaultSize(const GW::Constants::Allegiance allegi
 
 float AgentRenderer::GetSize(const GW::Agent* agent, const CustomAgent* ca) const
 {
-    if (ca && ca->size_active && ca->size >= 0) {
+    if (ca && ca->size > 0.f) {
         return ca->size;
     }
 
@@ -1687,7 +1697,7 @@ float AgentRenderer::GetSize(const GW::Agent* agent, const CustomAgent* ca) cons
 
 AgentRenderer::Shape_e AgentRenderer::GetShape(const GW::Agent* agent, const CustomAgent* ca) const
 {
-    if (ca && ca->shape_active) {
+    if (ca && ca->shape != Shape_None) {
         return ca->shape;
     }
 
@@ -1751,7 +1761,7 @@ void AgentRenderer::Enqueue(const Shape_e shape, const GW::Agent* agent, const f
             auto border_color = color_target;
             if (const auto matches = GetCustomAgentsToDraw(agent)) {
                 for (const auto* rule : *matches) {
-                    if (!rule->border_color_active) continue;
+                    if (!Colors::IsVisible(rule->border_color)) continue;
                     border_color = rule->border_color;
                     break;
                 }
@@ -1776,7 +1786,7 @@ void AgentRenderer::Enqueue(const Shape_e shape, const GW::MapProp* agent, const
 
 void AgentRenderer::Enqueue(const Shape_e shape, const RenderPosition& pos, const float size, const Color color, const Color modifier)
 {
-    if ((color & IM_COL32_A_MASK) == 0) return;
+    if (shape == Shape_None || (color & IM_COL32_A_MASK) == 0) return;
     const auto& shape_verts = shapes[shape].vertices;
     vertices.reserve(vertices.size() + shape_verts.size());
 
@@ -1847,26 +1857,26 @@ AgentRenderer::CustomAgent::CustomAgent(const ToolboxIni* ini, const char* secti
     target_state = static_cast<TargetState>(ini->GetLongValue(section, VAR_NAME(target_state), target_state));
     player_relation = static_cast<PlayerRelation>(ini->GetLongValue(section, VAR_NAME(player_relation), player_relation));
     outpost_only = ini->GetBoolValue(section, VAR_NAME(outpost_only), outpost_only);
-    border_color = Colors::Load(ini, section, VAR_NAME(border_color), border_color);
-    border_color_active = ini->GetBoolValue(section, VAR_NAME(border_color_active), border_color_active);
+    border_color = Colors::Load(ini, section, VAR_NAME(border_color), 0xFFFFFF00);
     gadget_state = static_cast<GadgetState>(ini->GetLongValue(section, VAR_NAME(gadget_state), gadget_state));
     profession = static_cast<int>(ini->GetLongValue(section, VAR_NAME(profession), profession));
     boss_state = static_cast<int>(ini->GetLongValue(section, VAR_NAME(boss_state), boss_state));
 
-    color = Colors::Load(ini, section, VAR_NAME(color), color);
-    color_text = Colors::Load(ini, section, VAR_NAME(color_text), color_text);
-    const int s = ini->GetLongValue(section, VAR_NAME(shape), shape);
+    color = Colors::Load(ini, section, VAR_NAME(color), 0xFFF00000);
+    color_text = Colors::Load(ini, section, VAR_NAME(color_text), 0xFFF00000);
+    const int s = ini->GetLongValue(section, VAR_NAME(shape), 0);
     if (s >= 1 && s <= 4) {
-        // this is a small hack because we used to have shape=0 -> default, now we just cast to Shape_e.
-        // but shape=1 on file is still tear (which is Shape_e::Tear == 0).
         shape = static_cast<Shape_e>(s - 1);
     }
     size = static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(size), size));
 
-    color_active = ini->GetBoolValue(section, VAR_NAME(color_active), color_active);
-    color_text_active = ini->GetBoolValue(section, VAR_NAME(color_text_active), color_text_active);
-    shape_active = ini->GetBoolValue(section, VAR_NAME(shape_active), shape_active);
-    size_active = ini->GetBoolValue(section, VAR_NAME(size_active), size_active);
+    LegacyFlags flags;
+    flags.color_active = ini->GetBoolValue(section, "color_active", flags.color_active);
+    flags.color_text_active = ini->GetBoolValue(section, "color_text_active", flags.color_text_active);
+    flags.shape_active = ini->GetBoolValue(section, "shape_active", flags.shape_active);
+    flags.size_active = ini->GetBoolValue(section, "size_active", flags.size_active);
+    flags.border_color_active = ini->GetBoolValue(section, "border_color_active", flags.border_color_active);
+    ApplyLegacyFlags(flags);
 }
 
 AgentRenderer::CustomAgent::CustomAgent(const Settings& settings)
@@ -1891,22 +1901,26 @@ AgentRenderer::CustomAgent::CustomAgent(const Settings& settings)
     player_relation = static_cast<PlayerRelation>(settings.player_relation);
     outpost_only = settings.outpost_only;
     border_color = settings.border_color;
-    border_color_active = settings.border_color_active;
     gadget_state = static_cast<GadgetState>(settings.gadget_state);
     profession = settings.profession;
     boss_state = settings.boss_state;
 
     color = settings.color;
     color_text = settings.color_text;
-    if (settings.shape >= Tear && settings.shape <= BigCircle) {
+    if (settings.shape >= Shape_None && settings.shape <= BigCircle) {
         shape = static_cast<Shape_e>(settings.shape);
     }
     size = settings.size;
+}
 
-    color_active = settings.color_active;
-    color_text_active = settings.color_text_active;
-    shape_active = settings.shape_active;
-    size_active = settings.size_active;
+void AgentRenderer::CustomAgent::ApplyLegacyFlags(const LegacyFlags& flags)
+{
+    if (!flags.color_active) color &= ~IM_COL32_A_MASK;
+    if (!flags.color_text_active) color_text &= ~IM_COL32_A_MASK;
+    if (!flags.border_color_active) border_color &= ~IM_COL32_A_MASK;
+    if (!flags.size_active) size = 0.f;
+    if (!flags.shape_active) shape = Shape_None;
+    else if (shape == Shape_None) shape = Tear;
 }
 
 AgentRenderer::CustomAgent::CustomAgent(const DWORD model_id, const Color _color, const char* _name)
@@ -1940,7 +1954,6 @@ AgentRenderer::CustomAgent::Settings AgentRenderer::CustomAgent::ToSettings() co
     settings.player_relation = player_relation;
     settings.outpost_only = outpost_only;
     settings.border_color = border_color;
-    settings.border_color_active = border_color_active;
     settings.gadget_state = gadget_state;
     settings.profession = profession;
     settings.boss_state = boss_state;
@@ -1950,10 +1963,6 @@ AgentRenderer::CustomAgent::Settings AgentRenderer::CustomAgent::ToSettings() co
     settings.shape = shape;
     settings.size = size;
 
-    settings.color_active = color_active;
-    settings.color_text_active = color_text_active;
-    settings.shape_active = shape_active;
-    settings.size_active = size_active;
     return settings;
 }
 
@@ -1965,7 +1974,7 @@ bool AgentRenderer::CustomAgent::DrawHeader()
     const float button_width = ImGui::GetFrameHeight() + style.ItemInnerSpacing.x;
     ImGui::SameLine();
     float cursor_pos = ImGui::GetCursorPosX();
-    if (color_active) {
+    if (Colors::IsVisible(color)) {
         changed |= ImGui::ColorButtonPicker("##color", &color);
         if (ImGui::IsItemHovered()) {
             const ImVec4 col = ImGui::ColorConvertU32ToFloat4(color);
@@ -1975,7 +1984,7 @@ bool AgentRenderer::CustomAgent::DrawHeader()
         ImGui::SameLine();
     }
     ImGui::SetCursorPosX(cursor_pos += button_width);
-    if (color_text_active) {
+    if (Colors::IsVisible(color_text)) {
         changed |= ImGui::ColorButtonPicker("##color_text", &color_text);
         if (ImGui::IsItemHovered()) {
             const ImVec4 col = ImGui::ColorConvertU32ToFloat4(color_text);
@@ -2117,56 +2126,30 @@ bool AgentRenderer::CustomAgent::DrawSettings(Operation& op)
 
         ImGui::Spacing();
 
-        if (ImGui::Checkbox("##color_active", &color_active)) {
+        if (Colors::DrawSettingHueWheel("Color", &color, ImGuiColorEditFlags_AlphaBar)) {
             changed = true;
         }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("If unchecked, the default color will be used");
-        }
-        ImGui::SameLine();
-        if (Colors::DrawSettingHueWheel("Color", &color, 0)) {
-            changed = true;
-        }
-        ImGui::ShowHelp("The custom color for this agent.");
-        if (ImGui::Checkbox("Target border color override", &border_color_active)) changed = true;
-        if (border_color_active && Colors::DrawSettingHueWheel("Target border color", &border_color)) changed = true;
+        ImGui::ShowHelp("Minimap marker color. Alpha 0 inherits the next matching color.");
+        if (Colors::DrawSettingHueWheel("Target border color", &border_color, ImGuiColorEditFlags_AlphaBar)) changed = true;
+        ImGui::ShowHelp("Alpha 0 inherits the next matching target border color.");
 
-        if (ImGui::Checkbox("##color_text_active", &color_text_active)) {
+        if (Colors::DrawSettingHueWheel("Text color", &color_text, ImGuiColorEditFlags_AlphaBar)) {
             changed = true;
         }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("If unchecked, the default color will be used");
-        }
-        ImGui::SameLine();
-        if (Colors::DrawSettingHueWheel("Text color", &color_text, 0)) {
-            changed = true;
-        }
-        ImGui::ShowHelp("The custom text color for this agent.");
+        ImGui::ShowHelp("In-game name tag color. Alpha 0 inherits the next matching color or the game's default.");
 
-        if (ImGui::Checkbox("##size_active", &size_active)) {
-            changed = true;
-        }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("If unchecked, the default size will be used");
-        }
-        ImGui::SameLine();
         if (ImGui::DragFloat("Size", &size, 1.0f, 0.0f, 200.0f)) {
             changed = true;
         }
-        ImGui::ShowHelp("The size for this agent.");
+        ImGui::ShowHelp("Minimap marker size. Zero inherits the next matching size.");
 
-        if (ImGui::Checkbox("##shape_active", &shape_active)) {
+        static const char* items[] = {"Inherit", "Tear", "Circle", "Square", "Big Circle"};
+        auto shape_selection = static_cast<int>(shape) + 1;
+        if (ImGui::Combo("Shape", &shape_selection, items, _countof(items))) {
+            shape = static_cast<Shape_e>(shape_selection - 1);
             changed = true;
         }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("If unchecked, the default shape will be used");
-        }
-        ImGui::SameLine();
-        static const char* items[] = {"Tear", "Circle", "Square", "Big Circle"};
-        if (ImGui::Combo("Shape", (int*)&shape, items, 4)) {
-            changed = true;
-        }
-        ImGui::ShowHelp("The shape of this agent.");
+        ImGui::ShowHelp("Inherit uses the next matching shape or the minimap default.");
 
         ImGui::Spacing();
 

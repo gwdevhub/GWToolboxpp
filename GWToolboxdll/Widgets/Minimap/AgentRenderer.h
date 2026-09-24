@@ -74,7 +74,7 @@ private:
 
     static constexpr size_t shape_size = 5;
 
-    enum Shape_e { Tear, Circle, Quad, BigCircle, Star };
+    enum Shape_e { Shape_None = -1, Tear, Circle, Quad, BigCircle, Star };
 
     enum Color_Modifier {
         None,
@@ -118,14 +118,10 @@ private:
             int dead_state = EitherDeadState;
             int quest_state = EitherQuestState;
             bool is_default = false;
-            Colors::SettingColor color = 0xFFF00000;
-            Colors::SettingColor color_text = 0xFFF00000;
-            int shape = Tear;
+            Colors::SettingColor color = 0;
+            Colors::SettingColor color_text = 0;
+            int shape = Shape_None;
             float size = 0.0f;
-            bool color_active = true;
-            bool color_text_active = false;
-            bool shape_active = true;
-            bool size_active = false;
             int agent_type = 0;
             DWORD identifier = 0;
             bool identifier_active = false;
@@ -136,7 +132,14 @@ private:
             int gadget_state = AnyGadget;
             int profession = 0;
             int boss_state = 0;
-            Colors::SettingColor border_color = 0xFFFFFF00;
+            Colors::SettingColor border_color = 0;
+        };
+
+        struct LegacyFlags {
+            bool color_active = true;
+            bool color_text_active = false;
+            bool shape_active = true;
+            bool size_active = false;
             bool border_color_active = false;
         };
 
@@ -147,6 +150,7 @@ private:
         bool DrawHeader();
         bool DrawSettings(Operation& op);
         [[nodiscard]] Settings ToSettings() const;
+        void ApplyLegacyFlags(const LegacyFlags& flags);
 
         // utility
         const unsigned int ui_id = 0; // to ensure UI consistency
@@ -166,14 +170,10 @@ private:
         bool is_default = false;
 
         // attributes to change
-        Color color = 0xFFF00000;
-        Color color_text = 0xFFF00000;
-        Shape_e shape = Tear;
+        Color color = 0;
+        Color color_text = 0;
+        Shape_e shape = Shape_None;
         float size = 0.0f;
-        bool color_active = true;
-        bool color_text_active = false;
-        bool shape_active = true;
-        bool size_active = false;
         AgentType agent_type = NPC;
         DWORD identifier = 0;
         bool identifier_active = false;
@@ -184,8 +184,7 @@ private:
         GadgetState gadget_state = AnyGadget;
         int profession = 0;
         int boss_state = 0;
-        Color border_color = 0xFFFFFF00;
-        bool border_color_active = false;
+        Color border_color = 0;
     };
 
     struct Shape_Vertex : GW::Vec2f {
