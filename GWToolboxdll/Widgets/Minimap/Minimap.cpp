@@ -1112,41 +1112,6 @@ void Minimap::DrawSettingsInternal()
     }
     ImGui::StartSpacedElements(300.f);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Color enemies by profession", &agent_renderer.enemies_colors_by_profession);
-    if (agent_renderer.enemies_colors_by_profession) {
-        ImGui::Indent();
-        if (ImGui::RadioButton("Color only bosses", agent_renderer.only_color_bosses == true)) {
-            agent_renderer.only_color_bosses = true;
-        }
-        if (ImGui::RadioButton("Color all enemies", agent_renderer.only_color_bosses == false)) {
-            agent_renderer.only_color_bosses = false;
-        }
-        if (ImGui::TreeNodeEx("Profession colors", ImGuiTreeNodeFlags_FramePadding)) {
-            constexpr uint32_t color_flags = ImGuiColorEditFlags_NoInputs;
-            static const char* prof_names[] = {
-                nullptr,        // 0 = None, hidden
-                "Warrior",      // 1
-                "Ranger",       // 2
-                "Monk",         // 3
-                "Necromancer",  // 4
-                "Mesmer",       // 5
-                "Elementalist", // 6
-                "Assassin",     // 7
-                "Ritualist",    // 8
-                "Paragon",      // 9
-                "Dervish",      // 10
-            };
-            ImGui::StartSpacedElements(180.f);
-            for (size_t i = 1; i < _countof(prof_names); ++i) {
-                ImGui::NextSpacedElement();
-                Colors::DrawSettingHueWheel(prof_names[i], &agent_renderer.profession_colors[i], color_flags);
-            }
-            ImGui::TreePop();
-        }
-        ImGui::Unindent();
-        ImGui::StartSpacedElements(300.f);
-    }
-    ImGui::NextSpacedElement();
     ImGui::CheckboxWithHelp("Show hidden NPCs", &agent_renderer.show_hidden_npcs, "Show NPCs that aren't usually visible on the minimap\ne.g. minipets, invisible NPCs");
     ImGui::NextSpacedElement();
     ImGui::CheckboxWithHelp("Show symbol for quest NPCs", &agent_renderer.show_quest_npcs_on_minimap, "Show a star for NPCs that have quest progress available");
@@ -1220,7 +1185,7 @@ void Minimap::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
     hide_flagging_controls_patch.TogglePatch(hide_flagging_controls);
 
     range_renderer.LoadSettings(doc, legacy, Name());
-    agent_renderer.LoadCustomAgents();
+    if (!AgentRenderer::AppearanceRulesLoaded()) agent_renderer.LoadCustomAgents(doc, legacy);
     agent_renderer.Invalidate();
     pingslines_renderer.Invalidate();
     symbols_renderer.Invalidate();
@@ -1236,7 +1201,7 @@ void Minimap::SaveSettings(SettingsDoc& doc)
     ToolboxWidget::SaveSettings(doc);
     range_renderer.SaveSettings(doc, Name());
     EffectRenderer::SaveSettings(doc, Name());
-    agent_renderer.SaveCustomAgents();
+    agent_renderer.SaveCustomAgents(doc);
     custom_renderer.SaveMarkers();
 }
 

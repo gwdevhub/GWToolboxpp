@@ -42,7 +42,7 @@ The Minimap widget is an advanced version of the Guild Wars compass. It shows th
 
 ## Customising appearance
 
-All of the settings below live under <ToolboxPath steps={["Settings", "Minimap"]} /> and persist in `GWToolbox.ini` in your settings folder. Most colour pickers accept alpha — set alpha to `0` to disable a feature entirely.
+All of the settings below live under <ToolboxPath steps={["Settings", "Minimap"]} />. Appearance rules are saved with the minimap settings in `configs/default/modules/Minimap.json`. Existing `AgentColors.json` and `AgentColors.ini` entries are imported when upgrading. Most colour pickers accept alpha — set alpha to `0` to disable a feature entirely.
 
 ### General
 
@@ -67,36 +67,33 @@ Settings sit under <ToolboxPath steps={["Settings", "Minimap", "Agents"]} /> wit
 #### Agent Colors
 
 - AoE auras: **EoE**, **QZ**, **Winnowing**, **Frozen Soil**, **Symbiosis** — the picker is the rim colour; the centre is the same hue with alpha-50, gradient in between.
-- **Target** — border surrounding the currently targeted agent.
-- **Player (alive)** / **Player (dead)** — you.
-- **Signpost** / **Item** — interactive props / ground items.
-- **Hostile (>90% HP)** / **Hostile (dead)** — enemies; below 90% HP they shift by the *Agent damaged modifier*.
-- **Ally (NPC Quest Giver)** / **Ally (dead)** — apply across every friendly allegiance.
-- **Neutral**, **Ally (player)**, **Ally (NPC)**, **Ally (spirit)** and **Ally (minion)** have moved to seeded rows in **Custom Agents** below, so they're reorderable and filterable alongside your own custom colours.
+- **Target** border colour is a seeded rule in **Custom Agents**; the border thickness remains below.
+- Player, NPC, item, gadget, chest, hostile and friendly colours are seeded rows in **Custom Agents** below, including quest givers, dead agents and profession-based hostile colours.
 - **Agent modifier** — subtracted at the border and added at the centre of every agent to create a shaded look. Set to 0 for flat-colour agents.
 - **Agent damaged modifier** — subtracted from hostile agents under 90% HP.
-- **Marked Target** — outline colour for agents highlighted via [`/marktarget`](#chat-commands).
-- **Restore Defaults** — reset every colour and per-row size override in this sub-panel.
+- **Marked Target** colour and size are seeded in **Custom Agents**.
+- **Restore Defaults** — reset effect colours, fallback sizes and the seeded appearance rows.
 
 #### Agent Sizes
 
 - **Default Size** — every agent except the player, signposts, items, and bosses.
-- **Player Size** / **Signpost Size** / **Item Size** / **Boss Size**. (Minion size moved to the **Ally (Minion)** row in Custom Agents.)
-- **Marked Target Size** — size of agents highlighted via `/marktarget`.
-- **Marked Targets Inherit Custom Size/Shape** <ToolboxPath steps={["Settings", "Minimap", "Agents", "Marked Targets Inherit Custom Size/Shape"]} /> — When on, marked agents that also have a Custom Agent entry use *that* entry's size and shape instead of the marked-target defaults.
-- **Default Shape** / **Player Shape** / **Other Player Shape** — pick from `Tear`, `Circle`, `Square`, `Big Circle`.
-- **Restore Defaults** — reset every size in this sub-panel.
+- Player, boss, signpost, item and minion sizes are seeded in **Custom Agents**.
+- Marked agents use the **Marked Target** appearance rule, which can be reordered alongside more specific agent rules.
+- **Default Shape** — the fallback when no appearance rule specifies a shape. The seeded **Player** and **Other player** rows have their own shape controls.
+- **Restore Defaults** — reset fallback and seeded appearance sizes.
 
 #### Custom Agents
 
-Override colour/size/shape per model id, or per agent allegiance. Shown in a scrollable list with a **Filter** box (matches on **Name** or **Group**, display-only — it doesn't change list order). **Add Agent Custom Color** appends a new row. Each row exposes:
+This ordered list controls minimap markers and in-game name tag colours. Seeded rows cover common agent categories and previously configured name tag colours; older custom-agent entries are imported here. The **Filter** box matches the row's display **Name** or **Group** without changing rule order. **Add Agent Custom Color** appends a new row. Each row exposes:
 
 - **Visible** toggle, **Name** (free-text label), **Group** (free-text tag, e.g. `Farming`, used only for the filter box above).
-- **Match by** — `Model ID` (a specific agent) or an allegiance (`Ally`, `Neutral`, `Enemy`, `Spirit/Pet`, `Minion`, `NPC/Minipet`) that matches every living agent of that type. Matching by allegiance shows extra **Dead state** and **Quest state** filters and disables the **Model ID** field.
+- **Agent type** — `Item`, `Gadget`, `NPC`, `Player`, or `Any`. An optional **Identifier** selects an item model ID, gadget ID, or NPC model ID according to the type; it is disabled for `Any`. Migrated entries retain their legacy model/allegiance matching.
+- **Match name** — optional case-insensitive substring, or `/pattern/flags` regular expression (the same syntax as Loot Beacons).
+- **Target state** and **Player relation** — optional conditions such as targeted, self, friend, guild member, or party member. **Outposts only** restricts a rule to outposts. NPC rules can also match **Profession**, **Boss state**, **Dead state** and **Quest state**; gadget rules can distinguish opened and closed locked chests.
 - **Model ID** (when matching by Model ID) / **Map ID** (`0` = all maps).
 - **Combat** — `In combat` / `Not in combat` / `Either`.
 - **Weapon** — `Has weapon` / `No weapon` / `Either`.
-- **Color** / **Text color** / **Size** / **Shape** — each with an *enable* checkbox; leave unchecked to fall through to the defaults.
+- **Color** / **Text color** / **Size** / **Shape** — independent overrides for minimap markers and in-game names; disable any field to inherit it from a matching default rule. **Target border color override** changes the colour of the targeted agent's outline.
 - **Move Up / Move Down / Delete** — entries are evaluated top-to-bottom, so order matters when multiple rules could match. The seeded default rows (**Neutral**, **Ally**, **Ally (NPC)**, **Ally (Spirit/Pet)**, **Ally (Minion)**) can't be deleted, only disabled via the **Visible** toggle.
 
 ### Ranges
@@ -220,7 +217,7 @@ Under <ToolboxPath steps={["Settings", "Minimap", "In-game rendering"]} />. **Be
 
 These settings sit at the bottom of the settings panel rather than inside a named header.
 
-- **Show boss by profession color on minimap** <ToolboxPath steps={["Settings", "Minimap", "Show boss by profession color on minimap"]} /> — Tint bosses by primary profession. Enabling the option reveals a sub-panel with one colour picker per profession (Warrior, Ranger, Monk, Necromancer, Mesmer, Elementalist, Assassin, Ritualist, Paragon, Dervish).
+- Profession-coloured hostile markers are seeded as rules under **Custom Agents**. Their **Boss state** determines whether they affect only bosses or all enemies of that profession.
 - **Show hidden NPCs** <ToolboxPath steps={["Settings", "Minimap", "Show hidden NPCs"]} /> — Show NPCs that aren't normally on the compass (minipets, invisible NPCs, etc.).
 - **Show symbol for quest NPCs** <ToolboxPath steps={["Settings", "Minimap", "Show symbol for quest NPCs"]} /> — Draw a star next to NPCs that have quest progress available.
 - **Agent Border thickness** <ToolboxPath steps={["Settings", "Minimap", "Agent Border thickness"]} /> — Border around every agent (0–100).

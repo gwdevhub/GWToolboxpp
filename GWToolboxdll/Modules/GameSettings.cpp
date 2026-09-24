@@ -1,4 +1,6 @@
 #include "stdafx.h"
+#include <Widgets/Minimap/AgentRenderer.h>
+#include <Widgets/Minimap/Minimap.h>
 
 #include <GWCA/Utilities/MemoryPatcher.h>
 #include <GWCA/Utilities/Scanner.h>
@@ -46,6 +48,7 @@
 #include <GWCA/Utilities/Hooker.h>
 
 #include <Utils/GuiUtils.h>
+#include <Utils/SettingsRegistry.h>
 #include <Utils/ToolboxUtils.h>
 
 #include <Modules/PartyWindowModule.h>
@@ -175,44 +178,6 @@ namespace {
         GW::Hook::LeaveHook();
     }
 
-    struct NametagColor {
-        const char* label;
-        DEFAULT_NAMETAG_COLOR default_val;
-        Color* ptr;
-        bool player_override = false;
-    };
-    NametagColor nametag_color_settings[] = {
-        {"NPC", DEFAULT_NAMETAG_COLOR::NPC, &settings.nametag_color_npc.value},
-        {"Myself", DEFAULT_NAMETAG_COLOR::PLAYER_SELF, &settings.nametag_color_player_self.value},
-        {"Other Player", DEFAULT_NAMETAG_COLOR::PLAYER_OTHER, &settings.nametag_color_player_other.value},
-        {"Other Player (In Party)", DEFAULT_NAMETAG_COLOR::PLAYER_IN_PARTY, &settings.nametag_color_player_in_party.value},
-        {"Other Player (In My Party)", DEFAULT_NAMETAG_COLOR::PLAYER_IN_MY_PARTY, &settings.nametag_color_player_in_my_party.value},
-        {"Friends", DEFAULT_NAMETAG_COLOR::PLAYER_OTHER, &settings.nametag_color_friends.value, true},
-        {"Guild Members", DEFAULT_NAMETAG_COLOR::PLAYER_OTHER, &settings.nametag_color_guild_members.value, true},
-        {"Gadget", DEFAULT_NAMETAG_COLOR::GADGET, &settings.nametag_color_gadget.value},
-        {"Enemy", DEFAULT_NAMETAG_COLOR::ENEMY, &settings.nametag_color_enemy.value},
-        {"Item", DEFAULT_NAMETAG_COLOR::ITEM, &settings.nametag_color_item.value},
-    };
-
-    // Cached per-player nametag colors; cleared on map load and party changes so lookups run once per hover per map.
-    std::unordered_map<std::wstring, Color> nametag_color_cache;
-
-    bool IsGuildMemberPlayer(const wchar_t* player_name)
-    {
-        if (!(player_name && *player_name)) {
-            return false;
-        }
-        const auto guild_context = GW::GetGuildContext();
-        if (!guild_context) {
-            return false;
-        }
-        for (const GW::GuildPlayer* player : guild_context->player_roster) {
-            if (player && player->current_name[0] && !wcsncmp(player->current_name, player_name, _countof(player->current_name))) {
-                return true;
-            }
-        }
-        return false;
-    }
 
     struct ChannelColorDef {
         const char* key;
@@ -1570,7 +1535,6 @@ void GameSettings::Initialize()
     // Trigger for message on party change
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyPlayerRemove>(&PartyPlayerRemove_Entry, [&](const GW::HookStatus*, GW::Packet::StoC::PartyPlayerRemove*) {
         check_message_on_party_change = true;
-        nametag_color_cache.clear();
     });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ScreenShake>(&OnScreenShake_Entry, OnScreenShake);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentModel>(&OnAgentModel_Entry, [this](GW::HookStatus* status, const GW::Packet::StoC::AgentModel* packet) {
@@ -1708,6 +1672,14 @@ void GameSettings::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
     ToolboxModule::LoadSettings(doc, legacy);
     doc.GetStruct(Name(), settings);
+    auto& minimap = Minimap::Instance();
+    auto& renderer = AgentRenderer::Instance();
+    renderer.RegisterSettings(&minimap);
+    renderer.ResetAppearanceSettings();
+    SettingsRegistry::LoadFieldsFromDoc(&minimap, doc);
+    SettingsRegistry::LoadFromIniFallback(&minimap, legacy, doc);
+    renderer.LoadLegacyAppearanceDefaults(doc, legacy);
+    renderer.LoadCustomAgents(doc, legacy);
 
     for (const auto& [key, chan] : channel_color_settings)
         LoadChannelColor(doc, legacy, Name(), key, chan);
@@ -1779,6 +1751,8 @@ void GameSettings::Terminate()
     GW::UI::RemoveUIMessageCallback(&OnQuestUIMessage_HookEntry);
     GW::UI::RemoveUIMessageCallback(&OnPostUIMessage_HookEntry);
     GW::UI::RemoveUIMessageCallback(&OnPreUIMessage_HookEntry);
+    GW::UI::RemoveUIMessageCallback(&OnAgentNameTag_Entry);
+    AgentRenderer::Instance().ReleaseAppearanceHooks();
 
     if (SkillList_UICallback_Func) GW::Hook::RemoveHook(SkillList_UICallback_Func);
     if (SetFrameSkillDescription_Func) GW::Hook::RemoveHook(SetFrameSkillDescription_Func);
@@ -1791,6 +1765,17 @@ void GameSettings::SaveSettings(SettingsDoc& doc)
 {
     ToolboxModule::SaveSettings(doc);
     doc.SetStruct(Name(), settings);
+    AgentRenderer::Instance().SaveCustomAgents(doc);
+    constexpr const char* migrated_colors[] = {
+        "override_name_tag_colors", "nametag_color_npc", "nametag_color_player_self", "nametag_color_player_other",
+        "nametag_color_player_in_party", "nametag_color_player_in_my_party", "nametag_color_friends",
+        "nametag_color_guild_members", "nametag_color_gadget", "nametag_color_enemy", "nametag_color_item"
+    };
+    if (AgentRenderer::AppearanceRulesLoaded()) {
+        for (const auto key : migrated_colors) doc.EraseKey(Name(), key);
+        doc.EraseKey("Friend List", "friend_name_tag_enabled");
+        doc.EraseKey("Friend List", "friend_name_tag_color");
+    }
 
     for (const auto& [key, chan] : channel_color_settings)
         SaveChannelColor(doc, Name(), key, chan);
@@ -2000,20 +1985,7 @@ void GameSettings::DrawSettingsInternal()
     ImGui::Unindent();
     ImGui::NewLine();
     ImGui::Checkbox("Show 'You have N Lockpicks' on Locked Chest name tags", &settings.show_amount_of_lockpicks_under_locked_chest_nametag);
-    if (ImGui::Checkbox("In-game name tag colors", &settings.override_name_tag_colors)) {
-        nametag_color_cache.clear();
-    }
-    ImGui::ShowHelp("These set global name tag colors by category.\nTo set a custom color for a specific agent, see Minimap > Custom Agents > Text Color.");
-    ImGui::BeginDisabled(!settings.override_name_tag_colors);
-    ImGui::Indent();
-    ImGui::StartSpacedElements(checkbox_w);
-    constexpr uint32_t flags = ImGuiColorEditFlags_NoInputs;
-    for (auto& c : nametag_color_settings) {
-        ImGui::NextSpacedElement();
-        Colors::DrawSettingHueWheel(c.label, c.ptr, flags);
-    }
-    ImGui::Unindent();
-    ImGui::EndDisabled();
+    ImGui::TextDisabled("Agent and name tag colours: Minimap > Custom Agents");
 
     ImGui::NewLine();
     ImGui::Text("Hide skill descriptions in:");
@@ -2228,7 +2200,6 @@ void GameSettings::OnPartyInviteReceived(const GW::HookStatus* status, const GW:
 // Flash window on player added
 void GameSettings::OnPartyPlayerJoined(const GW::HookStatus*, const GW::Packet::StoC::PartyPlayerAdd*)
 {
-    nametag_color_cache.clear();
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) {
         return;
     }
@@ -2485,7 +2456,6 @@ void GameSettings::OnMapLoaded(GW::HookStatus*, GW::Packet::StoC::MapLoaded*)
 {
     instance_entered_at = TIMER_INIT();
     SetWindowTitle(settings.set_window_title_as_charname);
-    nametag_color_cache.clear();
 }
 
 // Hide more than 10 signets of capture
@@ -2504,38 +2474,6 @@ void GameSettings::OnAgentNameTag(GW::HookStatus*, const GW::UI::UIMessage msgid
         return;
     }
     const auto tag = static_cast<GW::UI::AgentNameTagInfo*>(wParam);
-    if (settings.override_name_tag_colors) {
-        for (const auto& c : nametag_color_settings) {
-            if (c.player_override) {
-                continue;
-            }
-            if (tag->text_color == static_cast<Color>(c.default_val)) {
-                tag->text_color = *c.ptr;
-                break;
-            }
-        }
-        if (tag->name_enc) {
-            const auto player_name = TextUtils::GetPlayerNameFromEncodedString(tag->name_enc);
-            if (!player_name.empty() && player_name != GetPlayerName()) {
-                const auto cached = nametag_color_cache.find(player_name);
-                if (cached != nametag_color_cache.end()) {
-                    tag->text_color = cached->second;
-                }
-                else {
-                    if (GW::FriendListMgr::GetFriend(nullptr, player_name.c_str(), GW::FriendType::Friend)) {
-                        tag->text_color = settings.nametag_color_friends;
-                    }
-                    else if (IsGuildMemberPlayer(player_name.c_str())) {
-                        tag->text_color = settings.nametag_color_guild_members;
-                    }
-                    else if (IsAgentInMyParty(tag->agent_id)) {
-                        tag->text_color = settings.nametag_color_player_in_my_party;
-                    }
-                    nametag_color_cache[player_name] = tag->text_color;
-                }
-            }
-        }
-    }
     if (settings.show_amount_of_lockpicks_under_locked_chest_nametag && tag->name_enc && wcseq(tag->name_enc, GW::EncStrings::LockedChest) && !tag->underline) {
         static wchar_t you_have_n_lockpicks[12];
         const auto count = GW::Items::CountItemByModelId(GW::Constants::ItemID::Lockpick, (int)GW::Constants::Bag::Backpack, (int)GW::Constants::Bag::Bag_2);
@@ -2543,5 +2481,8 @@ void GameSettings::OnAgentNameTag(GW::HookStatus*, const GW::UI::UIMessage msgid
         GW::UI::UInt32ToEncStr(count, item_count, _countof(item_count));
         swprintf(you_have_n_lockpicks, _countof(you_have_n_lockpicks), L"\xa35\x101%s\x10a\x8101\x730e\x1", item_count);
         tag->extra_info_enc = you_have_n_lockpicks;
+    }
+    if (const auto agent = GW::Agents::GetAgentByID(tag->agent_id)) {
+        AgentRenderer::Instance().ApplyNameTagColor(agent, tag->text_color);
     }
 }
