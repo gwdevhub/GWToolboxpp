@@ -241,7 +241,7 @@ void AgentRenderer::LoadCustomAgents(SettingsDoc& doc, ToolboxIni* legacy)
     }
     custom_agents.clear();
 
-    const auto append_rule = [this](CustomAgent* rule) {
+    const auto append_rule = [this](CustomAgent* rule, const bool was_seeded = false) {
         const auto append = [this](CustomAgent* entry) {
             entry->index = custom_agents.size();
             custom_agents.push_back(entry);
@@ -252,7 +252,7 @@ void AgentRenderer::LoadCustomAgents(SettingsDoc& doc, ToolboxIni* legacy)
         }
         if (rule->allegiance >= 0) {
             rule->agent_type = NPC;
-            if (rule->is_default) rule->dead_state = Alive;
+            if (was_seeded) rule->dead_state = Alive;
             append(rule);
             return;
         }
@@ -291,16 +291,16 @@ void AgentRenderer::LoadCustomAgents(SettingsDoc& doc, ToolboxIni* legacy)
         int rules_version = 0;
         doc.Get(rules_section, "appearance_rules_version", rules_version);
         std::vector<CustomAgent::LegacyFlags> flags;
-        if (rules_version < 2 && (!doc.Get(rules_section, "appearance_rules", flags) || flags.size() != saved.size())) {
+        if (rules_version < 3 && (!doc.Get(rules_section, "appearance_rules", flags) || flags.size() != saved.size())) {
             Log::Error("Failed to migrate appearance rules in %s", rules_section);
             return;
         }
         for (size_t i = 0; i < saved.size(); ++i) {
             auto* rule = new CustomAgent(saved[i]);
             if (rules_version < 2) rule->ApplyLegacyFlags(flags[i]);
-            append_rule(rule);
+            append_rule(rule, rules_version < 3 && flags[i].is_default);
         }
-        BuildCustomAgentsMap();
+        RebuildRuleMatchers();
         custom_agents_loaded = true;
         if (!appearance_defaults_seeded) {
             SeedAppearanceDefaults(doc, legacy);
@@ -324,7 +324,7 @@ void AgentRenderer::LoadCustomAgents(SettingsDoc& doc, ToolboxIni* legacy)
         for (size_t i = 0; i < entries.size(); ++i) {
             auto* rule = new CustomAgent(entries[i]);
             rule->ApplyLegacyFlags(flags[i]);
-            append_rule(rule);
+            append_rule(rule, flags[i].is_default);
         }
     }
     else {
@@ -335,10 +335,10 @@ void AgentRenderer::LoadCustomAgents(SettingsDoc& doc, ToolboxIni* legacy)
         inifile.GetAllSections(entries);
 
         for (const auto& entry : entries) {
-            append_rule(new CustomAgent(&inifile, entry.pItem));
+            append_rule(new CustomAgent(&inifile, entry.pItem), inifile.GetBoolValue(entry.pItem, "is_default", false));
         }
     }
-    BuildCustomAgentsMap();
+    RebuildRuleMatchers();
     custom_agents_loaded = true;
 
     if (!custom_agent_defaults_seeded) {
@@ -360,7 +360,6 @@ void AgentRenderer::SeedAppearanceDefaults(const SettingsDoc& doc, const Toolbox
         rule->dead_state = dead;
         rule->size = size;
         rule->shape = shape;
-        rule->is_default = true;
         std::snprintf(rule->group, sizeof(rule->group), "Defaults");
         rule->index = custom_agents.size();
         custom_agents.push_back(rule);
@@ -449,7 +448,7 @@ void AgentRenderer::SeedAppearanceDefaults(const SettingsDoc& doc, const Toolbox
         return specificity(a) > specificity(b);
     });
     for (size_t i = tag_start; i < custom_agents.size(); ++i) custom_agents[i]->index = i;
-    BuildCustomAgentsMap();
+    RebuildRuleMatchers();
 }
 
 void AgentRenderer::SeedDefaultCustomAgents()
@@ -474,54 +473,13 @@ void AgentRenderer::SeedDefaultCustomAgents()
         ca->agent_type = NPC;
         ca->quest_state = row.quest_state;
         ca->size = *row.size;
-        ca->is_default = true;
         ca->dead_state = Alive;
         ca->shape = Shape_None;
         std::snprintf(ca->group, sizeof(ca->group), "Defaults");
         ca->index = custom_agents.size();
         custom_agents.push_back(ca);
     }
-    BuildCustomAgentsMap();
-}
-
-void AgentRenderer::SyncSeededDefaultsFromLegacyFields()
-{
-    const std::pair<GW::Constants::Allegiance, std::pair<Color, float>> legacy_values[] = {
-        {GW::Constants::Allegiance::Neutral, {color_neutral, size_neutral}},
-        {GW::Constants::Allegiance::Ally_NonAttackable, {color_ally, size_ally}},
-        {GW::Constants::Allegiance::Npc_Minipet, {color_ally_npc, size_ally_npc}},
-        {GW::Constants::Allegiance::Spirit_Pet, {color_ally_spirit, size_ally_spirit}},
-        {GW::Constants::Allegiance::Minion, {color_ally_minion, size_minion}},
-    };
-    for (const auto& [allegiance, values] : legacy_values) {
-        for (CustomAgent* ca : custom_agents) {
-            if (!ca->is_default || ca->agent_type != NPC || ca->allegiance != static_cast<int>(allegiance) ||
-                ca->dead_state != Alive || ca->quest_state == QuestGiver || ca->profession != GW::Constants::Profession::None || ca->boss_state) {
-                continue;
-            }
-            ca->color = values.first;
-            ca->size = values.second;
-        }
-    }
-    for (auto* rule : custom_agents) {
-        if (!rule->is_default || Colors::IsVisible(rule->color_text)) continue;
-        const std::string_view name = rule->name;
-        if (name == "Hostile") { rule->color = color_hostile; rule->size = size_hostile; }
-        else if (name == "Hostile (dead)") { rule->color = color_hostile_dead; rule->size = size_hostile; }
-        else if (name == "Ally (dead)") { rule->color = color_ally_dead; rule->size = size_ally; }
-        else if (name == "Ally (quest giver)") { rule->color = color_ally_npc_quest; rule->size = size_ally_npc_quest; }
-        else if (name == "Item") { rule->color = color_item; rule->size = size_item; }
-        else if (name == "Locked chest (closed)") { rule->color = color_locked_chest; rule->size = size_locked_chest; }
-        else if (name == "Locked chest (opened)") { rule->color = color_locked_chest_open; rule->size = size_locked_chest_open; }
-        else if (name == "Gadget") { rule->color = color_signpost; rule->size = size_signpost; }
-        else if (name == "Player") { rule->color = color_player; rule->size = size_player; rule->shape = shape_player; }
-        else if (name == "Player (dead)") { rule->color = color_player_dead; rule->size = size_player; rule->shape = shape_player; }
-        else if (name == "Other player") { rule->color = color_ally; rule->size = size_ally; rule->shape = shape_players; }
-        else if (name == "Marked Target") { rule->color = color_marked_target; rule->size = size_marked_target; }
-        else if (name == "Boss") { rule->size = size_boss; }
-        else if (name == "Target") { rule->border_color = color_target; }
-    }
-    rules_changed = true;
+    RebuildRuleMatchers();
 }
 
 void AgentRenderer::SaveCustomAgents(SettingsDoc& doc) const
@@ -533,7 +491,7 @@ void AgentRenderer::SaveCustomAgents(SettingsDoc& doc) const
             entries.push_back(ca->ToSettings());
         }
         doc.Set("Game Settings", "appearance_rules", entries);
-        doc.Set("Game Settings", "appearance_rules_version", 2);
+        doc.Set("Game Settings", "appearance_rules_version", 3);
         doc.Set("Game Settings", "custom_agent_defaults_seeded", custom_agent_defaults_seeded);
         doc.Set("Game Settings", "appearance_defaults_seeded", appearance_defaults_seeded);
         doc.EraseKey("Minimap", "appearance_rules");
@@ -678,11 +636,9 @@ void AgentRenderer::DrawSettings()
     ImGui::Checkbox("Show props on minimap", &show_props_on_minimap);
 #endif
     if (ImGui::TreeNodeEx("Agent Colors", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
-        ImGui::SmallConfirmButton("Restore Defaults", "Reset default appearance rows, effect colours and fallback sizes?\nThis cannot be undone.", [&](bool result, void*) {
+        ImGui::SmallConfirmButton("Restore Defaults", "Reset effect colours and fallback colours?\nAppearance rules are not changed.", [&](bool result, void*) {
             if (result) {
                 LoadDefaultColors();
-                LoadDefaultSizes();
-                SyncSeededDefaultsFromLegacyFields();
             }
         });
 
@@ -728,11 +684,10 @@ void AgentRenderer::DrawSettings()
     }
 
     if (ImGui::TreeNodeEx("Agent Sizes", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
-        ImGui::SmallConfirmButton("Restore Defaults", "Are you sure?\nThis will reset all agent sizes to the default values.\nThis operation cannot be undone.\n\n",
+        ImGui::SmallConfirmButton("Restore Defaults", "Reset fallback sizes and border thickness?\nAppearance rules are not changed.",
             [&](const bool result, void*) {
                 if (result) {
                     LoadDefaultSizes();
-                    SyncSeededDefaultsFromLegacyFields();
                 }
             });
         {
@@ -833,7 +788,7 @@ void AgentRenderer::DrawSettings()
         }
         ImGui::EndChild();
         if (changed) {
-            BuildCustomAgentsMap();
+            RebuildRuleMatchers();
         }
         if (ImGui::Button("Add Appearance Rule")) {
             custom_agents.push_back(new CustomAgent(0, 0, "<name>"));
@@ -1306,15 +1261,13 @@ void AgentRenderer::Render(IDirect3DDevice9* device)
             const auto* cas = GetCustomAgentsToDraw(agent);
             const auto* ca = cas && !cas->empty() ? cas->front() : nullptr;
             if (ca) Enqueue(agent, ca);
-            else Enqueue(default_shape, agent, size_marked_target, color_marked_target);
+            else Enqueue(agent);
         }
 
         // 4. target if it's a non-player
         if (target && (!target->GetAsAgentLiving() || !target->GetAsAgentLiving()->IsPlayer())) {
-            const auto marked = GetMarkedTarget(target->agent_id);
             const auto custom_agents_for_this_agent = GetCustomAgentsToDraw(target);
             if (custom_agents_for_this_agent) Enqueue(target, custom_agents_for_this_agent->front());
-            else if (marked) Enqueue(default_shape, target, size_marked_target, color_marked_target);
             else Enqueue(target);
         }
 
@@ -1515,20 +1468,6 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
     return IM_COL32(0, 0, 0, 0);
 }
 
-float AgentRenderer::GetSeededDefaultSize(const GW::Constants::Allegiance allegiance, const float fallback) const
-{
-    const auto it = custom_agents_by_allegiance.find(static_cast<int>(allegiance));
-    if (it == custom_agents_by_allegiance.end()) {
-        return fallback;
-    }
-    for (const CustomAgent* ca : it->second) {
-        if (ca->is_default && ca->active && ca->size > 0.f) {
-            return ca->size;
-        }
-    }
-    return fallback;
-}
-
 float AgentRenderer::GetSize(const GW::Agent* agent, const CustomAgent* ca) const
 {
     if (ca && ca->size > 0.f) {
@@ -1562,22 +1501,22 @@ float AgentRenderer::GetSize(const GW::Agent* agent, const CustomAgent* ca) cons
             if (!living->GetIsDead() && living->GetHasQuest()) {
                 return size_ally_npc_quest;
             }
-            return GetSeededDefaultSize(GW::Constants::Allegiance::Ally_NonAttackable, size_ally);
+            return size_ally;
 
         case GW::Constants::Allegiance::Neutral: // neutral
-            return GetSeededDefaultSize(GW::Constants::Allegiance::Neutral, size_neutral);
+            return size_neutral;
 
         case GW::Constants::Allegiance::Spirit_Pet: // spirit / pet
-            return GetSeededDefaultSize(GW::Constants::Allegiance::Spirit_Pet, size_ally_spirit);
+            return size_ally_spirit;
 
         case GW::Constants::Allegiance::Npc_Minipet: // npc / minipet
             if (!living->GetIsDead() && living->GetHasQuest()) {
                 return size_ally_npc_quest;
             }
-            return GetSeededDefaultSize(GW::Constants::Allegiance::Npc_Minipet, size_ally_npc);
+            return size_ally_npc;
 
         case GW::Constants::Allegiance::Minion: // minion
-            return GetSeededDefaultSize(GW::Constants::Allegiance::Minion, size_minion);
+            return size_minion;
 
         case GW::Constants::Allegiance::Enemy: // hostile
             switch (living->player_number) {
@@ -1788,16 +1727,12 @@ void AgentRenderer::Enqueue(const Shape_e shape, const RenderPosition& pos, cons
     }
 }
 
-void AgentRenderer::BuildCustomAgentsMap()
+void AgentRenderer::RebuildRuleMatchers()
 {
     rules_changed = true;
-    custom_agents_by_allegiance.clear();
     compiled_name_patterns.clear();
     check_friends = check_guild = check_party = false;
     for (const CustomAgent* ca : custom_agents) {
-        if (ca->allegiance >= 0) {
-            custom_agents_by_allegiance[ca->allegiance].push_back(ca);
-        }
         if (ca->match_name[0]) compiled_name_patterns.emplace(ca, TextUtils::StringToWString(ca->match_name));
         if (ca->active) {
             check_friends |= ca->player_relation == Friend;
@@ -1820,7 +1755,6 @@ AgentRenderer::CustomAgent::CustomAgent(const ToolboxIni* ini, const char* secti
     allegiance = static_cast<int>(ini->GetLongValue(section, VAR_NAME(allegiance), allegiance));
     dead_state = static_cast<DeadState>(ini->GetLongValue(section, VAR_NAME(dead_state), static_cast<long>(dead_state)));
     quest_state = static_cast<QuestState>(ini->GetLongValue(section, VAR_NAME(quest_state), static_cast<long>(quest_state)));
-    is_default = ini->GetBoolValue(section, VAR_NAME(is_default), is_default);
     agent_type = static_cast<AgentType>(ini->GetLongValue(section, VAR_NAME(agent_type), 0));
     identifier = static_cast<DWORD>(ini->GetLongValue(section, VAR_NAME(identifier), identifier));
     identifier_active = ini->GetBoolValue(section, VAR_NAME(identifier_active), identifier != 0);
@@ -1863,7 +1797,6 @@ AgentRenderer::CustomAgent::CustomAgent(const Settings& settings)
     allegiance = settings.allegiance;
     dead_state = static_cast<DeadState>(settings.dead_state);
     quest_state = static_cast<QuestState>(settings.quest_state);
-    is_default = settings.is_default;
     agent_type = static_cast<AgentType>(settings.agent_type);
     identifier = settings.identifier;
     identifier_active = settings.identifier_active || identifier != 0;
@@ -1916,7 +1849,6 @@ AgentRenderer::CustomAgent::Settings AgentRenderer::CustomAgent::ToSettings() co
     settings.allegiance = allegiance;
     settings.dead_state = dead_state;
     settings.quest_state = quest_state;
-    settings.is_default = is_default;
     settings.agent_type = agent_type;
     settings.identifier = identifier_active ? identifier : 0;
     settings.identifier_active = identifier_active;
@@ -1987,11 +1919,9 @@ bool AgentRenderer::CustomAgent::DrawSettings(Operation& op)
         }
         ImGui::SameLine();
         const float x = ImGui::GetCursorPosX();
-        ImGui::BeginDisabled(is_default);
         if (ImGui::InputText("Name", name, 128)) {
             changed = true;
         }
-        ImGui::EndDisabled();
         ImGui::ShowHelp("A name to help you remember what this is. Optional.");
         ImGui::SetCursorPosX(x);
         if (ImGui::InputText("Group", group, sizeof(group))) {
@@ -2145,16 +2075,14 @@ bool AgentRenderer::CustomAgent::DrawSettings(Operation& op)
             ImGui::SetTooltip("Move the color down in the list");
         }
         ImGui::SameLine(0, spacing);
-        ImGui::BeginDisabled(is_default);
         if (ImGui::Button("Delete", ImVec2(width, 0))) {
-            ImGui::OpenPopup("Delete Color?");
+            ImGui::OpenPopup("Delete Rule?");
         }
-        ImGui::EndDisabled();
         if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip(is_default ? "Default rows can't be deleted; uncheck \"active\" to disable this one instead" : "Delete the color");
+            ImGui::SetTooltip("Delete the appearance rule");
         }
 
-        if (ImGui::BeginPopupModal("Delete Color?", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        if (ImGui::BeginPopupModal("Delete Rule?", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
             ImGui::Text("Are you sure?\nThis operation cannot be undone\n\n");
             if (ImGui::Button("OK", ImVec2(120, 0))) {
                 op = Operation::Delete;

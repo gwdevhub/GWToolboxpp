@@ -118,7 +118,6 @@ private:
             int allegiance = -1;
             int dead_state = EitherDeadState;
             int quest_state = EitherQuestState;
-            bool is_default = false;
             Colors::SettingColor color = 0;
             Colors::SettingColor color_text = 0;
             int shape = Shape_None;
@@ -137,6 +136,7 @@ private:
         };
 
         struct LegacyFlags {
+            bool is_default = false;
             bool color_active = true;
             bool color_text_active = false;
             bool shape_active = true;
@@ -168,7 +168,6 @@ private:
         int allegiance = -1;
         DeadState dead_state = DeadState::EitherDeadState;
         QuestState quest_state = QuestState::EitherQuestState;
-        bool is_default = false;
 
         // attributes to change
         Color color = 0;
@@ -221,7 +220,6 @@ private:
     std::vector<CachedPolygon> relevant_polygons;
     std::vector<CachedMarker> relevant_markers;
 
-    float GetSeededDefaultSize(GW::Constants::Allegiance allegiance, float fallback) const;
 
     struct RenderPosition {
         float rotation_cos;
@@ -291,15 +289,13 @@ private:
     std::array<Color, 11> profession_colors = DefaultProfessionColors();
 
     std::vector<CustomAgent*> custom_agents{};
-    std::unordered_map<int, std::vector<const CustomAgent*>> custom_agents_by_allegiance{};
     std::unordered_map<const CustomAgent*, TextUtils::SearchPattern<wchar_t>> compiled_name_patterns;
     bool check_friends = false;
     bool check_guild = false;
     bool check_party = false;
-    void BuildCustomAgentsMap();
+    void RebuildRuleMatchers();
     void SeedDefaultCustomAgents();
     void SeedAppearanceDefaults(const SettingsDoc& doc, const ToolboxIni* legacy);
-    void SyncSeededDefaultsFromLegacyFields();
     bool custom_agent_defaults_seeded = false;
     bool appearance_defaults_seeded = false;
 
