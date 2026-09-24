@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include <Widgets/Minimap/AgentRenderer.h>
 
 #include <GWCA/Packets/StoC.h>
 
@@ -407,18 +408,6 @@ namespace {
                 GW::UI::SendFrameUIMessage(GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"Game"),6), message_id, wparam);
             }
             break;
-        case GW::UI::UIMessage::kSetAgentNameTagAttribs:
-        case GW::UI::UIMessage::kShowAgentNameTag: {
-            if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost || !settings.friend_name_tag_enabled) {
-                break;
-            }
-            const auto tag = static_cast<GW::UI::AgentNameTagInfo*>(wparam);
-            const auto player_name = TextUtils::GetPlayerNameFromEncodedString(tag->name_enc);
-            const auto friend_ = FriendListWindow::GetFriend(player_name.c_str());
-            if (friend_ && friend_->type == GW::FriendType::Friend) {
-                tag->text_color = settings.friend_name_tag_color;
-            }
-        }break;
         // When starting a new whisper message, automatically check and redirect the recipient
         case GW::UI::UIMessage::kStartWhisper: {
             const auto packet = (GW::UI::UIPacket::kStartWhisper*)wparam;
@@ -851,8 +840,6 @@ void FriendListWindow::Initialize()
 
     constexpr GW::UI::UIMessage OnUIMessage_Headers[] = {
         GW::UI::UIMessage::kStartWhisper,
-        GW::UI::UIMessage::kSetAgentNameTagAttribs,
-        GW::UI::UIMessage::kShowAgentNameTag,
         GW::UI::UIMessage::kWriteToChatLog,
         GW::UI::UIMessage::kOpenWhisper,
         GW::UI::UIMessage::kSendChatMessage,
@@ -1257,10 +1244,7 @@ void FriendListWindow::DrawSettingsInternal()
     Colors::DrawSettingHueWheel("Widget background hover color", &settings.hover_background_color.value);
     ImGui::CheckboxWithHelp("Show my status", &settings.show_my_status, "e.g. 'You are: Online'");
 
-    ImGui::CheckboxWithHelp("Custom name tag color for friends", &settings.friend_name_tag_enabled, "When targeting friends in an outpost");
-    if (settings.friend_name_tag_enabled) {
-        Colors::DrawSettingHueWheel("Friend name tag color", &settings.friend_name_tag_color.value);
-    }
+    ImGui::TextDisabled("Friend name tag colours: Game Settings > Agent Appearance");
     DrawChatSettings();
 }
 
@@ -1315,6 +1299,10 @@ void FriendListWindow::SaveSettings(SettingsDoc& doc)
 {
     ToolboxWindow::SaveSettings(doc);
     doc.SetStruct(Name(), settings);
+    if (AgentRenderer::AppearanceRulesLoaded()) {
+        doc.EraseKey(Name(), "friend_name_tag_enabled");
+        doc.EraseKey(Name(), "friend_name_tag_color");
+    }
     SaveToFile();
 }
 

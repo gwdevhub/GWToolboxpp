@@ -1,10 +1,14 @@
 #pragma once
 
+#include <array>
+
 #include <GWCA/Utilities/Hook.h>
 
+#include <GWCA/Constants/Constants.h>
 #include <GWCA/GameContainers/GamePos.h>
 
 #include <D3DContainers.h>
+#include <Utils/TextUtils.h>
 #include <Widgets/Minimap/CustomRenderer.h>
 
 
@@ -24,6 +28,7 @@ namespace GW {
 using Color = uint32_t;
 
 class ToolboxModule;
+class SettingsDoc;
 
 class AgentRenderer : public D3DVertexBuffer {
     friend class Minimap;
@@ -34,21 +39,25 @@ public:
 
     void Terminate() override;
     static AgentRenderer& Instance();
+    static bool AppearanceRulesLoaded();
 
     void Render(IDirect3DDevice9* device) override;
 
     void DrawSettings();
     void RegisterSettings(ToolboxModule* module);
-    void LoadCustomAgents();
-    void SaveCustomAgents() const;
+    void RegisterMinimapSettings(ToolboxModule* module);
+    void LoadCustomAgents(SettingsDoc& doc, ToolboxIni* legacy);
+    void SaveCustomAgents(SettingsDoc& doc) const;
+    bool ApplyNameTagColor(const GW::Agent* agent, Color& color);
+    void InvalidateAppearance(uint32_t agent_id);
+    void ReleaseAppearanceHooks();
 
     void LoadDefaultColors();
     void LoadDefaultSizes();
+    void ResetAppearanceSettings();
+    void LoadLegacyAppearanceDefaults(const SettingsDoc& doc, const ToolboxIni* legacy);
 
-    Color GetProfessionColor(uint32_t profession) const
-    {
-        return profession < _countof(profession_colors) ? profession_colors[profession] : 0;
-    }
+    Color GetProfessionColor(GW::Constants::Profession profession) const;
 
     bool show_hidden_npcs = false;
     bool show_quest_npcs_on_minimap = false;
@@ -66,7 +75,7 @@ private:
 
     static constexpr size_t shape_size = 5;
 
-    enum Shape_e { Tear, Circle, Quad, BigCircle, Star };
+    enum Shape_e { Shape_None = -1, Tear, Circle, Quad, BigCircle, Star };
 
     enum Color_Modifier {
         None,
@@ -82,6 +91,10 @@ private:
     enum WeaponState { HasWeapon, NoWeapon, EitherWeapon };
     enum DeadState { Dead, Alive, EitherDeadState };
     enum QuestState { QuestGiver, NotQuestGiver, EitherQuestState };
+    enum AgentType { Any = 1, Item, Gadget, NPC, Player };
+    enum TargetState { EitherTarget, Targeted, NotTargeted, Marked };
+    enum PlayerRelation { AnyRelation, Self, Other, Friend, Guild, MyParty, InParty };
+    enum GadgetState { AnyGadget, ClosedChest, OpenedChest, OtherGadget };
 
     class CustomAgent {
         static unsigned int cur_ui_id;
@@ -91,11 +104,9 @@ private:
             None,
             MoveUp,
             MoveDown,
-            Delete,
-            ModelIdChange
+            Delete
         };
 
-        // glaze-serialized mirror of the persisted fields (AgentColors.json)
         struct Settings {
             bool active = true;
             std::string name;
@@ -104,18 +115,33 @@ private:
             DWORD mapId = 0;
             int combat_state = EitherCombat;
             int weapon_state = EitherWeapon;
-            int allegiance = -1; // -1 == match by modelId only; otherwise a GW::Constants::Allegiance value
+            int allegiance = -1;
             int dead_state = EitherDeadState;
             int quest_state = EitherQuestState;
-            bool is_default = false; // seeded from the old fixed agent-color/size categories; can't be deleted
-            Colors::SettingColor color = 0xFFF00000;
-            Colors::SettingColor color_text = 0xFFF00000;
-            int shape = Tear;
+            Colors::SettingColor color = 0;
+            Colors::SettingColor color_text = 0;
+            int shape = Shape_None;
             float size = 0.0f;
+            int agent_type = 0;
+            DWORD identifier = 0;
+            bool identifier_active = false;
+            std::string match_name;
+            int target_state = EitherTarget;
+            int player_relation = AnyRelation;
+            bool outpost_only = false;
+            int gadget_state = AnyGadget;
+            int profession = 0;
+            int boss_state = 0;
+            Colors::SettingColor border_color = 0;
+        };
+
+        struct LegacyFlags {
+            bool is_default = false;
             bool color_active = true;
             bool color_text_active = false;
             bool shape_active = true;
             bool size_active = false;
+            bool border_color_active = false;
         };
 
         CustomAgent(const ToolboxIni* ini, const char* section);
@@ -125,6 +151,7 @@ private:
         bool DrawHeader();
         bool DrawSettings(Operation& op);
         [[nodiscard]] Settings ToSettings() const;
+        void ApplyLegacyFlags(const LegacyFlags& flags);
 
         // utility
         const unsigned int ui_id = 0; // to ensure UI consistency
@@ -138,20 +165,26 @@ private:
         DWORD mapId = 0; // 0 for 'any map'
         CombatState combat_state = CombatState::EitherCombat;
         WeaponState weapon_state = WeaponState::EitherWeapon;
-        int allegiance = -1; // -1 == match by modelId only
+        int allegiance = -1;
         DeadState dead_state = DeadState::EitherDeadState;
         QuestState quest_state = QuestState::EitherQuestState;
-        bool is_default = false;
 
         // attributes to change
-        Color color = 0xFFF00000;
-        Color color_text = 0xFFF00000;
-        Shape_e shape = Tear;
+        Color color = 0;
+        Color color_text = 0;
+        Shape_e shape = Shape_None;
         float size = 0.0f;
-        bool color_active = true;
-        bool color_text_active = false;
-        bool shape_active = true;
-        bool size_active = false;
+        AgentType agent_type = NPC;
+        DWORD identifier = 0;
+        bool identifier_active = false;
+        char match_name[128]{};
+        TargetState target_state = EitherTarget;
+        PlayerRelation player_relation = AnyRelation;
+        bool outpost_only = false;
+        GadgetState gadget_state = AnyGadget;
+        GW::Constants::Profession profession = GW::Constants::Profession::None;
+        int boss_state = 0;
+        Color border_color = 0;
     };
 
     struct Shape_Vertex : GW::Vec2f {
@@ -187,7 +220,6 @@ private:
     std::vector<CachedPolygon> relevant_polygons;
     std::vector<CachedMarker> relevant_markers;
 
-    float GetSeededDefaultSize(GW::Constants::Allegiance allegiance, float fallback) const;
 
     struct RenderPosition {
         float rotation_cos;
@@ -201,6 +233,27 @@ private:
     void Enqueue(Shape_e shape, const RenderPosition& pos, float size, Color color, Color modifier = 0);
 
     std::vector<const CustomAgent*>* GetCustomAgentsToDraw(const GW::Agent* agent);
+    void RefreshMatches(const GW::Agent* agent);
+    static void OnNameDecoded(void* context, const wchar_t* decoded);
+    struct MatchCache {
+        const GW::Agent* agent = nullptr;
+        uint32_t generation = 0;
+        uint32_t identifier = 0;
+        uint32_t map_id = 0;
+        uint32_t flags = 0;
+        int allegiance = -1;
+        GW::Constants::Profession profession = GW::Constants::Profession::None;
+        AgentType type = Any;
+        bool valid = false;
+        uint32_t relation_flags = 0;
+        bool name_requested = false;
+        std::wstring name;
+        std::vector<const CustomAgent*> matches;
+    };
+    std::unordered_map<uint32_t, MatchCache> match_cache;
+    std::unordered_map<uint32_t, std::pair<uint32_t, uint32_t>> pending_names;
+    uint32_t next_name_token = 0;
+    bool rules_changed = true;
 
 
     Color color_agent_modifier = 0x001E1E1E;
@@ -228,28 +281,23 @@ private:
     Color color_ally_dead = 0x64006400;
     Color color_marked_target = 0xFFFFFC00;
 
-    Color profession_colors[11] = {
-        0xFF666666,
-        0xFFEEAA33,
-        0xFF55AA00,
-        0xFF4444BB,
-        0xFF00AA55,
-        0xFF8800AA,
-        0xFFBB3333,
-        0xFFAA0088,
-        0xFF00AAAA,
-        0xFF996600,
-        0xFF7777CC
-    };
+    static constexpr std::array<Color, 11> DefaultProfessionColors()
+    {
+        return {0xFF666666, 0xFFEEAA33, 0xFF55AA00, 0xFF4444BB, 0xFF00AA55, 0xFF8800AA,
+                0xFFBB3333, 0xFFAA0088, 0xFF00AAAA, 0xFF996600, 0xFF7777CC};
+    }
+    std::array<Color, 11> profession_colors = DefaultProfessionColors();
 
     std::vector<CustomAgent*> custom_agents{};
-    std::unordered_map<DWORD, std::vector<const CustomAgent*>> custom_agents_map{};
-    std::unordered_map<int, std::vector<const CustomAgent*>> custom_agents_by_allegiance{};
-    void BuildCustomAgentsMap();
+    std::unordered_map<const CustomAgent*, TextUtils::SearchPattern<wchar_t>> compiled_name_patterns;
+    bool check_friends = false;
+    bool check_guild = false;
+    bool check_party = false;
+    void RebuildRuleMatchers();
     void SeedDefaultCustomAgents();
-    void SyncSeededDefaultsFromLegacyFields();
+    void SeedAppearanceDefaults(const SettingsDoc& doc, const ToolboxIni* legacy);
     bool custom_agent_defaults_seeded = false;
-    //const CustomAgent* FindValidCustomAgent(DWORD modelid) const;
+    bool appearance_defaults_seeded = false;
 
     float size_default = 100.f;
     float size_player = 100.f;
@@ -266,12 +314,10 @@ private:
     float size_ally_npc = 100.f;
     float size_ally_npc_quest = 100.f;
     float size_ally_spirit = 100.f;
-    bool marked_target_inherit_custom_agents = false;
     Shape_e default_shape = Tear;
     Shape_e shape_player = Tear;
     Shape_e shape_players = Tear;
 
-    bool agentcolors_changed = false;
     bool custom_agents_loaded = false; // guards SaveCustomAgents against clobbering a file that was never read
 
     GW::HookEntry UIMsg_Entry;

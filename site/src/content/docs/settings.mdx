@@ -95,6 +95,16 @@ These are several quality-of-life features that can be toggled on or off:
 
 Note that you will not see status changes on your own friend list, but your status will have changed, and other players will see this.
 
+### Agent Appearance
+
+<ToolboxPath steps={["Settings", "Game Settings"]} /> contains **Agent Colors**, **Agent Sizes**, and **Agent Appearance**. These settings control [Minimap](/docs/minimap/) markers and in-game name tags even when the Minimap widget is disabled. Appearance rules are saved in `configs/default/modules/Game Settings.json`; existing rules in `Minimap.json`, `AgentColors.json` and `AgentColors.ini`, and old Game Settings/Friend List nametag colours are imported automatically.
+
+- **Agent Colors** — colours of EoE, QZ, Winnowing, Frozen Soil and Symbiosis auras, plus agent shading and damaged-agent modifiers. **Restore Defaults** resets effect and fallback colours, without changing appearance rules. The **Agent Border thickness** and **Target Border thickness** sliders below the rule list control marker outlines.
+- **Agent Sizes** — fallback size and shape for agents without a matching size or shape rule. **Restore Defaults** resets fallback sizes, not appearance rules.
+- **Agent Appearance** — an ordered, filterable list of rules. The first matching enabled field wins; other fields fall through to later rules or the fallback. **Add Appearance Rule** creates a row. Initial rules for allies, enemies, players, items, gadgets, chests, marked targets and profession colours are ordinary rules: edit, move, disable or delete them like any other.
+- Each rule can match an **Agent type** (`Item`, `Gadget`, `NPC`, `Player` or `Any`), an optional type-specific **Identifier** (item model ID, gadget ID or NPC model ID), **Allegiance**, **Map ID**, and **Match name**. Check **Match identifier** for an exact ID match, including ID `0`; leave it unchecked to match any ID of that type. Name matching uses the same case-insensitive substring or `/pattern/flags` regex syntax as Loot Beacons. During migration, old allegiance entries become NPC rules and old model-ID entries become adjacent NPC and gadget rules, preserving their order.
+- Optional state filters include **Target state**, **Dead state**, **Quest state**, **Combat**, **Weapon**, **Player relation**, **Gadget state**, **Profession**, **Boss state** and **Outposts only**. Rules can override minimap **Color**, **Size**, **Shape** and target border colour independently of in-game **Text color**. Set a colour's alpha to `0`, size to `0`, or shape to **Inherit** to fall through to the next matching rule or default. Older per-field enable checkboxes are converted to these values when settings are migrated.
+
 ### Miscellaneous
 * **Show warning when earned faction reaches ___%** displays a warning when your faction reaches the specified percentage in challenge missions or elite areas.
 * **Collectors Edition emotes on player dance** applies Collector's Edition animations to your character's dance emote.
@@ -120,16 +130,7 @@ Note that you will not see status changes on your own friend list, but your stat
 * **Block full screen message when entering a new area**
 * **Block full screen popup that shows when completing a vanquish**
 * **Block full screen popup that shows when opening a dungeon chest**
-* **In-game name tag colors** overrides the colour the floating name tag above each agent is drawn in, by category. Uncheck it to use Guild Wars' name tag colours instead. Click a colour wheel to change a category's colour. These are global overrides — to recolour a single specific agent instead of a whole category, use [Minimap → Custom Agents](/docs/windows/minimap#custom-agents)' **Text color** field:
-    * **NPC** — non-player characters such as allies, vendors and signposts.
-    * **Myself** — your own character.
-    * **Other Player** — players not currently in your party.
-    * **Other Player (In Party)** — players in your party.
-    * **Friends** — players on your Friends list.
-    * **Guild Members** — players in your guild roster.
-    * **Gadget** — interactive objects such as chests, levers and traps.
-    * **Enemy** — hostile creatures.
-    * **Item** — dropped items on the ground.
+* **Agent and name tag colours** are configured together under [Agent Appearance](#agent-appearance). Set a row's **Text color** for the in-game name tag; set its alpha to `0` to inherit the next rule or Guild Wars' colour.
 * **Hide in-game store message on character select screen** removes the in-game store advertisement shown on the character selection screen.
 * **Show message in chat when you're the last player to resign** posts a chat message once everyone else in your party has resigned. See also the [Resign Log](/docs/info/#resign-log).
 * **Show experience progress instead of current level on your experience bar** displays your XP as progress toward the next level rather than your current level number.

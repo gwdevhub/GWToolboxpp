@@ -148,8 +148,6 @@ public:
         bool show_my_status = true;
         bool add_offline_players_to_friends = true;
         Colors::SettingColor hover_background_color = 0x33999999;
-        bool friend_name_tag_enabled = false;
-        Colors::SettingColor friend_name_tag_color = 0xff6060ff;
     };
 
     static Friend* GetFriend(const wchar_t*);

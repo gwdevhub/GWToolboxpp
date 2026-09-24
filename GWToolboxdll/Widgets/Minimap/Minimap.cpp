@@ -798,7 +798,7 @@ void Minimap::Initialize()
     SettingsRegistry::RegisterField(this, "cardinal_offset", &cardinal_offset);
     SettingsRegistry::RegisterField(this, "cardinal_font_size", &cardinal_font_size);
     range_renderer.RegisterSettings(this);
-    agent_renderer.RegisterSettings(this);
+    agent_renderer.RegisterMinimapSettings(this);
     pingslines_renderer.RegisterSettings(this);
     symbols_renderer.RegisterSettings(this);
     custom_renderer.RegisterSettings(this);
@@ -1065,8 +1065,6 @@ void Minimap::DrawSettingsInternal()
         scale = a;
     }
     ImGui::Text("You can set the color alpha to 0 to disable any minimap feature.");
-    // agent_rendered has its own TreeNodes
-    agent_renderer.DrawSettings();
     if (SettingsWindow::SubSectionHeader(SettingsName(), "Ranges")) {
         range_renderer.DrawSettings();
         ImGui::TreePop();
@@ -1112,47 +1110,10 @@ void Minimap::DrawSettingsInternal()
     }
     ImGui::StartSpacedElements(300.f);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Color enemies by profession", &agent_renderer.enemies_colors_by_profession);
-    if (agent_renderer.enemies_colors_by_profession) {
-        ImGui::Indent();
-        if (ImGui::RadioButton("Color only bosses", agent_renderer.only_color_bosses == true)) {
-            agent_renderer.only_color_bosses = true;
-        }
-        if (ImGui::RadioButton("Color all enemies", agent_renderer.only_color_bosses == false)) {
-            agent_renderer.only_color_bosses = false;
-        }
-        if (ImGui::TreeNodeEx("Profession colors", ImGuiTreeNodeFlags_FramePadding)) {
-            constexpr uint32_t color_flags = ImGuiColorEditFlags_NoInputs;
-            static const char* prof_names[] = {
-                nullptr,        // 0 = None, hidden
-                "Warrior",      // 1
-                "Ranger",       // 2
-                "Monk",         // 3
-                "Necromancer",  // 4
-                "Mesmer",       // 5
-                "Elementalist", // 6
-                "Assassin",     // 7
-                "Ritualist",    // 8
-                "Paragon",      // 9
-                "Dervish",      // 10
-            };
-            ImGui::StartSpacedElements(180.f);
-            for (size_t i = 1; i < _countof(prof_names); ++i) {
-                ImGui::NextSpacedElement();
-                Colors::DrawSettingHueWheel(prof_names[i], &agent_renderer.profession_colors[i], color_flags);
-            }
-            ImGui::TreePop();
-        }
-        ImGui::Unindent();
-        ImGui::StartSpacedElements(300.f);
-    }
-    ImGui::NextSpacedElement();
     ImGui::CheckboxWithHelp("Show hidden NPCs", &agent_renderer.show_hidden_npcs, "Show NPCs that aren't usually visible on the minimap\ne.g. minipets, invisible NPCs");
     ImGui::NextSpacedElement();
     ImGui::CheckboxWithHelp("Show symbol for quest NPCs", &agent_renderer.show_quest_npcs_on_minimap, "Show a star for NPCs that have quest progress available");
 
-    ImGui::SliderFloat("Agent Border thickness", &agent_renderer.agent_border_thickness, 0.f, 100.f, "%.0f");
-    ImGui::SliderFloat("Target Border thickness", &agent_renderer.target_border_thickness, 0.f, 100.f, "%.0f");
 
     ImGui::Text("Allow mouse click-through in:");
     ImGui::Indent();
@@ -1220,7 +1181,6 @@ void Minimap::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
     hide_flagging_controls_patch.TogglePatch(hide_flagging_controls);
 
     range_renderer.LoadSettings(doc, legacy, Name());
-    agent_renderer.LoadCustomAgents();
     agent_renderer.Invalidate();
     pingslines_renderer.Invalidate();
     symbols_renderer.Invalidate();
@@ -1236,7 +1196,6 @@ void Minimap::SaveSettings(SettingsDoc& doc)
     ToolboxWidget::SaveSettings(doc);
     range_renderer.SaveSettings(doc, Name());
     EffectRenderer::SaveSettings(doc, Name());
-    agent_renderer.SaveCustomAgents();
     custom_renderer.SaveMarkers();
 }
 
