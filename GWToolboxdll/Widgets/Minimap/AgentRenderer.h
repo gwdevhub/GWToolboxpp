@@ -90,7 +90,7 @@ private:
     enum WeaponState { HasWeapon, NoWeapon, EitherWeapon };
     enum DeadState { Dead, Alive, EitherDeadState };
     enum QuestState { QuestGiver, NotQuestGiver, EitherQuestState };
-    enum AgentType { Legacy, Any, Item, Gadget, NPC, Player };
+    enum AgentType { Any = 1, Item, Gadget, NPC, Player };
     enum TargetState { EitherTarget, Targeted, NotTargeted, Marked };
     enum PlayerRelation { AnyRelation, Self, Other, Friend, Guild, MyParty, InParty };
     enum GadgetState { AnyGadget, ClosedChest, OpenedChest, OtherGadget };
@@ -103,8 +103,7 @@ private:
             None,
             MoveUp,
             MoveDown,
-            Delete,
-            ModelIdChange
+            Delete
         };
 
         struct Settings {
@@ -127,8 +126,9 @@ private:
             bool color_text_active = false;
             bool shape_active = true;
             bool size_active = false;
-            int agent_type = Legacy;
+            int agent_type = 0;
             DWORD identifier = 0;
+            bool identifier_active = false;
             std::string match_name;
             int target_state = EitherTarget;
             int player_relation = AnyRelation;
@@ -160,7 +160,7 @@ private:
         DWORD mapId = 0; // 0 for 'any map'
         CombatState combat_state = CombatState::EitherCombat;
         WeaponState weapon_state = WeaponState::EitherWeapon;
-        int allegiance = -1; // -1 == match by modelId only
+        int allegiance = -1;
         DeadState dead_state = DeadState::EitherDeadState;
         QuestState quest_state = QuestState::EitherQuestState;
         bool is_default = false;
@@ -174,8 +174,9 @@ private:
         bool color_text_active = false;
         bool shape_active = true;
         bool size_active = false;
-        AgentType agent_type = Legacy;
+        AgentType agent_type = NPC;
         DWORD identifier = 0;
+        bool identifier_active = false;
         char match_name[128]{};
         TargetState target_state = EitherTarget;
         PlayerRelation player_relation = AnyRelation;

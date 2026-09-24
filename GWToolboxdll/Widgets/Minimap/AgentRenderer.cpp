@@ -241,6 +241,35 @@ void AgentRenderer::LoadCustomAgents(SettingsDoc& doc, ToolboxIni* legacy)
     }
     custom_agents.clear();
 
+    const auto append_rule = [this](CustomAgent* rule) {
+        const auto append = [this](CustomAgent* entry) {
+            entry->index = custom_agents.size();
+            custom_agents.push_back(entry);
+        };
+        if (static_cast<int>(rule->agent_type) != 0) {
+            append(rule);
+            return;
+        }
+        if (rule->allegiance >= 0) {
+            rule->agent_type = NPC;
+            if (rule->is_default) rule->dead_state = Alive;
+            append(rule);
+            return;
+        }
+        const auto old_rule = rule->ToSettings();
+        rule->agent_type = NPC;
+        rule->identifier = rule->modelId;
+        rule->identifier_active = true;
+        rule->modelId = 0;
+        append(rule);
+        auto* gadget_rule = new CustomAgent(old_rule);
+        gadget_rule->agent_type = Gadget;
+        gadget_rule->identifier = gadget_rule->modelId;
+        gadget_rule->identifier_active = true;
+        gadget_rule->modelId = 0;
+        append(gadget_rule);
+    };
+
     if (!doc.Has("Game Settings", "custom_agent_defaults_seeded")) {
         if (!doc.Get("Minimap", "custom_agent_defaults_seeded", custom_agent_defaults_seeded) && legacy) {
             custom_agent_defaults_seeded = legacy->GetBoolValue("Minimap", "custom_agent_defaults_seeded", false);
@@ -260,13 +289,7 @@ void AgentRenderer::LoadCustomAgents(SettingsDoc& doc, ToolboxIni* legacy)
             return;
         }
         for (const auto& entry : saved) {
-            auto* rule = new CustomAgent(entry);
-            if (rule->is_default && rule->agent_type == Legacy && rule->allegiance >= 0) {
-                rule->agent_type = NPC;
-                rule->dead_state = Alive;
-            }
-            rule->index = custom_agents.size();
-            custom_agents.push_back(rule);
+            append_rule(new CustomAgent(entry));
         }
         BuildCustomAgentsMap();
         custom_agents_loaded = true;
@@ -288,13 +311,7 @@ void AgentRenderer::LoadCustomAgents(SettingsDoc& doc, ToolboxIni* legacy)
             return;
         }
         for (const auto& entry : entries) {
-            const auto custom_agent = new CustomAgent(entry);
-            if (custom_agent->is_default && custom_agent->agent_type == Legacy && custom_agent->allegiance >= 0) {
-                custom_agent->agent_type = NPC;
-                custom_agent->dead_state = Alive;
-            }
-            custom_agent->index = custom_agents.size();
-            custom_agents.push_back(custom_agent);
+            append_rule(new CustomAgent(entry));
         }
     }
     else {
@@ -305,9 +322,7 @@ void AgentRenderer::LoadCustomAgents(SettingsDoc& doc, ToolboxIni* legacy)
         inifile.GetAllSections(entries);
 
         for (const auto& entry : entries) {
-            auto* custom_agent = new CustomAgent(&inifile, entry.pItem);
-            custom_agent->index = custom_agents.size();
-            custom_agents.push_back(custom_agent);
+            append_rule(new CustomAgent(&inifile, entry.pItem));
         }
     }
     BuildCustomAgentsMap();
@@ -511,7 +526,7 @@ void AgentRenderer::SyncSeededDefaultsFromLegacyFields()
         }
     }
     for (auto* rule : custom_agents) {
-        if (!rule->is_default || rule->agent_type == Legacy || rule->color_text_active) continue;
+        if (!rule->is_default || rule->color_text_active) continue;
         const std::string_view name = rule->name;
         if (name == "Hostile") { rule->color = color_hostile; rule->size = size_hostile; }
         else if (name == "Hostile (dead)") { rule->color = color_hostile_dead; rule->size = size_hostile; }
@@ -820,10 +835,6 @@ void AgentRenderer::DrawSettings()
                     delete custom;
                     --i;
                     break;
-                case CustomAgent::Operation::ModelIdChange: {
-                    changed = true;
-                    break;
-                }
                 default:
                     break;
             }
@@ -847,6 +858,7 @@ void AgentRenderer::DrawSettings()
         if (ImGui::Button("Add Appearance Rule")) {
             custom_agents.push_back(new CustomAgent(0, color_hostile, "<name>"));
             custom_agents.back()->index = custom_agents.size() - 1;
+            custom_agents.back()->active = false;
             rules_changed = true;
         }
         ImGui::TreePop();
@@ -1073,15 +1085,9 @@ void AgentRenderer::RefreshMatches(const GW::Agent* agent)
     for (const auto* rule : custom_agents) {
         if (!rule->active || rule->mapId && rule->mapId != static_cast<DWORD>(GW::Map::GetMapID())) continue;
         if (rule->outpost_only && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) continue;
-        if (rule->agent_type == Legacy) {
-            if (rule->allegiance >= 0 ? !living || rule->allegiance != static_cast<int>(living->allegiance) :
-                !rule->modelId || rule->modelId != identifier || type == Item) continue;
-        }
-        else {
-            if (rule->agent_type != Any && rule->agent_type != type) continue;
-            if (rule->agent_type != Any && rule->identifier && rule->identifier != identifier) continue;
-            if (rule->allegiance >= 0 && (!living || rule->allegiance != static_cast<int>(living->allegiance))) continue;
-        }
+        if (rule->agent_type != Any && rule->agent_type != type) continue;
+        if (rule->agent_type != Any && rule->identifier_active && rule->identifier != identifier) continue;
+        if (rule->allegiance >= 0 && (!living || rule->allegiance != static_cast<int>(living->allegiance))) continue;
         if (rule->target_state == Targeted && !targeted || rule->target_state == NotTargeted && targeted || rule->target_state == Marked && !marked) continue;
         if (rule->profession && rule->profession != static_cast<int>(profession)) continue;
         if (rule->boss_state == 1 && !(flags & 128u) || rule->boss_state == 2 && (flags & 128u)) continue;
@@ -1834,8 +1840,9 @@ AgentRenderer::CustomAgent::CustomAgent(const ToolboxIni* ini, const char* secti
     dead_state = static_cast<DeadState>(ini->GetLongValue(section, VAR_NAME(dead_state), static_cast<long>(dead_state)));
     quest_state = static_cast<QuestState>(ini->GetLongValue(section, VAR_NAME(quest_state), static_cast<long>(quest_state)));
     is_default = ini->GetBoolValue(section, VAR_NAME(is_default), is_default);
-    agent_type = static_cast<AgentType>(ini->GetLongValue(section, VAR_NAME(agent_type), agent_type));
+    agent_type = static_cast<AgentType>(ini->GetLongValue(section, VAR_NAME(agent_type), 0));
     identifier = static_cast<DWORD>(ini->GetLongValue(section, VAR_NAME(identifier), identifier));
+    identifier_active = ini->GetBoolValue(section, VAR_NAME(identifier_active), identifier != 0);
     std::snprintf(match_name, sizeof(match_name), "%s", ini->GetValue(section, VAR_NAME(match_name), ""));
     target_state = static_cast<TargetState>(ini->GetLongValue(section, VAR_NAME(target_state), target_state));
     player_relation = static_cast<PlayerRelation>(ini->GetLongValue(section, VAR_NAME(player_relation), player_relation));
@@ -1878,6 +1885,7 @@ AgentRenderer::CustomAgent::CustomAgent(const Settings& settings)
     is_default = settings.is_default;
     agent_type = static_cast<AgentType>(settings.agent_type);
     identifier = settings.identifier;
+    identifier_active = settings.identifier_active || identifier != 0;
     std::snprintf(match_name, sizeof(match_name), "%s", settings.match_name.c_str());
     target_state = static_cast<TargetState>(settings.target_state);
     player_relation = static_cast<PlayerRelation>(settings.player_relation);
@@ -1925,7 +1933,8 @@ AgentRenderer::CustomAgent::Settings AgentRenderer::CustomAgent::ToSettings() co
     settings.quest_state = quest_state;
     settings.is_default = is_default;
     settings.agent_type = agent_type;
-    settings.identifier = identifier;
+    settings.identifier = identifier_active ? identifier : 0;
+    settings.identifier_active = identifier_active;
     settings.match_name = match_name;
     settings.target_state = target_state;
     settings.player_relation = player_relation;
@@ -1975,7 +1984,9 @@ bool AgentRenderer::CustomAgent::DrawHeader()
         ImGui::SameLine();
     }
     ImGui::SetCursorPosX(cursor_pos += button_width);
-    ImGui::Text(name);
+    static const char* types[] = {"Any", "Item", "Gadget", "NPC", "Player"};
+    const auto type_name = agent_type >= Any && agent_type <= Player ? types[agent_type - Any] : "Unknown";
+    ImGui::Text("%s [%s]", name, type_name);
     return changed;
 }
 
@@ -2008,16 +2019,19 @@ bool AgentRenderer::CustomAgent::DrawSettings(Operation& op)
         }
         ImGui::ShowHelp("An optional tag to filter this list by, e.g. 'Farming' or 'Bosses'. Purely organisational.");
         ImGui::SetCursorPosX(x);
-        static const char* agent_types[] = {"Legacy allegiance/model", "Any", "Item", "Gadget", "NPC", "Player"};
-        if (ImGui::Combo("Agent type", reinterpret_cast<int*>(&agent_type), agent_types, _countof(agent_types))) {
+        static const char* agent_types[] = {"Any", "Item", "Gadget", "NPC", "Player"};
+        auto type_selection = static_cast<int>(agent_type) - Any;
+        if (ImGui::Combo("Agent type", &type_selection, agent_types, _countof(agent_types))) {
+            agent_type = static_cast<AgentType>(type_selection + Any);
             changed = true;
             allegiance = -1;
             modelId = 0;
             identifier = 0;
+            identifier_active = false;
             if (agent_type != NPC) { profession = 0; boss_state = 0; }
             if (agent_type != Gadget) gadget_state = AnyGadget;
             if (agent_type != Player) player_relation = AnyRelation;
-            if (agent_type != NPC && agent_type != Player && agent_type != Legacy) {
+            if (agent_type == Item || agent_type == Gadget) {
                 dead_state = EitherDeadState;
                 quest_state = EitherQuestState;
                 combat_state = EitherCombat;
@@ -2025,10 +2039,14 @@ bool AgentRenderer::CustomAgent::DrawSettings(Operation& op)
             }
         }
         ImGui::SetCursorPosX(x);
-        ImGui::BeginDisabled(agent_type == Any || agent_type == Legacy);
-        if (ImGui::InputInt("Identifier (0 = any)", reinterpret_cast<int*>(&identifier))) changed = true;
+        ImGui::BeginDisabled(agent_type == Any);
+        if (ImGui::Checkbox("Match identifier", &identifier_active)) changed = true;
         ImGui::EndDisabled();
-        ImGui::ShowHelp("Item model ID, gadget ID, or NPC model ID; zero matches any of the chosen type.");
+        ImGui::SetCursorPosX(x);
+        ImGui::BeginDisabled(agent_type == Any || !identifier_active);
+        if (ImGui::InputInt("Identifier", reinterpret_cast<int*>(&identifier))) changed = true;
+        ImGui::EndDisabled();
+        ImGui::ShowHelp("Item model ID, gadget ID or NPC model ID, according to the chosen type. If unchecked, matches any identifier; checked also allows an exact ID of 0.");
         ImGui::SetCursorPosX(x);
         if (ImGui::InputText("Match name", match_name, sizeof(match_name))) changed = true;
         ImGui::ShowHelp("Case-insensitive substring, or /pattern/flags for a regular expression, as in Loot Beacons.");
@@ -2059,16 +2077,15 @@ bool AgentRenderer::CustomAgent::DrawSettings(Operation& op)
         ImGui::SetCursorPosX(x);
         if (ImGui::Checkbox("Outposts only", &outpost_only)) changed = true;
         ImGui::SetCursorPosX(x);
-        static const char* allegiance_items[] = {"Model ID (below)", "Ally", "Neutral", "Enemy", "Spirit/Pet", "Minion", "NPC/Minipet"};
         static const char* typed_allegiances[] = {"Any", "Ally", "Neutral", "Enemy", "Spirit/Pet", "Minion", "NPC/Minipet"};
         int allegiance_combo = allegiance < 0 ? 0 : allegiance;
-        if ((agent_type == Legacy || agent_type == NPC || agent_type == Player) &&
-            ImGui::Combo(agent_type == Legacy ? "Match by" : "Allegiance", &allegiance_combo, agent_type == Legacy ? allegiance_items : typed_allegiances, 7)) {
+        if ((agent_type == NPC || agent_type == Player) &&
+            ImGui::Combo("Allegiance", &allegiance_combo, typed_allegiances, 7)) {
             allegiance = allegiance_combo == 0 ? -1 : allegiance_combo;
             changed = true;
         }
-        ImGui::ShowHelp("Optional allegiance filter. Legacy rules can alternatively match by model ID.");
-        if (allegiance >= 0 || agent_type == NPC || agent_type == Player) {
+        ImGui::ShowHelp("Optional allegiance filter for NPCs and players.");
+        if (agent_type == NPC || agent_type == Player || agent_type == Any) {
             ImGui::SetCursorPosX(x);
             static const char* dead_state_items[] = {"Dead", "Alive", "Either"};
             if (ImGui::Combo("Dead state", (int*)&dead_state, dead_state_items, 3)) {
@@ -2079,16 +2096,6 @@ bool AgentRenderer::CustomAgent::DrawSettings(Operation& op)
             if (ImGui::Combo("Quest state", (int*)&quest_state, quest_state_items, 3)) {
                 changed = true;
             }
-        }
-        if (agent_type == Legacy) {
-            ImGui::SetCursorPosX(x);
-            ImGui::BeginDisabled(allegiance >= 0);
-            if (ImGui::InputInt("Model ID", (int*)&modelId)) {
-                op = Operation::ModelIdChange;
-                changed = true;
-            }
-            ImGui::EndDisabled();
-            ImGui::ShowHelp("Match a model ID unless an allegiance is selected above.");
         }
         ImGui::SetCursorPosX(x);
         if (ImGui::InputInt("Map ID", (int*)&mapId)) {
