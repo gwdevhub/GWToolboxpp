@@ -12,9 +12,17 @@ Instructions for any AI agent in this repo. (`CLAUDE.md` just imports this.)
 - **Docs (`site/`):** pages go in `src/content/docs/`; `llms.txt`/`llms-full.txt` auto-generate from them. A new page needs `description:` frontmatter plus a `src/lib/nav.ts` entry to appear in `llms.txt`. After changes run `npm --prefix site run build` and check `site/dist/llms.txt`.
 - **Explaining a feature:** first check if it's documented (`src/content/docs/` or <https://www.gwtoolbox.com/docs/>); if missing/wrong, flag it, offer a fix, and link the page.
 
+## AI software factory routing
+
+- Read `docs/ai/AI_SOFTWARE_FACTORY.md` for roles, authority, task sizing, workflow and escalation.
+- Planning: read `docs/ai/ARCHITECT_GOVERNANCE.md` and prepare an approved TaskSpec using `docs/ai/TASK_SPEC_TEMPLATE.md`.
+- Cursor implements only the approved TaskSpec/slice, checks worktree/branch/HEAD first, runs required validation and makes a factual handoff.
+- Independent review: read `docs/ai/REVIEW_GOVERNANCE.md`; human decides PR readiness, merge and release.
+- Keep Quest Tracker exports observational: disappearance does not establish completion. Preserve identity, source and confidence; coordinate any Contract v1 change with the consumer repository.
+- Existing issue/PR constraints and scoped rules remain stricter and win.
+
 ## AI collaboration and review
 
-- For a Cursor → ChatGPT senior-review loop, read `docs/ai/REVIEW_GOVERNANCE.md`.
 - Cursor implements only an approved slice, runs relevant checks, and prepares the required compact handoff.
 - ChatGPT review is read-only. It must not edit, commit, push, alter CI/policy, change PR lifecycle, or merge unless the human explicitly asks.
 - After a prior review, use a delta handoff and delta review rather than repeating a full audit. One full acceptance review occurs immediately before the human PR decision.
