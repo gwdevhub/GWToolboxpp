@@ -330,29 +330,11 @@ namespace Carto {
         {2, 105, 42},
     };
 
-    constexpr DeadTile kKnownCreditable[] = {
-        {0, 224, 116},
-    };
-
-    bool TileKnownCreditable(const int cx, const int cy)
-    {
-        return std::ranges::any_of(kKnownCreditable, [&](const DeadTile& t) {
-            return t.continent == continent_mask.continent && t.cx == cx && t.cy == cy;
-        });
-    }
-
     bool TileNeverCredits(const int cx, const int cy)
     {
         return std::ranges::any_of(kNeverCredits, [&](const DeadTile& t) {
             return t.continent == continent_mask.continent && t.cx == cx && t.cy == cy;
         });
-    }
-
-    // Says nothing about the loaded navmesh: which map you are in must not change a square's worth.
-    bool FogCellCoverable(const int cx, const int cy)
-    {
-        if (TileNeverCredits(cx, cy)) return false;
-        return continent_mask.Empty() || TileKnownCreditable(cx, cy) || continent_mask.Get(cx, cy);
     }
 
     bool ThisMapCanCredit(const int cx, const int cy)
@@ -380,13 +362,18 @@ namespace Carto {
     // The bake clipped each map's dilation already, so only the extra Bird's Eye rings walk the raw ground.
     bool StandableWithin(const int cx, const int cy, const int radius, const bool permissive = false)
     {
-        if (TileKnownCreditable(cx, cy)) return true;
         const auto* credit = permissive ? continent_mask.any_credit : continent_mask.credit;
         const auto* ground = permissive ? continent_mask.any_raw : continent_mask.raw;
         if (ContinentMask::Sample(credit, cx, cy)) return true;
         return AnyInRing(cx, cy, radius, [&](const int nx, const int ny, const int dx, const int dy) {
             return std::max(abs(dx), abs(dy)) > kMaskRadius && ContinentMask::Sample(ground, nx, ny);
         });
+    }
+
+    bool FogCellCoverable(const int cx, const int cy)
+    {
+        if (TileNeverCredits(cx, cy)) return false;
+        return continent_mask.Empty() || StandableWithin(cx, cy, RevealRadius());
     }
 
     void RecountExploration(const CartoGrid& grid)
