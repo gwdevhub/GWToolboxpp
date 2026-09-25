@@ -2,6 +2,8 @@
 
 This repository uses a bounded Cursor → ChatGPT senior-review loop. It is designed for reliable C++ and Quest Tracker changes without repeatedly paying for a whole-repository audit.
 
+Review uses the role and authority model in `docs/ai/AI_SOFTWARE_FACTORY.md`. Compare the approved product request, TaskSpec, implementation diff and actual validation evidence. Reviewer reasoning is independent of the Architect's private analysis.
+
 ## Authority
 
 | Role | May do | Must not do without explicit human instruction |
@@ -11,6 +13,10 @@ This repository uses a bounded Cursor → ChatGPT senior-review loop. It is desi
 | ChatGPT reviewer | independent read-only review; return one bounded repair batch; issue a gate verdict | edit, commit, push, alter CI/policy, change PR lifecycle, merge, release, or silently advance a gate |
 
 Existing issue/PR constraints remain stricter than this document. In particular, Quest Tracker evidence rules, observation semantics, persistence boundaries, and inter-repo Contract v1 constraints remain binding.
+
+## Required review inputs
+
+Read `AGENTS.md`, `docs/ai/AI_SOFTWARE_FACTORY.md`, this file, the approved TaskSpec (path, issue or inline reference), original issue/request, diff and exact check results. Inspect relevant repository contracts and scoped rules. A green gate proves only what that gate checks; missing required evidence cannot support PASS.
 
 ## Usage-efficient review rhythm
 
@@ -27,6 +33,7 @@ Do not repeat a full audit after a small repair commit. Escalate only if a publi
 ```md
 # Review handoff: <issue / slice>
 - Review type: <delta | final acceptance>
+- TaskSpec: <path / issue / inline reference and version>
 - Goal / in scope:
 - Non-goals:
 - Branch:
@@ -46,7 +53,7 @@ No raw logs unless a failure needs evidence.
 
 ```text
 Read-only <delta|final acceptance> review for <issue/slice>.
-Read AGENTS.md and docs/ai/REVIEW_GOVERNANCE.md first.
+Read AGENTS.md, docs/ai/AI_SOFTWARE_FACTORY.md, docs/ai/REVIEW_GOVERNANCE.md and the approved TaskSpec first.
 Base: <SHA>; previous reviewed: <SHA or none>; head: <SHA>.
 In scope: <...>. Non-goals: <...>.
 Do not edit, commit, push, alter CI/policy, change PR state, or merge.
@@ -56,3 +63,11 @@ End with exactly one: PASS, REPAIR REQUIRED, or HUMAN DECISION REQUIRED.
 ```
 
 P0 means security/data-loss/outage risk. P1 means likely normal-use incorrectness or broken contract/persistence behavior. P2 is a real edge defect worth fixing before a dependent slice. P3 is optional and omitted unless requested.
+
+## Verdict meaning
+
+- `PASS`: no reproducible P0–P2 issue remains within scope and all required evidence is present.
+- `REPAIR REQUIRED`: a bounded technical correction is needed before human PR review.
+- `HUMAN DECISION REQUIRED`: scope, product risk, ownership or contract authority needs a human decision.
+
+The verdict does not approve merge, release or deployment. Review the project's specific failure modes: observation versus inferred completion; character identity; state transitions; persistence/restart; producer capacity and validity; consumer contract drift; build compatibility.
