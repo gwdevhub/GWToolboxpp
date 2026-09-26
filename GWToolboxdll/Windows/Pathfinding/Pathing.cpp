@@ -419,10 +419,25 @@ namespace Pathing {
         count = ClipHalfPlane(poly, count, 0, box_max.x, false);
         count = ClipHalfPlane(poly, count, 1, box_min.y, true);
         count = ClipHalfPlane(poly, count, 1, box_max.y, false);
+        const auto edge_footing = [&] {
+            if (!include_edges) return false;
+            for (size_t i = 0; i < count; i++) {
+                const auto& a = poly[i];
+                const auto& b = poly[(i + 1) % count];
+                const GW::Vec2f mid{(a.x + b.x) * 0.5f, (a.y + b.y) * 0.5f};
+                if (a.x < box_max.x && a.y < box_max.y) {
+                    out_point = a;
+                    return true;
+                }
+                if (mid.x < box_max.x && mid.y < box_max.y) {
+                    out_point = mid;
+                    return true;
+                }
+            }
+            return false;
+        };
         if (count < 3) {
-            if (!include_edges || !count) return false;
-            out_point = poly[0];
-            return true;
+            return edge_footing();
         }
 
         float area2 = 0.f;
@@ -438,9 +453,7 @@ namespace Pathing {
         // Collinear after clipping - an overlap with no width is not somewhere to stand. The
         // threshold is in square gwinches, so anything with real extent clears it by orders.
         if (fabsf(area2) < 1e-3f) {
-            if (!include_edges) return false;
-            out_point = poly[0];
-            return true;
+            return edge_footing();
         }
         out_point = {centroid.x / (3.f * area2), centroid.y / (3.f * area2)};
         return true;

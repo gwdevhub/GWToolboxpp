@@ -40,7 +40,8 @@ def _clip(poly, axis, limit, keep_above):
 
 def intersects(quad, x0, y0, x1, y1):
     poly = _clip(_clip(_clip(_clip(quad, 0, x0, True), 0, x1, False), 1, y0, True), 1, y1, False)
-    return bool(poly)
+    return any(x < x1 and y > y0 for a, b in zip(poly, poly[1:] + poly[:1])
+               for x, y in (a, ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)))
 
 dat = open_dat()
 cont_tiles = {}
