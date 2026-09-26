@@ -2,6 +2,11 @@
 
 Mirrored in both repos. Keep wording aligned when editing.
 
+Fork beta install / `/localdll` / updater notes: [`fork-beta-install.md`](fork-beta-install.md).  
+Gate status: [`verification/public-beta-gate.md`](verification/public-beta-gate.md).
+
+Contract `producer.version` is the numeric Toolbox version string only (e.g. `8.34`). In-game Settings may also show fork `+quest` and a Beta label; those are **not** written into `producer.version`.
+
 ## Always collected (Quest Tracker / progress store)
 
 Requires: fork build with Quest Tracker loaded, character logged in (persistent identity).

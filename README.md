@@ -4,6 +4,10 @@
 
 If you are here to check toolbox features or for a download link, go to [https://gwtoolbox.com](https://gwtoolbox.com). Stay here and keep reading for information on how to download and build from source.
 
+### Fork note (Quest Tracker beta)
+
+This checkout may be the **vinogitz/GWToolboxpp** fork with observational Quest Tracker → Tyrian Wayfarer Contract v1 export. That build is **not** an official GWToolbox++ release. Testers: see [`docs/quest-tracker/fork-beta-install.md`](docs/quest-tracker/fork-beta-install.md). Export/import scope: [`docs/quest-tracker/toolbox-wayfarer-export-guide.md`](docs/quest-tracker/toolbox-wayfarer-export-guide.md).
+
 ## How to download, build, and run
 ### Requirements
 * Visual Studio 2026 version 18.0+. You can download [Visual Studio Community](https://visualstudio.microsoft.com/vs/community/) for free. You will also need the "Desktop development with C++" package.
