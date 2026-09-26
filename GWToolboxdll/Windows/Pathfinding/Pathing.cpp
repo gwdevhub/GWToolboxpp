@@ -407,10 +407,9 @@ namespace Pathing {
         }
     } // namespace
 
-    bool TrapezoidOverlapsBox(const GW::PathingTrapezoid* t, const GW::Vec2f& box_min, const GW::Vec2f& box_max, GW::Vec2f& out_point)
+    bool TrapezoidOverlapsBox(const GW::PathingTrapezoid* t, const GW::Vec2f& box_min, const GW::Vec2f& box_max, GW::Vec2f& out_point, const bool include_edges)
     {
         if (!t) return false;
-        // Box-on-box first: most trapezoids miss most boxes, and this is the loop that asks.
         if (std::min(t->XTL, t->XBL) > box_max.x || std::max(t->XTR, t->XBR) < box_min.x) return false;
         if (t->YB > box_max.y || t->YT < box_min.y) return false;
 
@@ -420,7 +419,26 @@ namespace Pathing {
         count = ClipHalfPlane(poly, count, 0, box_max.x, false);
         count = ClipHalfPlane(poly, count, 1, box_min.y, true);
         count = ClipHalfPlane(poly, count, 1, box_max.y, false);
-        if (count < 3) return false; // they miss, or meet only along an edge or at a corner
+        const auto edge_footing = [&] {
+            if (!include_edges) return false;
+            for (size_t i = 0; i < count; i++) {
+                const auto& a = poly[i];
+                const auto& b = poly[(i + 1) % count];
+                const GW::Vec2f mid{(a.x + b.x) * 0.5f, (a.y + b.y) * 0.5f};
+                if (a.x < box_max.x && a.y < box_max.y) {
+                    out_point = a;
+                    return true;
+                }
+                if (mid.x < box_max.x && mid.y < box_max.y) {
+                    out_point = mid;
+                    return true;
+                }
+            }
+            return false;
+        };
+        if (count < 3) {
+            return edge_footing();
+        }
 
         float area2 = 0.f;
         GW::Vec2f centroid{0.f, 0.f};
@@ -434,7 +452,9 @@ namespace Pathing {
         }
         // Collinear after clipping - an overlap with no width is not somewhere to stand. The
         // threshold is in square gwinches, so anything with real extent clears it by orders.
-        if (fabsf(area2) < 1e-3f) return false;
+        if (fabsf(area2) < 1e-3f) {
+            return edge_footing();
+        }
         out_point = {centroid.x / (3.f * area2), centroid.y / (3.f * area2)};
         return true;
     }

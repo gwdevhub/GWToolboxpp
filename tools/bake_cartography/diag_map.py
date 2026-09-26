@@ -21,14 +21,10 @@ def _clip(poly, axis, limit, keep_above):
             out.append((a[0] + (b[0]-a[0])*u, a[1] + (b[1]-a[1])*u))
     return out
 
-def overlaps(quad, x0, y0, x1, y1):
+def intersects(quad, x0, y0, x1, y1):
     poly = _clip(_clip(_clip(_clip(quad, 0, x0, True), 0, x1, False), 1, y0, True), 1, y1, False)
-    if len(poly) < 3: return False
-    area2 = 0.0
-    for i in range(len(poly)):
-        a, b = poly[i], poly[(i+1) % len(poly)]
-        area2 += a[0]*b[1] - b[0]*a[1]
-    return abs(area2) > 1e-7
+    return any(x < x1 and y > y0 for a, b in zip(poly, poly[1:] + poly[:1])
+               for x, y in (a, ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)))
 
 placed = {}
 for tok in open('placed_maps.txt').read().split():
@@ -74,10 +70,10 @@ for mid in (int(a) for a in sys.argv[1:]):
             bx, by = max(t[4], t[6])/96.0+midx, -t[7]/96.0+midy
             quad = [(t[3]/96.0+midx, -t[7]/96.0+midy), (t[4]/96.0+midx, -t[7]/96.0+midy),
                     (t[6]/96.0+midx, -t[8]/96.0+midy), (t[5]/96.0+midx, -t[8]/96.0+midy)]
-            for cy in range(int(math.ceil(min(ay,by)/TILE))-1, int(math.ceil(max(ay,by)/TILE))):
-                for cx in range(int(math.floor(min(ax,bx)/TILE)), int(math.floor(max(ax,bx)/TILE))+1):
+            for cy in range(int(math.ceil(min(ay,by)/TILE))-1, int(math.floor(max(ay,by)/TILE))+1):
+                for cx in range(int(math.ceil(min(ax,bx)/TILE))-1, int(math.floor(max(ax,bx)/TILE))+1):
                     if (cx, cy) in out: continue
-                    if overlaps(quad, cx*TILE, cy*TILE, (cx+1)*TILE, (cy+1)*TILE): out.add((cx, cy))
+                    if intersects(quad, cx*TILE, cy*TILE, (cx+1)*TILE, (cy+1)*TILE): out.add((cx, cy))
         return out
     kept, allt = mark(comp), mark(set().union(*comps) if comps else set())
     keptg = mark(comp_g)

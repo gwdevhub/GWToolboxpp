@@ -67,6 +67,9 @@ namespace Carto {
         };
     }
 
+    inline int ContactTileMin(const float coord) { return static_cast<int>(ceilf(coord / kWorldMapUnitsPerCell)) - 1; }
+    inline int ContactTileMax(const float coord) { return static_cast<int>(floorf(coord / kWorldMapUnitsPerCell)); }
+
     inline float Dist2(const GW::Vec2f& a, const GW::Vec2f& b)
     {
         const float dx = a.x - b.x, dy = a.y - b.y;
@@ -228,8 +231,10 @@ namespace Carto {
         GW::Vec2f a{}, b{};
         if (!WorldMapWidget::GamePosToWorldMap(lo, a, map_id)) return;
         if (!WorldMapWidget::GamePosToWorldMap(hi, b, map_id)) return;
-        const auto [x0, y0] = FogTileAt({std::min(a.x, b.x), std::min(a.y, b.y)});
-        const auto [x1, y1] = FogTileAt({std::max(a.x, b.x), std::max(a.y, b.y)});
+        const int x0 = ContactTileMin(std::min(a.x, b.x));
+        const int y0 = ContactTileMin(std::min(a.y, b.y));
+        const int x1 = ContactTileMax(std::max(a.x, b.x));
+        const int y1 = ContactTileMax(std::max(a.y, b.y));
         for (int cy = y0; cy <= y1; cy++) {
             for (int cx = x0; cx <= x1; cx++) {
                 GW::GamePos ca{}, cb{};
@@ -237,7 +242,7 @@ namespace Carto {
                 if (!WorldMapWidget::WorldMapToGamePos({(cx + 1) * kWorldMapUnitsPerCell, (cy + 1) * kWorldMapUnitsPerCell}, cb, map_id)) continue;
                 GW::Vec2f footing{};
                 if (Pathing::TrapezoidOverlapsBox(&trap, {std::min(ca.x, cb.x), std::min(ca.y, cb.y)},
-                                                  {std::max(ca.x, cb.x), std::max(ca.y, cb.y)}, footing)) {
+                                                  {std::max(ca.x, cb.x), std::max(ca.y, cb.y)}, footing, true)) {
                     fn(cx, cy);
                 }
             }
