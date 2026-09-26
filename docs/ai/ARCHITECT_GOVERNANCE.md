@@ -15,6 +15,8 @@ Read `AGENTS.md`, `docs/ai/AI_SOFTWARE_FACTORY.md`, `docs/ai/TASK_SPEC_TEMPLATE.
 
 For this repository, inspect specifically: observation versus inferred completion; character identity; state transitions; persistence/restart; producer capacity and validity; consumer contract drift; build compatibility.
 
+Follow **Heavy Validation Economy** in `docs/ai/AI_SOFTWARE_FACTORY.md`: prefer **cheap falsification**, then **preflight**, then **narrow validation**, and only then **heavyweight validation** when justified. When relevant, TaskSpecs must specify cheap preflight, expensive validation, known environment blockers, STOP wording when preflight or a **known deterministic blocker** proves heavyweight validation cannot succeed, and whether expensive validation is mandatory for acceptance. Recommended wording: `Do not run heavyweight validation if preflight proves it cannot succeed.` A required gate that cannot execute is **acceptance BLOCKED**, not a pass; do not convert **NOT RUN due to known blocker** into PASS.
+
 The Architect writes a TaskSpec, not implementation code or an independent review. Human product scope and release decisions remain human. Do not invent missing project conventions or silently relax a gate.
 
 ## Output and escalation

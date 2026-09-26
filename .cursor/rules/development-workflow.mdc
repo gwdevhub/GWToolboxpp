@@ -5,3 +5,4 @@ alwaysApply: true
 # Workflow
 Inspect existing code and GWCA lifecycle, record verified capabilities and unknowns, write a plan with exact integration points, split phases, implement only approved scope, build each coherent phase, avoid unrelated changes, and stop at phase completion.
 Report changed/upstream files, build/tests, required in-game verification, limitations, and deferred work.
+Follow Heavy Validation Economy: do not escalate to full MSVC/xwin rebuilds or in-game sessions when preflight or a known deterministic blocker already proves they cannot succeed.
