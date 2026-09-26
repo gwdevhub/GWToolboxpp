@@ -15,6 +15,7 @@ Instructions for any AI agent in this repo. (`CLAUDE.md` just imports this.)
 ## AI software factory routing
 
 - Read `docs/ai/AI_SOFTWARE_FACTORY.md` for roles, authority, task sizing, workflow and escalation.
+- `docs/ai/STATE_0.md` is a provisional, evidence-linked inventory; `docs/ai/AI_OPERATING_CARD.md` summarizes navigation. Verify facts before TaskSpec planning; neither replaces this file, the contract, or approved issue rules.
 - Planning: read `docs/ai/ARCHITECT_GOVERNANCE.md` and prepare an approved TaskSpec using `docs/ai/TASK_SPEC_TEMPLATE.md`.
 - Cursor implements only the approved TaskSpec/slice, checks worktree/branch/HEAD first, runs required validation and makes a factual handoff.
 - Independent review: read `docs/ai/REVIEW_GOVERNANCE.md`; human decides PR readiness, merge and release.

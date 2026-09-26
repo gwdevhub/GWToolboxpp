@@ -1,26 +1,15 @@
-# AI operating card — GWToolbox++
+# AI operating card — GWToolboxpp fork
 
-| Role | May do | Must not without explicit human instruction |
-| --- | --- | --- |
-| Human | Approve State 0 and each slice; merge; release | — |
-| Cursor | Plan; implement **one** approved slice; run narrow build/checks; write handoff | Widen scope; mass refactors; alter CI/tooling/presets without approval |
-| ChatGPT | Co-author State 0 / slices; read-only review | Edit repo; commit; push; merge; deploy |
+Use this as a short entry point. Authority and the full workflow live in [AI_SOFTWARE_FACTORY.md](AI_SOFTWARE_FACTORY.md), planning in [ARCHITECT_GOVERNANCE.md](ARCHITECT_GOVERNANCE.md), TaskSpec shape in [TASK_SPEC_TEMPLATE.md](TASK_SPEC_TEMPLATE.md), and independent review in [REVIEW_GOVERNANCE.md](REVIEW_GOVERNANCE.md).
 
-## Hard rules
+| Role | Next deliverable |
+| --- | --- |
+| Human | Product goal, approved scope and final PR/release decision |
+| GPT Architect | A bounded TaskSpec based on verified repository facts and the approved goal |
+| Cursor | Implementation and factual evidence for one approved TaskSpec/slice |
+| Deterministic gates | Exact build/test results and unavailable checks |
+| GPT Reviewer | Independent PASS, REPAIR REQUIRED or HUMAN DECISION REQUIRED verdict |
 
-1. No State 0 for the touched area → inventory/plan only, no feature coding.
-2. One chat = one approved slice (prefer one module / one behavior).
-3. End coded work with a compact handoff (goal, non-goals, paths, build/test commands run, deferred).
-4. Treat upstream vs your fork goals explicitly — do not silently diverge from upstream without documenting it in State 0.
+[STATE_0.md](STATE_0.md) is a provisional inventory and planning aid. Verify material claims against the current branch, code, tests and issue before using them in a TaskSpec. A missing or stale inventory does not by itself block an unrelated approved task; material uncertainty is resolved by the Architect or escalated.
 
-Handoff template (minimal):
-
-```md
-# Review handoff: <slice>
-- Goal / in scope:
-- Non-goals:
-- Changed paths:
-- Checks run (cmake/build/tests):
-- Known limitations / deferred:
-- Next human decision: keep | repair | stop | update State 0
-```
+Keep fork goals distinct from upstream changes. Quest Tracker produces observations; quest disappearance does not establish completion. Preserve identity, source/confidence and Contract v1 boundaries. End implementation with the handoff defined in `REVIEW_GOVERNANCE.md`, then stop for independent review and the human decision. A chat session is not an authority boundary; each new slice needs its own approved TaskSpec and handoff.
