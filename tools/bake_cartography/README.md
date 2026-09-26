@@ -75,6 +75,10 @@ breaking the syntax.
 Standable, not discoverable. Discoverable is this dilated by the reveal radius, and that radius
 depends on the Bird's Eye Compass, so it stays a runtime choice.
 
+Standable tiles include edge and corner contact with a reachable pathing trapezoid. A player can
+stand exactly on a trapezoid boundary, so requiring positive-area overlap would miss fog squares
+that the game credits from such positions.
+
 Each map is reduced to its **largest connected component** (trapezoid adjacency plus unblocked
 portals, all planes treated as open since blocked-plane state only exists at runtime) so terrain
 that exists but cannot be walked to is left out.

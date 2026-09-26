@@ -38,16 +38,9 @@ def _clip(poly, axis, limit, keep_above):
     return out
 
 
-def overlaps(quad, x0, y0, x1, y1):
-    # True when the quad and the tile share actual area - a sliver along one edge counts, a shared
-    # edge or corner does not. Mirrors Pathing::TrapezoidOverlapsBox.
+def intersects(quad, x0, y0, x1, y1):
     poly = _clip(_clip(_clip(_clip(quad, 0, x0, True), 0, x1, False), 1, y0, True), 1, y1, False)
-    if len(poly) < 3: return False
-    area2 = 0.0
-    for i in range(len(poly)):
-        a, b = poly[i], poly[(i+1) % len(poly)]
-        area2 += a[0]*b[1] - b[0]*a[1]
-    return abs(area2) > 1e-7  # world-map units squared; a tile is 1024
+    return bool(poly)
 
 dat = open_dat()
 cont_tiles = {}
@@ -112,13 +105,10 @@ for n, (mid, (cont, sx, sy, ex, ey), f) in enumerate(todo, 1):
                         (t[4]/96.0+midx, -t[7]/96.0+midy),   # XTR, YT
                         (t[6]/96.0+midx, -t[8]/96.0+midy),   # XBR, YB
                         (t[5]/96.0+midx, -t[8]/96.0+midy)]   # XBL, YB
-                # The box is the candidate range only. Marking all of it files tiles a slanted edge
-                # merely passes near, and the widget dilates those into fog it claims you can uncover;
-                # the overlap test below is the same one Pathing::TrapezoidOverlapsBox does in game.
-                for cy in range(int(math.ceil(min(ay,by)/TILE))-1, int(math.ceil(max(ay,by)/TILE))):
-                    for cx in range(int(math.floor(min(ax,bx)/TILE)), int(math.floor(max(ax,bx)/TILE))+1):
+                for cy in range(int(math.ceil(min(ay,by)/TILE))-1, int(math.floor(max(ay,by)/TILE))+1):
+                    for cx in range(int(math.ceil(min(ax,bx)/TILE))-1, int(math.floor(max(ax,bx)/TILE))+1):
                         if (cx, cy) in out: continue
-                        if overlaps(quad, cx*TILE, cy*TILE, (cx+1)*TILE, (cy+1)*TILE):
+                        if intersects(quad, cx*TILE, cy*TILE, (cx+1)*TILE, (cy+1)*TILE):
                             out.add((cx, cy))
             return out
 

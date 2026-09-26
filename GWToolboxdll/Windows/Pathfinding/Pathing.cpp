@@ -407,10 +407,9 @@ namespace Pathing {
         }
     } // namespace
 
-    bool TrapezoidOverlapsBox(const GW::PathingTrapezoid* t, const GW::Vec2f& box_min, const GW::Vec2f& box_max, GW::Vec2f& out_point)
+    bool TrapezoidOverlapsBox(const GW::PathingTrapezoid* t, const GW::Vec2f& box_min, const GW::Vec2f& box_max, GW::Vec2f& out_point, const bool include_edges)
     {
         if (!t) return false;
-        // Box-on-box first: most trapezoids miss most boxes, and this is the loop that asks.
         if (std::min(t->XTL, t->XBL) > box_max.x || std::max(t->XTR, t->XBR) < box_min.x) return false;
         if (t->YB > box_max.y || t->YT < box_min.y) return false;
 
@@ -420,7 +419,11 @@ namespace Pathing {
         count = ClipHalfPlane(poly, count, 0, box_max.x, false);
         count = ClipHalfPlane(poly, count, 1, box_min.y, true);
         count = ClipHalfPlane(poly, count, 1, box_max.y, false);
-        if (count < 3) return false; // they miss, or meet only along an edge or at a corner
+        if (count < 3) {
+            if (!include_edges || !count) return false;
+            out_point = poly[0];
+            return true;
+        }
 
         float area2 = 0.f;
         GW::Vec2f centroid{0.f, 0.f};
@@ -434,7 +437,11 @@ namespace Pathing {
         }
         // Collinear after clipping - an overlap with no width is not somewhere to stand. The
         // threshold is in square gwinches, so anything with real extent clears it by orders.
-        if (fabsf(area2) < 1e-3f) return false;
+        if (fabsf(area2) < 1e-3f) {
+            if (!include_edges) return false;
+            out_point = poly[0];
+            return true;
+        }
         out_point = {centroid.x / (3.f * area2), centroid.y / (3.f * area2)};
         return true;
     }
