@@ -49,6 +49,28 @@ format to `Settings/cartography/`. Prefer it - this directory is for a machine w
     python3 bake.py          # regenerates fileids.txt, writes out/standable_L<n>.bin
     python3 make_header.py   # out/ -> GWToolboxdll/Widgets/CartographyData.h
 
+The offline bake processes each map file once, reusing its pathing walk across maps that share
+that file. It runs serially by default; `--jobs N` runs independent map files in separate processes,
+each with its own read-only DAT handle. More workers can be slower when DAT reads compete for
+CPU or storage. `bake.py --map 442 --output /tmp/carto-check` can bake one placed map for
+comparison, but only a complete bake is suitable input to `make_header.py`.
+
+For offline prop-collision analysis, cache local model outlines once and reuse them across every
+placement and map sharing the model file ID:
+
+    python3 prebake_prop_collision.py  # out/prop_collision_models.json.gz
+    python3 diag_map.py --props 442 55
+
+The cache stores each model's grouped local XY collision outlines, full vertex flags and Z values,
+and reconstructs XY/Z bounds on load. Placement positions, orientations, scales and collision
+enable flags are still read from each map. `GW_PROP_COLLISION_CACHE` can point `diag_map.py` to a
+different cache. This is diagnostic input: neither the pathing masks nor `CartographyData.h` are
+altered by it. Determining whether an outline blocks standing on a particular pathing plane also
+requires matching heights and accounting for doors that change state.
+
+`prebake_prop_collision.py` decodes each distinct model once, with `--jobs N` available to process
+map and model files in separate processes; `--map 442 --map 55` limits the input to those maps.
+
 `snapdat.open_dat()` prefers a local install - `$GW_DAT`, then the `ArenaNet\Guild Wars`
 registry key, then the usual Program Files paths. `Gw.dat` is the same container as
 `Gw.snapshot`, it opens read-only while the client is running, and it takes about 5 minutes

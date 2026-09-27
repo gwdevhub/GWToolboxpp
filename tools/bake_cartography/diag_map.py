@@ -5,6 +5,7 @@ from snapdat import open_dat, read_stream_full
 from ffna import (chunks, game_bounds, parse_planes, portal_doorways, flood,
                   largest_component, glitched_component, MAP_PATH, MAP_INFO)
 from ffna import _port_pairs, _trap_centre
+from prop_collision import ModelCollisionCache, placed_props, transform_path
 
 TILE = 32.0
 
@@ -35,7 +36,11 @@ for line in open('fileids.txt'):
     a, b = line.split(); fid[int(a)] = int(b)
 
 dat = open_dat()
-for mid in (int(a) for a in sys.argv[1:]):
+show_props = '--props' in sys.argv[1:]
+cache_path = os.environ.get('GW_PROP_COLLISION_CACHE', os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                                       'out', 'prop_collision_models.json.gz'))
+model_cache = ModelCollisionCache(dat, cache_path) if show_props else None
+for mid in (int(a) for a in sys.argv[1:] if a != '--props'):
     cont, sx, sy, ex, ey = placed[mid]
     d = read_stream_full(dat, fid[mid], 1)
     ch = chunks(d)
@@ -56,6 +61,14 @@ for mid in (int(a) for a in sys.argv[1:]):
     print(f"  game_bounds {gmnx:.0f},{gmny:.0f} .. {gmxx:.0f},{gmxy:.0f}  span {gmxx-gmnx:.0f}x{gmxy-gmny:.0f}"
           f"  -> wm span {(gmxx-gmnx)/96:.0f}x{(gmxy-gmny)/96:.0f} (rect is {ex-sx}x{ey-sy})")
     print(f"  planes {len(planes)} traps {total} doorways {len(doorways)}")
+    if show_props:
+        placements = list(placed_props(d, ch))
+        active = [(fid, location, orientation, scale) for fid, location, orientation, scale, flags in placements if not flags & 1]
+        paths = [(path.points[0][0] & 1, transform_path(path, location, orientation, scale))
+                 for fid, location, orientation, scale in active for path in model_cache.get(fid)]
+        groups = (sum(group == 0 for group, _ in paths), sum(group == 1 for group, _ in paths))
+        print(f"  props {len(placements)}, enabled {len(active)}, collision paths {len(paths)} "
+              f"(groups {groups[0]}/{groups[1]}); model streams decoded {model_cache.reads}")
     print(f"  blocked components: {[len(c) for c in comps[:12]]} (of {len(comps)}), largest keeps "
           f"{len(comps[0])*100.0/total:.1f}% of traps" if comps else "  no traps")
     comp = largest_component(planes, doorways)

@@ -9,18 +9,26 @@ PORTAL_MODEL_FILE_IDS = frozenset((0x4e6b2, 0x3c5ac, 0xa825, 0xe723, 0x858b, 0x2
 UNKNOWN_PORTAL_HALF_WIDTH = 400.0
 
 
+def prop_file_ids(d, ch):
+    if MAP_PROP_FILENAMES not in ch:
+        return []
+    off, size = ch[MAP_PROP_FILENAMES]
+    if size < 5:
+        return []
+    ids = []
+    for i in range((size - 5) // 6):
+        a, b = struct.unpack_from('<2H', d, off + 5 + i * 6)
+        ids.append((a - 0xff00ff) + b * 0xff00 if a > 0xff and b > 0xff else 0)
+    return ids
+
+
 def portal_doorways(d, ch):
     """Travel-portal discs as (x, y, radius_sq). Mirrors ParsePortalProps in PathingMapDataLoader.cpp."""
     if MAP_PROP_FILENAMES not in ch or MAP_PROP_INFO not in ch:
         return []
-    fo, fsz = ch[MAP_PROP_FILENAMES]
-    if fsz < 5:
+    file_ids = prop_file_ids(d, ch)
+    if not file_ids:
         return []
-    file_ids = []
-    for i in range((fsz - 5) // 6):
-        p = fo + 5 + i * 6
-        id0, id1 = struct.unpack_from('<2H', d, p)
-        file_ids.append((id0 - 0xff00ff) + id1 * 0xff00 if id0 > 0xff and id1 > 0xff else 0)
     po, psz = ch[MAP_PROP_INFO]
     if psz < 12:
         return []
