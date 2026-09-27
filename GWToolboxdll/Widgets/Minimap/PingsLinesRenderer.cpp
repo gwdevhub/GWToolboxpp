@@ -89,9 +89,7 @@ void PingsLinesRenderer::P046Callback(const GW::Packet::StoC::AgentPinged* pak)
         }
     }
     if (!found && GetActivePings() < max_game_pings) {
-        auto* ping = new AgentPing(pak->agent_id);
-        ping->game_ping = true;
-        pings.push_front(ping);
+        pings.push_front(new AgentPing(pak->agent_id, true));
     }
 }
 
@@ -155,13 +153,12 @@ void PingsLinesRenderer::OnUIMessage(GW::HookStatus*, GW::UI::UIMessage message_
     case GW::UI::UIMessage::kCompassPing: {
         const auto packet = (GW::UI::UIPacket::kCompassPing*)wparam;
         if (GetActivePings() < max_game_pings) {
-            auto* ping = new TerrainPing(
+            pings.push_front(new TerrainPing(
                 packet->point.x * drawing_scale,
                 packet->point.y * drawing_scale,
-                packet->color
-            );
-            ping->game_ping = true;
-            pings.push_front(ping);
+                packet->color,
+                true
+            ));
         }
     } break;
     }
