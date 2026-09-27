@@ -332,6 +332,7 @@ namespace {
         bool block_compass_message = false;
         if (message->message_id == GW::UI::UIMessage::kCompassDraw && wParam) {
             const auto packet = static_cast<GW::UI::UIPacket::kCompassDraw*>(wParam);
+            ASSERT(packet->player_number < 0xffff && packet->session_id < 0xffff);
             const auto session_key = (packet->player_number << 16) | static_cast<uint16_t>(packet->session_id);
             const auto found = compass_drawing_sessions.find(session_key);
             const auto continuing_drawing = found != compass_drawing_sessions.end() && TIMER_DIFF(found->second) <= 5000;
