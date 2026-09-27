@@ -323,12 +323,24 @@ namespace {
     }
 
     CompassContext* compass_context = nullptr;
+    std::map<uint32_t, clock_t> compass_drawing_sessions;
 
     void __cdecl OnCompassFrame_UICallback(GW::UI::InteractionMessage* message, void* wParam, void* lParam)
     {
         GW::Hook::EnterHook();
 
         compass_context = message->wParam ? *(CompassContext**)message->wParam : nullptr;
+        const auto forward_message = [&] {
+            if (compass_context && hide_flagging_controls) {
+                const auto prev = compass_context->ai_controls;
+                compass_context->ai_controls = nullptr;
+                OnCompassFrame_UICallback_Ret(message, wParam, lParam);
+                compass_context->ai_controls = prev;
+            }
+            else {
+                OnCompassFrame_UICallback_Ret(message, wParam, lParam);
+            }
+        };
         switch (message->message_id) {
             case GW::UI::UIMessage::kFrameMessage_0x44: {
                 if (OverrideCompassVisibility()) {
@@ -348,6 +360,7 @@ namespace {
                 OnCompassFrame_UICallback_Ret(message, wParam, lParam);
                 compass_context = nullptr;
                 compass_frame = nullptr;
+                compass_drawing_sessions.clear();
                 compass_fix_pending = false;
                 compass_position_dirty = true;
                 break;
@@ -372,17 +385,29 @@ namespace {
                     message->message_id = prev;
                 }
                 break;
+            case GW::UI::UIMessage::kCompassDraw:
+            case GW::UI::UIMessage::kCompassPing: {
+                bool block_compass_message = message->message_id == GW::UI::UIMessage::kCompassPing && hide_compass_pings;
+                if (message->message_id == GW::UI::UIMessage::kCompassDraw && wParam) {
+                    const auto packet = static_cast<GW::UI::UIPacket::kCompassDraw*>(wParam);
+                    ASSERT(packet->player_number < 0xffff && packet->session_id < 0xffff);
+                    const auto session_key = (packet->player_number << 16) | static_cast<uint16_t>(packet->session_id);
+                    const auto found = compass_drawing_sessions.find(session_key);
+                    const auto continuing_drawing = found != compass_drawing_sessions.end() && TIMER_DIFF(found->second) <= 5000;
+                    if (packet->number_of_points != 1 || continuing_drawing) {
+                        compass_drawing_sessions[session_key] = TIMER_INIT();
+                        block_compass_message = hide_compass_drawings;
+                    }
+                    else {
+                        block_compass_message = hide_compass_pings;
+                    }
+                }
+                if (block_compass_message) break;
+                forward_message();
+                break;
+            }
             default:
-                if (compass_context && hide_flagging_controls) {
-                    // Temporarily nullify the pointer to flagging controls for all other message ids
-                    const auto prev = compass_context->ai_controls;
-                    compass_context->ai_controls = nullptr;
-                    OnCompassFrame_UICallback_Ret(message, wParam, lParam);
-                    compass_context->ai_controls = prev;
-                }
-                else {
-                    OnCompassFrame_UICallback_Ret(message, wParam, lParam);
-                }
+                forward_message();
                 break;
         }
 
@@ -391,16 +416,16 @@ namespace {
 
     GW::UI::Frame* GetCompassFrame()
     {
-        if (compass_frame) return compass_frame;
-        compass_frame = GW::UI::GetFrameByLabel(L"Compass");
-        if (compass_frame) {
-            ASSERT(compass_frame->frame_callbacks.size());
-            if (!OnCompassFrame_UICallback_Func) {
-                OnCompassFrame_UICallback_Func = compass_frame->frame_callbacks[0].callback;
+        if (!compass_frame) {
+            compass_frame = GW::UI::GetFrameByLabel(L"Compass");
+            if (compass_frame) compass_position_dirty = true;
+        }
+        if (compass_frame && !OnCompassFrame_UICallback_Func && compass_frame->frame_callbacks.size()) {
+            OnCompassFrame_UICallback_Func = compass_frame->frame_callbacks[0].callback;
+            if (OnCompassFrame_UICallback_Func) {
                 GW::Hook::CreateHook((void**)&OnCompassFrame_UICallback_Func, OnCompassFrame_UICallback, reinterpret_cast<void**>(&OnCompassFrame_UICallback_Ret));
                 GW::Hook::EnableHooks(OnCompassFrame_UICallback_Func);
             }
-            compass_position_dirty = true;
         }
         return compass_frame;
     }
@@ -868,16 +893,9 @@ void Minimap::OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessage msgid,
             in_interface_settings = (uint32_t)wParam == 1;
             compass_position_dirty = true;
             break;
-        case GW::UI::UIMessage::kCompassDraw: {
-            ASSERT(wParam);
-            const auto packet = (GW::UI::UIPacket::kCompassDraw*)wParam;
-            status->blocked |= packet->number_of_points > 1 ? hide_compass_drawings : hide_compass_pings;
-        } break;
-        case GW::UI::UIMessage::kCompassPing:
-            status->blocked |= hide_compass_pings;
-            break;
         case GW::UI::UIMessage::kMapLoaded: {
             in_interface_settings = false;
+            compass_drawing_sessions.clear();
             EnsureCompassIsLoaded();
             instance.pmap_renderer.Invalidate();
             GameWorldRenderer::TriggerSyncAllMarkers();

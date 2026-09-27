@@ -51,7 +51,7 @@ namespace Pathing {
     // True if `p` lies within this trapezoid, in 2D. Game thread only.
     bool IsOnTrapezoid(const GW::PathingTrapezoid* t, const GW::Vec2f& p);
 
-    bool TrapezoidOverlapsBox(const GW::PathingTrapezoid* t, const GW::Vec2f& box_min, const GW::Vec2f& box_max, GW::Vec2f& out_point);
+    bool TrapezoidOverlapsBox(const GW::PathingTrapezoid* t, const GW::Vec2f& box_min, const GW::Vec2f& box_max, GW::Vec2f& out_point, bool include_edges = false);
 
     bool IsPositionReachable(const GW::GamePos& point);
 

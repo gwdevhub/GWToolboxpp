@@ -14,12 +14,14 @@ the latest version, go to the [Home Page](./) instead.
 * [New] Pcons: Heroes' Trifecta and Empowering Feast can now be automatically used. Each is used when any of its constituent effects is absent or about to expire.
 * [New] Pcons can now be automatically disabled when a cinematic starts.
 * [Fix] Minimap: pings now use Guild Wars' own graphics and stay correctly aligned when the minimap is rotated. The inner ping indicator clamps to the minimap edge when its location is out of view, and the **Player Pings** setting controls their opacity with a less-obtrusive default.
+* [Fix] Minimap: game-generated pings now follow the compass's limit of eight at a time, so effects such as Stalker's Ration no longer flood the minimap in crowded areas.
 * [New] Armory: search armor and weapon previews by name.
 * [New] Hero Builds: the hero selector now shows profession icons, can optionally group heroes by profession, and shows each mercenary hero's in-game name while you are in an outpost.
 * [Fix] Hero Builds now applies saved disabled skill states at a controlled rate, so loading teams with more than 16 disabled hero skills no longer leaves later skills enabled.
 * [Fix] Effects Monitor now tracks Shadowsong, Dissonance, Wanderlust, Anguish, Gaze of Fury and Vampirism after you summon them. These spirit timers also highlight their matching skill and appear in the Skillbar widget's effect monitor. Timers use each spirit's actual lifespan, including Shadowsong's fixed 30 seconds and Vampirism's Sunspear-rank scaling.
 * [Fix] Cartographer now detects the Bird's Eye View effect automatically and adjusts its reveal range while the effect is active, replacing the manual Bird's Eye Compass setting.
 * [Fix] Cartographer now uses the current map's pathing data after transitions between missions and outposts, and no longer periodically rebuilds continent-wide fog while the mission map is open.
+* [Fix] Cartographer now recognises reachable spots on the edge of walkable terrain, so it no longer marks the fog squares they can uncover as impossible to explore.
 * [Fix] Automatic title selection (`/title` and the Reapply Title hotkey) now uses Lightbringer instead of Sunspear in Turai's Procession, Jennur's Horde, Nundu Bay, Dzagonur Bastion, Yatendi Canyons, Vehtendi Valley, Forum Highlands and The Mirror of Lyss, where Margonites make Lightbringer the useful title.
 * [Fix] Fixed a crash while replacing the fallback font during Toolbox startup.
 * [Fix] Audio Settings no longer crashes Guild Wars when an audio handle has already been released.
