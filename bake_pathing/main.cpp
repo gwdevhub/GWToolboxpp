@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <climits>
 #include <cmath>
 #include <cstdint>
@@ -19,6 +20,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -48,6 +50,7 @@ namespace {
         Map map;
         TileSets masks;
         bool success = false;
+        double elapsed_ms = 0.;
     };
 
     uint64_t Key(int x, int y)
@@ -330,6 +333,7 @@ namespace {
 
     Result Bake(const Map& map, const DatArchive& dat)
     {
+        const auto started = std::chrono::steady_clock::now();
         Result result{};
         result.map = map;
         std::vector<uint8_t> bytes;
@@ -348,6 +352,7 @@ namespace {
         const auto reachable = Reachable(planes, gates);
         Rasterize(map, planes, reachable, min_x, max_y, result.masks);
         result.success = true;
+        result.elapsed_ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - started).count();
         return result;
     }
 
@@ -423,14 +428,19 @@ namespace {
 
 int wmain(int argc, wchar_t** argv)
 {
-    if (argc != 3) {
-        std::wcerr << L"Usage: bake_pathing.exe <Gw.dat> <output folder>\n";
+    if (argc != 3 && (argc != 5 || std::wstring_view(argv[3]) != L"--map")) {
+        std::wcerr << L"Usage: bake_pathing.exe <Gw.dat> <output folder> [--map <map id>]\n";
         return 1;
     }
     try {
         const DatArchive dat(argv[1]);
         if (!dat.Valid()) throw std::runtime_error("could not open GW DAT index");
-        const auto maps = Maps();
+        auto maps = Maps();
+        if (argc == 5) {
+            const int wanted = std::stoi(argv[4]);
+            std::erase_if(maps, [wanted](const Map& map) { return map.id != wanted; });
+            if (maps.empty()) throw std::runtime_error("map has no bakeable world-map file ID");
+        }
         std::map<int, TileSets> continents;
         for (size_t start = 0; start < maps.size(); start += 10) {
             std::vector<std::future<Result>> batch;
@@ -440,6 +450,8 @@ int wmain(int argc, wchar_t** argv)
             for (auto& job : batch) {
                 auto baked = job.get();
                 if (!baked.success) throw std::runtime_error("map " + std::to_string(baked.map.id) + " failed to bake");
+                if (argc == 5)
+                    std::wcout << L"map " << baked.map.id << L": " << baked.elapsed_ms << L" ms\n";
                 auto& aggregate = continents[baked.map.continent];
                 for (size_t kind = 0; kind < 6; kind++)
                     aggregate[kind].insert(baked.masks[kind].begin(), baked.masks[kind].end());

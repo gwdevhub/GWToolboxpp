@@ -7,6 +7,11 @@ output folder:
     cmake --build <build-folder> --target bake_pathing --config Release
     bake_pathing.exe "C:\Guild Wars\Gw.dat" "C:\cartography-output"
 
+For a single-map timing check, pass `--map <map id>`. For example, `--map 442` bakes Lair of
+Forgotten and prints its elapsed time in milliseconds, including DAT read/decompression, pathing
+parse, reachability and tile rasterization. Its partial output is not a replacement for a full
+continent bake.
+
 It writes `standable_L<n>.bin`, `creditable_L<n>.bin`, `standable_glitched_L<n>.bin`,
 `creditable_glitched_L<n>.bin`, `standable_any_L<n>.bin`, `creditable_any_L<n>.bin` for each
 continent with pathing, plus `CartographyData.h`. Copy the generated header to
