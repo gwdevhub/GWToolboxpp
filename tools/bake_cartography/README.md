@@ -64,6 +64,17 @@ keyed by local DAT path, size and modification time, so updating the DAT starts 
 first run still decompresses the data; repeated analysis skips the Python decompressor. Cached
 streams consume extra disk space. The cache only applies to local DAT reads, not CDN downloads.
 
+An optional C decoder in `gw_inflate.c` can replace the slow Python inflate step, including on
+the first run. Build it separately as a shared library, then set `GW_INFLATE_LIB` to its absolute
+path before running either bake script. For example, on Linux:
+
+    cc -O3 -std=c11 -fPIC -shared gw_inflate.c -o libgwinflate.so
+    GW_INFLATE_LIB="$PWD/libgwinflate.so" python3 bake.py
+
+On Windows, build a DLL exporting `gw_inflate_all` instead. If the library is absent or rejects a
+stream, the Python decoder remains the fallback. Set `GW_INFLATE_VERIFY=1` while checking a new
+library to compare native output against the Python reference byte-for-byte.
+
 For offline prop-collision analysis, cache local model outlines once and reuse them across every
 placement and map sharing the model file ID:
 

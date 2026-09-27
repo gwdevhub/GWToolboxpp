@@ -11,6 +11,7 @@ for _d in INFLATE_DIRS:
         sys.path.insert(0, _d)
         break
 import inflate
+from native_inflate import decode as native_decode
 
 CACHE = os.environ.get('GW_CHUNK_CACHE', '/tmp/chunkcache')
 os.makedirs(CACHE, exist_ok=True)
@@ -176,6 +177,9 @@ def inflate_all(data, cap=96 << 20):
     Mirrors inflate.inflate() but returns whatever was produced when the bitstream ends,
     instead of raising. That makes the requested size a ceiling rather than a target.
     """
+    fast = native_decode(data, cap)
+    if fast is not None and not os.environ.get('GW_INFLATE_VERIFY'):
+        return fast
     I = inflate
     stream = I.BitStream(data)
     stream.consume(4)
@@ -210,7 +214,10 @@ def inflate_all(data, cap=96 << 20):
                         output.append(output[i])
     except Exception:
         pass
-    return bytes(output)
+    result = bytes(output)
+    if fast is not None and fast != result:
+        raise ValueError('native DAT decompression differs from Python reference')
+    return result
 
 
 def read_stream_full(dat, file_id, stream_id):
