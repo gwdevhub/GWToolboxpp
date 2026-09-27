@@ -81,7 +81,6 @@ void PingsLinesRenderer::P046Callback(const GW::Packet::StoC::AgentPinged* pak)
     if (reduce_ping_spam) {
         for (Ping* ping : pings) {
             if (ping->GetAgentID() == pak->agent_id) {
-                // extend the duration to count for the current ping.
                 const clock_t diff = TIMER_DIFF(ping->start);
                 ping->duration = 3000 + diff;
                 found = true;
@@ -89,8 +88,10 @@ void PingsLinesRenderer::P046Callback(const GW::Packet::StoC::AgentPinged* pak)
             }
         }
     }
-    if (!found) {
-        pings.push_front(new AgentPing(pak->agent_id));
+    if (!found && HasRoomForGamePing()) {
+        auto* ping = new AgentPing(pak->agent_id);
+        ping->game_ping = true;
+        pings.push_front(ping);
     }
 }
 
@@ -153,12 +154,15 @@ void PingsLinesRenderer::OnUIMessage(GW::HookStatus*, GW::UI::UIMessage message_
     } break;
     case GW::UI::UIMessage::kCompassPing: {
         const auto packet = (GW::UI::UIPacket::kCompassPing*)wparam;
-
-        pings.push_front(new TerrainPing(
-            packet->point.x * drawing_scale,
-            packet->point.y * drawing_scale,
-            packet->color
-        ));
+        if (HasRoomForGamePing()) {
+            auto* ping = new TerrainPing(
+                packet->point.x * drawing_scale,
+                packet->point.y * drawing_scale,
+                packet->color
+            );
+            ping->game_ping = true;
+            pings.push_front(ping);
+        }
     } break;
     }
 
@@ -241,6 +245,18 @@ bool PingsLinesRenderer::HasPendingLines() const
     return std::ranges::any_of(drawings, [](const auto& drawing) {
         return drawing.second.player != 0 && !drawing.second.lines.empty();
     });
+}
+
+bool PingsLinesRenderer::HasRoomForGamePing() const
+{
+    constexpr size_t max_game_pings = 8;
+    size_t active_game_pings = 0;
+    for (const auto* ping : pings) {
+        if (ping->game_ping && TIMER_DIFF(ping->start) <= ping->duration && ++active_game_pings == max_game_pings) {
+            return false;
+        }
+    }
+    return true;
 }
 
 void PingsLinesRenderer::DrawPings(IDirect3DDevice9* device)

@@ -43,6 +43,7 @@ class PingsLinesRenderer : public D3DVertexBuffer {
         virtual ~Ping() = default;
         clock_t start;
         int duration = 3000;
+        bool game_ping = false;
         [[nodiscard]] virtual float GetX() const = 0;
         [[nodiscard]] virtual float GetY() const = 0;
         [[nodiscard]] virtual float GetScale() const { return 1.0f; }
@@ -152,6 +153,7 @@ private:
     void DrawDrawings(IDirect3DDevice9* device);
     void EnqueueVertex(float x, float y, Color color);
     [[nodiscard]] bool HasPendingLines() const;
+    [[nodiscard]] bool HasRoomForGamePing() const;
 
     int ToIntPos(const float n) const
     {
