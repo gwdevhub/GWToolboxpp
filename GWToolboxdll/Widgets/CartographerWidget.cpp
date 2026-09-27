@@ -527,7 +527,7 @@ namespace Carto {
     {
         GW::Vec2f box_min{}, box_max{}, footing{};
         nav_cells.CellBox(cx, cy, box_min, box_max);
-        if (!Pathing::TrapezoidOverlapsBox(ref.trapezoid, box_min, box_max, footing)) return false;
+        if (!Pathing::TrapezoidOverlapsBox(ref.trapezoid, box_min, box_max, footing, true)) return false;
         out = GW::GamePos{footing.x, footing.y, ref.plane};
         return true;
     }
@@ -558,8 +558,10 @@ namespace Carto {
         GW::Vec2f lo{}, hi{};
         if (!WorldMapWidget::GamePosToWorldMap(GW::GamePos{min_x, min_y}, lo)) return false;
         if (!WorldMapWidget::GamePosToWorldMap(GW::GamePos{max_x, max_y}, hi)) return false;
-        const auto [grid_x0, grid_y0] = FogTileAt({std::min(lo.x, hi.x), std::min(lo.y, hi.y)});
-        const auto [grid_x1, grid_y1] = FogTileAt({std::max(lo.x, hi.x), std::max(lo.y, hi.y)});
+        const int grid_x0 = ContactTileMin(std::min(lo.x, hi.x));
+        const int grid_y0 = ContactTileMin(std::min(lo.y, hi.y));
+        const int grid_x1 = ContactTileMax(std::max(lo.x, hi.x));
+        const int grid_y1 = ContactTileMax(std::max(lo.y, hi.y));
 
         nav_cells = {};
         nav_cells.map_id = map_id;
@@ -573,8 +575,10 @@ namespace Carto {
             GW::Vec2f a{}, b{};
             if (!WorldMapWidget::GamePosToWorldMap(GW::GamePos{std::min(t->XTL, t->XBL), t->YB}, a)) continue;
             if (!WorldMapWidget::GamePosToWorldMap(GW::GamePos{std::max(t->XTR, t->XBR), t->YT}, b)) continue;
-            const auto [x0, y0] = FogTileAt({std::min(a.x, b.x), std::min(a.y, b.y)});
-            const auto [x1, y1] = FogTileAt({std::max(a.x, b.x), std::max(a.y, b.y)});
+            const int x0 = ContactTileMin(std::min(a.x, b.x));
+            const int y0 = ContactTileMin(std::min(a.y, b.y));
+            const int x1 = ContactTileMax(std::max(a.x, b.x));
+            const int y1 = ContactTileMax(std::max(a.y, b.y));
             for (int cy = y0; cy <= y1; cy++) {
                 for (int cx = x0; cx <= x1; cx++) {
                     if (!nav_cells.InGrid(cx, cy)) continue;

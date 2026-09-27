@@ -86,7 +86,7 @@ namespace Carto {
                     for (uint32_t t = 0; t < plane.trapezoid_count; t++) {
                         const auto* trap = &plane.trapezoids[t];
                         GW::Vec2f footing{};
-                        if (!Pathing::TrapezoidOverlapsBox(trap, box_min, box_max, footing)) continue;
+                        if (!Pathing::TrapezoidOverlapsBox(trap, box_min, box_max, footing, true)) continue;
                         overlap++;
                         if (!seed) seed = trap;
                         if (blocked_comp.contains(trap)) in_blocked++;
