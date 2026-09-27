@@ -1393,15 +1393,6 @@ void QuestProgressService::IngestJourneySnapshot(JourneySnapshotResult snapshot)
                 *stored, *candidates, snapshot.raw_flood, changed);
         }
     }
-    else if (snapshot.skill_points_earned.has_value()) {
-        const auto previous = stored->skill_points_earned;
-        if (!previous.has_value() || *snapshot.skill_points_earned >= *previous) {
-            if (snapshot.skill_points_earned != previous) {
-                stored->skill_points_earned = snapshot.skill_points_earned;
-                changed = true;
-            }
-        }
-    }
 
     const auto before = stored->journey_events.size();
     AppendUniqueJourneyEvents(stored->journey_events, snapshot.new_events);
