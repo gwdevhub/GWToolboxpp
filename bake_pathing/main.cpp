@@ -2,6 +2,7 @@
 #include "PlacedMaps.h"
 
 #include <Utils/ArenaNetFileParser.h>
+#include <functional>
 #include <Windows/Pathfinding/PathingMapDataLoader.h>
 #include <Windows/Pathfinding/maps_constant_data.h>
 
