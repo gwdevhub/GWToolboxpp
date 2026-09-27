@@ -144,6 +144,8 @@ public:
     void RegisterSettings(ToolboxModule* module);
 
 private:
+    static constexpr size_t max_game_pings = 8;
+
     void Initialize(IDirect3DDevice9* device) override;
 
     void DrawPings(IDirect3DDevice9* device);
@@ -153,7 +155,7 @@ private:
     void DrawDrawings(IDirect3DDevice9* device);
     void EnqueueVertex(float x, float y, Color color);
     [[nodiscard]] bool HasPendingLines() const;
-    [[nodiscard]] bool HasRoomForGamePing() const;
+    [[nodiscard]] size_t GetActivePings() const;
 
     int ToIntPos(const float n) const
     {

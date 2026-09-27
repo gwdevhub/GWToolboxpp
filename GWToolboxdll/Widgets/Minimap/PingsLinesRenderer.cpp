@@ -88,7 +88,7 @@ void PingsLinesRenderer::P046Callback(const GW::Packet::StoC::AgentPinged* pak)
             }
         }
     }
-    if (!found && HasRoomForGamePing()) {
+    if (!found && GetActivePings() < max_game_pings) {
         auto* ping = new AgentPing(pak->agent_id);
         ping->game_ping = true;
         pings.push_front(ping);
@@ -154,7 +154,7 @@ void PingsLinesRenderer::OnUIMessage(GW::HookStatus*, GW::UI::UIMessage message_
     } break;
     case GW::UI::UIMessage::kCompassPing: {
         const auto packet = (GW::UI::UIPacket::kCompassPing*)wparam;
-        if (HasRoomForGamePing()) {
+        if (GetActivePings() < max_game_pings) {
             auto* ping = new TerrainPing(
                 packet->point.x * drawing_scale,
                 packet->point.y * drawing_scale,
@@ -247,16 +247,15 @@ bool PingsLinesRenderer::HasPendingLines() const
     });
 }
 
-bool PingsLinesRenderer::HasRoomForGamePing() const
+size_t PingsLinesRenderer::GetActivePings() const
 {
-    constexpr size_t max_game_pings = 8;
     size_t active_game_pings = 0;
     for (const auto* ping : pings) {
-        if (ping->game_ping && TIMER_DIFF(ping->start) <= ping->duration && ++active_game_pings == max_game_pings) {
-            return false;
+        if (ping->game_ping && TIMER_DIFF(ping->start) <= ping->duration) {
+            ++active_game_pings;
         }
     }
-    return true;
+    return active_game_pings;
 }
 
 void PingsLinesRenderer::DrawPings(IDirect3DDevice9* device)
