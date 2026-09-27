@@ -55,6 +55,15 @@ each with its own read-only DAT handle. More workers can be slower when DAT read
 CPU or storage. `bake.py --map 442 --output /tmp/carto-check` can bake one placed map for
 comparison, but only a complete bake is suitable input to `make_header.py`.
 
+`--threads N` instead shares one DAT reader and locks its seek/read operation; decompression and
+pathing occur outside that lock. It cannot be combined with `--jobs N`. Python's GIL can still
+make CPU-heavy bakes slower with threads, so benchmark both modes before using them for a full bake.
+
+`--stream-cache out/streams` keeps decompressed map/model streams across runs. Its directory is
+keyed by local DAT path, size and modification time, so updating the DAT starts a new cache. The
+first run still decompresses the data; repeated analysis skips the Python decompressor. Cached
+streams consume extra disk space. The cache only applies to local DAT reads, not CDN downloads.
+
 For offline prop-collision analysis, cache local model outlines once and reuse them across every
 placement and map sharing the model file ID:
 
@@ -69,7 +78,8 @@ altered by it. Determining whether an outline blocks standing on a particular pa
 requires matching heights and accounting for doors that change state.
 
 `prebake_prop_collision.py` decodes each distinct model once, with `--jobs N` available to process
-map and model files in separate processes; `--map 442 --map 55` limits the input to those maps.
+map and model files in separate processes or `--threads N` to share a locked DAT reader;
+`--map 442 --map 55` limits the input to those maps.
 
 `snapdat.open_dat()` prefers a local install - `$GW_DAT`, then the `ArenaNet\Guild Wars`
 registry key, then the usual Program Files paths. `Gw.dat` is the same container as

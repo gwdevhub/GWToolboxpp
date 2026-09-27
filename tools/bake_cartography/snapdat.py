@@ -1,5 +1,5 @@
 """Read Gw.dat - from the local install, or out of the CDN's chunked Gw.snapshot."""
-import sys, json, struct, os
+import sys, json, struct, os, threading, hashlib
 
 # inflate.py is Headquarter's and is not vendored here. Set GW_INFLATE_DIR if yours is elsewhere.
 INFLATE_DIRS = [os.environ.get('GW_INFLATE_DIR'),
@@ -30,6 +30,7 @@ class Snapshot:
         self.size = e["size"]
         self.cs = mf.chunk_size
         self.mem = {}
+        self.lock = threading.Lock()
 
     def chunk(self, i):
         if i in self.mem: return self.mem[i]
@@ -45,15 +46,16 @@ class Snapshot:
         return d
 
     def read(self, off, ln):
-        out = bytearray()
-        while ln > 0:
-            i = off // self.cs
-            o = off % self.cs
-            c = self.chunk(i)
-            take = min(ln, len(c) - o)
-            out += c[o:o+take]
-            off += take; ln -= take
-        return bytes(out)
+        with self.lock:
+            out = bytearray()
+            while ln > 0:
+                i = off // self.cs
+                o = off % self.cs
+                c = self.chunk(i)
+                take = min(ln, len(c) - o)
+                out += c[o:o+take]
+                off += take; ln -= take
+            return bytes(out)
 
 class LocalSnapshot:
     """The local route. Gw.dat is the same container as Gw.snapshot - same 3AN magic, same MFT - so
@@ -68,10 +70,12 @@ class LocalSnapshot:
         if not self.path:
             raise FileNotFoundError("no Gw.dat found; set GW_DAT to its path")
         self.f = open(self.path, 'rb')
+        self.lock = threading.Lock()
 
     def read(self, off, ln):
-        self.f.seek(off)
-        d = self.f.read(ln)
+        with self.lock:
+            self.f.seek(off)
+            d = self.f.read(ln)
         if len(d) != ln:
             raise EOFError("short read at %d: wanted %d, got %d" % (off, ln, len(d)))
         return d
@@ -115,6 +119,11 @@ def open_dat():
 class Dat:
     def __init__(self, snap):
         self.snap = snap
+        self.cache_key = None
+        if isinstance(snap, LocalSnapshot):
+            info = os.stat(snap.path)
+            identity = f'{os.path.abspath(snap.path)}:{info.st_size}:{info.st_mtime_ns}'
+            self.cache_key = hashlib.sha256(identity.encode()).hexdigest()[:20]
         head = snap.read(0, 32)
         assert head[:4] == b'3AN\x1a', head[:4]
         self.mft_offset, = struct.unpack_from('<q', head, 16)
@@ -205,6 +214,16 @@ def inflate_all(data, cap=96 << 20):
 
 
 def read_stream_full(dat, file_id, stream_id):
+    cache_dir = os.environ.get('GW_DAT_STREAM_CACHE')
+    cache_path = (os.path.join(cache_dir, dat.cache_key, f'{file_id:08x}_{stream_id}.bin')
+                  if cache_dir and dat.cache_key else None)
+    if cache_path:
+        try:
+            cached = open(cache_path, 'rb').read()
+            if cached[:4] == b'ffna':
+                return cached
+        except OSError:
+            pass
     idx = dat.fid2slot.get(file_id)
     if idx is None:
         return None
@@ -216,7 +235,24 @@ def read_stream_full(dat, file_id, stream_id):
             if not b or size <= 0:
                 return None
             raw = dat.snap.read(off, size)
-            return inflate_all(raw) if a else raw
+            decoded = inflate_all(raw) if a else raw
+            if cache_path and a and decoded[:4] == b'ffna':
+                temp_path = None
+                try:
+                    os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+                    temp_path = f'{cache_path}.{os.getpid()}.{threading.get_ident()}.tmp'
+                    with open(temp_path, 'wb') as output:
+                        output.write(decoded)
+                    os.replace(temp_path, cache_path)
+                except OSError:
+                    pass
+                finally:
+                    if temp_path:
+                        try:
+                            os.unlink(temp_path)
+                        except OSError:
+                            pass
+            return decoded
         idx = nxt
         if idx <= 0:
             return None

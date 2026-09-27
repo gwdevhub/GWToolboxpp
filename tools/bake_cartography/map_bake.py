@@ -1,7 +1,7 @@
 import math
 from functools import lru_cache
 
-from ffna import (MAP_INFO, MAP_PATH, _port_pairs, chunks, entrance_component, every_trapezoid,
+from ffna import (MAP_INFO, MAP_PATH, _port_pairs, chunks, entrance_component,
                   game_bounds, glitched_component, largest_component, parse_planes, portal_doorways)
 from snapdat import open_dat, read_stream_full
 
@@ -54,7 +54,6 @@ def bake_map_group(tasks):
     pair = _port_pairs(planes)
     normal = entrance_component(planes, doorways, pair) | largest_component(planes, doorways)
     glitched = glitched_component(planes, normal, doorways)
-    any_trap = every_trapezoid(planes)
     results = []
     placed = {}
     for mid, (cont,sx,sy,ex,ey), _ in tasks:
@@ -63,10 +62,11 @@ def bake_map_group(tasks):
             anchor_x = sx - gmnx/96.0
             anchor_y = sy + gmxy/96.0 + 1.0
 
-            def mark(component):
-                out = set()
-                for pi, ti in component:
-                    trap = planes[pi]['traps'][ti]
+            base, gate, all_ground = set(), set(), set()
+            for pi, plane in enumerate(planes):
+                for ti, trap in enumerate(plane['traps']):
+                    is_normal = (pi, ti) in normal
+                    is_glitched = (pi, ti) in glitched
                     ax, ay = min(trap[3], trap[5])/96.0+anchor_x, -trap[8]/96.0+anchor_y
                     bx, by = max(trap[4], trap[6])/96.0+anchor_x, -trap[7]/96.0+anchor_y
                     quad = [(trap[3]/96.0+anchor_x, -trap[7]/96.0+anchor_y),
@@ -75,9 +75,15 @@ def bake_map_group(tasks):
                             (trap[5]/96.0+anchor_x, -trap[8]/96.0+anchor_y)]
                     for cy in range(math.ceil(min(ay,by)/TILE)-1, math.floor(max(ay,by)/TILE)+1):
                         for cx in range(math.ceil(min(ax,bx)/TILE)-1, math.floor(max(ax,bx)/TILE)+1):
-                            if (cx, cy) not in out and intersects(quad, cx*TILE, cy*TILE, (cx+1)*TILE, (cy+1)*TILE):
-                                out.add((cx, cy))
-                return out
+                            tile = (cx, cy)
+                            if tile in all_ground and (not is_normal or tile in base) and (not is_glitched or tile in gate):
+                                continue
+                            if intersects(quad, cx*TILE, cy*TILE, (cx+1)*TILE, (cy+1)*TILE):
+                                all_ground.add(tile)
+                                if is_normal:
+                                    base.add(tile)
+                                if is_glitched:
+                                    gate.add(tile)
 
             bx0, by0 = math.floor(sx/TILE)-1, math.ceil(sy/TILE)-2
             bx1, by1 = math.ceil(ex/TILE)+1, math.ceil(ey/TILE)+1
@@ -86,9 +92,6 @@ def bake_map_group(tasks):
                 return {(tx+dx,ty+dy) for tx,ty in stand for dy in (-1,0,1) for dx in (-1,0,1)
                         if bx0 <= tx+dx < bx1 and by0 <= ty+dy < by1}
 
-            base = mark(normal)
-            gate = base if glitched is normal else mark(glitched)
-            all_ground = gate if any_trap == glitched else mark(any_trap)
             placed[rectangle] = (base,dilate(base),gate,dilate(gate),all_ground,dilate(all_ground))
         results.append((mid,cont,'ok',placed[rectangle]))
     return results

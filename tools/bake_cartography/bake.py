@@ -5,7 +5,7 @@ import struct
 import subprocess
 import sys
 import time
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from map_bake import bake_map_group, init_worker
@@ -37,10 +37,16 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--map', type=int, action='append', dest='maps')
     parser.add_argument('--jobs', type=int, default=1)
+    parser.add_argument('--threads', type=int, default=0)
+    parser.add_argument('--stream-cache')
     parser.add_argument('--output', default='out')
     args = parser.parse_args()
     if args.jobs < 1:
         parser.error('--jobs must be at least 1')
+    if args.threads < 0 or (args.threads and args.jobs != 1):
+        parser.error('--threads must be nonnegative and cannot be combined with --jobs N')
+    if args.stream_cache:
+        os.environ['GW_DAT_STREAM_CACHE'] = args.stream_cache
 
     placed = {}
     for token in open(os.path.join(HERE,'placed_maps.txt')).read().split():
@@ -87,7 +93,7 @@ def main():
             last_progress = done//20
             print(f'{done}/{len(todo)} {stats} ({time.time()-started:.0f}s)',flush=True)
 
-    if args.jobs == 1:
+    if args.jobs == 1 and not args.threads:
         init_worker()
         for group in groups:
             try:
@@ -98,7 +104,12 @@ def main():
                 print(f'  map file {group[0][2]:#x}: {type(error).__name__}: {error}',flush=True)
             progress()
     else:
-        with ProcessPoolExecutor(max_workers=args.jobs, initializer=init_worker) as executor:
+        if args.threads:
+            init_worker()
+            workers = ThreadPoolExecutor(max_workers=args.threads)
+        else:
+            workers = ProcessPoolExecutor(max_workers=args.jobs, initializer=init_worker)
+        with workers as executor:
             futures = {executor.submit(bake_map_group,group):group for group in groups}
             for future in as_completed(futures):
                 group=futures[future]

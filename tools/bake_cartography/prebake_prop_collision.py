@@ -3,7 +3,7 @@ import os
 import subprocess
 import sys
 import time
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from ffna import chunks
@@ -35,10 +35,16 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--map', type=int, action='append', dest='maps')
     parser.add_argument('--jobs', type=int, default=1)
+    parser.add_argument('--threads', type=int, default=0)
+    parser.add_argument('--stream-cache')
     parser.add_argument('--output', default=os.path.join(HERE, 'out', 'prop_collision_models.json.gz'))
     args = parser.parse_args()
     if args.jobs < 1:
         parser.error('--jobs must be at least 1')
+    if args.threads < 0 or (args.threads and args.jobs != 1):
+        parser.error('--threads must be nonnegative and cannot be combined with --jobs N')
+    if args.stream_cache:
+        os.environ['GW_DAT_STREAM_CACHE'] = args.stream_cache
 
     placed = {int(token.split(':')[0]) for token in open(os.path.join(HERE, 'placed_maps.txt')).read().split()}
     if not os.path.exists(os.path.join(HERE, 'fileids.txt')):
@@ -54,7 +60,7 @@ def main():
     started = time.time()
     models = ModelCollisionCache(None)
     model_ids = set()
-    if args.jobs == 1:
+    if args.jobs == 1 and not args.threads:
         init_worker()
         for i, fid in enumerate(map_files, 1):
             model_ids.update(map_models(fid))
@@ -66,7 +72,12 @@ def main():
             if i % 100 == 0 or i == len(model_ids):
                 print(f'{i}/{len(model_ids)} model files decoded ({time.time()-started:.0f}s)', flush=True)
     else:
-        with ProcessPoolExecutor(max_workers=args.jobs, initializer=init_worker) as executor:
+        if args.threads:
+            init_worker()
+            workers = ThreadPoolExecutor(max_workers=args.threads)
+        else:
+            workers = ProcessPoolExecutor(max_workers=args.jobs, initializer=init_worker)
+        with workers as executor:
             futures = [executor.submit(map_models, fid) for fid in map_files]
             for i, future in enumerate(as_completed(futures), 1):
                 model_ids.update(future.result())
@@ -80,8 +91,9 @@ def main():
 
     os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
     models.save(args.output)
+    mode = f'{args.threads} threads' if args.threads else f'{args.jobs} processes'
     print(f'{len(map_files)} unique map files, {len(models.models)} model file IDs, '
-          f'{models.reads} model streams decoded by {args.jobs} workers in {time.time()-started:.1f}s -> {args.output}')
+          f'{models.reads} model streams decoded with {mode} in {time.time()-started:.1f}s -> {args.output}')
 
 
 if __name__ == '__main__':
