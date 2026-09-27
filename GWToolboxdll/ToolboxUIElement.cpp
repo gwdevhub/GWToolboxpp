@@ -618,9 +618,13 @@ void ToolboxUIElement::DrawBreakoutButton(IDirect3DDevice9*)
     }
 
     const auto bw = ImGui::FindWindowByName(window_id);
+    const ImVec2 previous_size = bw ? bw->Size : ImVec2(0.f, 0.f);
     const auto g = ImGui::GetCurrentContext();
     const bool being_moved = bw && g->MovingWindow && g->MovingWindow->RootWindow == bw->RootWindow;
-    if (!being_moved) {
+    const auto previous = breakout_button_rects.find(this);
+    const bool unchanged = bw && previous != breakout_button_rects.end() && ImVec2Eq(previous->second.Min, bw->Pos) &&
+                           ImVec2Eq(previous->second.GetSize(), bw->Size) && ImVec2Eq(ClampBreakoutPos(bw->Pos, bw->Size), bw->Pos);
+    if (!being_moved && (pending_breakout_pos || !unchanged)) {
         const float est = ImGui::GetFrameHeight() + 16.f;
         const ImVec2 size = bw ? bw->Size : ImVec2(est, est);
         const auto vp = ImGui::GetMainViewport();
@@ -677,7 +681,9 @@ void ToolboxUIElement::DrawBreakoutButton(IDirect3DDevice9*)
         if (pos.x != bw->Pos.x || pos.y != bw->Pos.y) ImGui::SetWindowPos(window_id, pos);
         breakout_pos[0] = bw->Pos.x;
         breakout_pos[1] = bw->Pos.y;
-        breakout_button_rects[this] = ImRect(bw->Pos, {bw->Pos.x + bw->Size.x, bw->Pos.y + bw->Size.y});
+        if (!being_moved && ImVec2Eq(previous_size, bw->Size)) {
+            breakout_button_rects[this] = ImRect(bw->Pos, {bw->Pos.x + bw->Size.x, bw->Pos.y + bw->Size.y});
+        }
     }
 }
 
