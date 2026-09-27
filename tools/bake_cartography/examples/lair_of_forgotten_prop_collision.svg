@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="510" viewBox="0 0 520 510">
+<rect width="100%" height="100%" fill="#101e2b"/>
+<style>text{font-family:system-ui,Arial,sans-serif;fill:#e2ecf0} .sub{fill:#a8c1cb;font-size:12px} .tick{fill:#b9d3df;font-size:10px}</style>
+<text x="26" y="35" font-size="22" font-weight="700">Prop-model collision geometry</text>
+<text x="26" y="58" class="sub">173 prop placements · 54 enabled for pathing · 19 have collision vertices</text>
+<text x="26" y="80" class="sub">Lair of Forgotten · map 442 · Gw.dat file 0x33583 · world-map coordinates</text>
+<rect x="80" y="124" width="320.00" height="320.00" fill="#142b39"/>
+<path d="M80.00,124.00 v320.00" stroke="#647a88" stroke-width=".5" opacity=".42"/>
+<path d="M120.00,124.00 v320.00" stroke="#647a88" stroke-width=".5" opacity=".42"/>
+<text class="tick" x="122.0" y="117">94</text>
+<path d="M160.00,124.00 v320.00" stroke="#647a88" stroke-width=".5" opacity=".42"/>
+<path d="M200.00,124.00 v320.00" stroke="#647a88" stroke-width=".5" opacity=".42"/>
+<text class="tick" x="202.0" y="117">96</text>
+<path d="M240.00,124.00 v320.00" stroke="#647a88" stroke-width=".5" opacity=".42"/>
+<path d="M280.00,124.00 v320.00" stroke="#647a88" stroke-width=".5" opacity=".42"/>
+<text class="tick" x="282.0" y="117">98</text>
+<path d="M320.00,124.00 v320.00" stroke="#647a88" stroke-width=".5" opacity=".42"/>
+<path d="M360.00,124.00 v320.00" stroke="#647a88" stroke-width=".5" opacity=".42"/>
+<text class="tick" x="362.0" y="117">100</text>
+<path d="M400.00,124.00 v320.00" stroke="#647a88" stroke-width=".5" opacity=".42"/>
+<path d="M80.00,124.00 h320.00" stroke="#647a88" stroke-width=".5" opacity=".42"/>
+<text class="tick" x="45" y="134.0">10</text>
+<path d="M80.00,164.00 h320.00" stroke="#647a88" stroke-width=".5" opacity=".42"/>
+<path d="M80.00,204.00 h320.00" stroke="#647a88" stroke-width=".5" opacity=".42"/>
+<text class="tick" x="45" y="214.0">12</text>
+<path d="M80.00,244.00 h320.00" stroke="#647a88" stroke-width=".5" opacity=".42"/>
+<path d="M80.00,284.00 h320.00" stroke="#647a88" stroke-width=".5" opacity=".42"/>
+<text class="tick" x="45" y="294.0">14</text>
+<path d="M80.00,324.00 h320.00" stroke="#647a88" stroke-width=".5" opacity=".42"/>
+<path d="M80.00,364.00 h320.00" stroke="#647a88" stroke-width=".5" opacity=".42"/>
+<text class="tick" x="45" y="374.0">16</text>
+<path d="M80.00,404.00 h320.00" stroke="#647a88" stroke-width=".5" opacity=".42"/>
+<path d="M80.00,444.00 h320.00" stroke="#647a88" stroke-width=".5" opacity=".42"/>
+<polyline points="278.16,220.00 277.24,220.90 277.47,221.68 281.58,224.68 282.54,223.97 280.85,219.24 279.99,218.75 278.86,219.44 277.60,217.83 278.56,216.90 278.26,216.24 274.20,213.14 273.04,214.05 274.97,218.58 275.90,219.09 276.93,218.40 278.16,220.00" fill="none" stroke="#ff8059" stroke-width="1.45" stroke-linejoin="round" stroke-linecap="round" opacity=".85"/>
+<polyline points="278.16,220.00 276.93,218.40 277.60,217.83 278.86,219.44 278.16,220.00" fill="none" stroke="#efbb4c" stroke-width="1.45" stroke-linejoin="round" stroke-linecap="round" opacity=".85"/>
+<circle cx="277.99" cy="219.28" r="1.8" fill="#efbb4c"/>
+<polyline points="289.09,268.50 291.89,272.87 297.53,274.80 300.87,274.15 298.84,270.16 301.68,269.44 299.95,264.46 298.43,263.25 294.45,264.27 293.81,265.51 294.03,266.69 290.92,266.44 289.09,268.50" fill="none" stroke="#ff8059" stroke-width="1.45" stroke-linejoin="round" stroke-linecap="round" opacity=".85"/>
+<polyline points="249.90,256.06 250.70,257.43 252.28,257.43 253.08,256.06 252.25,255.26 250.59,254.97 249.90,256.06" fill="none" stroke="#ff8059" stroke-width="1.45" stroke-linejoin="round" stroke-linecap="round" opacity=".85"/>
+<polyline points="180.07,176.94 179.46,177.46 178.57,177.24 178.42,176.43 179.08,175.80 179.89,175.97 180.07,176.94" fill="none" stroke="#ff8059" stroke-width="1.45" stroke-linejoin="round" stroke-linecap="round" opacity=".85"/>
+<polyline points="269.19,270.22 265.08,272.02 264.42,270.03 262.38,269.05 263.93,266.25 266.40,266.15 269.19,270.22" fill="none" stroke="#ff8059" stroke-width="1.45" stroke-linejoin="round" stroke-linecap="round" opacity=".85"/>
+<polyline points="213.61,345.53 212.80,346.54 213.12,347.28 217.57,349.76 218.43,348.94 216.18,344.46 215.27,344.07 214.23,344.89 212.79,343.45 213.62,342.41 213.24,341.79 208.83,339.21 207.79,340.26 210.27,344.51 211.25,344.90 212.19,344.09 213.61,345.53" fill="none" stroke="#ff8059" stroke-width="1.45" stroke-linejoin="round" stroke-linecap="round" opacity=".85"/>
+<polyline points="213.61,345.53 212.19,344.09 212.79,343.45 214.23,344.89 213.61,345.53" fill="none" stroke="#efbb4c" stroke-width="1.45" stroke-linejoin="round" stroke-linecap="round" opacity=".85"/>
+<circle cx="213.34" cy="344.84" r="1.8" fill="#efbb4c"/>
+<polyline points="147.39,363.10 145.37,358.27 128.37,353.98 126.00,357.21 147.39,363.10" fill="none" stroke="#ff8059" stroke-width="1.45" stroke-linejoin="round" stroke-linecap="round" opacity=".85"/>
+<polyline points="206.68,366.35 206.95,366.85 207.63,366.83 207.87,366.35 207.63,365.87 207.08,365.87 206.68,366.35" fill="none" stroke="#ff8059" stroke-width="1.45" stroke-linejoin="round" stroke-linecap="round" opacity=".85"/>
+<polyline points="202.20,357.62 202.35,357.88 202.64,357.88 202.79,357.62 202.64,357.37 202.35,357.37 202.20,357.62" fill="none" stroke="#ff8059" stroke-width="1.45" stroke-linejoin="round" stroke-linecap="round" opacity=".85"/>
+<polyline points="242.52,328.47 243.41,328.50 243.85,327.74 243.58,327.42 243.08,327.39 242.45,327.65 242.52,328.47" fill="none" stroke="#ff8059" stroke-width="1.45" stroke-linejoin="round" stroke-linecap="round" opacity=".85"/>
+<polyline points="262.76,328.08 260.67,323.57 255.70,323.71 249.59,326.30 245.92,325.75 242.98,331.48 244.84,335.61 262.76,328.08" fill="none" stroke="#ff8059" stroke-width="1.45" stroke-linejoin="round" stroke-linecap="round" opacity=".85"/>
+<polyline points="126.91,352.58 124.62,351.96 118.36,356.84 118.86,358.58 126.91,352.58" fill="none" stroke="#ff8059" stroke-width="1.45" stroke-linejoin="round" stroke-linecap="round" opacity=".85"/>
+<polyline points="201.86,344.24 205.52,344.40 213.29,334.90 211.94,332.44 201.86,344.24" fill="none" stroke="#ff8059" stroke-width="1.45" stroke-linejoin="round" stroke-linecap="round" opacity=".85"/>
+<polyline points="279.01,370.65 289.01,380.29 287.32,382.05 285.28,381.72 276.92,373.43 279.01,370.65" fill="none" stroke="#ff8059" stroke-width="1.45" stroke-linejoin="round" stroke-linecap="round" opacity=".85"/>
+<polyline points="272.97,375.93 269.23,378.18 267.78,392.67 270.72,394.23 272.97,375.93" fill="none" stroke="#ff8059" stroke-width="1.45" stroke-linejoin="round" stroke-linecap="round" opacity=".85"/>
+<polyline points="289.28,386.96 279.72,397.42 277.88,395.74 278.15,393.65 286.38,384.90 289.28,386.96" fill="none" stroke="#ff8059" stroke-width="1.45" stroke-linejoin="round" stroke-linecap="round" opacity=".85"/>
+<polyline points="269.69,377.05 270.79,381.12 277.43,385.19 280.28,384.36 269.69,377.05" fill="none" stroke="#ff8059" stroke-width="1.45" stroke-linejoin="round" stroke-linecap="round" opacity=".85"/>
+<polyline points="258.47,177.77 258.43,179.54 260.61,181.81 263.77,181.88 266.04,179.69 266.08,177.96 266.57,175.22 266.06,173.01 258.58,172.82 258.00,175.09 258.47,177.77" fill="none" stroke="#ff8059" stroke-width="1.45" stroke-linejoin="round" stroke-linecap="round" opacity=".85"/>
+<polyline points="261.39,177.22 263.09,177.28 263.11,177.88 264.33,177.91 264.44,177.91 265.83,177.95 266.08,177.96 266.04,179.69 263.77,181.88 260.61,181.81 258.43,179.54 258.47,177.77 258.73,177.78 260.14,177.82 260.22,177.82 261.33,177.84 261.39,177.22" fill="none" stroke="#efbb4c" stroke-width="1.45" stroke-linejoin="round" stroke-linecap="round" opacity=".85"/>
+<circle cx="261.94" cy="177.45" r="1.8" fill="#efbb4c"/>
+<polyline points="267.82,356.06 265.12,360.04 266.55,368.81 269.39,370.66 267.82,356.06" fill="none" stroke="#ff8059" stroke-width="1.45" stroke-linejoin="round" stroke-linecap="round" opacity=".85"/>
+<text x="26" y="491" class="sub">Orange/yellow: two model record groups; neither implies a solid wall.</text>
+<rect x="120.00" y="164.00" width="240.00" height="240.00" fill="none" stroke="#f6c961" stroke-width="2"/>
+<rect x="27" y="456" width="13" height="13" fill="none" stroke="#f6c961" stroke-width="2"/>
+<text x="48" y="468" class="sub">map rectangle</text>
+</svg>
