@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="580" height="620" viewBox="0 0 580 620">
+<rect width="100%" height="100%" fill="#101e2b"/>
+<style>text{font-family:system-ui,Arial,sans-serif;fill:#e2ecf0} .sub{fill:#a8c1cb;font-size:12px} .tick{fill:#b9d3df;font-size:10px}</style>
+<text x="26" y="35" font-size="22" font-weight="700">Map collision data</text>
+<text x="26" y="58" class="sub">DAT chunk 0x2000000E: 0 polygons · 0 points</text>
+<text x="26" y="80" class="sub">Lion&#x27;s Arch · map 55 · Gw.dat file 0x34fd · world-map coordinates</text>
+<rect x="80" y="124" width="425.60" height="425.60" fill="#142b39"/>
+<path d="M80.00,124.00 v425.60" stroke="#647a88" stroke-width=".5" opacity=".42"/>
+<path d="M110.40,124.00 v425.60" stroke="#647a88" stroke-width=".5" opacity=".42"/>
+<text class="tick" x="112.4" y="117">116</text>
+<path d="M140.80,124.00 v425.60" stroke="#647a88" stroke-width=".5" opacity=".42"/>
+<path d="M171.20,124.00 v425.60" stroke="#647a88" stroke-width=".5" opacity=".42"/>
+<text class="tick" x="173.2" y="117">118</text>
+<path d="M201.60,124.00 v425.60" stroke="#647a88" stroke-width=".5" opacity=".42"/>
+<path d="M232.00,124.00 v425.60" stroke="#647a88" stroke-width=".5" opacity=".42"/>
+<text class="tick" x="234.0" y="117">120</text>
+<path d="M262.40,124.00 v425.60" stroke="#647a88" stroke-width=".5" opacity=".42"/>
+<path d="M292.80,124.00 v425.60" stroke="#647a88" stroke-width=".5" opacity=".42"/>
+<text class="tick" x="294.8" y="117">122</text>
+<path d="M323.20,124.00 v425.60" stroke="#647a88" stroke-width=".5" opacity=".42"/>
+<path d="M353.60,124.00 v425.60" stroke="#647a88" stroke-width=".5" opacity=".42"/>
+<text class="tick" x="355.6" y="117">124</text>
+<path d="M384.00,124.00 v425.60" stroke="#647a88" stroke-width=".5" opacity=".42"/>
+<path d="M414.40,124.00 v425.60" stroke="#647a88" stroke-width=".5" opacity=".42"/>
+<text class="tick" x="416.4" y="117">126</text>
+<path d="M444.80,124.00 v425.60" stroke="#647a88" stroke-width=".5" opacity=".42"/>
+<path d="M475.20,124.00 v425.60" stroke="#647a88" stroke-width=".5" opacity=".42"/>
+<text class="tick" x="477.2" y="117">128</text>
+<path d="M505.60,124.00 v425.60" stroke="#647a88" stroke-width=".5" opacity=".42"/>
+<path d="M80.00,124.00 h425.60" stroke="#647a88" stroke-width=".5" opacity=".42"/>
+<text class="tick" x="45" y="134.0">146</text>
+<path d="M80.00,154.40 h425.60" stroke="#647a88" stroke-width=".5" opacity=".42"/>
+<path d="M80.00,184.80 h425.60" stroke="#647a88" stroke-width=".5" opacity=".42"/>
+<text class="tick" x="45" y="194.8">148</text>
+<path d="M80.00,215.20 h425.60" stroke="#647a88" stroke-width=".5" opacity=".42"/>
+<path d="M80.00,245.60 h425.60" stroke="#647a88" stroke-width=".5" opacity=".42"/>
+<text class="tick" x="45" y="255.6">150</text>
+<path d="M80.00,276.00 h425.60" stroke="#647a88" stroke-width=".5" opacity=".42"/>
+<path d="M80.00,306.40 h425.60" stroke="#647a88" stroke-width=".5" opacity=".42"/>
+<text class="tick" x="45" y="316.4">152</text>
+<path d="M80.00,336.80 h425.60" stroke="#647a88" stroke-width=".5" opacity=".42"/>
+<path d="M80.00,367.20 h425.60" stroke="#647a88" stroke-width=".5" opacity=".42"/>
+<text class="tick" x="45" y="377.2">154</text>
+<path d="M80.00,397.60 h425.60" stroke="#647a88" stroke-width=".5" opacity=".42"/>
+<path d="M80.00,428.00 h425.60" stroke="#647a88" stroke-width=".5" opacity=".42"/>
+<text class="tick" x="45" y="438.0">156</text>
+<path d="M80.00,458.40 h425.60" stroke="#647a88" stroke-width=".5" opacity=".42"/>
+<path d="M80.00,488.80 h425.60" stroke="#647a88" stroke-width=".5" opacity=".42"/>
+<text class="tick" x="45" y="498.8">158</text>
+<path d="M80.00,519.20 h425.60" stroke="#647a88" stroke-width=".5" opacity=".42"/>
+<path d="M80.00,549.60 h425.60" stroke="#647a88" stroke-width=".5" opacity=".42"/>
+<rect x="135.00" y="276.80" width="310" height="120" rx="12" fill="#223748" stroke="#658398"/>
+<text x="290.00" y="315.80" font-size="17" text-anchor="middle">No collision shapes in this chunk</text>
+<text x="290.00" y="345.80" class="sub" text-anchor="middle">The map file stores an empty collision record.</text>
+<text x="290.00" y="370.80" class="sub" text-anchor="middle">Prop model collision is separate.</text>
+<text x="26" y="601" class="sub">Map collision chunk only; prop/model collision is separate.</text>
+<rect x="110.40" y="154.40" width="364.80" height="364.80" fill="none" stroke="#f6c961" stroke-width="2"/>
+<rect x="27" y="566" width="13" height="13" fill="none" stroke="#f6c961" stroke-width="2"/>
+<text x="48" y="578" class="sub">map rectangle</text>
+</svg>
