@@ -73,7 +73,9 @@ path before running either bake script. For example, on Linux:
 
 On Windows, build a DLL exporting `gw_inflate_all` instead. If the library is absent or rejects a
 stream, the Python decoder remains the fallback. Set `GW_INFLATE_VERIFY=1` while checking a new
-library to compare native output against the Python reference byte-for-byte.
+library to compare native output against the Python reference byte-for-byte. With both the DLL/SO
+and a local DAT available, run `python3 -m unittest test_native_inflate.py` from this directory to
+check representative map and model streams before relying on it for a full bake.
 
 For offline prop-collision analysis, cache local model outlines once and reuse them across every
 placement and map sharing the model file ID:
