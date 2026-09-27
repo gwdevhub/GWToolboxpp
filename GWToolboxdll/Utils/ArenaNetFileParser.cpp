@@ -2,7 +2,6 @@
 #include <algorithm>
 #include <cstring>
 #include <vector>
-#include <Modules/GwDatModule.h>
 
 namespace {
     // FVF lookup tables (from the pattern)
@@ -46,21 +45,6 @@ namespace ArenaNetFileParser {
         data_size = data.size();
         return isValid();
     }
-    bool GameAssetFile::readFromDat(const uint32_t _file_id, uint32_t stream_id)
-    {
-        wchar_t fileHash[4] = {0};
-        FileIdToFileHash(_file_id, fileHash);
-        return readFromDat(fileHash, stream_id);
-    }
-    bool GameAssetFile::readFromDat(const wchar_t* file_hash, uint32_t stream_id)
-    {
-        std::vector<uint8_t> bytes;
-        file_id = FileHashToFileId(file_hash);
-        data_size = 0;
-        data.clear();
-        if (!GwDatModule::ReadDatFile(file_hash, &bytes, stream_id)) return false;
-        return parse(bytes);
-    }
     const uint8_t ArenaNetFile::getFFNAType() const
     {
         return (uint8_t)data[4];
@@ -73,7 +57,7 @@ namespace ArenaNetFileParser {
     }
     const Chunk* ArenaNetFile::FindChunk(ChunkType chunk_type)
     {
-        ASSERT(isValid());
+        if (!isValid()) return nullptr;
         size_t offset = 5;
         while (offset + 8 <= data_size) {
             const auto chunk = (Chunk*)&data[offset];
@@ -86,4 +70,3 @@ namespace ArenaNetFileParser {
         return nullptr;
     }
 }
-

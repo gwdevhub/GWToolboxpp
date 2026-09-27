@@ -1,0 +1,5 @@
+#pragma once
+
+#include <string_view>
+
+inline constexpr std::string_view placed_maps = R"PLACED(@PLACED_MAPS@)PLACED";
