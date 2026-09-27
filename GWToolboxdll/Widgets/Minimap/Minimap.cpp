@@ -329,29 +329,6 @@ namespace {
     {
         GW::Hook::EnterHook();
 
-        bool block_compass_message = false;
-        if (message->message_id == GW::UI::UIMessage::kCompassDraw && wParam) {
-            const auto packet = static_cast<GW::UI::UIPacket::kCompassDraw*>(wParam);
-            ASSERT(packet->player_number < 0xffff && packet->session_id < 0xffff);
-            const auto session_key = (packet->player_number << 16) | static_cast<uint16_t>(packet->session_id);
-            const auto found = compass_drawing_sessions.find(session_key);
-            const auto continuing_drawing = found != compass_drawing_sessions.end() && TIMER_DIFF(found->second) <= 5000;
-            if (packet->number_of_points != 1 || continuing_drawing) {
-                compass_drawing_sessions[session_key] = TIMER_INIT();
-                block_compass_message = hide_compass_drawings;
-            }
-            else {
-                block_compass_message = hide_compass_pings;
-            }
-        }
-        else if (message->message_id == GW::UI::UIMessage::kCompassPing) {
-            block_compass_message = hide_compass_pings;
-        }
-        if (block_compass_message) {
-            GW::Hook::LeaveHook();
-            return;
-        }
-
         compass_context = message->wParam ? *(CompassContext**)message->wParam : nullptr;
         switch (message->message_id) {
             case GW::UI::UIMessage::kFrameMessage_0x44: {
@@ -397,6 +374,26 @@ namespace {
                     message->message_id = prev;
                 }
                 break;
+            case GW::UI::UIMessage::kCompassDraw:
+            case GW::UI::UIMessage::kCompassPing: {
+                bool block_compass_message = message->message_id == GW::UI::UIMessage::kCompassPing && hide_compass_pings;
+                if (message->message_id == GW::UI::UIMessage::kCompassDraw && wParam) {
+                    const auto packet = static_cast<GW::UI::UIPacket::kCompassDraw*>(wParam);
+                    ASSERT(packet->player_number < 0xffff && packet->session_id < 0xffff);
+                    const auto session_key = (packet->player_number << 16) | static_cast<uint16_t>(packet->session_id);
+                    const auto found = compass_drawing_sessions.find(session_key);
+                    const auto continuing_drawing = found != compass_drawing_sessions.end() && TIMER_DIFF(found->second) <= 5000;
+                    if (packet->number_of_points != 1 || continuing_drawing) {
+                        compass_drawing_sessions[session_key] = TIMER_INIT();
+                        block_compass_message = hide_compass_drawings;
+                    }
+                    else {
+                        block_compass_message = hide_compass_pings;
+                    }
+                }
+                if (block_compass_message) break;
+            }
+            [[fallthrough]];
             default:
                 if (compass_context && hide_flagging_controls) {
                     // Temporarily nullify the pointer to flagging controls for all other message ids
