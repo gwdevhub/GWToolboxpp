@@ -323,14 +323,30 @@ namespace {
     }
 
     CompassContext* compass_context = nullptr;
+    std::map<std::pair<uint32_t, uint32_t>, clock_t> compass_drawing_sessions;
 
     void __cdecl OnCompassFrame_UICallback(GW::UI::InteractionMessage* message, void* wParam, void* lParam)
     {
         GW::Hook::EnterHook();
 
-        if ((message->message_id == GW::UI::UIMessage::kCompassDraw && wParam &&
-             (static_cast<GW::UI::UIPacket::kCompassDraw*>(wParam)->number_of_points > 1 ? hide_compass_drawings : hide_compass_pings)) ||
-            (message->message_id == GW::UI::UIMessage::kCompassPing && hide_compass_pings)) {
+        bool block_compass_message = false;
+        if (message->message_id == GW::UI::UIMessage::kCompassDraw && wParam) {
+            const auto packet = static_cast<GW::UI::UIPacket::kCompassDraw*>(wParam);
+            const auto session = std::make_pair(packet->player_number, packet->session_id);
+            const auto found = compass_drawing_sessions.find(session);
+            const auto continuing_drawing = found != compass_drawing_sessions.end() && TIMER_DIFF(found->second) <= 5000;
+            if (packet->number_of_points != 1 || continuing_drawing) {
+                compass_drawing_sessions[session] = TIMER_INIT();
+                block_compass_message = hide_compass_drawings;
+            }
+            else {
+                block_compass_message = hide_compass_pings;
+            }
+        }
+        else if (message->message_id == GW::UI::UIMessage::kCompassPing) {
+            block_compass_message = hide_compass_pings;
+        }
+        if (block_compass_message) {
             GW::Hook::LeaveHook();
             return;
         }
@@ -355,6 +371,7 @@ namespace {
                 OnCompassFrame_UICallback_Ret(message, wParam, lParam);
                 compass_context = nullptr;
                 compass_frame = nullptr;
+                compass_drawing_sessions.clear();
                 compass_fix_pending = false;
                 compass_position_dirty = true;
                 break;
@@ -877,6 +894,7 @@ void Minimap::OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessage msgid,
             break;
         case GW::UI::UIMessage::kMapLoaded: {
             in_interface_settings = false;
+            compass_drawing_sessions.clear();
             EnsureCompassIsLoaded();
             instance.pmap_renderer.Invalidate();
             GameWorldRenderer::TriggerSyncAllMarkers();
