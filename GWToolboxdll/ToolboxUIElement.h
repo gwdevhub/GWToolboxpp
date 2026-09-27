@@ -56,6 +56,7 @@ public:
     bool pending_breakout_pos = false;
     // Runtime-only: set once the button has been positioned (from saved settings or a computed default)
     bool breakout_pos_set = false;
+    ImVec2 breakout_button_size = {};
 
     // Mobile-mode layout settings (separate from normal-mode settings above)
     bool mobile_lock_move = false;

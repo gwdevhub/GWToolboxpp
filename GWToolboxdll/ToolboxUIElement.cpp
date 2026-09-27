@@ -617,31 +617,12 @@ void ToolboxUIElement::DrawBreakoutButton(IDirect3DDevice9*)
         flags |= ImGuiWindowFlags_NoMove;
     }
 
-    const auto bw = ImGui::FindWindowByName(window_id);
-    const ImVec2 previous_size = bw ? bw->Size : ImVec2(0.f, 0.f);
-    const auto g = ImGui::GetCurrentContext();
-    const bool being_moved = bw && g->MovingWindow && g->MovingWindow->RootWindow == bw->RootWindow;
-    const auto previous = breakout_button_rects.find(this);
-    const bool unchanged = bw && previous != breakout_button_rects.end() && ImVec2Eq(previous->second.Min, bw->Pos) &&
-                           ImVec2Eq(previous->second.GetSize(), bw->Size) && ImVec2Eq(ClampBreakoutPos(bw->Pos, bw->Size), bw->Pos);
-    if (!being_moved && (pending_breakout_pos || !unchanged)) {
-        const float est = ImGui::GetFrameHeight() + 16.f;
-        const ImVec2 size = bw ? bw->Size : ImVec2(est, est);
-        const auto vp = ImGui::GetMainViewport();
-        const ImVec2 center = {vp->WorkPos.x + (vp->WorkSize.x - size.x) * 0.5f, vp->WorkPos.y + (vp->WorkSize.y - size.y) * 0.5f};
-        const ImVec2 desired = pending_breakout_pos || (breakout_pos_set && !bw) ? ImVec2(breakout_pos[0], breakout_pos[1]) : bw ? bw->Pos : center;
-        const auto pos = PlaceBreakoutButton(this, desired, size);
-        if (pending_breakout_pos || !bw || pos.x != bw->Pos.x || pos.y != bw->Pos.y) {
-            ImGui::SetNextWindowPos(pos, ImGuiCond_Always);
-        }
-        pending_breakout_pos = false;
-    }
-    breakout_pos_set = true;
-
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, {6.f, 6.f});
     ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, {10.f, 10.f});
 
-    if (ImGui::Begin(window_id, nullptr, flags)) {
+    const bool opened = ImGui::Begin(window_id, nullptr, flags);
+    const auto bw = ImGui::GetCurrentWindow();
+    if (opened) {
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {6.f, 4.f});
         const float btn_size = ImGui::GetTextLineHeight() + ImGui::GetStyle().FramePadding.y * 2.f;
 
@@ -673,18 +654,29 @@ void ToolboxUIElement::DrawBreakoutButton(IDirect3DDevice9*)
             ImGui::EndPopup();
         }
     }
+    const auto bounded = ClampBreakoutPos(bw->Pos, bw->Size);
+    if (ImGui::IsMouseDown(0)) {
+        if (!ImVec2Eq(bounded, bw->Pos)) ImGui::SetWindowPos(bounded);
+    }
+    else if (pending_breakout_pos || !breakout_pos_set || ImGui::IsMouseReleased(0) ||
+             !ImVec2Eq(breakout_button_size, bw->Size) || !ImVec2Eq(bounded, bw->Pos)) {
+        const auto vp = ImGui::GetMainViewport();
+        const ImVec2 center = {vp->WorkPos.x + (vp->WorkSize.x - bw->Size.x) * 0.5f, vp->WorkPos.y + (vp->WorkSize.y - bw->Size.y) * 0.5f};
+        const ImVec2 desired = pending_breakout_pos ? ImVec2(breakout_pos[0], breakout_pos[1]) : breakout_pos_set ? bw->Pos : center;
+        const auto pos = PlaceBreakoutButton(this, desired, bw->Size);
+        if (!ImVec2Eq(pos, bw->Pos)) ImGui::SetWindowPos(pos);
+        pending_breakout_pos = false;
+        breakout_pos_set = true;
+    }
+    breakout_button_size = bw->Size;
     ImGui::End();
     ImGui::PopStyleVar(2);
 
-    if (const auto bw = ImGui::FindWindowByName(window_id)) {
-        const auto pos = ClampBreakoutPos(bw->Pos, bw->Size);
-        if (pos.x != bw->Pos.x || pos.y != bw->Pos.y) ImGui::SetWindowPos(window_id, pos);
+    if (!pending_breakout_pos) {
         breakout_pos[0] = bw->Pos.x;
         breakout_pos[1] = bw->Pos.y;
-        if (!being_moved && ImVec2Eq(previous_size, bw->Size)) {
-            breakout_button_rects[this] = ImRect(bw->Pos, {bw->Pos.x + bw->Size.x, bw->Pos.y + bw->Size.y});
-        }
     }
+    breakout_button_rects[this] = ImRect(bw->Pos, {bw->Pos.x + bw->Size.x, bw->Pos.y + bw->Size.y});
 }
 
 bool ToolboxUIElement::DrawTabButton(const bool show_icon, const bool show_text, const bool center_align_text)
