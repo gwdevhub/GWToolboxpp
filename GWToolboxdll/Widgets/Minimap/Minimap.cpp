@@ -323,7 +323,7 @@ namespace {
     }
 
     CompassContext* compass_context = nullptr;
-    std::map<uint32_t, std::map<uint32_t, clock_t>> compass_drawing_sessions;
+    std::map<uint32_t, clock_t> compass_drawing_sessions;
 
     void __cdecl OnCompassFrame_UICallback(GW::UI::InteractionMessage* message, void* wParam, void* lParam)
     {
@@ -332,11 +332,11 @@ namespace {
         bool block_compass_message = false;
         if (message->message_id == GW::UI::UIMessage::kCompassDraw && wParam) {
             const auto packet = static_cast<GW::UI::UIPacket::kCompassDraw*>(wParam);
-            auto& sessions = compass_drawing_sessions[packet->player_number];
-            const auto found = sessions.find(packet->session_id);
-            const auto continuing_drawing = found != sessions.end() && TIMER_DIFF(found->second) <= 5000;
+            const auto session_key = (packet->player_number << 16) | static_cast<uint16_t>(packet->session_id);
+            const auto found = compass_drawing_sessions.find(session_key);
+            const auto continuing_drawing = found != compass_drawing_sessions.end() && TIMER_DIFF(found->second) <= 5000;
             if (packet->number_of_points != 1 || continuing_drawing) {
-                sessions[packet->session_id] = TIMER_INIT();
+                compass_drawing_sessions[session_key] = TIMER_INIT();
                 block_compass_message = hide_compass_drawings;
             }
             else {
