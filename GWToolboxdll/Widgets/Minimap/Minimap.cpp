@@ -328,6 +328,13 @@ namespace {
     {
         GW::Hook::EnterHook();
 
+        if ((message->message_id == GW::UI::UIMessage::kCompassDraw && wParam &&
+             (static_cast<GW::UI::UIPacket::kCompassDraw*>(wParam)->number_of_points > 1 ? hide_compass_drawings : hide_compass_pings)) ||
+            (message->message_id == GW::UI::UIMessage::kCompassPing && hide_compass_pings)) {
+            GW::Hook::LeaveHook();
+            return;
+        }
+
         compass_context = message->wParam ? *(CompassContext**)message->wParam : nullptr;
         switch (message->message_id) {
             case GW::UI::UIMessage::kFrameMessage_0x44: {
@@ -391,16 +398,16 @@ namespace {
 
     GW::UI::Frame* GetCompassFrame()
     {
-        if (compass_frame) return compass_frame;
-        compass_frame = GW::UI::GetFrameByLabel(L"Compass");
-        if (compass_frame) {
-            ASSERT(compass_frame->frame_callbacks.size());
-            if (!OnCompassFrame_UICallback_Func) {
-                OnCompassFrame_UICallback_Func = compass_frame->frame_callbacks[0].callback;
+        if (!compass_frame) {
+            compass_frame = GW::UI::GetFrameByLabel(L"Compass");
+            if (compass_frame) compass_position_dirty = true;
+        }
+        if (compass_frame && !OnCompassFrame_UICallback_Func && compass_frame->frame_callbacks.size()) {
+            OnCompassFrame_UICallback_Func = compass_frame->frame_callbacks[0].callback;
+            if (OnCompassFrame_UICallback_Func) {
                 GW::Hook::CreateHook((void**)&OnCompassFrame_UICallback_Func, OnCompassFrame_UICallback, reinterpret_cast<void**>(&OnCompassFrame_UICallback_Ret));
                 GW::Hook::EnableHooks(OnCompassFrame_UICallback_Func);
             }
-            compass_position_dirty = true;
         }
         return compass_frame;
     }
@@ -867,14 +874,6 @@ void Minimap::OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessage msgid,
         case GW::UI::UIMessage::kDestroyUIPositionOverlay:
             in_interface_settings = (uint32_t)wParam == 1;
             compass_position_dirty = true;
-            break;
-        case GW::UI::UIMessage::kCompassDraw: {
-            ASSERT(wParam);
-            const auto packet = (GW::UI::UIPacket::kCompassDraw*)wParam;
-            status->blocked |= packet->number_of_points > 1 ? hide_compass_drawings : hide_compass_pings;
-        } break;
-        case GW::UI::UIMessage::kCompassPing:
-            status->blocked |= hide_compass_pings;
             break;
         case GW::UI::UIMessage::kMapLoaded: {
             in_interface_settings = false;
