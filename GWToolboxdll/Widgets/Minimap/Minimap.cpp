@@ -330,6 +330,17 @@ namespace {
         GW::Hook::EnterHook();
 
         compass_context = message->wParam ? *(CompassContext**)message->wParam : nullptr;
+        const auto forward_message = [&] {
+            if (compass_context && hide_flagging_controls) {
+                const auto prev = compass_context->ai_controls;
+                compass_context->ai_controls = nullptr;
+                OnCompassFrame_UICallback_Ret(message, wParam, lParam);
+                compass_context->ai_controls = prev;
+            }
+            else {
+                OnCompassFrame_UICallback_Ret(message, wParam, lParam);
+            }
+        };
         switch (message->message_id) {
             case GW::UI::UIMessage::kFrameMessage_0x44: {
                 if (OverrideCompassVisibility()) {
@@ -392,19 +403,11 @@ namespace {
                     }
                 }
                 if (block_compass_message) break;
+                forward_message();
+                break;
             }
-            [[fallthrough]];
             default:
-                if (compass_context && hide_flagging_controls) {
-                    // Temporarily nullify the pointer to flagging controls for all other message ids
-                    const auto prev = compass_context->ai_controls;
-                    compass_context->ai_controls = nullptr;
-                    OnCompassFrame_UICallback_Ret(message, wParam, lParam);
-                    compass_context->ai_controls = prev;
-                }
-                else {
-                    OnCompassFrame_UICallback_Ret(message, wParam, lParam);
-                }
+                forward_message();
                 break;
         }
 
