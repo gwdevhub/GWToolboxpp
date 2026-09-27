@@ -60,7 +60,7 @@ Labels:
 | Dungeon / mission clear journey events | confirmed observable | UI `kDungeonComplete` / `kMissionComplete` + current map → timed journey kinds (missions[] remains permanent bits). |
 | Cartography threshold journey events | confirmed observable | Continent fog grid `cartographed_areas` / `h05B4` coverage % → `cartography_threshold` at 1/10/25/50/75/90/100. Not map-local cartographer title. |
 | Timed vanquish clear | confirmed observable | UI `kVanquishComplete` → `vanquish_complete` (permanent bits remain `vanquish_area`). |
-| Skill-point milestones | confirmed observable | `total_earned_skill_points` → `skill_point_threshold` + `amount`. |
+| Skill-point milestones | confirmed observable | `total_earned_skill_points` → `skill_point_threshold` + `amount` at thresholds `{1, 10, 25, 50, 100}` (producer list in `kSkillPointThresholdAmounts`; Contract v1 unchanged). Seal-before-delta: first stable seal emits zero catch-up; later crossings only. Lifetime sample below stored `skill_points_earned` is invalid regression (no event; keep stored max). |
 | Faction milestones | confirmed observable | `total_earned_{kurzick,luxon,balth,imperial}` → `faction_threshold` + `amount`. |
 | Hall of Monuments snapshot | confirmed observable | Async `HallOfMonumentsModule::AsyncGetAccountAchievements` → `hallOfMonuments` (point totals + dedication detail arrays) + `hom_points` journey when category totals increase. Not Draw/Update blocking. |
 

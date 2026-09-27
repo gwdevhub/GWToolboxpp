@@ -14,6 +14,7 @@ struct CharacterJourneyBaselineCandidates {
     IdSetBaselineCandidate professions;
     IdSetBaselineCandidate vanquish_areas;
     FlagBaselineCandidate hard_mode;
+    AmountBaselineCandidate skill_points;
 
     friend bool operator==(
         const CharacterJourneyBaselineCandidates& a,
@@ -24,7 +25,8 @@ struct CharacterJourneyBaselineCandidates {
             && a.heroes == b.heroes
             && a.professions == b.professions
             && a.vanquish_areas == b.vanquish_areas
-            && a.hard_mode == b.hard_mode;
+            && a.hard_mode == b.hard_mode
+            && a.skill_points == b.skill_points;
     }
 };
 

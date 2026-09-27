@@ -3,6 +3,7 @@
 
 #include "test_assert.h"
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -34,6 +35,38 @@ RawIdSetFamilyObservation MissingContextIds()
 RawFlagFamilyObservation UsableFlag(bool value)
 {
     return MakeRawFlagFamilyObservation(true, true, value);
+}
+
+RawAmountFamilyObservation UsableAmount(uint32_t amount)
+{
+    return MakeRawAmountFamilyObservation(true, true, amount);
+}
+
+RawAmountFamilyObservation UnusableAmount()
+{
+    return MakeRawAmountFamilyObservation(true, false, 50);
+}
+
+RawAmountFamilyObservation MissingContextAmount()
+{
+    return MakeRawAmountFamilyObservation(false, true, 50);
+}
+
+SkillPointBaselineTransitionResult StepSkillPoints(
+    const RawAmountFamilyObservation& observation,
+    const StateOnlyJourneyBaseline& baseline,
+    const AmountBaselineCandidate& candidate,
+    std::optional<uint32_t> skill_points_earned,
+    const std::vector<JourneyEventRecord>& history,
+    std::string_view observed_at)
+{
+    return TransitionSkillPointsJourneyBaseline(
+        observation,
+        baseline,
+        candidate,
+        skill_points_earned,
+        history,
+        observed_at);
 }
 
 IdSetBaselineTransitionResult StepMaps(
@@ -368,6 +401,111 @@ void TestSealedPartialSampleNoEmitNoExpand()
     Expect(full.baseline.ids[2] == 30, "full_baseline_has_30");
 }
 
+void TestSkillPointsSealZeroCatchUpThenThresholds()
+{
+    StateOnlyJourneyBaseline baseline{};
+    AmountBaselineCandidate candidate{};
+    std::optional<uint32_t> earned;
+    SkillPointBaselineTransitionResult step{};
+    for (int i = 0; i < 3; ++i) {
+        step = StepSkillPoints(UsableAmount(50), baseline, candidate, earned, {}, kTs);
+        baseline = step.baseline;
+        candidate = step.candidate;
+        earned = step.skill_points_earned;
+        Expect(step.new_events.empty(), "sp_seal_no_events");
+    }
+    Expect(step.baseline.state == JourneyBaselineSealState::Sealed, "sp_sealed");
+    Expect(earned == 50u, "sp_seal_snapshot");
+
+    step = StepSkillPoints(UsableAmount(50), step.baseline, step.candidate, earned, {}, kTs2);
+    Expect(step.new_events.empty(), "sp_same_no_events");
+    Expect(step.skill_points_earned == 50u, "sp_same_snapshot");
+
+    step = StepSkillPoints(
+        UsableAmount(100), step.baseline, step.candidate, step.skill_points_earned, {}, kTs3);
+    Expect(step.new_events.size() == 1, "sp_cross_100_one");
+    Expect(step.new_events[0].kind == "skill_point_threshold", "sp_cross_kind");
+    Expect(step.new_events[0].amount == 100u, "sp_cross_amount");
+    Expect(step.skill_points_earned == 100u, "sp_cross_snapshot");
+
+    auto again = StepSkillPoints(
+        UsableAmount(100),
+        step.baseline,
+        step.candidate,
+        step.skill_points_earned,
+        step.new_events,
+        kTs4);
+    Expect(again.new_events.empty(), "sp_repeat_dedupe");
+    Expect(again.skill_points_earned == 100u, "sp_repeat_snapshot");
+}
+
+void TestSkillPointsMultiThresholdAndRegression()
+{
+    StateOnlyJourneyBaseline baseline{};
+    AmountBaselineCandidate candidate{};
+    std::optional<uint32_t> earned;
+    SkillPointBaselineTransitionResult step{};
+    for (int i = 0; i < 3; ++i) {
+        step = StepSkillPoints(UsableAmount(5), baseline, candidate, earned, {}, kTs);
+        baseline = step.baseline;
+        candidate = step.candidate;
+        earned = step.skill_points_earned;
+    }
+    Expect(step.baseline.state == JourneyBaselineSealState::Sealed, "sp_low_sealed");
+    Expect(step.new_events.empty(), "sp_low_zero_catchup");
+
+    step = StepSkillPoints(
+        UsableAmount(50), step.baseline, step.candidate, step.skill_points_earned, {}, kTs2);
+    Expect(step.new_events.size() == 3, "sp_multi_three");
+    Expect(step.new_events[0].amount == 10u, "sp_multi_10");
+    Expect(step.new_events[1].amount == 25u, "sp_multi_25");
+    Expect(step.new_events[2].amount == 50u, "sp_multi_50");
+    Expect(step.skill_points_earned == 50u, "sp_multi_snapshot");
+
+    auto history = step.new_events;
+    auto regress = StepSkillPoints(
+        UsableAmount(20), step.baseline, step.candidate, step.skill_points_earned, history, kTs3);
+    Expect(regress.new_events.empty(), "sp_regress_no_events");
+    Expect(regress.skill_points_earned == 50u, "sp_regress_keeps_max");
+    Expect(regress.baseline.state == JourneyBaselineSealState::Sealed, "sp_regress_stays_sealed");
+
+    auto recover = StepSkillPoints(
+        UsableAmount(50), regress.baseline, regress.candidate, regress.skill_points_earned, history, kTs4);
+    Expect(recover.new_events.empty(), "sp_recover_no_dup");
+    Expect(recover.skill_points_earned == 50u, "sp_recover_snapshot");
+}
+
+void TestSkillPointsUnsetRegressionAndUnusable()
+{
+    StateOnlyJourneyBaseline baseline{};
+    AmountBaselineCandidate candidate{};
+    std::optional<uint32_t> earned = 40u;
+
+    auto step = StepSkillPoints(UsableAmount(40), baseline, candidate, earned, {}, kTs);
+    baseline = step.baseline;
+    candidate = step.candidate;
+    earned = step.skill_points_earned;
+    Expect(candidate.consecutive_matches == 1u, "sp_unset_streak_one");
+    Expect(baseline.state == JourneyBaselineSealState::Unset, "sp_unset_still");
+
+    step = StepSkillPoints(UsableAmount(30), baseline, candidate, earned, {}, kTs2);
+    Expect(step.baseline.state == JourneyBaselineSealState::Unset, "sp_unset_regress_unset");
+    Expect(!step.candidate.active, "sp_unset_regress_breaks");
+    Expect(step.candidate.consecutive_matches == 0u, "sp_unset_regress_zero");
+    Expect(step.skill_points_earned == 40u, "sp_unset_regress_keeps");
+    Expect(step.new_events.empty(), "sp_unset_regress_no_events");
+
+    step = StepSkillPoints(UnusableAmount(), step.baseline, step.candidate, step.skill_points_earned, {}, kTs3);
+    Expect(!step.candidate.active, "sp_unusable_breaks");
+    Expect(step.new_events.empty(), "sp_unusable_no_events");
+    Expect(step.skill_points_earned == 40u, "sp_unusable_keeps");
+
+    step = StepSkillPoints(
+        MissingContextAmount(), step.baseline, step.candidate, step.skill_points_earned, {}, kTs4);
+    Expect(!step.candidate.active, "sp_missing_breaks");
+    Expect(step.skill_points_earned == 40u, "sp_missing_keeps");
+}
+
 void TestLegacyOrphanDoesNotBlockPostSealDelta()
 {
     std::vector<JourneyEventRecord> history;
@@ -416,4 +554,7 @@ void RunJourneyBaselineTransitionTests()
     TestZeroIdNeverSealsOrFalseDelta();
     TestSealedPartialSampleNoEmitNoExpand();
     TestLegacyOrphanDoesNotBlockPostSealDelta();
+    TestSkillPointsSealZeroCatchUpThenThresholds();
+    TestSkillPointsMultiThresholdAndRegression();
+    TestSkillPointsUnsetRegressionAndUnusable();
 }

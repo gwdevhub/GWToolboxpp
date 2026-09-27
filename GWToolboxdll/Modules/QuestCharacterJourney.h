@@ -160,6 +160,8 @@ enum class JourneyUnlockIdKind : uint8_t {
     Profession,
 };
 
+inline constexpr uint32_t kSkillPointThresholdAmounts[] = {1, 10, 25, 50, 100};
+
 std::string BuildTitleSubjectKey(uint32_t title_id);
 std::string BuildLevelSubjectKey(uint32_t level);
 std::string BuildMapSubjectKey(uint32_t map_id);

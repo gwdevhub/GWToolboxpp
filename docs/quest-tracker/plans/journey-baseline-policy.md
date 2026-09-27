@@ -102,7 +102,7 @@ Async HoM (separate ingest, same seal-before-delta rule)
 | `hard_mode_unlock` | Snapshot flag | Character | Emit if unlocked and kind absent | Per-family seal; emit only false→true after seal | HM unlocked bool + family sealed flag |
 | `vanquish_area` | Snapshot vanquish bits | Character | Emit-all catch-up | Same as map_unlock | Vanquish map id set + family sealed flag |
 | `cartography_threshold` | Snapshot fog % | Character | Catch-up all thresholds from 0 | Per-family seal; emit only newly crossed thresholds after seal | Single sealed prior % (no dual mirror) |
-| `skill_point_threshold` | Snapshot earned SP | Character | Catch-up from 0 via events | Per-family seal; W5 snapshot prior | Sealed flag + `skill_points_earned` |
+| `skill_point_threshold` | Snapshot earned SP | Character | Catch-up from 0 via events | Per-family seal; W5 snapshot prior; thresholds `{1, 10, 25, 50, 100}` (`kSkillPointThresholdAmounts`); sample `< skill_points_earned` is invalid regression (no event, keep max; Unset streak break) | Sealed flag + `skill_points_earned` |
 | `faction_threshold` | Snapshot earned factions | Character | Catch-up from 0 | Per-family seal; W5 snapshot prior | Sealed flag + `faction_totals` |
 | `hom_points` | Async HoM snapshot | Character envelope | First sample treats previous as 0 → emit all non-zero | HoM-family BaselineTransition; seal-before-delta | Sealed flag + `hall_of_monuments` |
 | `mission_complete` | UI game message | Character | Event-only | Keep separate timed path | None |
@@ -225,6 +225,8 @@ Do **not** dual-write mirrored baseline amounts beside snapshots.
 4. Write current snapshot / baseline forward.
 
 The builder must **never** re-read a snapshot field that this same ingest already overwrote as its prior.
+
+**Skill-point regression (producer policy):** a usable sample with `amount < skill_points_earned` is invalid. Emit nothing and keep the stored snapshot maximum. While `Unset`, also break the amount-family candidate streak. Does not unseal a `Sealed` family.
 
 ### 3.8 Sealing and delta (post-A7)
 

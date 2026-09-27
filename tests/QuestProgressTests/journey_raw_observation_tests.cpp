@@ -227,6 +227,8 @@ void TestRawFloodIngestCreatesNoEventsAndLeavesBaselinesUnset()
     Expect(character.faction_totals->luxon == 5000u, "raw_ingest_faction_luxon");
     Expect(svc.JourneyBaselineCandidates() != nullptr, "raw_ingest_candidates_open");
     Expect(svc.JourneyBaselineCandidates()->maps.consecutive_matches == 1, "raw_ingest_maps_streak_one");
+    Expect(svc.JourneyBaselineCandidates()->skill_points.consecutive_matches == 1,
+        "raw_ingest_skill_points_streak_one");
 }
 
 void TestNonFloodEventsStillIngest()
