@@ -22,7 +22,6 @@
 #include <Windows/Pathfinding/PathingMapDataLoader.h>
 #include <Utils/ToolboxUtils.h>
 
-// Per continent, standable tiles and the tiles they credit, as the .bin files make_header.py consumes.
 namespace Carto {
     struct ContinentBake {
         // (cy << 32) | (uint32)cx, per walk: gates blocking, gates open, and no walk - ground exists only.

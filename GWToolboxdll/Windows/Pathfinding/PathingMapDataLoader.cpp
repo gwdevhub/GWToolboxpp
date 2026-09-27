@@ -77,16 +77,6 @@ namespace Pathing {
         plane.sink_node_count = sink_node_count;
     }
 
-    // Travel-portal model file IDs (asura gates / ferry portals). Shared by the DAT
-    // prop parser and the live MapContext extractor so both agree on what counts.
-    bool IsPortalModelFileId(uint32_t fid)
-    {
-        switch (fid) {
-            case 0x4e6b2: case 0x3c5ac: case 0xa825: case 0xe723: case 0x858b: case 0x28da0: case 0x1c533: case 0x5e77a: return true;
-            default: return false;
-        }
-    }
-
     // The model info is shared by every prop using that model, and carries the file hash the
     // portal check keys off plus the collision bounds the doorway width comes from.
     static uint32_t MapPropModelFileId(const GW::MapProp* prop)
