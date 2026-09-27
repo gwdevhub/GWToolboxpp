@@ -81,7 +81,6 @@ void PingsLinesRenderer::P046Callback(const GW::Packet::StoC::AgentPinged* pak)
     if (reduce_ping_spam) {
         for (Ping* ping : pings) {
             if (ping->GetAgentID() == pak->agent_id) {
-                // extend the duration to count for the current ping.
                 const clock_t diff = TIMER_DIFF(ping->start);
                 ping->duration = 3000 + diff;
                 found = true;
@@ -89,8 +88,8 @@ void PingsLinesRenderer::P046Callback(const GW::Packet::StoC::AgentPinged* pak)
             }
         }
     }
-    if (!found) {
-        pings.push_front(new AgentPing(pak->agent_id));
+    if (!found && GetActivePings() < max_game_pings) {
+        pings.push_front(new AgentPing(pak->agent_id, true));
     }
 }
 
@@ -153,12 +152,14 @@ void PingsLinesRenderer::OnUIMessage(GW::HookStatus*, GW::UI::UIMessage message_
     } break;
     case GW::UI::UIMessage::kCompassPing: {
         const auto packet = (GW::UI::UIPacket::kCompassPing*)wparam;
-
-        pings.push_front(new TerrainPing(
-            packet->point.x * drawing_scale,
-            packet->point.y * drawing_scale,
-            packet->color
-        ));
+        if (GetActivePings() < max_game_pings) {
+            pings.push_front(new TerrainPing(
+                packet->point.x * drawing_scale,
+                packet->point.y * drawing_scale,
+                packet->color,
+                true
+            ));
+        }
     } break;
     }
 
@@ -241,6 +242,17 @@ bool PingsLinesRenderer::HasPendingLines() const
     return std::ranges::any_of(drawings, [](const auto& drawing) {
         return drawing.second.player != 0 && !drawing.second.lines.empty();
     });
+}
+
+size_t PingsLinesRenderer::GetActivePings() const
+{
+    size_t active_game_pings = 0;
+    for (const auto* ping : pings) {
+        if (ping->game_ping && TIMER_DIFF(ping->start) <= ping->duration) {
+            ++active_game_pings;
+        }
+    }
+    return active_game_pings;
 }
 
 void PingsLinesRenderer::DrawPings(IDirect3DDevice9* device)

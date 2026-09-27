@@ -14,6 +14,7 @@ the latest version, go to the [Home Page](./) instead.
 * [New] Pcons: Heroes' Trifecta and Empowering Feast can now be automatically used. Each is used when any of its constituent effects is absent or about to expire.
 * [New] Pcons can now be automatically disabled when a cinematic starts.
 * [Fix] Minimap: pings now use Guild Wars' own graphics and stay correctly aligned when the minimap is rotated. The inner ping indicator clamps to the minimap edge when its location is out of view, and the **Player Pings** setting controls their opacity with a less-obtrusive default.
+* [Fix] Minimap: game-generated pings now follow the compass's limit of eight at a time, so effects such as Stalker's Ration no longer flood the minimap in crowded areas.
 * [New] Armory: search armor and weapon previews by name.
 * [New] Hero Builds: the hero selector now shows profession icons, can optionally group heroes by profession, and shows each mercenary hero's in-game name while you are in an outpost.
 * [Fix] Hero Builds now applies saved disabled skill states at a controlled rate, so loading teams with more than 16 disabled hero skills no longer leaves later skills enabled.

@@ -37,12 +37,13 @@ class PingsLinesRenderer : public D3DVertexBuffer {
     };
 
     struct Ping {
-        Ping()
-            : start(TIMER_INIT()) { }
+        explicit Ping(const bool _game_ping = false)
+            : start(TIMER_INIT()), game_ping(_game_ping) { }
 
         virtual ~Ping() = default;
         clock_t start;
         int duration = 3000;
+        const bool game_ping;
         [[nodiscard]] virtual float GetX() const = 0;
         [[nodiscard]] virtual float GetY() const = 0;
         [[nodiscard]] virtual float GetScale() const { return 1.0f; }
@@ -54,8 +55,8 @@ class PingsLinesRenderer : public D3DVertexBuffer {
     struct TerrainPing : Ping {
         TerrainPing(const float _x, const float _y)
             : TerrainPing(_x, _y, Colors::Empty()) { }
-        TerrainPing(const float _x, const float _y, const Color _color)
-            : x(_x), y(_y), color(_color) { }
+        TerrainPing(const float _x, const float _y, const Color _color, const bool _game_ping = false)
+            : Ping(_game_ping), x(_x), y(_y), color(_color) { }
 
         const float x, y;
         const Color color;
@@ -66,8 +67,8 @@ class PingsLinesRenderer : public D3DVertexBuffer {
     };
 
     struct AgentPing : Ping {
-        explicit AgentPing(const DWORD _id)
-            : id(_id) { }
+        AgentPing(const DWORD _id, const bool _game_ping)
+            : Ping(_game_ping), id(_id) { }
 
         DWORD id;
         [[nodiscard]] float GetX() const override;
@@ -143,6 +144,8 @@ public:
     void RegisterSettings(ToolboxModule* module);
 
 private:
+    static constexpr size_t max_game_pings = 8;
+
     void Initialize(IDirect3DDevice9* device) override;
 
     void DrawPings(IDirect3DDevice9* device);
@@ -152,6 +155,7 @@ private:
     void DrawDrawings(IDirect3DDevice9* device);
     void EnqueueVertex(float x, float y, Color color);
     [[nodiscard]] bool HasPendingLines() const;
+    [[nodiscard]] size_t GetActivePings() const;
 
     int ToIntPos(const float n) const
     {
