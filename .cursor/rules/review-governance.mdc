@@ -7,4 +7,4 @@ Read `AGENTS.md` and `docs/ai/REVIEW_GOVERNANCE.md` whenever a task asks for a r
 
 A repair batch is bounded work. Validate each finding, make the smallest safe repair, run affected checks, and update the handoff. Do not add cleanup, refactors, CI/dependency/generated-asset changes, PR-state changes, or a new review request. Preserve stricter Quest Tracker observation, transition, identity, persistence, and inter-repo contract rules.
 
-After a prior review, prepare a delta handoff, not a new full audit. Include exact SHAs, changed paths, concise check results, risks, and deferred items.
+After a prior review, prepare a delta handoff, not a new full audit. Include exact SHAs, changed paths, concise check results, risks, and deferred items. When heavyweight validation was skipped, include the Heavy Validation Economy handoff fields from `docs/ai/REVIEW_GOVERNANCE.md`.

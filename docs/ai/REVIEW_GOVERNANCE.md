@@ -42,12 +42,21 @@ Do not repeat a full audit after a small repair commit. Escalate only if a publi
 - Current HEAD SHA:
 - Changed paths:
 - Behavior, transition, or persistence change:
-- Checks actually run: <command → pass/fail/skipped>
+- Checks actually run: <command → pass/fail/skipped/NOT RUN due to known blocker>
+- Heavy validation attempted: <yes | no | n/a>
+- Heavy validation status:
+- Preflight result:
+- Known blocker:
+- Previous evidence reference:
+- Acceptance impact: <none | acceptance BLOCKED | …>
+- Rerun condition:
 - Known limitations / deferred work:
 - Requested focus:
 ```
 
 No raw logs unless a failure needs evidence.
+
+**NOT RUN due to known blocker** is not PASS. If mandatory heavyweight evidence is unavailable, acceptance remains **acceptance BLOCKED** even when cheaper checks are green. See Heavy Validation Economy in `docs/ai/AI_SOFTWARE_FACTORY.md`.
 
 ## Reviewer prompt
 
@@ -66,7 +75,7 @@ P0 means security/data-loss/outage risk. P1 means likely normal-use incorrectnes
 
 ## Verdict meaning
 
-- `PASS`: no reproducible P0–P2 issue remains within scope and all required evidence is present.
+- `PASS`: no reproducible P0–P2 issue remains within scope and all required evidence is present. Missing mandatory heavyweight evidence marked **NOT RUN due to known blocker** cannot support PASS; treat as **acceptance BLOCKED** / escalate.
 - `REPAIR REQUIRED`: a bounded technical correction is needed before human PR review.
 - `HUMAN DECISION REQUIRED`: scope, product risk, ownership or contract authority needs a human decision.
 

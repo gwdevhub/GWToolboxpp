@@ -8,4 +8,6 @@ alwaysApply: true
 - Compilation alone does not verify game-state behavior.
 - Review callback registration/teardown explicitly.
 - Persistence parsers need malformed/old-version tests.
+- Prefer cheap falsification and preflight before heavyweight validation; see `.cursor/rules/heavy-validation-economy.mdc` and `docs/ai/AI_SOFTWARE_FACTORY.md`.
 - Do not declare completion while relevant build/tests fail.
+- State exactly which checks ran and distinguish unrun checks (**NOT RUN due to known blocker**) from passed checks; do not claim PASS when mandatory evidence is missing (**acceptance BLOCKED**).

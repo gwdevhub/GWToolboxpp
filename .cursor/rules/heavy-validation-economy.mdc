@@ -1,0 +1,28 @@
+---
+description: Cheap falsification first; skip hopeless expensive validation; never treat known blockers as PASS.
+alwaysApply: true
+---
+
+# Heavy Validation Economy
+
+Normative source: `docs/ai/AI_SOFTWARE_FACTORY.md` (Heavy Validation Economy).
+
+Default strategy:
+
+```text
+cheap falsification → preflight → narrow validation → heavyweight validation only when justified
+```
+
+Before any expensive command (roughly >5 min, full MSVC/RelWithDebInfo rebuild, xwin cross build, full test suite when a targeted subset suffices, in-game verification, or repo-known long commands):
+
+1. Run cheap **preflight** for prerequisites (toolchain, worktree, prior narrow gate green, live client when required).
+2. If a **known deterministic blocker** is already characterized and the environment has not materially changed, do **not** reproduce it: mark **NOT RUN due to known blocker**, keep cheaper useful checks, and STOP if that check is mandatory (**acceptance BLOCKED**).
+3. Do not convert **NOT RUN due to known blocker** into PASS or substitute a weaker check as equivalent.
+
+Failure-fast: if an inexpensive check already proves acceptance cannot pass, do not escalate.
+
+Retry only plausibly transient failures (network blip, temporary service, known startup race). Do not retry missing executables, wrong pins, invalid config, schema/syntax/compile/parser failures, storage quota exhaustion, unsupported environments, or a missing live game client when in-game evidence is mandatory.
+
+Long-running commands: never start or keep waiting when deterministic evidence already shows the command cannot succeed. If a running process becomes hopeless, terminate it when safely possible, record the reason, and continue with cheaper checks or STOP—do not wait for timeout to collect an expected failure.
+
+When heavyweight validation is skipped, include handoff fields: Heavy validation attempted/status, Preflight result, Known blocker, Previous evidence reference, Acceptance impact, Rerun condition.
