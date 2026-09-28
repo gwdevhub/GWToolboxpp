@@ -491,6 +491,117 @@ void TestDetachedFailedFlushPreservesSealedBaseline()
         "svc_detach_reload_no_candidate");
 }
 
+JourneySnapshotResult SkillPointsSample(
+    const SessionIdentity& id,
+    uint32_t amount,
+    std::string_view observed_at = kTs)
+{
+    JourneySnapshotResult snapshot;
+    snapshot.skill_points_earned = amount;
+    snapshot.raw_flood.observed_at = std::string(observed_at);
+    snapshot.raw_flood.skill_points = MakeRawAmountFamilyObservation(true, true, amount);
+    NormalizeRawJourneyFloodObservation(snapshot.raw_flood);
+    return Stamp(std::move(snapshot), id);
+}
+
+void IngestSkillPointsN(
+    QuestProgressService& svc,
+    const SessionIdentity& id,
+    uint32_t amount,
+    int n,
+    std::string_view observed_at = kTs)
+{
+    for (int i = 0; i < n; ++i) {
+        svc.IngestJourneySnapshot(SkillPointsSample(id, amount, observed_at));
+    }
+}
+
+void TestSkillPointsServiceSealDeltaRegression()
+{
+    const auto dir = MakeTempDir();
+    auto id = PersistentId(kAcct, kCharA, "Hero");
+    QuestProgressService svc;
+    svc.Initialize();
+    svc.SetStoreDirectory(dir);
+    svc.BindIdentity(id);
+
+    IngestSkillPointsN(svc, id, 40, 3);
+    const auto& sealed = ActiveCharacter(svc, id);
+    Expect(sealed.journey_baselines.skill_points.state == JourneyBaselineSealState::Sealed,
+        "svc_sp_sealed");
+    Expect(sealed.skill_points_earned == 40u, "svc_sp_seal_snapshot");
+    Expect(sealed.journey_events.empty(), "svc_sp_seal_zero_events");
+
+    svc.IngestJourneySnapshot(SkillPointsSample(id, 100, kTs2));
+    Expect(ActiveCharacter(svc, id).journey_events.size() == 2, "svc_sp_delta_two");
+    Expect(ActiveCharacter(svc, id).journey_events[0].amount == 50u, "svc_sp_delta_50");
+    Expect(ActiveCharacter(svc, id).journey_events[1].amount == 100u, "svc_sp_delta_100");
+    Expect(ActiveCharacter(svc, id).skill_points_earned == 100u, "svc_sp_delta_snapshot");
+
+    svc.IngestJourneySnapshot(SkillPointsSample(id, 100, kTs3));
+    Expect(ActiveCharacter(svc, id).journey_events.size() == 2, "svc_sp_dedupe");
+
+    svc.IngestJourneySnapshot(SkillPointsSample(id, 60, kTs4));
+    Expect(ActiveCharacter(svc, id).journey_events.size() == 2, "svc_sp_regress_no_event");
+    Expect(ActiveCharacter(svc, id).skill_points_earned == 100u, "svc_sp_regress_keeps_max");
+
+    svc.IngestJourneySnapshot(SkillPointsSample(id, 100, kTs4));
+    Expect(ActiveCharacter(svc, id).journey_events.size() == 2, "svc_sp_recover_no_dup");
+    Expect(ActiveCharacter(svc, id).skill_points_earned == 100u, "svc_sp_recover_snapshot");
+    Expect(svc.Flush(true), "svc_sp_flush");
+
+    QuestProgressService reload;
+    reload.Initialize();
+    reload.SetStoreDirectory(dir);
+    reload.BindIdentity(id);
+    Expect(ActiveCharacter(reload, id).journey_baselines.skill_points.state
+            == JourneyBaselineSealState::Sealed,
+        "svc_sp_reload_sealed");
+    Expect(ActiveCharacter(reload, id).skill_points_earned == 100u, "svc_sp_reload_snapshot");
+    Expect(ActiveCharacter(reload, id).journey_events.size() == 2, "svc_sp_reload_events");
+}
+
+void TestSkillPointsIdentityFenceRejectsForeignAndAwaiting()
+{
+    const auto dir = MakeTempDir();
+    auto id_a = PersistentId(kAcct, kCharA, "A");
+    auto id_b = PersistentId(kAcct, kCharB, "B");
+    QuestProgressService svc;
+    svc.Initialize();
+    svc.SetStoreDirectory(dir);
+    svc.BindIdentity(id_a);
+
+    svc.IngestJourneySnapshot(SkillPointsSample(id_b, 200, kTs));
+    Expect(!ActiveCharacter(svc, id_a).skill_points_earned.has_value(), "svc_sp_fence_foreign_no_snapshot");
+    Expect(ActiveCharacter(svc, id_a).journey_baselines.skill_points.state
+            == JourneyBaselineSealState::Unset,
+        "svc_sp_fence_foreign_unset");
+    Expect(ActiveCharacter(svc, id_a).journey_events.empty(), "svc_sp_fence_foreign_no_events");
+    Expect(svc.JourneyBaselineCandidates()->skill_points.consecutive_matches == 0,
+        "svc_sp_fence_foreign_no_streak");
+
+    IngestSkillPointsN(svc, id_a, 40, 3, kTs2);
+    Expect(ActiveCharacter(svc, id_a).journey_baselines.skill_points.state
+            == JourneyBaselineSealState::Sealed,
+        "svc_sp_fence_own_sealed");
+    Expect(ActiveCharacter(svc, id_a).skill_points_earned == 40u, "svc_sp_fence_own_snapshot");
+    Expect(ActiveCharacter(svc, id_a).journey_events.empty(), "svc_sp_fence_own_zero_catchup");
+    Expect(svc.Flush(true), "svc_sp_fence_flush_before_rebind");
+
+    svc.BindIdentity(id_b);
+    svc.BindIdentity(id_a, false, 5, true);
+    Expect(svc.awaiting_post_bind_snapshot(), "svc_sp_fence_awaiting");
+    Expect(ActiveCharacter(svc, id_a).skill_points_earned == 40u, "svc_sp_fence_await_keeps_pre");
+
+    svc.IngestJourneySnapshot(SkillPointsSample(id_a, 500, kTs3));
+    Expect(svc.awaiting_post_bind_snapshot(), "svc_sp_fence_await_still");
+    Expect(ActiveCharacter(svc, id_a).skill_points_earned == 40u, "svc_sp_fence_await_no_raise");
+    Expect(ActiveCharacter(svc, id_a).journey_events.empty(), "svc_sp_fence_await_no_events");
+    Expect(ActiveCharacter(svc, id_a).journey_baselines.skill_points.state
+            == JourneyBaselineSealState::Sealed,
+        "svc_sp_fence_await_stays_sealed");
+}
+
 void TestNonFloodEventsUnchangedAlongsideSeal()
 {
     const auto dir = MakeTempDir();
@@ -545,4 +656,6 @@ void RunJourneyBaselineServiceIngestTests()
     TestIdentityFenceBlocksMismatchedAndAwaiting();
     TestDetachedFailedFlushPreservesSealedBaseline();
     TestNonFloodEventsUnchangedAlongsideSeal();
+    TestSkillPointsServiceSealDeltaRegression();
+    TestSkillPointsIdentityFenceRejectsForeignAndAwaiting();
 }

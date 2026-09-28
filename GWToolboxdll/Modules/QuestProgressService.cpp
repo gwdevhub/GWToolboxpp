@@ -1284,6 +1284,32 @@ void QuestProgressService::ApplyCharacterJourneyBaselineTransitions(
             changed = true;
         }
     }
+
+    {
+        const auto previous_baseline = stored.journey_baselines.skill_points;
+        const auto previous_skill_points = stored.skill_points_earned;
+        auto step = TransitionSkillPointsJourneyBaseline(
+            raw_flood.skill_points,
+            stored.journey_baselines.skill_points,
+            candidates.skill_points,
+            previous_skill_points,
+            stored.journey_events,
+            raw_flood.observed_at);
+        stored.journey_baselines.skill_points = std::move(step.baseline);
+        candidates.skill_points = std::move(step.candidate);
+        if (stored.journey_baselines.skill_points != previous_baseline) {
+            changed = true;
+        }
+        if (step.skill_points_earned != previous_skill_points) {
+            stored.skill_points_earned = step.skill_points_earned;
+            changed = true;
+        }
+        const auto before_events = stored.journey_events.size();
+        AppendUniqueJourneyEvents(stored.journey_events, step.new_events);
+        if (stored.journey_events.size() != before_events) {
+            changed = true;
+        }
+    }
 }
 
 void QuestProgressService::IngestSnapshot(
@@ -1353,11 +1379,6 @@ void QuestProgressService::IngestJourneySnapshot(JourneySnapshotResult snapshot)
     if (snapshot.experience_total.has_value()
         && snapshot.experience_total != stored->experience_total) {
         stored->experience_total = snapshot.experience_total;
-        changed = true;
-    }
-    if (snapshot.skill_points_earned.has_value()
-        && snapshot.skill_points_earned != stored->skill_points_earned) {
-        stored->skill_points_earned = snapshot.skill_points_earned;
         changed = true;
     }
     if (snapshot.faction_totals.has_value()

@@ -3,7 +3,10 @@
 #include <Modules/QuestProgressDomain.h>
 
 #include <algorithm>
+#include <iterator>
 #include <map>
+#include <optional>
+#include <vector>
 
 namespace QuestProgress {
 namespace {
@@ -80,6 +83,21 @@ void BreakFlagStreak(FlagBaselineCandidate& candidate)
     candidate.active = false;
     candidate.value = false;
     candidate.consecutive_matches = 0;
+}
+
+void BreakAmountStreak(AmountBaselineCandidate& candidate)
+{
+    candidate.active = false;
+    candidate.amount = 0;
+    candidate.consecutive_matches = 0;
+}
+
+bool IsAmountRegression(
+    std::optional<uint32_t> previous_skill_points_earned,
+    uint32_t current_amount)
+{
+    return previous_skill_points_earned.has_value()
+        && current_amount < *previous_skill_points_earned;
 }
 
 IdSetBaselineTransitionResult TransitionIdSetUnset(
@@ -278,6 +296,80 @@ FlagBaselineTransitionResult TransitionHardModeJourneyBaseline(
     out.baseline.unlocked = legacy || out.candidate.seen_true || observation.value;
     BreakFlagStreak(out.candidate);
     out.candidate.seen_true = false;
+    return out;
+}
+
+SkillPointBaselineTransitionResult TransitionSkillPointsJourneyBaseline(
+    const RawAmountFamilyObservation& observation,
+    const StateOnlyJourneyBaseline& previous_baseline,
+    const AmountBaselineCandidate& previous_candidate,
+    std::optional<uint32_t> previous_skill_points_earned,
+    const std::vector<JourneyEventRecord>& existing_events,
+    std::string_view observed_at_utc)
+{
+    SkillPointBaselineTransitionResult out;
+    out.baseline = previous_baseline;
+    out.candidate = previous_candidate;
+    out.skill_points_earned = previous_skill_points_earned;
+
+    if (previous_baseline.state == JourneyBaselineSealState::Sealed) {
+        BreakAmountStreak(out.candidate);
+        if (!ObservationEligible(
+                observation.context_available,
+                observation.sample_usable,
+                observed_at_utc)) {
+            return out;
+        }
+        if (IsAmountRegression(previous_skill_points_earned, observation.value)) {
+            return out;
+        }
+        const uint32_t prior = previous_skill_points_earned.value_or(0);
+        const std::vector<uint32_t> thresholds(
+            std::begin(kSkillPointThresholdAmounts),
+            std::end(kSkillPointThresholdAmounts));
+        out.new_events = BuildAbsoluteThresholdEvents(
+            "skill_point_threshold",
+            "skill_points",
+            prior,
+            observation.value,
+            thresholds,
+            existing_events,
+            observed_at_utc);
+        out.skill_points_earned = observation.value;
+        out.baseline.state = JourneyBaselineSealState::Sealed;
+        return out;
+    }
+
+    if (!ObservationEligible(
+            observation.context_available,
+            observation.sample_usable,
+            observed_at_utc)) {
+        BreakAmountStreak(out.candidate);
+        return out;
+    }
+
+    if (IsAmountRegression(previous_skill_points_earned, observation.value)) {
+        BreakAmountStreak(out.candidate);
+        return out;
+    }
+
+    if (out.candidate.active && out.candidate.amount == observation.value) {
+        ++out.candidate.consecutive_matches;
+    }
+    else {
+        out.candidate.active = true;
+        out.candidate.amount = observation.value;
+        out.candidate.consecutive_matches = 1;
+    }
+
+    out.skill_points_earned = observation.value;
+
+    if (out.candidate.consecutive_matches < kJourneyBaselineStableSampleCount) {
+        return out;
+    }
+
+    out.baseline.state = JourneyBaselineSealState::Sealed;
+    BreakAmountStreak(out.candidate);
     return out;
 }
 

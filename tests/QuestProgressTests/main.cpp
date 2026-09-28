@@ -5,6 +5,7 @@
 
 #include "test_assert.h"
 
+#include <iterator>
 #include <string>
 #include <vector>
 
@@ -852,12 +853,15 @@ int main()
         Expect(dungeon.size() == 1, "dungeon_complete_once");
         Expect(dungeon.at(0).kind == "dungeon_complete", "dungeon_kind");
 
+        const std::vector<uint32_t> sp_thresholds(
+            std::begin(kSkillPointThresholdAmounts),
+            std::end(kSkillPointThresholdAmounts));
         const auto sp = BuildAbsoluteThresholdEvents(
             "skill_point_threshold",
             "skill_points",
             0,
             50,
-            {1, 10, 25, 50, 100},
+            sp_thresholds,
             {},
             "2026-07-25T20:14:00.000Z");
         Expect(sp.size() == 4, "skill_point_thresholds");

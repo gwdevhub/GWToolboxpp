@@ -41,6 +41,19 @@ struct FlagBaselineCandidate {
     }
 };
 
+struct AmountBaselineCandidate {
+    bool active = false;
+    uint32_t amount = 0;
+    uint32_t consecutive_matches = 0;
+
+    friend bool operator==(const AmountBaselineCandidate& a, const AmountBaselineCandidate& b)
+    {
+        return a.active == b.active
+            && a.amount == b.amount
+            && a.consecutive_matches == b.consecutive_matches;
+    }
+};
+
 struct IdSetBaselineTransitionResult {
     IdSetJourneyBaseline baseline;
     IdSetBaselineCandidate candidate;
@@ -50,6 +63,13 @@ struct IdSetBaselineTransitionResult {
 struct FlagBaselineTransitionResult {
     FlagJourneyBaseline baseline;
     FlagBaselineCandidate candidate;
+    std::vector<JourneyEventRecord> new_events;
+};
+
+struct SkillPointBaselineTransitionResult {
+    StateOnlyJourneyBaseline baseline;
+    AmountBaselineCandidate candidate;
+    std::optional<uint32_t> skill_points_earned;
     std::vector<JourneyEventRecord> new_events;
 };
 
@@ -66,6 +86,14 @@ FlagBaselineTransitionResult TransitionHardModeJourneyBaseline(
     const RawFlagFamilyObservation& observation,
     const FlagJourneyBaseline& previous_baseline,
     const FlagBaselineCandidate& previous_candidate,
+    const std::vector<JourneyEventRecord>& existing_events,
+    std::string_view observed_at_utc);
+
+SkillPointBaselineTransitionResult TransitionSkillPointsJourneyBaseline(
+    const RawAmountFamilyObservation& observation,
+    const StateOnlyJourneyBaseline& previous_baseline,
+    const AmountBaselineCandidate& previous_candidate,
+    std::optional<uint32_t> previous_skill_points_earned,
     const std::vector<JourneyEventRecord>& existing_events,
     std::string_view observed_at_utc);
 

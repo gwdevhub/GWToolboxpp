@@ -44,6 +44,12 @@ AccountProgressStore MakeSampleStore()
     map_enter.observed_at = "2026-07-25T17:00:00.000Z";
     map_enter.map_id = 73;
     character.journey_events.push_back(map_enter);
+    JourneyEventRecord skill_point;
+    skill_point.kind = "skill_point_threshold";
+    skill_point.subject_key = "skill_points:50";
+    skill_point.observed_at = "2026-07-25T17:30:00.000Z";
+    skill_point.amount = 50;
+    character.journey_events.push_back(skill_point);
 
     MissionRecord mission;
     mission.map_id = 73;
@@ -175,6 +181,8 @@ void TestEnvelopeAndMapping()
     Expect(json.find("\"resiliencePoints\"") != std::string::npos, "export_hom_resilience");
     Expect(json.find("\"resilienceDedicated\"") != std::string::npos, "export_hom_resilience_dedicated");
     Expect(json.find("\"map_enter\"") != std::string::npos, "export_map_enter_kind");
+    Expect(json.find("\"skill_point_threshold\"") != std::string::npos, "export_skill_point_threshold_kind");
+    Expect(json.find("\"skill_points:50\"") != std::string::npos, "export_skill_point_subject");
     Expect(json.find("\"mapId\"") != std::string::npos, "export_mission_map_id");
     Expect(json.find("\"isCompleted\"") != std::string::npos, "export_is_completed");
     Expect(json.find("\"eventId\"") != std::string::npos, "export_event_id");
