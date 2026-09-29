@@ -149,6 +149,7 @@ namespace {
     };
 
     std::unordered_map<uint32_t, Beacon> beacons;
+    std::unordered_set<uint32_t> pending_agent_ids;
     std::vector<BeaconVertex> scratch;
     std::vector<RingVertex> ring_scratch;
     uint32_t scan_counter = 0;
@@ -360,16 +361,17 @@ namespace {
     void OnPostUIMessage(GW::HookStatus*, const GW::UI::UIMessage message_id, void* wparam, void*)
     {
         switch (message_id) {
-            case GW::UI::UIMessage::kAgentUpdate: {
-                const auto agent_id = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(wparam));
-                const auto* agent = GW::Agents::GetAgentByID(agent_id);
-                const auto* agent_item = agent ? agent->GetAsAgentItem() : nullptr;
-                ProcessItemAgent(agent_item, agent_item ? GW::Items::GetItemById(agent_item->item_id) : nullptr);
+            case GW::UI::UIMessage::kShowAgentNameTag: {
+                const auto* info = static_cast<const GW::UI::AgentNameTagInfo*>(wparam);
+                if (info && !beacons.contains(info->agent_id)) pending_agent_ids.insert(info->agent_id);
                 break;
             }
-            case GW::UI::UIMessage::kAgentDestroy:
-                beacons.erase(static_cast<uint32_t>(reinterpret_cast<uintptr_t>(wparam)));
+            case GW::UI::UIMessage::kAgentDestroy: {
+                const auto agent_id = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(wparam));
+                pending_agent_ids.erase(agent_id);
+                beacons.erase(agent_id);
                 break;
+            }
             case GW::UI::UIMessage::kMapLoaded:
                 pending_full_scan = true;
                 break;
@@ -458,11 +460,26 @@ void LootBeaconsModule::DrawInWorld(IDirect3DDevice9* device)
 {
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) {
         beacons.clear();
+        pending_agent_ids.clear();
         return;
     }
-    if (pending_full_scan && GW::Map::GetIsMapLoaded() && !GW::UI::IsLoadingScreenShown() && GW::Agents::GetAgentArray()) {
-        ScanItems();
-        pending_full_scan = false;
+    if (GW::Map::GetIsMapLoaded() && !GW::UI::IsLoadingScreenShown()) {
+        if (pending_full_scan && GW::Agents::GetAgentArray()) {
+            ScanItems();
+            pending_full_scan = false;
+        }
+        for (auto it = pending_agent_ids.begin(); it != pending_agent_ids.end();) {
+            if (beacons.contains(*it)) {
+                it = pending_agent_ids.erase(it);
+                continue;
+            }
+            const auto* agent = GW::Agents::GetAgentByID(*it);
+            const auto* agent_item = agent ? agent->GetAsAgentItem() : nullptr;
+            const auto* item = agent_item ? GW::Items::GetItemById(agent_item->item_id) : nullptr;
+            if (item) ProcessItemAgent(agent_item, item);
+            if (agent && (!agent_item || item)) it = pending_agent_ids.erase(it);
+            else ++it;
+        }
     }
     const auto now = GetTickCount64();
     RefreshBeacons();
@@ -571,7 +588,7 @@ void LootBeaconsModule::Initialize()
     RegisterSettings(this);
     pending_full_scan = true;
     const GW::UI::UIMessage ui_messages[] = {
-        GW::UI::UIMessage::kAgentUpdate,
+        GW::UI::UIMessage::kShowAgentNameTag,
         GW::UI::UIMessage::kAgentDestroy,
         GW::UI::UIMessage::kMapLoaded,
     };
@@ -589,6 +606,7 @@ void LootBeaconsModule::SignalTerminate()
     }
     GW::UI::RemoveUIMessageCallback(&agent_ui_message_entry);
     beacons.clear();
+    pending_agent_ids.clear();
     pending_full_scan = false;
 }
 
