@@ -1,5 +1,7 @@
 #pragma once
 
+#include <span>
+
 namespace ABI::Windows::UI { struct Color; }
 using Color = ImU32;
 
@@ -61,6 +63,8 @@ namespace ImGui {
 
     IMGUI_API bool MyCombo(const char* label, const char* preview_text, int* current_item,
                            bool (*items_getter)(void* data, int idx, const char** out_text), void* data, int items_count);
+
+    IMGUI_API bool MultiSelectCombo(const char* label, uint32_t* selected, std::span<const char* const> items);
 
     // Show a popup on-screen with a message and yes/no buttons. Returns true if an option has been chosen, with *result as true/false for yes/no
     IMGUI_API void ConfirmDialog(const char* message, ImGui::ImGuiConfirmDialogCallback callback, void* wparam = nullptr);

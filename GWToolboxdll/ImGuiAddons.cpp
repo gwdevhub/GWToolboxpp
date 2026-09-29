@@ -79,6 +79,31 @@ namespace ImGui {
         return changed;
     }
 
+    bool MultiSelectCombo(const char* label, uint32_t* selected, std::span<const char* const> items)
+    {
+        const auto count = std::min(items.size(), size_t{32});
+        std::string preview;
+        for (size_t i = 0; i < count; ++i) {
+            if (!(*selected & (1u << i))) continue;
+            if (!preview.empty()) preview += ", ";
+            preview += items[i];
+        }
+        if (preview.empty()) preview = "None";
+
+        bool changed = false;
+        if (BeginCombo(label, preview.c_str())) {
+            for (size_t i = 0; i < count; ++i) {
+                const auto bit = 1u << i;
+                if (Selectable(items[i], (*selected & bit) != 0, ImGuiSelectableFlags_NoAutoClosePopups)) {
+                    *selected ^= bit;
+                    changed = true;
+                }
+            }
+            EndCombo();
+        }
+        return changed;
+    }
+
     void SetTooltip(std::function<void()> tooltip_callback)
     {
         if (!BeginTooltipEx(ImGuiTooltipFlags_OverridePrevious, ImGuiWindowFlags_None))
