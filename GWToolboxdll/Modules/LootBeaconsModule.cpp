@@ -363,7 +363,7 @@ namespace {
         switch (message_id) {
             case GW::UI::UIMessage::kShowAgentNameTag: {
                 const auto* info = static_cast<const GW::UI::AgentNameTagInfo*>(wparam);
-                if (info) pending_agent_ids.insert(info->agent_id);
+                if (info && !beacons.contains(info->agent_id)) pending_agent_ids.insert(info->agent_id);
                 break;
             }
             case GW::UI::UIMessage::kAgentDestroy: {
@@ -469,6 +469,10 @@ void LootBeaconsModule::DrawInWorld(IDirect3DDevice9* device)
             pending_full_scan = false;
         }
         for (auto it = pending_agent_ids.begin(); it != pending_agent_ids.end();) {
+            if (beacons.contains(*it)) {
+                it = pending_agent_ids.erase(it);
+                continue;
+            }
             const auto* agent = GW::Agents::GetAgentByID(*it);
             const auto* agent_item = agent ? agent->GetAsAgentItem() : nullptr;
             const auto* item = agent_item ? GW::Items::GetItemById(agent_item->item_id) : nullptr;
