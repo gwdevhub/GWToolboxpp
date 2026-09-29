@@ -323,17 +323,12 @@ namespace {
     void ProcessItemAgent(const GW::AgentItem* agent_item, const GW::Item* item)
     {
         if (!(agent_item && item)) return;
-        if (name_beacons_dirty) CompileNameBeacons();
-        if (compiled_name_beacons.empty()) {
-            Classify(agent_item, item);
-            return;
-        }
+        Classify(agent_item, item);
+        if (compiled_name_beacons.empty()) return;
         const wchar_t* name_enc = item->single_item_name && *item->single_item_name ? item->single_item_name : item->name_enc;
         if (name_enc && *name_enc) {
             GW::UI::AsyncDecodeStr(name_enc, OnItemNameDecoded, reinterpret_cast<void*>(static_cast<uintptr_t>(agent_item->agent_id)));
-            return;
         }
-        Classify(agent_item, item);
     }
 
     void OnItemNameDecoded(void* wparam, const wchar_t* decoded)
