@@ -153,6 +153,7 @@ namespace {
     std::vector<RingVertex> ring_scratch;
     uint32_t scan_counter = 0;
     bool beacons_dirty = false;
+    bool pending_full_scan = false;
     GW::HookEntry agent_ui_message_entry;
     int compositor_token = 0;
 
@@ -370,7 +371,7 @@ namespace {
                 beacons.erase(static_cast<uint32_t>(reinterpret_cast<uintptr_t>(wparam)));
                 break;
             case GW::UI::UIMessage::kMapLoaded:
-                ScanItems();
+                pending_full_scan = true;
                 break;
             default:
                 break;
@@ -458,6 +459,10 @@ void LootBeaconsModule::DrawInWorld(IDirect3DDevice9* device)
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) {
         beacons.clear();
         return;
+    }
+    if (pending_full_scan && GW::Map::GetIsMapLoaded() && !GW::UI::IsLoadingScreenShown() && GW::Agents::GetAgentArray()) {
+        ScanItems();
+        pending_full_scan = false;
     }
     const auto now = GetTickCount64();
     RefreshBeacons();
@@ -564,6 +569,7 @@ void LootBeaconsModule::Initialize()
 {
     ToolboxModule::Initialize();
     RegisterSettings(this);
+    pending_full_scan = true;
     const GW::UI::UIMessage ui_messages[] = {
         GW::UI::UIMessage::kAgentUpdate,
         GW::UI::UIMessage::kAgentDestroy,
@@ -583,6 +589,7 @@ void LootBeaconsModule::SignalTerminate()
     }
     GW::UI::RemoveUIMessageCallback(&agent_ui_message_entry);
     beacons.clear();
+    pending_full_scan = false;
 }
 
 void LootBeaconsModule::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
