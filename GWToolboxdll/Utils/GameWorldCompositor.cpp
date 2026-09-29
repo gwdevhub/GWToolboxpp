@@ -43,7 +43,6 @@ namespace {
     FrCacheRenderFn FrCacheRenderAll_Func = nullptr;
     FrCacheRenderFn FrCacheRenderAll_Ret = nullptr;
     FrameRenderContext* frame_render_context = nullptr;
-    bool compositor_scanned = false;
     bool compositor_failed = false;
     bool compositor_hooked = false;
     bool drawn_this_frame = false; // guard: draw only in the first world pass per frame
@@ -76,11 +75,6 @@ namespace {
                 entry.second(device);
             }
         }
-    }
-
-    bool ScanCompositor()
-    {
-
     }
 
     void __cdecl OnFrCacheRenderAll(uint32_t param_1, uint32_t param_2)
@@ -170,38 +164,54 @@ namespace {
 
         GW::Hook::LeaveHook();
     }
-    bool hook_attempted = false;
-    bool EnsureHook()
+    bool scan_attempted = false;
+    bool Scan()
     {
-        if (hook_attempted)
+        if (scan_attempted)
             return FrCacheRenderAll_Func != 0;
-        hook_attempted = true;
+        scan_attempted = true;
 
         // FrCache_RenderAll asserts "frame" in FrCache.cpp at line 0x9e.
         auto address = GW::Scanner::ToFunctionStart(GW::Scanner::FindUseOfString("FrCache: ignored invalid client viewport rect (%0.6f,%0.6f,%0.6f,%0.6f)"), 0xfff);
         if (address)
             FrCacheRenderAll_Func = (FrCacheRenderFn)address;
+        else
+            Log::Log("[compositor] scan failed: FrCache_RenderAll not found");
         address = address ? GW::Scanner::FindInRange("\xa1????\x83", "x????x", 1, address, address + 0x10) : 0;
         if (address && GW::Scanner::IsValidPtr(*(uintptr_t*)address))
             frame_render_context = reinterpret_cast<FrameRenderContext*>((*(uintptr_t*)address) - offsetof(FrameRenderContext, render_buffer.m_size));
+        else if (FrCacheRenderAll_Func)
+            Log::Log("[compositor] scan failed: FrCache render context not found");
 
         if (!frame_render_context)
             FrCacheRenderAll_Func = 0;
+        return FrCacheRenderAll_Func != 0;
+    }
 
-        if (!FrCacheRenderAll_Func)
+    bool EnsureHook()
+    {
+        if (compositor_hooked) return true;
+        if (compositor_failed) return false;
+        if (!Scan()) {
+            compositor_failed = true;
             return false;
+        }
         if (GW::Hook::CreateHook(reinterpret_cast<void**>(&FrCacheRenderAll_Func), OnFrCacheRenderAll, reinterpret_cast<void**>(&FrCacheRenderAll_Ret)) != 0) {
+            Log::Log("[compositor] CreateHook on FrCache_RenderAll failed");
             FrCacheRenderAll_Func = 0;
+            compositor_failed = true;
             return false;
         }
         GW::Hook::EnableHooks(FrCacheRenderAll_Func);
+        compositor_hooked = true;
         return true;
     }
 
     void RemoveHook()
     {
-        if (FrCacheRenderAll_Func) {
+        if (compositor_hooked && FrCacheRenderAll_Func) {
             GW::Hook::RemoveHook(FrCacheRenderAll_Func);
+            compositor_hooked = false;
         }
     }
 

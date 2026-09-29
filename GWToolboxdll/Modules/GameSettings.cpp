@@ -139,7 +139,6 @@ namespace {
     clock_t activity_timer = 0;
 
     bool skip_characters_from_another_campaign_prompt = true;
-    bool remove_window_border_in_windowed_mode = false;
 
     bool was_leading = true;
 
@@ -1007,48 +1006,6 @@ namespace {
         }
     }
 
-    void CheckRemoveWindowBorder()
-    {
-        // @TODO: When frame is removed, the game "expands" to fill the space, but the UI is still offset as if its factoring in the for title bar. Intercept SetWindowPos on the game side instead of doing this???
-        const auto pref = GW::UI::GetPreference(GW::UI::NumberPreference::ScreenBorderless);
-        // Log::Log("Pref changed %d", pref);
-        if (remove_window_border_in_windowed_mode && pref == 0) {
-            const auto hwnd = GW::MemoryMgr::GetGWWindowHandle();
-            if (!hwnd) return;
-
-            auto remove_styles = (WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU);
-            auto lStyle = GetWindowLong(hwnd, GWL_STYLE);
-
-            if (!lStyle) return;
-            if ((lStyle & remove_styles) != 0) {
-                lStyle &= ~remove_styles;
-                SetWindowLong(hwnd, GWL_STYLE, lStyle);
-            }
-
-            remove_styles = (WS_EX_DLGMODALFRAME | WS_EX_CLIENTEDGE | WS_EX_STATICEDGE);
-            lStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
-            if ((lStyle & remove_styles) != 0) {
-                lStyle &= ~remove_styles;
-                // SetWindowLong(hwnd, GWL_EXSTYLE, lStyle);
-            }
-            // SetWindowLong(hwnd, GWL_EXSTYLE, lExStyle);
-
-            // SetWindowPos(hwnd, NULL, 0, 0, 0, 0, SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER);
-
-            // Display close/restore/min buttons top right
-            GW::UI::SetFrameVisible(GW::UI::GetFrameByLabel(L"BtnMin"), true);
-            GW::UI::SetFrameVisible(GW::UI::GetFrameByLabel(L"BtnRestore"), false); // @TODO: Show this, but make it maximise the window on click instead
-            GW::UI::SetFrameVisible(GW::UI::GetFrameByLabel(L"BtnExit"), true);
-        }
-        // pref 0 = windowed; any other mode (borderless, fullscreen, etc.) hides window buttons if the user opted in
-        if (pref != 0) {
-            const bool visible = !settings.hide_window_buttons_in_fullscreen;
-            GW::UI::SetFrameVisible(GW::UI::GetFrameByLabel(L"BtnMin"), visible);
-            GW::UI::SetFrameVisible(GW::UI::GetFrameByLabel(L"BtnRestore"), visible);
-            GW::UI::SetFrameVisible(GW::UI::GetFrameByLabel(L"BtnExit"), visible);
-        }
-    }
-
     // Pre-fill character name when donating faction
     void SkipCharacterNameEntryForFactionDonation(bool immediate = true)
     {
@@ -1200,10 +1157,6 @@ namespace {
                 // Automatically send a party window invite when a party search invite is sent
                 const auto packet = static_cast<GW::UI::UIPacket::kPartySearchInvite*>(wParam);
                 if (GW::PartyMgr::GetIsLeader()) GW::PartyMgr::InvitePlayer(GetPartySearchLeader(packet->source_party_search_id));
-            } break;
-            case GW::UI::UIMessage::kPreferenceValueChanged: {
-                const auto packet = static_cast<GW::UI::UIPacket::kPreferenceValueChanged*>(wParam);
-                if (packet->preference_id == GW::UI::NumberPreference::ScreenBorderless) CheckRemoveWindowBorder();
             } break;
             case GW::UI::UIMessage::kPartyDefeated: {
                 if (settings.auto_return_on_defeat && GW::PartyMgr::GetIsLeader()) GW::PartyMgr::ReturnToOutpost() || (Log::Warning("Failed to return to outpost"), true);
@@ -1570,7 +1523,6 @@ void GameSettings::Initialize()
 
     constexpr GW::UI::UIMessage post_ui_messages[] = {
         GW::UI::UIMessage::kPartySearchInviteSent,
-        GW::UI::UIMessage::kPreferenceValueChanged,
         GW::UI::UIMessage::kMapLoaded,
         GW::UI::UIMessage::kTradeSessionStart,
         GW::UI::UIMessage::kShowCancelEnterMissionBtn,
@@ -1917,10 +1869,6 @@ void GameSettings::DrawSettingsInternal()
 
     if (ImGui::Checkbox("Set Guild Wars window title as current logged-in character", &settings.set_window_title_as_charname)) {
         SetWindowTitle(settings.set_window_title_as_charname);
-    }
-
-    if (ImGui::Checkbox("Hide minimize/restore/close buttons in borderless and fullscreen modes", &settings.hide_window_buttons_in_fullscreen)) {
-        GW::GameThread::Enqueue(CheckRemoveWindowBorder);
     }
 
     ImGui::Checkbox("Show warning when earned faction reaches ", &settings.faction_warn_percent);

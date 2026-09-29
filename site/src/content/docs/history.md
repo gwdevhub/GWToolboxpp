@@ -8,6 +8,7 @@ Previous releases are available on Github as dll files. There is no support for 
 the latest version, go to the [Home Page](./) instead.
 
 ## Version 8.34
+* [Fix] Loot Beacons now detect drops already on the ground when Toolbox starts or a map finishes loading. Custom rarity-filtered beacons also render as soon as an item matches, without waiting for its name to decode.
 * [Fix] Objective Timer: collapsed past runs are visible again in the run history window.
 * [Perf] Loot Beacons now update when item agents appear or disappear instead of repeatedly scanning every agent. Custom name rules are applied once the item's name has decoded.
 * [New] Loot Beacons: custom item beacon rules can now require a specific rarity, so you can beacon a named item only when it is, for example, Purple or Gold. New rules accept any rarity by default; their colour is also optional, with transparent using the item's normal name-tag colour.
