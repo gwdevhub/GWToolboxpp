@@ -5,3 +5,5 @@ description: Prepare a compact evidence-based handoff for a ChatGPT senior revie
 Read `AGENTS.md` and `docs/ai/REVIEW_GOVERNANCE.md`.
 
 For the approved slice in `$ARGUMENTS`, do not make new product changes. Gather exact review base SHA, previous reviewed SHA if any, current HEAD, changed paths, stated scope/non-goals, behavior/transition/persistence change, and checks actually run. When heavyweight validation was skipped or blocked, include Heavy validation attempted/status, Preflight result, Known blocker, Previous evidence reference, Acceptance impact, and Rerun condition. Write or update the handoff in the governance format. Omit raw logs unless a failed check requires it. Do not commit, push, open/change a PR, request a review, or mark anything ready.
+
+Follow `docs/ai/WORKSPACE_WORKFLOW.md` and `docs/ai/HUMAN_LANGUAGE_POLICY.md`. Write explanatory prose in Hungarian, keep raw evidence exact, include the repo/absolute-folder status table, task stage and next owner/action. A PR body, if separately authorized, requires full Hungarian first and full English second. Do not claim independent acceptance for your own implementation.

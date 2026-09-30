@@ -28,3 +28,9 @@ Instructions for any AI agent in this repo. (`CLAUDE.md` just imports this.)
 - ChatGPT review is read-only. It must not edit, commit, push, alter CI/policy, change PR lifecycle, or merge unless the human explicitly asks.
 - After a prior review, use a delta handoff and delta review rather than repeating a full audit. One full acceptance review occurs immediately before the human PR decision.
 - Existing issue- and PR-specific instructions are stricter and win, including Quest Tracker observation semantics, identity binding, persistence, and inter-repository progress-contract constraints.
+
+## Session visibility and output language
+
+- Read `docs/ai/WORKSPACE_WORKFLOW.md` before repository/branch changes and task handoff. Report the absolute folder, branch/HEAD, upstream, ahead/behind, working tree and current task stage.
+- Follow `docs/ai/HUMAN_LANGUAGE_POLICY.md`: human-facing prose is Hungarian; PR bodies contain full Hungarian then full English versions. Preserve technical identifiers.
+- Use `docs/ai/GOVERNANCE_READINESS.md` for the outstanding operational and beta evidence checkpoint; it is not a runtime acceptance verdict.
