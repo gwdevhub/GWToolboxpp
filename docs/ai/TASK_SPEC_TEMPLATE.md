@@ -67,3 +67,9 @@ Write observable acceptance criteria and name actual repository commands where k
 Prefer **cheap falsification** and **preflight** before **heavyweight validation**; see Heavy Validation Economy in `docs/ai/AI_SOFTWARE_FACTORY.md`. When expensive validation exists, specify preflight, known blockers, STOP wording, and whether it is mandatory for acceptance. Recommended STOP wording: `Do not run heavyweight validation if preflight proves it cannot succeed.`
 
 Cursor reads `AGENTS.md`, this TaskSpec, the relevant controlling sources and `docs/ai/REVIEW_GOVERNANCE.md`; verifies folder/branch/HEAD/clean state; works only on the approved slice; runs required validation under Heavy Validation Economy; reports exact checks and HEAD; stops on a stop condition, including when preflight or a known deterministic blocker proves mandatory heavyweight validation cannot succeed (**acceptance BLOCKED**; do not claim PASS); includes heavy-validation skip fields in the handoff when applicable. Do not automatically start the next task.
+
+## Shared task metadata
+
+Every shape identifies the target repo/absolute folder, base ref/SHA, existing or proposed work branch, TaskSpec reference, current stage, next owner/action, and whether the peer repository is affected. A read-only task creates no branch. Repairs use the existing task branch.
+
+Follow [WORKSPACE_WORKFLOW.md](WORKSPACE_WORKFLOW.md) for state/cleanup and [HUMAN_LANGUAGE_POLICY.md](HUMAN_LANGUAGE_POLICY.md) for human-facing handoffs and bilingual PR bodies. The TaskSpec itself may remain English. Required checks must distinguish slice acceptance from release/live verification; documentation-only edits use link/diff/content checks unless they change executable behavior.

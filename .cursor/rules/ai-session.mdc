@@ -1,0 +1,9 @@
+---
+description: Repository and branch visibility, safe cleanup, and Hungarian human-facing output
+alwaysApply: true
+---
+
+Follow `AGENTS.md`, `docs/ai/WORKSPACE_WORKFLOW.md`, and `docs/ai/HUMAN_LANGUAGE_POLICY.md`.
+At task start, before branch changes, and at handoff, report repo/absolute folder, branch/HEAD, upstream, ahead/behind, tree and task stage in Hungarian.
+Do not silently switch or delete branches, stash/reset/clean user work, or start the next slice.
+PR bodies require full Hungarian first, full English second. Technical identifiers remain exact.

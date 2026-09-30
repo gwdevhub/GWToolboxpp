@@ -226,3 +226,11 @@ Example:
 ```
 
 Read only the controlling task, nearest code/tests and relevant rules/contracts initially. The repository and accepted documents outrank chat assumptions.
+
+## Operational entry points
+
+[WORKSPACE_WORKFLOW.md](WORKSPACE_WORKFLOW.md) defines repository/branch visibility, safe cleanup and task stages. [HUMAN_LANGUAGE_POLICY.md](HUMAN_LANGUAGE_POLICY.md) controls human-facing language. These apply to Architect, Implementer and Reviewer roles.
+
+Use the Cursor `start-task` command for context/preflight and `prepare-review-handoff` for evidence. Both route to the existing governance; neither authorizes implementation, merge or release by itself. The approved task and existing user authorization determine permitted actions; do not add repeated confirmation for routine choices already authorized.
+
+Track the consolidation and local operating check in [GOVERNANCE_READINESS.md](GOVERNANCE_READINESS.md). Governance wiring, independent code acceptance and beta release readiness are separate claims.
