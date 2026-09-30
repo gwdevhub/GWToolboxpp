@@ -15,7 +15,7 @@ Instructions for any AI agent in this repo. (`CLAUDE.md` just imports this.)
 ## Fork vs upstream (absolute)
 
 - Write only to `vinogitz/GWToolboxpp`. Never PR, push, commit, or otherwise contribute to `gwdevhub/GWToolboxpp`.
-- Keep the fork on latest `upstream/master` (gwdevhub HEAD) via `scripts/sync-upstream-rebase.ps1`. Details: `.cursor/rules/upstream-safety.mdc`.
+- The verified base for normal work is the fork `origin/master` tip. `upstream/master` is a read and comparison source. Upstream integration or rebase is a separate, explicitly authorized task—not an automatic prerequisite for other work. Use `scripts/sync-upstream-rebase.ps1` only in such a task. Details: `.cursor/rules/upstream-safety.mdc`.
 
 ## AI software factory routing
 

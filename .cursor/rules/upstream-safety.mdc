@@ -12,11 +12,12 @@ alwaysApply: true
 - Allowed toward `gwdevhub/GWToolboxpp`: `git fetch` / sync scripts that only read upstream.
 - Keep `remote.upstream.pushurl` set to `DISABLED`. Never clear or re-enable upstream push.
 
-## Always on gwdevhub HEAD
+## Fork base vs upstream
 
-- gwdevhub default branch is `master` (`upstream/HEAD` → `upstream/master`).
-- Keep the fork tip based on the latest `upstream/master` (rebase-friendly; fork commits on top).
-- Sync with `scripts/sync-upstream-rebase.ps1`, then push only to `origin`.
+- The verified base for normal work is the fork `origin/master` tip.
+- `upstream/master` (`upstream/HEAD` → `upstream/master`) is a read and comparison source.
+- Upstream integration or rebase is a separate, explicitly authorized task; it is not an automatic prerequisite for other work.
+- Use `scripts/sync-upstream-rebase.ps1` only in such an authorized task, then push only to `origin`.
 - Do not treat `upstream/dev` as the sync target unless a human explicitly approves a separate slice.
 
 ## Rebase-friendly fork practice
