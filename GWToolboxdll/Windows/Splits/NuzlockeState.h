@@ -1,24 +1,25 @@
 #pragma once
 
+#include <GWCA/Constants/Constants.h>
+
 #include <map>
 #include <memory>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-#include <GWCA/Constants/Constants.h>
 
 namespace GuiUtils {
     class EncString;
 }
 
-struct GoalList; // TotalPoints() only needs a reference — see GoalList.h
+struct GoalList;
 
-// v1: roster is built lazily from whichever heroes/henchmen we've actually seen this session; no pre-seeded campaign roster. Deaths only count in explorables.
+// Roster built from what seen this session. Deaths count in explorables only.
 struct NuzlockeMember {
     std::wstring name;
     int          deaths = 0;
-    // Heroes and henchmen only (real players don't get an icon); read once when first seen in NuzlockeUpdate()'s roster diff, since profession is available immediately even though henchman names decode async.
+    // Heroes/henches only. Profession ready at once, names decode later.
     GW::Constants::Profession profession = GW::Constants::Profession::None;
 };
 
@@ -29,65 +30,59 @@ struct NuzlockeIdentity {
     GW::Constants::Profession hench_profession = GW::Constants::Profession::None;
 };
 
-// Point value per goal category, applied when a goal of that category completes. Global (not per-list) — a non-Nuzlocke list just scores 0 since these all default to 0. Fields mirror the Add Goal trigger dropdown.
-struct NuzlockePointValues {
-    int manual       = 0;
-    int missions     = 0; // MissionComplete + MissionBonus
-    int explorables  = 0; // MapEnter
-    int towns        = 0; // EnterExplorable, ExitExplorable, ExitOutpost
-    int titles       = 0; // ReachTitleRank
-    int reach_level  = 0;
-    int quest        = 0; // QuestPickup + QuestComplete
-    int skill_learnt = 0;
+// Flat so the settings registry indexes every field (search, /tb_setting). Points: global, 0 = no score.
+struct NuzlockeSettings {
+    bool death_tracker_enabled = false;
+    int  hero_lives          = 1;
+    int  hench_lives         = 1;
+    int  player_lives        = 1;
+    // Same-name hench in other campaign has other agent_id.
+    bool merge_hench_by_name = false;
+
+    bool points_enabled      = false;
+    int  points_manual       = 0;
+    int  points_missions     = 0; // MissionComplete + MissionBonus
+    int  points_explorables  = 0; // Enter/Exit Explorable, VQ, old MapEnter
+    int  points_towns        = 0; // Enter/Exit Outpost
+    int  points_titles       = 0;
+    int  points_reach_level  = 0;
+    int  points_quest        = 0; // QuestPickup + QuestComplete
+    int  points_skill_learnt = 0;
 };
 
-// All Death Rules + Points settings and runtime tracking for SplitsWindow's Nuzlocke feature.
 struct NuzlockeState {
-    // Out-of-line (SplitsWindow.cpp): pending_hench_names/city_hench_names hold unique_ptr<GuiUtils::EncString>, only forward-declared here.
+    // Out-of-line: EncString only forward-declared here.
     NuzlockeState();
     ~NuzlockeState();
 
-    // ---- Death Rules settings ---- todo maybe allow 0 to visually remove tracking later?
-    bool death_rules_enabled = false;
-    int  hero_lives          = 1;
-    int  hench_lives         = 1;
-    int  player_lives        = 1; // self and other players are always tracked, no opt-out toggle
-    // Merges Henchman with same name cross campaigns. Same named henchman in different campaigns have different agent_id's.
-    bool merge_hench_by_name = false;
+    NuzlockeSettings settings;
 
-    // ---- Death Rules runtime state ----
     std::map<GW::Constants::HeroID, NuzlockeMember> heroes;
     std::map<std::wstring, NuzlockeMember>          henches;
-    // Real players (self and/or others), keyed by character name; resolved directly from the agent at time of death (player names aren't encoded/localized like hero names, so no pre-registration or async decode needed).
+    // Player names not encoded: read from agent at death.
     std::map<std::wstring, NuzlockeMember>          players;
-    // agent_id -> identity, only while that agent is actually in the party.
     std::unordered_map<uint32_t, NuzlockeIdentity>  agents;
-    // agent_ids already counted as dead — guards against re-counting the same death on a later poll tick. Cleared on new instance load.
+    // Counted dead agents. Leave on rezz so next death cost life. Clear on load.
     std::unordered_set<uint32_t>                    dead_agents;
-    // Henchman names decode asynchronously; polled from Update() until ready.
+    // Member so buckets reused each frame.
+    std::unordered_set<uint32_t>                    live_agents_scratch;
     std::vector<std::pair<uint32_t, std::unique_ptr<GuiUtils::EncString>>> pending_hench_names;
-    // Hireable henchmen in the current outpost, keyed by agent_id so we don't re-issue a decode request for one already resolved. Cleared on every instance load since agent_ids aren't stable across instances.
+    // agent_ids not stable across instances: clear on load.
     std::unordered_map<uint32_t, std::unique_ptr<GuiUtils::EncString>> city_hench_names;
-    // Stripped display-names of henchmen hireable in THIS outpost right now — recomputed only when the id list changes or something's still unresolved, not unconditionally every tick. Empty in explorables (hireable roster is a town-only concept).
+    // Town only. Recompute when ids change or something unresolved.
     std::unordered_set<std::wstring> city_hench_available;
-    // Skip-check for the above: last frame's raw henchmen_agent_ids plus whether every one had a resolved profession icon. Never skips while anything's unresolved, so a hireable henchman's icon keeps retrying until AgentLiving::primary populates rather than getting stuck blank. Reset on instance load since agent_ids aren't stable across instances.
+    // Never skip while unresolved, so icon keep retry till primary set.
     std::vector<uint32_t> last_town_hench_ids;
     bool                  town_hench_all_resolved = false;
 
-    // ---- Points ----
-    bool                 points_enabled = false;
-    NuzlockePointValues  goal_points;
-
-    // ---- Behavior (Windows/Splits/Nuzlocke.cpp) ----
-    // Fresh instance: drop identity-agnostic caches (agent_ids aren't stable across instances) and pre-seed self at full lives. Caller gates this on death-rules-enabled.
     void OnInstanceLoad();
-    // Rebuilds heroes/henches/players display rosters from `agents` without touching it — used on profile switch / manual reset, where identities are already known but death counts should clear.
+    // Pre-mark as counted before poll see resign deaths.
+    void OnPartyResigned();
+    // Keep agents so rosters reseed now, not next zone.
     void ResetProgress();
-    // Per-tick roster diff + death poll. last_was_explorable must reflect the CURRENT map (hireable-henchmen roster is a town-only concept). Caller gates this on death-rules-enabled.
+    // last_was_explorable must be CURRENT map.
     void Update(bool last_was_explorable);
-    // Renders the "Death Rules" collapsing header; draws nothing if nobody's tracked yet. Caller gates this on death-rules-enabled.
     void Draw();
-    // Sum of point values (Settings > Splits > Nuzlocke > Points) for every Completed, non-header goal in list.
     [[nodiscard]] int TotalPoints(const GoalList& list) const;
 
 private:

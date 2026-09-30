@@ -59,6 +59,9 @@ Automatically buys materials from the trader.
 ## Settings ([more info](/docs/settings/))
 All Toolbox settings can be found here.
 
+## Splits ([more info](/docs/splits/))
+A speedrun timer that splits automatically on in-game goals and compares each run against your PB.
+
 ## Notepad
 The notepad is just a space where you can write (or copy/paste) anything you want, such as complicated instructions to remember. Anything you write will still be there when you restart Toolbox or Guild Wars.
 

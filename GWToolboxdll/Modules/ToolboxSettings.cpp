@@ -51,7 +51,6 @@
 #include <Modules/TextToSpeechModule.h>
 #include <Modules/ToastNotifications.h>
 #include <Modules/VendorFix.h>
-#include <Modules/WebSocketModule.h>
 #include <Widgets/VanquishMapOverlayWidget.h>
 #include <Windows/AccountInventoryWindow.h>
 #include <Windows/ArmoryWindow.h>
@@ -243,7 +242,6 @@ namespace {
         MaterialsWindow::Instance(),
         TradeWindow::Instance(),
         NotePadWindow::Instance(),
-        WebSocketModule::Instance(),
         ObjectiveTimerWindow::Instance(),
         SplitsWindow::Instance(),
         FactionLeaderboardWindow::Instance(),

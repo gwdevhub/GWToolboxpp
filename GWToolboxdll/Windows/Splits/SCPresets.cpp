@@ -1,8 +1,11 @@
 #include "stdafx.h"
+
 #include "SCPresets.h"
 
 #include <Modules/Resources.h>
 #include <Utils/EncString.h>
+
+#include <span>
 
 namespace SCPresets {
 
@@ -101,26 +104,26 @@ static const MapID kSlaversExileLevels[]   = { MapID::Slavers_Exile_Level_5 };
 // clang-format on
 
 const Dungeon kDungeons[20] = {
-    { kOozePitLevels,     std::size(kOozePitLevels) },
-    { kFronisLevels,      std::size(kFronisLevels) },
-    { kSnowmenLevels,     std::size(kSnowmenLevels) },
-    { kSepulchreLevels,   std::size(kSepulchreLevels) },
-    { kBogrootLevels,     std::size(kBogrootLevels) },
-    { kArachniLevels,     std::size(kArachniLevels) },
-    { kCatacombsLevels,   std::size(kCatacombsLevels) },
-    { kRragarsLevels,     std::size(kRragarsLevels) },
-    { kCathedralLevels,   std::size(kCathedralLevels) },
-    { kDarkrimeLevels,    std::size(kDarkrimeLevels) },
-    { kRavensPointLevels, std::size(kRavensPointLevels) },
-    { kVloxenLevels,      std::size(kVloxenLevels) },
-    { kBloodstoneLevels,  std::size(kBloodstoneLevels) },
-    { kShardsOfOrrLevels, std::size(kShardsOfOrrLevels) },
-    { kOolasLabLevels,    std::size(kOolasLabLevels) },
-    { kHeartShiverLevels, std::size(kHeartShiverLevels) },
-    { kForsakenLevels,    std::size(kForsakenLevels) },
-    { kForsakenPreLevels, std::size(kForsakenPreLevels) },
-    { kFrostmawsLevels,   std::size(kFrostmawsLevels) },
-    { kSlaversExileLevels, std::size(kSlaversExileLevels) },
+    { "Ooze Pit",                        kOozePitLevels,      std::size(kOozePitLevels) },
+    { "Fronis Irontoe's Lair",           kFronisLevels,       std::size(kFronisLevels) },
+    { "Secret Lair of the Snowmen",      kSnowmenLevels,      std::size(kSnowmenLevels) },
+    { "Sepulchre of Dragrimmar",         kSepulchreLevels,    std::size(kSepulchreLevels) },
+    { "Bogroot Growths",                 kBogrootLevels,      std::size(kBogrootLevels) },
+    { "Arachni's Haunt",                 kArachniLevels,      std::size(kArachniLevels) },
+    { "Catacombs of Kathandrax",         kCatacombsLevels,    std::size(kCatacombsLevels) },
+    { "Rragar's Menagerie",              kRragarsLevels,      std::size(kRragarsLevels) },
+    { "Cathedral of Flames",             kCathedralLevels,    std::size(kCathedralLevels) },
+    { "Darkrime Delves",                 kDarkrimeLevels,     std::size(kDarkrimeLevels) },
+    { "Raven's Point",                   kRavensPointLevels,  std::size(kRavensPointLevels) },
+    { "Vloxen Excavations",              kVloxenLevels,       std::size(kVloxenLevels) },
+    { "Bloodstone Caves",                kBloodstoneLevels,   std::size(kBloodstoneLevels) },
+    { "Shards of Orr",                   kShardsOfOrrLevels,  std::size(kShardsOfOrrLevels) },
+    { "Oola's Lab",                      kOolasLabLevels,     std::size(kOolasLabLevels) },
+    { "Heart of the Shiverpeaks",        kHeartShiverLevels,  std::size(kHeartShiverLevels) },
+    { "Forsaken Tunnels",                kForsakenLevels,     std::size(kForsakenLevels) },
+    { "Forsaken Tunnels (Pre-Searing)",  kForsakenPreLevels,  std::size(kForsakenPreLevels) },
+    { "Frostmaw's Burrows",              kFrostmawsLevels,    std::size(kFrostmawsLevels) },
+    { "Slavers' Exile",                  kSlaversExileLevels, std::size(kSlaversExileLevels) },
 };
 
 GoalEntry BuildCheckpointGoal(const EliteCheckpoint& c, GW::Constants::MapID area_map_id)
@@ -130,19 +133,16 @@ GoalEntry BuildCheckpointGoal(const EliteCheckpoint& c, GW::Constants::MapID are
     g.trigger.type   = c.type;
     g.trigger.param1 = c.param1;
     if (c.pattern) g.trigger.pattern = c.pattern;
-    if (c.extra_param1_a) {
-        GoalTrigger alt; alt.type = c.type; alt.param1 = c.extra_param1_a;
-        g.extra_triggers.push_back(alt);
-    }
-    if (c.extra_param1_b) {
-        GoalTrigger alt; alt.type = c.type; alt.param1 = c.extra_param1_b;
+    for (const auto p1 : {c.extra_param1_a, c.extra_param1_b}) {
+        if (!p1) continue;
+        GoalTrigger alt; alt.type = c.type; alt.param1 = p1;
         g.extra_triggers.push_back(alt);
     }
     if (c.extra_pattern_a) {
         GoalTrigger alt; alt.type = c.type; alt.pattern = c.extra_pattern_a;
         g.extra_triggers.push_back(alt);
     }
-    if (c.starts_on_area_entry) { // real map-entry gated start, not starts_immediately — see the struct's own comment
+    if (c.starts_on_area_entry) {
         g.start_trigger = GoalTrigger{};
         g.start_trigger->type   = GoalTrigger::Type::MapEnter;
         g.start_trigger->map_id = area_map_id;
@@ -159,10 +159,9 @@ GoalList BuildDungeonPresetList(const Dungeon& dungeon)
 {
     GoalList list;
     list.is_preset = true;
-    list.name      = Resources::GetMapName(dungeon.levels[0])->string();
+    list.name      = dungeon.name;
 
     if (dungeon.level_count <= 1) {
-        // Nothing to break down — same flat single goal as Manual's picker.
         GoalEntry g;
         g.label          = list.name;
         g.trigger.type   = GoalTrigger::Type::DungeonReward;
@@ -174,7 +173,7 @@ GoalList BuildDungeonPresetList(const Dungeon& dungeon)
     GoalEntry hdr;
     hdr.is_header      = true;
     hdr.label          = list.name;
-    hdr.trigger.map_id = dungeon.levels[0]; // read by ApplyTimerPolicy's autostart/autofail, not the engine
+    hdr.trigger.map_id = dungeon.levels[0]; // ApplyTimerPolicy autostart/autofail
     list.goals.push_back(std::move(hdr));
 
     for (size_t i = 0; i < dungeon.level_count; ++i) {
@@ -184,16 +183,14 @@ GoalList BuildDungeonPresetList(const Dungeon& dungeon)
         g.label   = label;
         g.indent  = 1;
         if (i + 1 < dungeon.level_count) {
-            // Completes on the next level's own entry, matching OT's AddObjectiveAfterAll chaining.
             g.trigger.type   = GoalTrigger::Type::MapEnter;
             g.trigger.map_id = dungeon.levels[i + 1];
         } else {
-            // Final level's own map (not a "next" map) — unused by Pass 2 but needed by the auto-fail-on-rezone check, same as Mission/Bonus/VQ goals.
+            // Unused by Pass 2; auto-fail rezone check need it.
             g.trigger.type   = GoalTrigger::Type::DungeonReward;
             g.trigger.map_id = dungeon.levels[i];
         }
         if (i == 0) {
-            // Real map-entry gated start, matching OT's objectives.front()->SetStarted() (only runs once the ObjectiveSet is created by loading into this dungeon).
             g.start_trigger = GoalTrigger{};
             g.start_trigger->type   = GoalTrigger::Type::MapEnter;
             g.start_trigger->map_id = dungeon.levels[0];
@@ -212,7 +209,7 @@ GoalList BuildEliteAreaPresetList(const EliteArea& area)
     GoalEntry hdr;
     hdr.is_header      = true;
     hdr.label          = area.label;
-    hdr.trigger.map_id = area.map_id; // read by ApplyTimerPolicy's autostart/autofail, not the engine
+    hdr.trigger.map_id = area.map_id; // ApplyTimerPolicy autostart/autofail
     list.goals.push_back(std::move(hdr));
 
     for (size_t i = 0; i < area.count; ++i) {
@@ -223,13 +220,17 @@ GoalList BuildEliteAreaPresetList(const EliteArea& area)
     return list;
 }
 
-std::optional<GoalList> BuildPresetForMap(GW::Constants::MapID map_id)
+const Dungeon* FindDungeon(const GW::Constants::MapID map_id)
 {
     for (const auto& dungeon : kDungeons) {
-        for (size_t i = 0; i < dungeon.level_count; ++i) {
-            if (dungeon.levels[i] == map_id) return BuildDungeonPresetList(dungeon);
-        }
+        if (std::ranges::contains(std::span(dungeon.levels, dungeon.level_count), map_id)) return &dungeon;
     }
+    return nullptr;
+}
+
+std::optional<GoalList> BuildPresetForMap(GW::Constants::MapID map_id)
+{
+    if (const Dungeon* dungeon = FindDungeon(map_id)) return BuildDungeonPresetList(*dungeon);
     for (const auto& area : kEliteAreas) {
         if (area.map_id == map_id) return BuildEliteAreaPresetList(area);
     }
@@ -239,12 +240,9 @@ std::optional<GoalList> BuildPresetForMap(GW::Constants::MapID map_id)
     return std::nullopt;
 }
 
-// ---------------------------------------------------------------------------
-// Domain of Anguish
-// ---------------------------------------------------------------------------
-// Constants copied verbatim from ObjectiveTimerWindow.cpp's DoA_ObjId/DoorID enums and AddDoAObjectiveSet. Every row gets its own explicit start_trigger (not relay), since DoA's zone order rotates per run and relay would misdate a zone's start to whenever the previous one finished.
+// From OT's DoA_ObjId/DoorID + AddDoAObjectiveSet. Own start per row: zone order rotate, relay would misdate starts.
 namespace {
-    // DoACompleteZone's param1 ("zone message word") — OT's DoA_ObjId enum.
+    // DoACompleteZone param1 (OT's DoA_ObjId).
     constexpr uint32_t kDoAFoundry = 0x273F;
     constexpr uint32_t kDoAVeil    = 0x2740;
     constexpr uint32_t kDoAGloom   = 0x2741;
@@ -278,7 +276,7 @@ namespace {
     constexpr wchar_t kDoADarknessesDialogue[] = L"\x8101\x273B\xB5DB\x8B13";
     constexpr wchar_t kDoATendrilsDialogue[]   = L"\x8101\x34C1\x9FA1\xED8F\x1BE4";
 
-    // Nearest-neighbor rotation detection matching AddDoAObjectiveSet's own starting_area lambda; if Mallyx's spawn is closest of all 5 candidates, this isn't a DoA run at all.
+    // Nearest spawn. Mallyx closest = not DoA.
     constexpr GW::Vec2f kDoAMallyxSpawn(-3931, -6214);
     constexpr GW::Vec2f kDoAAreaSpawns[4] = {
         {-10514, 15231}, // Foundry
@@ -287,7 +285,6 @@ namespace {
         {16034,  1244},  // Gloom
     };
 
-    // Builds one DoA sub-objective matching OT's per-objective AddStartEvent/AddEndEvent pairs; start_extra/end_extra are alternate doors (OR semantics) for OT's multi-door starts/ends.
     GoalEntry MakeDoAGoal(const char* label,
                           GoalTrigger::Type start_type, uint32_t start_param1,
                           std::initializer_list<uint32_t> start_extra,
@@ -298,7 +295,7 @@ namespace {
     {
         GoalEntry g;
         g.label          = label;
-        g.indent         = 2; // nested two levels under BuildDoAPresetForZone's root header -> zone header -> room
+        g.indent         = 2;
         g.trigger.type   = end_type;
         g.trigger.param1 = end_param1;
         g.trigger.param2 = end_param2;
@@ -353,7 +350,7 @@ namespace {
     std::vector<GoalEntry> BuildDoAVeilChildren()
     {
         std::vector<GoalEntry> goals;
-        // "360"/"Underlords"/"Lords" have no explicit end event in OT (informational start-only) — each one's completion here borrows the next row's own start condition instead.
+        // 360/Underlords/Lords: no end event in OT. Borrow next row start.
         goals.push_back(MakeDoAGoal("360", T::DoorOpen, kDoAVeil360Left,
                                      {kDoAVeil360Middle, kDoAVeil360Right}, nullptr,
                                      T::DoorOpen, kDoAVeilRanger, {kDoAVeilDerv}));
@@ -394,22 +391,26 @@ int DetectDoAStartingZone(const GW::Vec2f spawn)
     return starting_area; // -1 = Mallyx, not DoA
 }
 
-GoalList BuildDoAPresetForZone(const int starting_zone)
-{
-    struct ZoneBlock {
+namespace {
+    struct DoAZoneBlock {
         const char* label;
         std::vector<GoalEntry> (*build)();
     };
-    static const ZoneBlock kZones[4] = {
+    // Same index order as DetectDoAStartingZone's result.
+    const DoAZoneBlock kDoAZones[4] = {
         {"Foundry", BuildDoAFoundryChildren},
         {"City",    BuildDoACityChildren},
         {"Veil",    BuildDoAVeilChildren},
         {"Gloom",   BuildDoAGloomChildren},
     };
+}
 
+GoalList BuildDoAPresetList()
+{
     GoalList list;
     list.is_preset = true;
-    list.name      = Resources::GetMapName(GW::Constants::MapID::Domain_of_Anguish)->string();
+    // One fixed order for every rotation: zones keep the same goal indices, so history compares per zone.
+    list.name      = "Domain of Anguish";
 
     GoalEntry hdr;
     hdr.is_header      = true;
@@ -417,60 +418,76 @@ GoalList BuildDoAPresetForZone(const int starting_zone)
     hdr.trigger.map_id = GW::Constants::MapID::Domain_of_Anguish;
     list.goals.push_back(std::move(hdr));
 
-    for (int i = 0; i < 4; ++i) {
-        const ZoneBlock& zone = kZones[(starting_zone + i) % 4];
-
+    for (const auto& zone : kDoAZones) {
         GoalEntry zone_hdr;
         zone_hdr.is_header      = true;
-        zone_hdr.indent         = 1; // child of the root header above, not a sibling — lets collapsing the root hide every zone
+        zone_hdr.indent         = 1; // child of root, so collapse root hide all
         zone_hdr.label          = zone.label;
         zone_hdr.trigger.map_id = GW::Constants::MapID::Domain_of_Anguish;
         list.goals.push_back(std::move(zone_hdr));
-
-        auto children = zone.build();
-        // Whichever zone lands first in rotation: its entrance DoorClose may already have fired before this list finished (re-)attaching after a swap, and a past network event can't be recovered — starts_immediately is safe here since this whole builder only ever runs off a confirmed InstanceLoadFile signal, i.e. we already know we're in DoA right now.
-        if (i == 0 && !children.empty()) children.front().starts_immediately = true;
-        for (auto& g : children) list.goals.push_back(std::move(g));
+        for (auto& g : zone.build()) list.goals.push_back(std::move(g));
     }
     return list;
 }
 
-// ---------------------------------------------------------------------------
-// Tomb of the Primeval Kings
-// ---------------------------------------------------------------------------
+const char* DoAZoneName(const int zone)
+{
+    return zone >= 0 && zone < static_cast<int>(std::size(kDoAZones)) ? kDoAZones[zone].label : "";
+}
+
+int DoAZoneFirstGoal(const GoalList& list, const int zone)
+{
+    if (zone < 0 || zone >= static_cast<int>(std::size(kDoAZones))) return -1;
+    for (size_t i = 0; i < list.goals.size(); ++i) {
+        const auto& g = list.goals[i];
+        if (!g.is_header || g.label != kDoAZones[zone].label) continue;
+        for (size_t j = i + 1; j < list.goals.size(); ++j)
+            if (!list.goals[j].is_header) return static_cast<int>(j);
+        return -1;
+    }
+    return -1;
+}
+
 const MapID kToPKLevels[4] = {
     MapID::The_Underworld_PvP,
     MapID::Scarred_Earth,
     MapID::The_Courtyard,
     MapID::The_Hall_of_Heroes,
 };
+// Static: same reason as Dungeon::name.
+static const char* const kToPKLevelNames[4] = { "The Underworld", "Scarred Earth", "The Courtyard", "The Hall of Heroes" };
 
 GoalList BuildToPKPresetList()
 {
     GoalList list;
     list.is_preset = true;
-    list.name      = Resources::GetMapName(MapID::Tomb_of_the_Primeval_Kings)->string();
+    list.name      = "Tomb of the Primeval Kings";
 
     GoalEntry hdr;
     hdr.is_header      = true;
     hdr.label          = list.name;
-    hdr.trigger.map_id = kToPKLevels[0]; // entry map, read by ApplyTimerPolicy's autostart fallback
+    hdr.trigger.map_id = kToPKLevels[0]; // ApplyTimerPolicy autostart
     list.goals.push_back(std::move(hdr));
 
     for (size_t i = 0; i < 4; ++i) {
         GoalEntry g;
-        g.label          = Resources::GetMapName(kToPKLevels[i])->string();
+        g.label          = kToPKLevelNames[i];
         g.indent         = 1;
         g.trigger.type   = T::CountdownStart;
-        g.trigger.param1 = static_cast<uint32_t>(kToPKLevels[i]); // matched via matchesPendingTrigger
-        g.trigger.map_id = kToPKLevels[i]; // read by GoalEngine's auto-fail rezone check, not Pass 2
+        g.trigger.param1 = static_cast<uint32_t>(kToPKLevels[i]);
+        g.trigger.map_id = kToPKLevels[i]; // auto-fail rezone check
         g.start_trigger  = GoalTrigger{};
-        // Only the entry map is explorable-ambiguous (shared with a non-ToPK outpost); the other 3 are only reached mid-run, so plain MapEnter is unambiguous there.
+        // Entry map shared with non-ToPK outpost; rest only reached mid-run.
         g.start_trigger->type   = (i == 0) ? T::EnterExplorable : T::MapEnter;
         g.start_trigger->map_id = kToPKLevels[i];
         list.goals.push_back(std::move(g));
     }
     return list;
+}
+
+GW::Constants::MapID AnchorMapId(const GoalList& list)
+{
+    return list.goals.empty() ? GW::Constants::MapID::None : list.goals.front().trigger.map_id;
 }
 
 } // namespace SCPresets

@@ -1,12 +1,15 @@
 #include "stdafx.h"
+
 #include "GoalList.h"
 
+#include <Modules/Resources.h>
+#include <Utils/TextUtils.h>
+
 #include <cctype>
+#include <ranges>
 #include <unordered_map>
 
-// ---------------------------------------------------------------------------
-// JSON DTOs for split-list files (glaze reflection requires external linkage).
-// ---------------------------------------------------------------------------
+// glaze reflection need external linkage.
 namespace GoalListJson {
     struct SerializedTrigger {
         std::string trigger_type = "Manual";
@@ -46,29 +49,25 @@ namespace GoalListJson {
         std::optional<bool> is_preset;
     };
 
+    // Name only: file stem can differ once sanitised.
+    struct SerializedListName {
+        std::string name;
+    };
+
     std::vector<uint16_t> EncodePattern(const std::wstring& pattern)
     {
-        std::vector<uint16_t> out;
-        out.reserve(pattern.size());
-        for (wchar_t c : pattern) out.push_back(static_cast<uint16_t>(c));
-        return out;
+        return {pattern.begin(), pattern.end()};
     }
 
     std::wstring DecodePattern(const std::vector<uint16_t>& pattern)
     {
-        std::wstring out;
-        out.reserve(pattern.size());
-        for (uint16_t c : pattern) out += static_cast<wchar_t>(c);
-        return out;
+        return {pattern.begin(), pattern.end()};
     }
 }
 using namespace GoalListJson;
 
-// ---------------------------------------------------------------------------
-// Serialization helpers
-// ---------------------------------------------------------------------------
 namespace {
-    // Single source of truth for the trigger type <-> string mapping, searched by both TriggerTypeName and TriggerTypeFromString below. Manual is deliberately absent — it's the implicit fallback on both sides (default enum value / unrecognized string).
+    // Manual absent on purpose: fallback both ways.
     struct TriggerTypeNameEntry { GoalTrigger::Type type; const char* name; };
     constexpr TriggerTypeNameEntry kTriggerTypeNames[] = {
         { GoalTrigger::Type::MapEnter,              "MapEnter" },
@@ -134,7 +133,6 @@ static GoalTrigger FromSerialized(const SerializedTrigger& jt)
     return t;
 }
 
-// ---------------------------------------------------------------------------
 void GoalList::ResetRunState()
 {
     for (auto& g : goals) {
@@ -148,7 +146,7 @@ void GoalList::ResetRunState()
 
 void GoalList::RenumberDuplicateLabels()
 {
-    // Strips a trailing " (N)" suffix this function previously added, so re-running it after a deletion renumbers from a clean base label.
+    // Strip old " (N)" first so renumber start clean.
     auto strip_suffix = [](const std::string& label) -> std::string {
         const size_t open = label.rfind(" (");
         if (open == std::string::npos || label.back() != ')') return label;
@@ -179,7 +177,7 @@ void GoalList::RenumberDuplicateLabels()
     }
 }
 
-bool GoalList::SaveToFile(const std::wstring& path) const
+bool GoalList::SaveToFile(const std::filesystem::path& path) const
 {
     SerializedGoalList j;
     j.name = name;
@@ -197,25 +195,17 @@ bool GoalList::SaveToFile(const std::wstring& path) const
         if (g.trigger.param1)    jg.param1 = g.trigger.param1;
         if (g.trigger.param2)    jg.param2 = g.trigger.param2;
         if (!g.trigger.pattern.empty()) jg.pattern = EncodePattern(g.trigger.pattern);
-        // starts_immediately is deliberately never serialized — see GoalEntry.h's own comment; it only means anything on the same tick a preset was built off a live signal.
+        // starts_immediately never saved: only valid same tick preset built.
         if (g.auto_complete_previous != 0) jg.auto_complete_previous = g.auto_complete_previous;
         if (g.is_header)  jg.is_header = true;
         if (g.indent != 0) jg.indent   = g.indent;
         if (g.display_style != GoalEntry::DisplayStyle::Splits)
             jg.display_style = static_cast<uint8_t>(g.display_style);
         if (g.start_trigger.has_value()) jg.start_trigger = ToSerialized(g.start_trigger.value());
-        if (!g.extra_start_triggers.empty()) {
-            std::vector<SerializedTrigger> jextra_starts;
-            jextra_starts.reserve(g.extra_start_triggers.size());
-            for (const auto& est : g.extra_start_triggers) jextra_starts.push_back(ToSerialized(est));
-            jg.extra_start_triggers = std::move(jextra_starts);
-        }
-        if (!g.extra_triggers.empty()) {
-            std::vector<SerializedTrigger> jextras;
-            jextras.reserve(g.extra_triggers.size());
-            for (const auto& et : g.extra_triggers) jextras.push_back(ToSerialized(et));
-            jg.extra_triggers = std::move(jextras);
-        }
+        if (!g.extra_start_triggers.empty())
+            jg.extra_start_triggers = g.extra_start_triggers | std::views::transform(ToSerialized) | std::ranges::to<std::vector>();
+        if (!g.extra_triggers.empty())
+            jg.extra_triggers = g.extra_triggers | std::views::transform(ToSerialized) | std::ranges::to<std::vector>();
         j.goals.push_back(std::move(jg));
     }
 
@@ -225,23 +215,20 @@ bool GoalList::SaveToFile(const std::wstring& path) const
         j.reference = std::move(jref);
     }
 
-    std::ofstream f(path);
-    if (!f.is_open()) return false;
-    f << glz::write<glz::opts{.prettify = true}>(j).value_or(std::string{});
-    return true;
+    return Resources::WriteFile(path, glz::write<glz::opts{.prettify = true}>(j).value_or(std::string{}));
 }
 
-bool GoalList::LoadFromFile(const std::wstring& path)
+bool GoalList::LoadFromFile(const std::filesystem::path& path)
 {
-    std::ifstream f(path);
-    if (!f.is_open()) return false;
-
-    std::stringstream ss;
-    ss << f.rdbuf();
+    std::string content;
+    if (!Resources::ReadFile(path, content)) return false;
 
     SerializedGoalList j;
     constexpr glz::opts opts{.error_on_unknown_keys = false};
-    if (glz::read<opts>(j, ss.str())) return false;
+    if (glz::read<opts>(j, content)) {
+        Log::ErrorW(L"Splits: failed to parse %s", path.wstring().c_str());
+        return false;
+    }
 
     name = j.name;
     is_preset = j.is_preset.value_or(false);
@@ -264,14 +251,10 @@ bool GoalList::LoadFromFile(const std::wstring& path)
         g.indent                  = jg.indent.value_or(0);
         g.display_style           = static_cast<GoalEntry::DisplayStyle>(jg.display_style.value_or(0));
         if (jg.start_trigger) g.start_trigger = FromSerialized(*jg.start_trigger);
-        if (jg.extra_start_triggers) {
-            g.extra_start_triggers.reserve(jg.extra_start_triggers->size());
-            for (const auto& je : *jg.extra_start_triggers) g.extra_start_triggers.push_back(FromSerialized(je));
-        }
-        if (jg.extra_triggers) {
-            g.extra_triggers.reserve(jg.extra_triggers->size());
-            for (const auto& je : *jg.extra_triggers) g.extra_triggers.push_back(FromSerialized(je));
-        }
+        if (jg.extra_start_triggers)
+            g.extra_start_triggers = *jg.extra_start_triggers | std::views::transform(FromSerialized) | std::ranges::to<std::vector>();
+        if (jg.extra_triggers)
+            g.extra_triggers = *jg.extra_triggers | std::views::transform(FromSerialized) | std::ranges::to<std::vector>();
         goals.push_back(std::move(g));
     }
 
@@ -286,15 +269,29 @@ bool GoalList::LoadFromFile(const std::wstring& path)
     return true;
 }
 
+std::wstring GoalList::FileStem(const std::string_view name)
+{
+    // UTF-8 overload: also handles CON/NUL and trailing dots/spaces.
+    const std::string safe = TextUtils::SanitiseFilename(name);
+    return safe.empty() ? L"_" : TextUtils::StringToWString(safe);
+}
+
 std::vector<std::pair<std::string, std::wstring>>
-GoalList::ListSaved(const std::wstring& folder)
+GoalList::ListSaved(const std::filesystem::path& folder)
 {
     std::vector<std::pair<std::string, std::wstring>> result;
     std::error_code ec;
     for (const auto& entry : std::filesystem::directory_iterator(folder, ec)) {
         if (entry.path().extension() != L".json") continue;
         if (entry.path().stem() == L"resume")     continue;
-        result.emplace_back(entry.path().stem().string(), entry.path().wstring());
+        std::string name;
+        if (std::string content; Resources::ReadFile(entry.path(), content)) {
+            SerializedListName j;
+            constexpr glz::opts opts{.error_on_unknown_keys = false};
+            if (!glz::read<opts>(j, content)) name = std::move(j.name);
+        }
+        if (name.empty()) name = TextUtils::WStringToString(entry.path().stem().wstring());
+        result.emplace_back(std::move(name), entry.path().wstring());
     }
     return result;
 }

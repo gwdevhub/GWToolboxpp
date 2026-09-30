@@ -1,9 +1,9 @@
 #include "stdafx.h"
+
 #include "GoalClock.h"
 
 void GoalClock::Start()  { running_ = true; }
 void GoalClock::Pause()  { running_ = false; }
-void GoalClock::Resume() { running_ = true; }
 
 void GoalClock::Reset()
 {
@@ -28,5 +28,5 @@ void GoalClock::Restore(double real_elapsed, double game_elapsed)
 {
     real_elapsed_ = real_elapsed;
     game_elapsed_ = game_elapsed;
-    running_      = true;
+    running_      = false;
 }

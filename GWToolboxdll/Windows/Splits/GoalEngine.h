@@ -1,23 +1,21 @@
 #pragma once
 
-#include "GoalList.h"
-#include "GoalClock.h"
-
-#include <vector>
-#include <GWCA/Constants/Maps.h>
 #include <GWCA/Constants/Constants.h>
+#include <GWCA/Constants/Maps.h>
 
-// ---------------------------------------------------------------------------
-// GoalEngine — checks conditions each frame, fires splits, tracks state.
-// ---------------------------------------------------------------------------
+#include <Windows/Splits/GoalClock.h>
+#include <Windows/Splits/GoalList.h>
+
+#include <set>
+#include <vector>
+
 class GoalEngine {
 public:
     void Attach(GoalList* list);
     void Detach();
 
-    // Returns the count of goals that fired this tick (0 = none).
-    // Ordered types block all subsequent goals until met; unordered types (mission/bonus/title/objective) never block, so several can fire in one tick.
-    // is_explorable must be synchronous with just_entered_map, not a live GetInstanceType() poll (can lag a frame and miss the one-shot tick).
+    // Returns goals fired this tick. Ordered types block later goals; unordered never block.
+    // is_explorable must come with just_entered_map, not GetInstanceType() poll (lag one frame, miss tick).
     int Update(const GoalClock& clock,
                GW::Constants::MapID current_map,
                bool just_entered_map,
@@ -28,45 +26,43 @@ public:
 
     void TriggerManual(const GoalClock& clock);
 
-    // Arms a pending bonus check (see CheckPendingMissionBonus) instead of reading it synchronously, which produces false positives.
+    // Arm bonus poll, not read now: read now give false positive.
     void NotifyMissionComplete(GW::Constants::MapID map);
     void NotifyVanquishComplete(GW::Constants::MapID map);
-    // Tracks the base/primary objective (no BULLET bit); its ObjectiveDone synthesizes MissionComplete+MissionBonus with the real server map_id.
+    // Primary objective (no BULLET bit). Its ObjectiveDone give real map_id.
     void NotifyObjectiveAdd(uint32_t obj_id, uint32_t type_flags);
 
-    // Generic event notification for preset-only triggers (DoorOpen, ObjectiveDone, etc.)
-    // str is only needed for ServerMessage/DisplayDialogue and must remain valid until Update() runs.
+    // str only for ServerMessage/DisplayDialogue. Copied.
     void NotifyEvent(GoalTrigger::Type type, uint32_t id1 = 0, uint32_t id2 = 0,
                      const wchar_t* str = nullptr, size_t str_len = 0);
 
     void Reset();
     void ForceStarted();
+    // Resume: Attach/Reset zero baseline, put back.
+    void RestoreLastSplit(double real, double game) { last_real_ = real; last_game_ = game; }
 
-    // Marks Started goals Failed with a split time; NotStarted/Completed goals are untouched.
     void FailRun(const GoalClock& clock);
 
-    // True if a Started Vanquish/Mission/Bonus goal's map was just left unfinished; detection only, caller decides policy since GoalEngine doesn't know auto_fail_on_rezone. Clears on read.
+    // Started VQ/Mission/Bonus map left unfinished. Caller pick policy. Clear on read.
     [[nodiscard]] bool ConsumeIncompleteRezone();
 
-    // Fires for any profile; only Running's caller-side policy acts on it.
     [[nodiscard]] bool ConsumeWrongMapEntered();
-
-    // TEMPORARY diagnostic for the MissionComplete-not-firing investigation: Pass 2 appends here whenever it evaluates a MissionComplete goal against a non-None mission_complete_map_. Drained (and cleared) by SplitsWindow::Update() into PushDbgEvent right after calling Update() here. Remove once resolved.
-    struct DebugNote { const char* tag; uint32_t v1; uint32_t v2; };
-    std::vector<DebugNote> debug_notes_;
 
 private:
     void FireGoal(int index, const GoalClock& clock);
-    // Throttled to once/second via bonus_check_timer_ — polls CompletionWindow (string/bitset scan), not free to run every tick for however long a bonus stays unearned.
+    void StampSplit(GoalEntry& g, const GoalClock& clock) const;
+    // Poll once/sec: CompletionWindow scan not free.
     void CheckPendingMissionBonus(float delta);
-    // Completes any not-yet-completed goals before `index` per its auto_complete_previous.
+    // Live complete events flaky some maps. Poll, only while in goal map.
+    void CheckPendingCompletions(float delta, GW::Constants::MapID current_map);
+    bool TrustedCompletionCheck(int goal_index, const wchar_t* player_name, const GoalTrigger& t);
     void CompletePreviousGoals(int index, const GoalClock& clock);
 
     struct PendingEvent {
         GoalTrigger::Type type;
         uint32_t          id1;
         uint32_t          id2;
-        std::wstring      str; // copy of string data for ServerMessage/DisplayDialogue
+        std::wstring      str;
     };
 
     GoalList* list_    = nullptr;
@@ -80,16 +76,17 @@ private:
     GW::Constants::MapID mission_complete_map_  = GW::Constants::MapID::None;
     GW::Constants::MapID mission_bonus_map_     = GW::Constants::MapID::None;
     GW::Constants::MapID vanquish_complete_map_ = GW::Constants::MapID::None;
-    // No timeout — a genuinely-unearned bonus just stays pending harmlessly for the rest of the run.
+    // No timeout: unearned bonus stay pending, harmless.
     GW::Constants::MapID pending_bonus_check_map_ = GW::Constants::MapID::None;
-    float                bonus_check_timer_        = 0.f; // accumulates delta; CheckPendingMissionBonus only polls once this hits 1s
-    // Base/primary objective id (no BULLET bit); its ObjectiveDone sets both mission_complete_map_/mission_bonus_map_ via the real server map_id.
+    bool                 pending_bonus_hm_        = false;
+    float                bonus_check_timer_        = 0.f;
+    float                completion_check_timer_   = 0.f;
+    // Goals seen incomplete this run. Only trust "complete" for these, so old beaten mission not insta-done.
+    std::set<int>        completion_confirmed_incomplete_;
     uint32_t             primary_obj_id_        = 0;
-    // See ConsumeIncompleteRezone().
     bool                 pending_incomplete_rezone_ = false;
-    // See ConsumeWrongMapEntered().
     bool                 pending_wrong_map_entered_ = false;
-    // One-shot: lets the first Enter-type goal fire if you're already standing on its map when the run starts/resumes, since a real zone-transition edge will never come.
+    // Already on first goal map at start: no zone edge will come, fake one.
     bool                 pending_run_start_ = false;
 
     std::vector<PendingEvent> pending_events_;

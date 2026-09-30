@@ -1,91 +1,41 @@
 #pragma once
 
-#include <map>
-#include <set>
-#include <utility>
-#include <vector>
-
-// Forward declarations
 class SplitsWindow;
-class ToolboxIni;
-class SettingsDoc;
+struct SplitsProfile;
 struct GoalList;
 struct GoalEntry;
 class GoalClock;
 
-// ---------------------------------------------------------------------------
-// SplitsGoalListWindow — runtime display + settings UI for the Splits window.
-// Per-profile settings live on SplitsProfile (plugin.ActiveProfile()); colors are global on SplitsWindow itself.
-// ---------------------------------------------------------------------------
 class SplitsGoalListWindow {
 public:
-    void Draw(SplitsWindow& window);
-    void DrawSettings(SplitsWindow& window);
-    // LoadSettings/SaveSettings for non-profile state (edit buffers, etc.)
-    void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy);
-    void SaveSettings(SettingsDoc& doc);
+    void Draw(SplitsWindow& splits);
+    void DrawSettings(SplitsWindow& splits);
 
 private:
-    bool DrawHeaderRow(const GoalList& list, int header_idx, const struct SplitsProfile& profile);
-    void DrawGoalRow(const GoalEntry& g, const GoalClock& clock, int index,
-                     bool is_current,
+    bool DrawHeaderRow(const GoalList& list, int header_idx, const SplitsProfile& profile);
+    void DrawGoalRow(const GoalEntry& g, const GoalClock& clock, bool is_current,
                      double pb_split_real, double pb_seg_real,
                      double pb_split_game, double pb_seg_game,
-                     const struct SplitsProfile& profile, SplitsWindow& plugin);
-    void DrawRecentRunsSection(SplitsWindow& plugin);
+                     double pb_start_real, double pb_start_game,
+                     const SplitsProfile& profile, SplitsWindow& splits);
+    void DrawRecentRunsSection(SplitsWindow& splits);
+    void DrawRunHistoryViewer(SplitsWindow& splits);
 
-    // DrawSettings sections — one profile's UI per named method (see .cpp header comment).
-    void DrawProfileSwitcher(SplitsWindow& window);
-    void DrawTimeAndBehaviorColumn(SplitsWindow& window);
-    void DrawKeybindsAndColorsColumn(SplitsWindow& window);
-    void DrawGoalListManagementColumn(SplitsWindow& window);
-    void DrawSCGoalsSummary(SplitsWindow& window);
-    void DrawEditableGoalsList(SplitsWindow& window);
-    void DrawStandardAddGoalForm(SplitsWindow& window);
+    void DrawProfileSwitcher(SplitsWindow& splits);
+    void DrawTimeAndBehaviorColumn(SplitsWindow& splits);
+    void DrawKeybindsAndColorsColumn(SplitsWindow& splits);
+    void DrawGoalListManagementColumn(SplitsWindow& splits);
+    void DrawPlainLoadCombo(SplitsWindow& splits);
+    void DrawSCLoadCombo(SplitsWindow& splits);
+    void DrawSCCreateVariantModal(SplitsWindow& splits);
+    void DrawSCGoalsSummary(SplitsWindow& splits);
+    void DrawEditableGoalsList(SplitsWindow& splits);
+    void DrawStandardAddGoalForm(SplitsWindow& splits);
 
-    void DrawMissionBatchPicker(SplitsWindow& window);
-    void DrawExplorableBatchPicker(SplitsWindow& window);
-    void DrawTownBatchPicker(SplitsWindow& window);
-    void DrawDungeonBatchPicker(SplitsWindow& window);
-    void DrawEliteAreaBatchPicker(SplitsWindow& window);
-    void DrawTitlePicker(SplitsWindow& window);
-
-    char edit_label_[128]     = {};
-    int  edit_trigger_type_   = 0; // -1 = Header (no trigger), -2 = Quest (Pickup+Complete pair)
-    int  edit_level_          = 1;
-    char list_name_buf_[64]   = {};
-
-    std::set<int>          batch_mis_checked_;
-    std::set<int>          batch_bon_checked_;
-    bool                   batch_hm_ = false;
-
-    std::map<int, uint8_t> batch_exp_checked_;
-    // Running only: records check order so its route can be added in click order instead of the region/name sort Manual/SC want.
-    std::vector<std::pair<int, uint8_t>> batch_exp_order_;
-    char                   exp_filter_buf_[128] = {};
-
-    std::map<int, uint8_t> batch_town_checked_;
-    std::vector<std::pair<int, uint8_t>> batch_town_order_;
-    char                   town_filter_buf_[128] = {};
-
-    std::set<int> batch_dungeon_checked_;
-    char          dungeon_filter_buf_[128] = {};
-
-    // Elite area picker — keyed by checkpoint array index, not param1 (Urgoz/Deep mix trigger types whose param1/pattern values could otherwise collide).
-    std::set<int> batch_fow_checked_;
-    std::set<int> batch_uw_checked_;
-    std::set<int> batch_urgoz_checked_;
-    std::set<int> batch_deep_checked_;
-
-    int  edit_title_id_       = 0xff;
-    int  edit_title_rank_     = -1; // 0-based tier index; -1 = unset (defaults to max on first use)
-    char title_filter_buf_[128] = {};
-
-    // Manual entry for both — matches wiki numbering, no master name list needed for either.
-    int  edit_quest_id_ = 0;
-    int  edit_skill_id_ = 0;
-
-    // Model ID is visible live in-game via the Info window's target panel, no wiki needed.
-    int  edit_mob_id_         = 0;
-    int  edit_mob_kill_count_ = 1;
+    void DrawMissionBatchPicker(SplitsWindow& splits);
+    void DrawExplorableBatchPicker(SplitsWindow& splits);
+    void DrawTownBatchPicker(SplitsWindow& splits);
+    void DrawDungeonBatchPicker(SplitsWindow& splits);
+    void DrawEliteAreaBatchPicker(SplitsWindow& splits);
+    void DrawTitlePicker(SplitsWindow& splits);
 };
