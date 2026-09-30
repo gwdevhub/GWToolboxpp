@@ -1,20 +1,16 @@
 #pragma once
 
+#include <Windows/Splits/GoalEntry.h>
+
+#include <filesystem>
 #include <string>
+#include <string_view>
 #include <vector>
 
-#include "GoalEntry.h"
-
-// ---------------------------------------------------------------------------
-// Reference splits embedded in a template — personal PB or an imported WR.
-// ---------------------------------------------------------------------------
 struct GoalReference {
-    std::vector<double> splits; // real-time cumulative split per non-header goal
+    std::vector<double> splits; // cumulative real time, per non-header goal
 };
 
-// ---------------------------------------------------------------------------
-// GoalList — a named, ordered collection of goals.
-// ---------------------------------------------------------------------------
 struct GoalList {
     bool                         is_preset = false;
     std::string                  name;
@@ -22,13 +18,14 @@ struct GoalList {
     std::optional<GoalReference> reference;
 
     void ResetRunState();
-    // Suffixes " (1)", " (2)", ... onto goals that share a label, in list order;
-    // strips the suffix back off when only one goal has that label.
+    // Dupe labels get " (N)". Last one left lose suffix.
     void RenumberDuplicateLabels();
 
-    bool SaveToFile(const std::wstring& path) const;
-    bool LoadFromFile(const std::wstring& path);
+    bool SaveToFile(const std::filesystem::path& path) const;
+    bool LoadFromFile(const std::filesystem::path& path);
 
     static std::vector<std::pair<std::string, std::wstring>>
-        ListSaved(const std::wstring& folder);
+        ListSaved(const std::filesystem::path& folder);
+    // UTF-8 decode, drop bad path chars, escape reserved device names.
+    static std::wstring FileStem(std::string_view name);
 };
