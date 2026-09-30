@@ -3,7 +3,25 @@ description: GWToolboxpp upstream fork safety
 alwaysApply: true
 ---
 # Upstream safety
-- Treat gwdevhub/GWToolboxpp as upstream.
+
+## One-way fork boundary (absolute)
+
+- Sole write target: `vinogitz/GWToolboxpp` (`origin`).
+- `gwdevhub/GWToolboxpp` (`upstream`) is fetch-only source code.
+- FORBIDDEN toward `gwdevhub/GWToolboxpp`: pull requests (including drafts), `git push`, commits into upstream history, issues, review requests, or any other contribution.
+- Allowed toward `gwdevhub/GWToolboxpp`: `git fetch` / sync scripts that only read upstream.
+- Keep `remote.upstream.pushurl` set to `DISABLED`. Never clear or re-enable upstream push.
+
+## Fork base vs upstream
+
+- The verified base for normal work is the fork `origin/master` tip.
+- `upstream/master` (`upstream/HEAD` → `upstream/master`) is a read and comparison source.
+- Upstream integration or rebase is a separate, explicitly authorized task; it is not an automatic prerequisite for other work.
+- Use `scripts/sync-upstream-rebase.ps1` only in such an authorized task, then push only to `origin`.
+- Do not treat `upstream/dev` as the sync target unless a human explicitly approves a separate slice.
+
+## Rebase-friendly fork practice
+
 - Keep tracker changes isolated and rebase-friendly.
 - Minimize existing-file modifications; no mass formatting or unrelated renames.
 - Do not update dependencies without approval.

@@ -12,6 +12,11 @@ Instructions for any AI agent in this repo. (`CLAUDE.md` just imports this.)
 - **Docs (`site/`):** pages go in `src/content/docs/`; `llms.txt`/`llms-full.txt` auto-generate from them. A new page needs `description:` frontmatter plus a `src/lib/nav.ts` entry to appear in `llms.txt`. After changes run `npm --prefix site run build` and check `site/dist/llms.txt`.
 - **Explaining a feature:** first check if it's documented (`src/content/docs/` or <https://www.gwtoolbox.com/docs/>); if missing/wrong, flag it, offer a fix, and link the page.
 
+## Fork vs upstream (absolute)
+
+- Write only to `vinogitz/GWToolboxpp`. Never PR, push, commit, or otherwise contribute to `gwdevhub/GWToolboxpp`.
+- The verified base for normal work is the fork `origin/master` tip. `upstream/master` is a read and comparison source. Upstream integration or rebase is a separate, explicitly authorized task—not an automatic prerequisite for other work. Use `scripts/sync-upstream-rebase.ps1` only in such a task. Details: `.cursor/rules/upstream-safety.mdc`.
+
 ## AI software factory routing
 
 - Read `docs/ai/AI_SOFTWARE_FACTORY.md` for roles, authority, task sizing, workflow and escalation.
