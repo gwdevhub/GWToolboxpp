@@ -80,3 +80,9 @@ P0 means security/data-loss/outage risk. P1 means likely normal-use incorrectnes
 - `HUMAN DECISION REQUIRED`: scope, product risk, ownership or contract authority needs a human decision.
 
 The verdict does not approve merge, release or deployment. Review the project's specific failure modes: observation versus inferred completion; character identity; state transitions; persistence/restart; producer capacity and validity; consumer contract drift; build compatibility.
+
+## Human-facing review output
+
+Follow [HUMAN_LANGUAGE_POLICY.md](HUMAN_LANGUAGE_POLICY.md) and [WORKSPACE_WORKFLOW.md](WORKSPACE_WORKFLOW.md). Explain findings, evidence limitations and next owner/action in Hungarian; preserve exact identifiers and verdict tokens. PR descriptions contain full Hungarian then full English versions.
+
+If the reviewer also implemented the change, report self-check results and transfer independent acceptance review to another reviewer. Do not call that self-review independent PASS. Keep the exact reviewed SHA and distinguish implementation acceptance from beta/release evidence.

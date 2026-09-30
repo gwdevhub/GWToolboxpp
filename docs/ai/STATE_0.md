@@ -44,3 +44,7 @@ These paths are a navigation map, not a substitute for inspecting current code. 
 3. **Select one bounded change if a real gap remains:** the Architect writes a Small/Medium/Large TaskSpec with tests and stop conditions. Do not infer a new feature requirement from this candidate list.
 
 Human product priority, PR readiness and release decisions remain human. See [REVIEW_GOVERNANCE.md](REVIEW_GOVERNANCE.md) for implementation handoff and independent review.
+
+## Governance consolidation checkpoint — 2026-09-30
+
+See [GOVERNANCE_READINESS.md](GOVERNANCE_READINESS.md) for the pinned dual-repository state, local cleanup checklist and beta evidence reconciliation. Older feature/build claims above retain their original evidence dates; do not interpret them as revalidated by the governance change.
