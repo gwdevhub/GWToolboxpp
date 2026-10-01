@@ -75,6 +75,7 @@
 #include <Windows/Pathfinding/PathfindingWindow.h>
 #include <Windows/PconsWindow.h>
 #include <Windows/RerollWindow.h>
+#include <Windows/SplitsWindow.h>
 #include <Windows/TradeWindow.h>
 #include <Windows/TravelWindow.h>
 
@@ -240,6 +241,7 @@ namespace {
         TradeWindow::Instance(),
         NotePadWindow::Instance(),
         ObjectiveTimerWindow::Instance(),
+        SplitsWindow::Instance(),
         FactionLeaderboardWindow::Instance(),
         DailyQuests::Instance(),
         FriendListWindow::Instance(),
