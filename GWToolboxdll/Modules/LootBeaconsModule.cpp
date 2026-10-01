@@ -19,7 +19,6 @@
 #include <Modules/GwDatModule.h>
 #include <Modules/LootBeaconsModule.h>
 #include <Modules/PriceCheckerModule.h>
-#include <Utils/EncString.h>
 #include <Utils/GameWorldCompositor.h>
 #include <Utils/SettingsRegistry.h>
 #include <Utils/TerrainDrape.h>
@@ -43,8 +42,6 @@ namespace {
     constexpr int kMaxBuildsPerFrame = 4;   // caps terrain-drape heightfield builds spent per frame
     constexpr int kDrapeGrid = 16;          // heightfield resolution sampled across a beacon's footprint
     constexpr int kRingDivs = 16;           // ring quad subdivision, so the sprite bends to follow the ground
-    constexpr uint64_t kScanIntervalMs = 1000;
-    constexpr uint64_t kNameDecodeRetryMs = 5000;
     constexpr uint32_t kRingTextureFileId = 0x2381; // GW dat texture for the pulsing ring sprite
 
     // Not user-configurable.
@@ -139,19 +136,15 @@ namespace {
 
     struct Beacon {
         GW::Vec2f pos;
-        float z = 0.f;
+        float z = 0.f; // the item agent's own world height; GW up is -z
         uint32_t zplane = 0;
-        uint32_t item_id = 0;
         Color color = 0;
         bool draw = false;
         bool dimmed = false;
-        bool draped = false;
-        bool draped_without_pathing = false;
+        bool draped = false; // heightfield resolved once (items don't move), then sampled every frame
         bool ring_cached = false;
         uint32_t seen = 0;
-        uint64_t name_decode_tick = 0;
-        GuiUtils::EncString name;
-        float field[kDrapeGrid + 1][kDrapeGrid + 1] = {};
+        float field[kDrapeGrid + 1][kDrapeGrid + 1] = {}; // terrain z sampled across pos +/- kFieldRadius
         std::vector<RingVertex> ring_outer, ring_inner;
     };
 
@@ -159,7 +152,6 @@ namespace {
     std::vector<BeaconVertex> scratch;
     std::vector<RingVertex> ring_scratch;
     uint32_t scan_counter = 0;
-    uint64_t last_scan_tick = 0;
     bool beacons_dirty = false;
     bool pending_full_scan = false;
     GW::HookEntry agent_ui_message_entry;
@@ -220,7 +212,6 @@ namespace {
             }
         }
         beacon.draped = true;
-        beacon.draped_without_pathing = !n_planes;
     }
 
     // Appends a textured ring quad subdivided into a kRingDivs grid, each vertex dropped onto the cached
@@ -279,13 +270,6 @@ namespace {
         if (name_beacons_dirty) CompileNameBeacons();
         auto& beacon = beacons[agent_item->agent_id];
         beacon.seen = scan_counter;
-        if (beacon.draped && (beacon.pos.x != agent_item->pos.x || beacon.pos.y != agent_item->pos.y ||
-                              beacon.z != agent_item->z || beacon.zplane != agent_item->pos.zplane)) {
-            beacon.draped = false;
-            beacon.ring_cached = false;
-            beacon.ring_outer.clear();
-            beacon.ring_inner.clear();
-        }
         beacon.pos = {agent_item->pos.x, agent_item->pos.y};
         beacon.z = agent_item->z;
         beacon.zplane = agent_item->pos.zplane;
@@ -299,9 +283,7 @@ namespace {
                 for (const auto& name_beacon : compiled_name_beacons) {
                     if (name_beacon.rarity != GW::Constants::Rarity::Unknown && name_beacon.rarity != rarity) continue;
                     if (!name_beacon.pattern.Matches(item_name)) continue;
-                    const auto rarity_color = RarityBeaconColor(rarity);
-                    beacon.color = Colors::IsVisible(name_beacon.color) ? name_beacon.color
-                                 : rarity_color ? rarity_color : Colors::ARGB(kRarityBeaconAlpha, 0, 255, 255);
+                    beacon.color = Colors::IsVisible(name_beacon.color) ? name_beacon.color : RarityBeaconColor(rarity);
                     beacon.draw = true;
                     return;
                 }
@@ -337,38 +319,32 @@ namespace {
         beacon.draw = draw;
     }
 
+    void OnItemNameDecoded(void* wparam, const wchar_t* decoded);
+
     void ProcessItemAgent(const GW::AgentItem* agent_item, const GW::Item* item)
     {
         if (!(agent_item && item)) return;
-        if (name_beacons_dirty) CompileNameBeacons();
-        auto& beacon = beacons[agent_item->agent_id];
-        if (beacon.item_id != agent_item->item_id) {
-            beacon = Beacon{};
-            beacon.item_id = agent_item->item_id;
-        }
-        if (compiled_name_beacons.empty()) {
-            Classify(agent_item, item);
-            return;
-        }
+        Classify(agent_item, item);
+        if (compiled_name_beacons.empty()) return;
         const wchar_t* name_enc = item->single_item_name && *item->single_item_name ? item->single_item_name : item->name_enc;
         if (name_enc && *name_enc) {
-            const auto now = GetTickCount64();
-            if (beacon.name.encoded() != name_enc ||
-                (now - beacon.name_decode_tick >= kNameDecodeRetryMs && beacon.name.wstring().empty())) {
-                beacon.name.reset(static_cast<const wchar_t*>(nullptr));
-                beacon.name_decode_tick = now;
-            }
-            const auto& item_name = beacon.name.reset(name_enc)->wstring();
-            Classify(agent_item, item, item_name);
-            return;
+            GW::UI::AsyncDecodeStr(name_enc, OnItemNameDecoded, reinterpret_cast<void*>(static_cast<uintptr_t>(agent_item->agent_id)));
         }
-        Classify(agent_item, item);
+    }
+
+    void OnItemNameDecoded(void* wparam, const wchar_t* decoded)
+    {
+        const auto agent_id = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(wparam));
+        const auto* agent = GW::Agents::GetAgentByID(agent_id);
+        const auto* agent_item = agent ? agent->GetAsAgentItem() : nullptr;
+        const auto* item = agent_item ? GW::Items::GetItemById(agent_item->item_id) : nullptr;
+        const auto item_name = TextUtils::StripTags(TextUtils::Replace(decoded ? decoded : L"", L"<brx>", L"\n"));
+        Classify(agent_item, item, item_name);
     }
 
     void ScanItems()
     {
         ++scan_counter;
-        beacons_dirty = false;
         const auto* agents = GW::Agents::GetAgentArray();
         if (!agents) {
             beacons.clear();
@@ -384,10 +360,9 @@ namespace {
     void OnPostUIMessage(GW::HookStatus*, const GW::UI::UIMessage message_id, void* wparam, void*)
     {
         switch (message_id) {
-            case GW::UI::UIMessage::kShowAgentNameTag: {
-                const auto* info = static_cast<const GW::UI::AgentNameTagInfo*>(wparam);
-                if (!info || beacons.contains(info->agent_id)) break;
-                const auto* agent = GW::Agents::GetAgentByID(info->agent_id);
+            case GW::UI::UIMessage::kAgentUpdate: {
+                const auto agent_id = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(wparam));
+                const auto* agent = GW::Agents::GetAgentByID(agent_id);
                 const auto* agent_item = agent ? agent->GetAsAgentItem() : nullptr;
                 ProcessItemAgent(agent_item, agent_item ? GW::Items::GetItemById(agent_item->item_id) : nullptr);
                 break;
@@ -396,9 +371,7 @@ namespace {
                 beacons.erase(static_cast<uint32_t>(reinterpret_cast<uintptr_t>(wparam)));
                 break;
             case GW::UI::UIMessage::kMapLoaded:
-                beacons.clear();
                 pending_full_scan = true;
-                last_scan_tick = 0;
                 break;
             default:
                 break;
@@ -487,16 +460,11 @@ void LootBeaconsModule::DrawInWorld(IDirect3DDevice9* device)
         beacons.clear();
         return;
     }
-    const auto now = GetTickCount64();
     if (pending_full_scan && GW::Map::GetIsMapLoaded() && !GW::UI::IsLoadingScreenShown() && GW::Agents::GetAgentArray()) {
         ScanItems();
         pending_full_scan = false;
-        last_scan_tick = now;
     }
-    else if (!pending_full_scan && now - last_scan_tick >= kScanIntervalMs) {
-        ScanItems();
-        last_scan_tick = now;
-    }
+    const auto now = GetTickCount64();
     RefreshBeacons();
     if (beacons.empty()) return;
 
@@ -533,19 +501,13 @@ void LootBeaconsModule::DrawInWorld(IDirect3DDevice9* device)
         const float focus_dx = beacon.pos.x - focus_x;
         const float focus_dy = beacon.pos.y - focus_y;
         if (cam && focus_dx * focus_dx + focus_dy * focus_dy > GW::Constants::SqrRange::Compass) continue;
-        EmitBeamQuad(scratch, beacon.pos, beacon.z, right_x, right_y, beacon.color, beacon.dimmed ? kBeamOpacity * 0.4f : kBeamOpacity);
-        if (beacon.draped_without_pathing && n_planes) {
-            beacon.draped = false;
-            beacon.ring_cached = false;
-            beacon.ring_outer.clear();
-            beacon.ring_inner.clear();
-        }
         if (!beacon.draped) {
-            if (builds >= kMaxBuildsPerFrame) continue;
+            if (!n_planes || builds >= kMaxBuildsPerFrame) continue;
             ++builds;
             BuildDrape(beacon, n_planes);
         }
         if (!beacon.ring_cached) BuildRingCache(beacon);
+        EmitBeamQuad(scratch, beacon.pos, beacon.z, right_x, right_y, beacon.color, beacon.dimmed ? kBeamOpacity * 0.4f : kBeamOpacity);
 
         // Ring opacity comes straight from the beacon colour's own alpha channel; dimmed (reserved for
         // other party members) is the one exception, same as the beam.
@@ -608,9 +570,8 @@ void LootBeaconsModule::Initialize()
     ToolboxModule::Initialize();
     RegisterSettings(this);
     pending_full_scan = true;
-    last_scan_tick = 0;
     const GW::UI::UIMessage ui_messages[] = {
-        GW::UI::UIMessage::kShowAgentNameTag,
+        GW::UI::UIMessage::kAgentUpdate,
         GW::UI::UIMessage::kAgentDestroy,
         GW::UI::UIMessage::kMapLoaded,
     };
@@ -629,7 +590,6 @@ void LootBeaconsModule::SignalTerminate()
     GW::UI::RemoveUIMessageCallback(&agent_ui_message_entry);
     beacons.clear();
     pending_full_scan = false;
-    last_scan_tick = 0;
 }
 
 void LootBeaconsModule::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
