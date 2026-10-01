@@ -354,9 +354,9 @@ void AgentRenderer::LoadCustomAgents(SettingsDoc& doc, ToolboxIni* legacy)
 
 void AgentRenderer::SeedAppearanceDefaults(const SettingsDoc& doc, const ToolboxIni* legacy)
 {
-    const auto add = [this](const char* label, const AgentType type, const Color color, const float size, const Shape_e shape, const int allegiance = -1, const DeadState dead = EitherDeadState) {
+    const auto add = [this](const char* label, const AgentType agent_type, const Color color, const float size, const Shape_e shape, const int allegiance = -1, const DeadState dead = EitherDeadState) {
         auto* rule = new CustomAgent(0, color, label);
-        rule->agent_type = type;
+        rule->agent_type = agent_type;
         rule->allegiance = allegiance;
         rule->dead_state = dead;
         rule->size = size;
@@ -404,13 +404,13 @@ void AgentRenderer::SeedAppearanceDefaults(const SettingsDoc& doc, const Toolbox
         enabled = legacy->GetBoolValue("Game Settings", "override_name_tag_colors", false);
     }
     if (enabled) {
-        const auto add_tag = [&doc, legacy, &add](const char* key, const char* label, const AgentType type, const int allegiance = -1, const PlayerRelation relation = AnyRelation, const Color fallback = 0) {
+        const auto add_tag = [&doc, legacy, &add](const char* key, const char* label, const AgentType agent_type, const int allegiance = -1, const PlayerRelation relation = AnyRelation, const Color fallback = 0) {
             Colors::SettingColor setting(fallback);
             if (!doc.Get("Game Settings", key, setting)) {
                 if (legacy && legacy->KeyExists("Game Settings", key)) setting = Colors::Load(legacy, "Game Settings", key, setting.value);
                 else if (!fallback) return;
             }
-            auto* rule = add(label, type, 0, 0.f, Shape_None, allegiance);
+            auto* rule = add(label, agent_type, 0, 0.f, Shape_None, allegiance);
             rule->player_relation = relation;
             rule->color_text = setting.value;
         };
@@ -593,8 +593,8 @@ void AgentRenderer::LoadLegacyAppearanceDefaults(const SettingsDoc& doc, const T
     if (!doc.Get(section, "only_color_bosses", only_color_bosses) && legacy) {
         only_color_bosses = legacy->GetBoolValue(section, "only_color_bosses", only_color_bosses);
     }
-    const std::pair<const char*, Shape_e*> shapes[] = {{"default_shape", &default_shape}, {"shape_player", &shape_player}, {"shape_players", &shape_players}};
-    for (const auto& [key, shape] : shapes) {
+    const std::pair<const char*, Shape_e*> shape_settings[] = {{"default_shape", &default_shape}, {"shape_player", &shape_player}, {"shape_players", &shape_players}};
+    for (const auto& [key, shape] : shape_settings) {
         auto value = static_cast<int>(*shape);
         if (!doc.Get(section, key, value) && legacy) value = static_cast<int>(legacy->GetLongValue(section, key, value));
         if (value >= Tear && value <= BigCircle) *shape = static_cast<Shape_e>(value);
@@ -912,7 +912,7 @@ AgentRenderer::AgentRenderer()
     }
 }
 
-void AgentRenderer::OnUIMessage(GW::HookStatus*, const GW::UI::UIMessage msgid, void* wParam, void*)
+void AgentRenderer::OnUIMessage(GW::HookStatus*, const GW::UI::UIMessage msgid, void*, void*)
 {
     switch (msgid) {
         case GW::UI::UIMessage::kMapLoaded:
@@ -967,7 +967,7 @@ void AgentRenderer::RefreshMatches(const GW::Agent* agent)
     const auto item = agent->GetAsAgentItem();
     const auto gadget = agent->GetAsAgentGadget();
     const auto item_data = item ? GW::Items::GetItemById(item->item_id) : nullptr;
-    const auto type = item ? Item : gadget ? Gadget : living ? living->IsPlayer() ? Player : NPC : Any;
+    const auto agent_type = item ? Item : gadget ? Gadget : living ? living->IsPlayer() ? Player : NPC : Any;
     const auto identifier = item_data ? item_data->model_id : gadget ? gadget->gadget_id : living ? living->player_number : 0;
     const auto targeted = GW::Agents::GetTargetId() == agent->agent_id || auto_target_id == agent->agent_id;
     const auto marked = GetMarkedTarget(agent->agent_id) != nullptr;
@@ -980,7 +980,7 @@ void AgentRenderer::RefreshMatches(const GW::Agent* agent)
         (gadget && IsLockedChest(agent) ? IsOpenedLockedChest(agent) ? 64u : 32u : 0u) |
         (living && living->GetHasBossGlow() ? 128u : 0u);
     uint32_t relations = 0;
-    if (type == Player) {
+    if (agent_type == Player) {
         if (agent->agent_id == GW::Agents::GetControlledCharacterId()) relations |= 1u;
         if (check_friends || check_guild) {
             const auto decoded = living ? GW::PlayerMgr::GetPlayerName(living->login_number) : nullptr;
@@ -1009,29 +1009,29 @@ void AgentRenderer::RefreshMatches(const GW::Agent* agent)
         cached.agent = agent;
         cached.generation = ++next_name_token;
     }
-    if (cached.valid && cached.identifier == identifier && cached.map_id == map_id && cached.flags == flags && cached.allegiance == allegiance && cached.type == type && cached.relation_flags == relations && cached.profession == profession) return;
+    if (cached.valid && cached.identifier == identifier && cached.map_id == map_id && cached.flags == flags && cached.allegiance == allegiance && cached.type == agent_type && cached.relation_flags == relations && cached.profession == profession) return;
     cached.identifier = identifier;
     cached.map_id = map_id;
     cached.flags = flags;
     cached.allegiance = allegiance;
     cached.profession = profession;
-    cached.type = type;
+    cached.type = agent_type;
     cached.relation_flags = relations;
     cached.valid = true;
     cached.matches.clear();
     for (const auto* rule : custom_agents) {
         if (!rule->active || rule->mapId && rule->mapId != static_cast<DWORD>(GW::Map::GetMapID())) continue;
         if (rule->outpost_only && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) continue;
-        if (rule->agent_type != Any && rule->agent_type != type) continue;
+        if (rule->agent_type != Any && rule->agent_type != agent_type) continue;
         if (rule->agent_type != Any && rule->identifier_active && rule->identifier != identifier) continue;
         if (rule->allegiance >= 0 && (!living || rule->allegiance != static_cast<int>(living->allegiance))) continue;
         if (rule->target_state == Targeted && !targeted || rule->target_state == NotTargeted && targeted || rule->target_state == Marked && !marked) continue;
         if (rule->profession != GW::Constants::Profession::None && rule->profession != profession) continue;
         if (rule->boss_state == 1 && !(flags & 128u) || rule->boss_state == 2 && (flags & 128u)) continue;
-        if (rule->gadget_state != AnyGadget && (type != Gadget ||
+        if (rule->gadget_state != AnyGadget && (agent_type != Gadget ||
             rule->gadget_state == ClosedChest && !(flags & 32u) || rule->gadget_state == OpenedChest && !(flags & 64u) ||
             rule->gadget_state == OtherGadget && (flags & (32u | 64u)))) continue;
-        if (rule->player_relation != AnyRelation && (type != Player ||
+        if (rule->player_relation != AnyRelation && (agent_type != Player ||
             rule->player_relation == Self && !(relations & 1u) || rule->player_relation == Other && (relations & 1u) ||
             rule->player_relation == Friend && !(relations & 2u) || rule->player_relation == Guild && !(relations & 4u) ||
             rule->player_relation == MyParty && !(relations & 8u) || rule->player_relation == InParty && !(relations & 16u))) continue;
