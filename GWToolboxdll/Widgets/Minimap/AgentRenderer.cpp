@@ -13,6 +13,7 @@
 #include <GWCA/GameEntities/Item.h>
 #include <GWCA/GameEntities/NPC.h>
 #include <GWCA/GameEntities/Pathing.h>
+#include <GWCA/GameEntities/Friendslist.h>
 
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/FriendListMgr.h>

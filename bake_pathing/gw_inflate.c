@@ -1,12 +1,6 @@
 #include "gw_inflate.h"
 #include <stdlib.h>
 
-#if defined(_WIN32)
-#define GW_EXPORT __declspec(dllexport)
-#else
-#define GW_EXPORT __attribute__((visibility("default")))
-#endif
-
 typedef struct {
     const uint8_t* data;
     size_t size;
@@ -191,11 +185,8 @@ static int next_code(BitStream* stream, const Huffman* huffman, uint32_t* symbol
     return 1;
 }
 
-#ifdef __cplusplus
-extern "C"
-#endif
-GW_EXPORT int gw_inflate_all(const uint8_t* source, size_t source_size, uint8_t* output,
-                             size_t capacity, size_t* output_size, const GwInflateTables* tables)
+int gw_inflate_all(const uint8_t* source, size_t source_size, uint8_t* output,
+                   size_t capacity, size_t* output_size, const GwInflateTables* tables)
 {
     if (!source || !output || !output_size || !tables || source_size < 8 || source_size > SIZE_MAX / 8) return -1;
     *output_size = 0;
@@ -205,7 +196,7 @@ GW_EXPORT int gw_inflate_all(const uint8_t* source, size_t source_size, uint8_t*
     for (;;) {
         Huffman literal = {0};
         Huffman distance = {0};
-        uint32_t block_size;
+        uint32_t block_size = 0;
         int ok = build_huffman(&stream, tables, &literal);
         if (ok) ok = build_huffman(&stream, tables, &distance);
         if (ok) ok = read_bits(&stream, 4, &block_size);
