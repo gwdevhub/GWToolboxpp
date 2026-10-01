@@ -49,8 +49,6 @@ namespace {
         return a.x == b.x && a.y == b.y;
     }
 
-    // Live rects of currently-shown breakout buttons, keyed by the owning element.
-    // Lets a newly-shown button pick a spot near the screen centre that doesn't overlap the others.
     std::unordered_map<const ToolboxUIElement*, ImRect> breakout_button_rects;
 
 } // namespace
@@ -175,6 +173,7 @@ void ToolboxUIElement::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
     ToolboxModule::LoadSettings(doc, legacy);
     if (doc.Has(Name(), "breakout_pos") || (legacy && legacy->KeyExists(Name(), "breakout_pos[0]"))) {
         pending_breakout_pos = true;
+        breakout_layout_dirty = true;
     }
     if (!snapped_frame_label.empty() && !doc.Has(Name(), "snap_offset") && !(legacy && legacy->KeyExists(Name(), "snap_offset[0]"))) {
         snap_offset_needs_init = true;
@@ -526,6 +525,7 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
                 }
                 if (ImGui::DragFloat2("Breakout position", reinterpret_cast<float*>(&_breakout_pos), 1.0f, 0.0f, 0.0f, "%.0f")) {
                     ImGui::SetWindowPos(breakout_window_id, _breakout_pos);
+                    breakout_layout_dirty = true;
                 }
                 ImGui::ShowHelp("You need to show the breakout button for this control to work");
             }
@@ -552,57 +552,53 @@ void ToolboxUIElement::ShowVisibleRadio()
 }
 
 namespace {
-    bool BreakoutRectsOverlap(const ImRect& a, const ImRect& b)
+    ImVec2 ClampBreakoutPos(const ImVec2& pos, const ImVec2& size)
     {
-        return a.Min.x < b.Max.x && a.Max.x > b.Min.x && a.Min.y < b.Max.y && a.Max.y > b.Min.y;
+        const auto vp = ImGui::GetMainViewport();
+        return {ImClamp(pos.x, vp->WorkPos.x, vp->WorkPos.x + ImMax(0.f, vp->WorkSize.x - size.x)),
+                ImClamp(pos.y, vp->WorkPos.y, vp->WorkPos.y + ImMax(0.f, vp->WorkSize.y - size.y))};
     }
 
-    // Minimum translation needed to push `self` out of every overlapping breakout button.
-    // Returns {0,0} when it already clears all of them.
-    ImVec2 ResolveBreakoutOverlap(const ToolboxUIElement* self_element, const ImRect& self)
+    ImVec2 PlaceBreakoutButton(const ToolboxUIElement* self_element, const ImVec2& desired, const ImVec2& size)
     {
-        ImVec2 push = {0.f, 0.f};
-        for (const auto& [element, other] : breakout_button_rects) {
-            if (element == self_element) continue;
-            const ImRect moved({self.Min.x + push.x, self.Min.y + push.y}, {self.Max.x + push.x, self.Max.y + push.y});
-            const float ox = ImMin(moved.Max.x, other.Max.x) - ImMax(moved.Min.x, other.Min.x);
-            const float oy = ImMin(moved.Max.y, other.Max.y) - ImMax(moved.Min.y, other.Min.y);
-            if (ox <= 0.f || oy <= 0.f) continue; // no overlap
-            if (ox < oy) {
-                push.x += moved.GetCenter().x < other.GetCenter().x ? -ox : ox;
-            }
-            else {
-                push.y += moved.GetCenter().y < other.GetCenter().y ? -oy : oy;
-            }
-        }
-        return push;
-    }
-
-    // Pick a position starting from the centre of the screen, cascading until it clears every other breakout button.
-    ImVec2 GetDefaultBreakoutPos(const ToolboxUIElement* self_element, const ImVec2& size)
-    {
-        const ImGuiViewport* vp = ImGui::GetMainViewport();
-        const ImVec2 start = {vp->WorkPos.x + (vp->WorkSize.x - size.x) * 0.5f, vp->WorkPos.y + (vp->WorkSize.y - size.y) * 0.5f};
-        const ImVec2 max = {vp->WorkPos.x + vp->WorkSize.x, vp->WorkPos.y + vp->WorkSize.y};
-        ImVec2 pos = start;
-        for (int i = 0; i < 256; i++) {
-            const ImRect candidate = {pos, {pos.x + size.x, pos.y + size.y}};
-            bool overlaps = false;
+        const auto fits = [self_element, size](const ImVec2& pos) {
+            const ImRect candidate(pos, {pos.x + size.x, pos.y + size.y});
             for (const auto& [element, rect] : breakout_button_rects) {
-                if (element != self_element && BreakoutRectsOverlap(candidate, rect)) {
-                    overlaps = true;
-                    break;
+                if (element != self_element && candidate.Overlaps(rect)) return false;
+            }
+            return true;
+        };
+
+        const auto pos = ClampBreakoutPos(desired, size);
+        if (fits(pos)) return pos;
+
+        const auto vp = ImGui::GetMainViewport();
+        const auto max = ClampBreakoutPos({vp->WorkPos.x + vp->WorkSize.x, vp->WorkPos.y + vp->WorkSize.y}, size);
+        std::vector<float> xs = {vp->WorkPos.x, max.x};
+        std::vector<float> ys = {vp->WorkPos.y, max.y};
+        for (const auto& [element, rect] : breakout_button_rects) {
+            if (element == self_element) continue;
+            xs.push_back(ImClamp(rect.Min.x - size.x, vp->WorkPos.x, max.x));
+            xs.push_back(ImClamp(rect.Max.x, vp->WorkPos.x, max.x));
+            ys.push_back(ImClamp(rect.Min.y - size.y, vp->WorkPos.y, max.y));
+            ys.push_back(ImClamp(rect.Max.y, vp->WorkPos.y, max.y));
+        }
+
+        ImVec2 nearest = pos;
+        float distance = FLT_MAX;
+        for (const auto y : ys) {
+            for (const auto x : xs) {
+                const ImVec2 candidate = {x, y};
+                const float dx = x - pos.x;
+                const float dy = y - pos.y;
+                const float d = dx * dx + dy * dy;
+                if (d < distance && fits(candidate)) {
+                    nearest = candidate;
+                    distance = d;
                 }
             }
-            if (!overlaps) break;
-            pos.x += size.x + 6.f;
-            if (pos.x + size.x > max.x) {
-                pos.x = start.x;
-                pos.y += size.y + 6.f;
-                if (pos.y + size.y > max.y) pos.y = vp->WorkPos.y;
-            }
         }
-        return pos;
+        return nearest;
     }
 }
 
@@ -611,6 +607,7 @@ void ToolboxUIElement::DrawBreakoutButton(IDirect3DDevice9*)
     const auto icon = Icon();
     if (!show_breakout_button || !icon || !*icon) {
         breakout_button_rects.erase(this);
+        breakout_layout_dirty = true;
         return;
     }
 
@@ -623,34 +620,12 @@ void ToolboxUIElement::DrawBreakoutButton(IDirect3DDevice9*)
         flags |= ImGuiWindowFlags_NoMove;
     }
 
-    if (pending_breakout_pos) {
-        ImGui::SetNextWindowPos({breakout_pos[0], breakout_pos[1]}, ImGuiCond_Always);
-        pending_breakout_pos = false;
-        breakout_pos_set = true;
-    }
-    else if (!breakout_pos_set) {
-        const float est = ImGui::GetFrameHeight() + 16.f;
-        const ImVec2 pos = GetDefaultBreakoutPos(this, {est, est});
-        ImGui::SetNextWindowPos(pos, ImGuiCond_Always);
-        breakout_pos[0] = pos.x;
-        breakout_pos[1] = pos.y;
-        breakout_pos_set = true;
-    }
-    else if (const auto bw = ImGui::FindWindowByName(window_id); bw && !(flags & ImGuiWindowFlags_NoMove)) {
-        const ImGuiContext* g = ImGui::GetCurrentContext();
-        const bool being_moved = g && g->MovingWindow && g->MovingWindow->RootWindow == bw->RootWindow;
-        if (!being_moved) {
-            const ImVec2 push = ResolveBreakoutOverlap(this, ImRect(bw->Pos, {bw->Pos.x + bw->Size.x, bw->Pos.y + bw->Size.y}));
-            if (push.x != 0.f || push.y != 0.f) {
-                ImGui::SetNextWindowPos({bw->Pos.x + push.x, bw->Pos.y + push.y}, ImGuiCond_Always);
-            }
-        }
-    }
-
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, {6.f, 6.f});
     ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, {10.f, 10.f});
 
-    if (ImGui::Begin(window_id, nullptr, flags)) {
+    const bool opened = ImGui::Begin(window_id, nullptr, flags);
+    const auto bw = ImGui::GetCurrentWindow();
+    if (opened) {
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {6.f, 4.f});
         const float btn_size = ImGui::GetTextLineHeight() + ImGui::GetStyle().FramePadding.y * 2.f;
 
@@ -682,14 +657,31 @@ void ToolboxUIElement::DrawBreakoutButton(IDirect3DDevice9*)
             ImGui::EndPopup();
         }
     }
+    const auto bounded = ClampBreakoutPos(bw->Pos, bw->Size);
+    if (!ImVec2Eq(bounded, bw->Pos)) {
+        ImGui::SetWindowPos(bounded);
+        breakout_layout_dirty = true;
+    }
+    if (ImGui::IsMouseReleased(0) || !ImVec2Eq(breakout_button_size, bw->Size)) breakout_layout_dirty = true;
+    if (breakout_layout_dirty && !ImGui::IsMouseDown(0)) {
+        const auto vp = ImGui::GetMainViewport();
+        const ImVec2 center = {vp->WorkPos.x + (vp->WorkSize.x - bw->Size.x) * 0.5f, vp->WorkPos.y + (vp->WorkSize.y - bw->Size.y) * 0.5f};
+        const ImVec2 desired = pending_breakout_pos ? ImVec2(breakout_pos[0], breakout_pos[1]) : breakout_pos_set ? bw->Pos : center;
+        const auto pos = PlaceBreakoutButton(this, desired, bw->Size);
+        if (!ImVec2Eq(pos, bw->Pos)) ImGui::SetWindowPos(pos);
+        pending_breakout_pos = false;
+        breakout_pos_set = true;
+        breakout_layout_dirty = false;
+    }
+    breakout_button_size = bw->Size;
     ImGui::End();
     ImGui::PopStyleVar(2);
 
-    if (const auto bw = ImGui::FindWindowByName(window_id)) {
+    if (!pending_breakout_pos) {
         breakout_pos[0] = bw->Pos.x;
         breakout_pos[1] = bw->Pos.y;
-        breakout_button_rects[this] = ImRect(bw->Pos, {bw->Pos.x + bw->Size.x, bw->Pos.y + bw->Size.y});
     }
+    breakout_button_rects[this] = ImRect(bw->Pos, {bw->Pos.x + bw->Size.x, bw->Pos.y + bw->Size.y});
 }
 
 bool ToolboxUIElement::DrawTabButton(const bool show_icon, const bool show_text, const bool center_align_text)
