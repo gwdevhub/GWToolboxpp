@@ -320,7 +320,8 @@ target_link_libraries(GWToolboxdll PRIVATE
 # distros still package) miscompiles them. Raise the floor, never lower it, without testing.
 set(VKD3D_MINIMUM_VERSION 1.19)
 
-file(GLOB FXC_PATHS "C:/Program Files (x86)/Windows Kits/10/bin/*/x86")
+get_filename_component(WINDOWS_KITS_ROOT "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows Kits\\Installed Roots;KitsRoot10]" ABSOLUTE)
+file(GLOB FXC_PATHS "${WINDOWS_KITS_ROOT}/bin/*/x86" "C:/Program Files (x86)/Windows Kits/10/bin/*/x86")
 find_program(FXC fxc DOC "hlsl compiler" PATHS ${FXC_PATHS})
 if(FXC)
     set(HLSL_COMPILE_COMMAND ${FXC})
