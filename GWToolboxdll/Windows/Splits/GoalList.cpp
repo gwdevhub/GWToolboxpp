@@ -13,7 +13,7 @@
 namespace GoalListJson {
     struct SerializedTrigger {
         std::string trigger_type = "Manual";
-        std::optional<int>      map_id;
+        std::optional<int> map_id;
         std::optional<uint32_t> param1;
         std::optional<uint32_t> param2;
         std::optional<std::vector<uint16_t>> pattern;
@@ -22,10 +22,10 @@ namespace GoalListJson {
     struct SerializedGoal {
         std::string label;
         std::string trigger_type = "Manual";
-        int         map_id       = 0;
-        int         level        = 0;
-        uint32_t    title_id     = 0xffu;
-        std::optional<bool>     hard_mode;
+        int map_id = 0;
+        int level = 0;
+        uint32_t title_id = 0xffu;
+        std::optional<bool> hard_mode;
         std::optional<uint32_t> param1;
         std::optional<uint32_t> param2;
         std::optional<std::vector<uint16_t>> pattern;
@@ -34,7 +34,7 @@ namespace GoalListJson {
         std::optional<std::vector<SerializedTrigger>> extra_triggers;
         std::optional<int> auto_complete_previous;
         std::optional<bool> is_header;
-        std::optional<int>  indent;
+        std::optional<int> indent;
         std::optional<uint8_t> display_style;
     };
 
@@ -63,39 +63,42 @@ namespace GoalListJson {
     {
         return {pattern.begin(), pattern.end()};
     }
-}
+} // namespace GoalListJson
 using namespace GoalListJson;
 
 namespace {
     // Manual absent on purpose: fallback both ways.
-    struct TriggerTypeNameEntry { GoalTrigger::Type type; const char* name; };
-    constexpr TriggerTypeNameEntry kTriggerTypeNames[] = {
-        { GoalTrigger::Type::MapEnter,              "MapEnter" },
-        { GoalTrigger::Type::EnterExplorable,       "EnterExplorable" },
-        { GoalTrigger::Type::ExitExplorable,        "ExitExplorable" },
-        { GoalTrigger::Type::VanquishComplete,      "VanquishComplete" },
-        { GoalTrigger::Type::MissionComplete,       "MissionComplete" },
-        { GoalTrigger::Type::MissionBonus,          "MissionBonus" },
-        { GoalTrigger::Type::ReachLevel,            "ReachLevel" },
-        { GoalTrigger::Type::ExitOutpost,           "ExitOutpost" },
-        { GoalTrigger::Type::ReachTitleRank,        "ReachTitleRank" },
-        { GoalTrigger::Type::ObjectiveDone,         "ObjectiveDone" },
-        { GoalTrigger::Type::DoorOpen,              "DoorOpen" },
-        { GoalTrigger::Type::DoorClose,             "DoorClose" },
-        { GoalTrigger::Type::AgentUpdateAllegiance, "AgentUpdateAllegiance" },
-        { GoalTrigger::Type::DoACompleteZone,       "DoACompleteZone" },
-        { GoalTrigger::Type::DungeonReward,         "DungeonReward" },
-        { GoalTrigger::Type::ServerMessage,         "ServerMessage" },
-        { GoalTrigger::Type::DisplayDialogue,       "DisplayDialogue" },
-        { GoalTrigger::Type::CountdownStart,        "CountdownStart" },
-        { GoalTrigger::Type::ObjectiveStarted,      "ObjectiveStarted" },
-        { GoalTrigger::Type::QuestPickup,           "QuestPickup" },
-        { GoalTrigger::Type::QuestComplete,         "QuestComplete" },
-        { GoalTrigger::Type::SkillLearnt,           "SkillLearnt" },
-        { GoalTrigger::Type::MobKill,               "MobKill" },
-        { GoalTrigger::Type::EnterOutpost,          "EnterOutpost" },
+    struct TriggerTypeNameEntry {
+        GoalTrigger::Type type;
+        const char* name;
     };
-}
+    constexpr TriggerTypeNameEntry kTriggerTypeNames[] = {
+        {GoalTrigger::Type::MapEnter, "MapEnter"},
+        {GoalTrigger::Type::EnterExplorable, "EnterExplorable"},
+        {GoalTrigger::Type::ExitExplorable, "ExitExplorable"},
+        {GoalTrigger::Type::VanquishComplete, "VanquishComplete"},
+        {GoalTrigger::Type::MissionComplete, "MissionComplete"},
+        {GoalTrigger::Type::MissionBonus, "MissionBonus"},
+        {GoalTrigger::Type::ReachLevel, "ReachLevel"},
+        {GoalTrigger::Type::ExitOutpost, "ExitOutpost"},
+        {GoalTrigger::Type::ReachTitleRank, "ReachTitleRank"},
+        {GoalTrigger::Type::ObjectiveDone, "ObjectiveDone"},
+        {GoalTrigger::Type::DoorOpen, "DoorOpen"},
+        {GoalTrigger::Type::DoorClose, "DoorClose"},
+        {GoalTrigger::Type::AgentUpdateAllegiance, "AgentUpdateAllegiance"},
+        {GoalTrigger::Type::DoACompleteZone, "DoACompleteZone"},
+        {GoalTrigger::Type::DungeonReward, "DungeonReward"},
+        {GoalTrigger::Type::ServerMessage, "ServerMessage"},
+        {GoalTrigger::Type::DisplayDialogue, "DisplayDialogue"},
+        {GoalTrigger::Type::CountdownStart, "CountdownStart"},
+        {GoalTrigger::Type::ObjectiveStarted, "ObjectiveStarted"},
+        {GoalTrigger::Type::QuestPickup, "QuestPickup"},
+        {GoalTrigger::Type::QuestComplete, "QuestComplete"},
+        {GoalTrigger::Type::SkillLearnt, "SkillLearnt"},
+        {GoalTrigger::Type::MobKill, "MobKill"},
+        {GoalTrigger::Type::EnterOutpost, "EnterOutpost"},
+    };
+} // namespace
 
 static std::string TriggerTypeName(GoalTrigger::Type t)
 {
@@ -125,10 +128,10 @@ static SerializedTrigger ToSerialized(const GoalTrigger& t)
 static GoalTrigger FromSerialized(const SerializedTrigger& jt)
 {
     GoalTrigger t;
-    t.type    = TriggerTypeFromString(jt.trigger_type);
-    t.map_id  = static_cast<GW::Constants::MapID>(jt.map_id.value_or(0));
-    t.param1  = jt.param1.value_or(0u);
-    t.param2  = jt.param2.value_or(0u);
+    t.type = TriggerTypeFromString(jt.trigger_type);
+    t.map_id = static_cast<GW::Constants::MapID>(jt.map_id.value_or(0));
+    t.param1 = jt.param1.value_or(0u);
+    t.param2 = jt.param2.value_or(0u);
     if (jt.pattern) t.pattern = DecodePattern(*jt.pattern);
     return t;
 }
@@ -136,10 +139,10 @@ static GoalTrigger FromSerialized(const SerializedTrigger& jt)
 void GoalList::ResetRunState()
 {
     for (auto& g : goals) {
-        g.status           = GoalStatus::NotStarted;
-        g.split            = {};
-        g.start_real_time  = -1.0;
-        g.start_game_time  = -1.0;
+        g.status = GoalStatus::NotStarted;
+        g.split = {};
+        g.start_real_time = -1.0;
+        g.start_game_time = -1.0;
         g.trigger_progress = 0;
     }
 }
@@ -171,7 +174,8 @@ void GoalList::RenumberDuplicateLabels()
         const std::string& base = base_labels[i];
         if (counts[base] <= 1) {
             goals[i].label = base;
-        } else {
+        }
+        else {
             goals[i].label = base + " (" + std::to_string(++seen[base]) + ")";
         }
     }
@@ -186,26 +190,23 @@ bool GoalList::SaveToFile(const std::filesystem::path& path) const
 
     for (const auto& g : goals) {
         SerializedGoal jg;
-        jg.label        = g.label;
+        jg.label = g.label;
         jg.trigger_type = TriggerTypeName(g.trigger.type);
-        jg.map_id       = static_cast<int>(g.trigger.map_id);
-        jg.level        = g.trigger.level;
-        jg.title_id     = static_cast<uint32_t>(g.trigger.title_id);
+        jg.map_id = static_cast<int>(g.trigger.map_id);
+        jg.level = g.trigger.level;
+        jg.title_id = static_cast<uint32_t>(g.trigger.title_id);
         if (g.trigger.hard_mode) jg.hard_mode = true;
-        if (g.trigger.param1)    jg.param1 = g.trigger.param1;
-        if (g.trigger.param2)    jg.param2 = g.trigger.param2;
+        if (g.trigger.param1) jg.param1 = g.trigger.param1;
+        if (g.trigger.param2) jg.param2 = g.trigger.param2;
         if (!g.trigger.pattern.empty()) jg.pattern = EncodePattern(g.trigger.pattern);
         // starts_immediately never saved: only valid same tick preset built.
         if (g.auto_complete_previous != 0) jg.auto_complete_previous = g.auto_complete_previous;
-        if (g.is_header)  jg.is_header = true;
-        if (g.indent != 0) jg.indent   = g.indent;
-        if (g.display_style != GoalEntry::DisplayStyle::Splits)
-            jg.display_style = static_cast<uint8_t>(g.display_style);
+        if (g.is_header) jg.is_header = true;
+        if (g.indent != 0) jg.indent = g.indent;
+        if (g.display_style != GoalEntry::DisplayStyle::Splits) jg.display_style = static_cast<uint8_t>(g.display_style);
         if (g.start_trigger.has_value()) jg.start_trigger = ToSerialized(g.start_trigger.value());
-        if (!g.extra_start_triggers.empty())
-            jg.extra_start_triggers = g.extra_start_triggers | std::views::transform(ToSerialized) | std::ranges::to<std::vector>();
-        if (!g.extra_triggers.empty())
-            jg.extra_triggers = g.extra_triggers | std::views::transform(ToSerialized) | std::ranges::to<std::vector>();
+        if (!g.extra_start_triggers.empty()) jg.extra_start_triggers = g.extra_start_triggers | std::views::transform(ToSerialized) | std::ranges::to<std::vector>();
+        if (!g.extra_triggers.empty()) jg.extra_triggers = g.extra_triggers | std::views::transform(ToSerialized) | std::ranges::to<std::vector>();
         j.goals.push_back(std::move(jg));
     }
 
@@ -237,32 +238,31 @@ bool GoalList::LoadFromFile(const std::filesystem::path& path)
 
     for (const auto& jg : j.goals) {
         GoalEntry g;
-        g.label             = jg.label;
-        g.trigger.type      = TriggerTypeFromString(jg.trigger_type);
-        g.trigger.map_id    = static_cast<GW::Constants::MapID>(jg.map_id);
-        g.trigger.level     = jg.level;
-        g.trigger.title_id  = static_cast<GW::Constants::TitleID>(jg.title_id);
+        g.label = jg.label;
+        g.trigger.type = TriggerTypeFromString(jg.trigger_type);
+        g.trigger.map_id = static_cast<GW::Constants::MapID>(jg.map_id);
+        g.trigger.level = jg.level;
+        g.trigger.title_id = static_cast<GW::Constants::TitleID>(jg.title_id);
         g.trigger.hard_mode = jg.hard_mode.value_or(false);
-        g.trigger.param1    = jg.param1.value_or(0u);
-        g.trigger.param2    = jg.param2.value_or(0u);
+        g.trigger.param1 = jg.param1.value_or(0u);
+        g.trigger.param2 = jg.param2.value_or(0u);
         if (jg.pattern) g.trigger.pattern = DecodePattern(*jg.pattern);
-        g.auto_complete_previous  = jg.auto_complete_previous.value_or(0);
-        g.is_header               = jg.is_header.value_or(false);
-        g.indent                  = jg.indent.value_or(0);
-        g.display_style           = static_cast<GoalEntry::DisplayStyle>(jg.display_style.value_or(0));
+        g.auto_complete_previous = jg.auto_complete_previous.value_or(0);
+        g.is_header = jg.is_header.value_or(false);
+        g.indent = jg.indent.value_or(0);
+        g.display_style = static_cast<GoalEntry::DisplayStyle>(jg.display_style.value_or(0));
         if (jg.start_trigger) g.start_trigger = FromSerialized(*jg.start_trigger);
-        if (jg.extra_start_triggers)
-            g.extra_start_triggers = *jg.extra_start_triggers | std::views::transform(FromSerialized) | std::ranges::to<std::vector>();
-        if (jg.extra_triggers)
-            g.extra_triggers = *jg.extra_triggers | std::views::transform(FromSerialized) | std::ranges::to<std::vector>();
+        if (jg.extra_start_triggers) g.extra_start_triggers = *jg.extra_start_triggers | std::views::transform(FromSerialized) | std::ranges::to<std::vector>();
+        if (jg.extra_triggers) g.extra_triggers = *jg.extra_triggers | std::views::transform(FromSerialized) | std::ranges::to<std::vector>();
         goals.push_back(std::move(g));
     }
 
     if (j.reference.has_value()) {
         GoalReference ref;
         ref.splits = j.reference->splits;
-        reference  = std::move(ref);
-    } else {
+        reference = std::move(ref);
+    }
+    else {
         reference.reset();
     }
 
@@ -276,14 +276,13 @@ std::wstring GoalList::FileStem(const std::string_view name)
     return safe.empty() ? L"_" : TextUtils::StringToWString(safe);
 }
 
-std::vector<std::pair<std::string, std::wstring>>
-GoalList::ListSaved(const std::filesystem::path& folder)
+std::vector<std::pair<std::string, std::wstring>> GoalList::ListSaved(const std::filesystem::path& folder)
 {
     std::vector<std::pair<std::string, std::wstring>> result;
     std::error_code ec;
     for (const auto& entry : std::filesystem::directory_iterator(folder, ec)) {
         if (entry.path().extension() != L".json") continue;
-        if (entry.path().stem() == L"resume")     continue;
+        if (entry.path().stem() == L"resume") continue;
         std::string name;
         if (std::string content; Resources::ReadFile(entry.path(), content)) {
             SerializedListName j;

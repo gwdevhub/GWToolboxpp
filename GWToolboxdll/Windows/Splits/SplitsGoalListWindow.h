@@ -13,11 +13,8 @@ public:
 
 private:
     bool DrawHeaderRow(const GoalList& list, int header_idx, const SplitsProfile& profile);
-    void DrawGoalRow(const GoalEntry& g, const GoalClock& clock, bool is_current,
-                     double pb_split_real, double pb_seg_real,
-                     double pb_split_game, double pb_seg_game,
-                     double pb_start_real, double pb_start_game,
-                     const SplitsProfile& profile, SplitsWindow& splits);
+    void
+    DrawGoalRow(const GoalEntry& g, const GoalClock& clock, bool is_current, double pb_split_real, double pb_seg_real, double pb_split_game, double pb_seg_game, double pb_start_real, double pb_start_game, const SplitsProfile& profile, SplitsWindow& splits);
     void DrawRecentRunsSection(SplitsWindow& splits);
     void DrawRunHistoryViewer(SplitsWindow& splits);
 

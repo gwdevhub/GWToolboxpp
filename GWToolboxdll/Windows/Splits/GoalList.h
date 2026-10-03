@@ -12,9 +12,9 @@ struct GoalReference {
 };
 
 struct GoalList {
-    bool                         is_preset = false;
-    std::string                  name;
-    std::vector<GoalEntry>       goals;
+    bool is_preset = false;
+    std::string name;
+    std::vector<GoalEntry> goals;
     std::optional<GoalReference> reference;
 
     void ResetRunState();
@@ -24,8 +24,7 @@ struct GoalList {
     bool SaveToFile(const std::filesystem::path& path) const;
     bool LoadFromFile(const std::filesystem::path& path);
 
-    static std::vector<std::pair<std::string, std::wstring>>
-        ListSaved(const std::filesystem::path& folder);
+    static std::vector<std::pair<std::string, std::wstring>> ListSaved(const std::filesystem::path& folder);
     // UTF-8 decode, drop bad path chars, escape reserved device names.
     static std::wstring FileStem(std::string_view name);
 };

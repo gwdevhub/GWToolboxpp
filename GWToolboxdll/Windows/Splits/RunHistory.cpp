@@ -42,7 +42,7 @@ namespace RunHistoryJson {
         // Starting zone for rotating areas (DoA), so zone times can later be split by run order.
         std::optional<std::string> start_zone;
     };
-}
+} // namespace RunHistoryJson
 using namespace RunHistoryJson;
 
 namespace {
@@ -50,10 +50,10 @@ namespace {
     {
         RecentRun rr;
         rr.attempt_number = attempt_number;
-        rr.total_real      = run.total_real;
-        rr.failed          = run.failed.value_or(false);
-        rr.utc_start        = run.utc_start.value_or(0);
-        rr.start_zone       = run.start_zone.value_or("");
+        rr.total_real = run.total_real;
+        rr.failed = run.failed.value_or(false);
+        rr.utc_start = run.utc_start.value_or(0);
+        rr.start_zone = run.start_zone.value_or("");
         if (run.goals) {
             rr.goals.reserve(run.goals->size());
             for (size_t i = 0; i < run.goals->size(); ++i) {
@@ -82,15 +82,14 @@ namespace {
 
     void WriteRuns(const std::filesystem::path& runs_path, const std::vector<SerializedRun>& runs)
     {
-        if (!Resources::WriteFile(runs_path, glz::write<glz::opts{.prettify = true}>(runs).value_or(std::string{})))
-            Log::ErrorW(L"Splits: failed to write run history %s", runs_path.wstring().c_str());
+        if (!Resources::WriteFile(runs_path, glz::write<glz::opts{.prettify = true}>(runs).value_or(std::string{}))) Log::ErrorW(L"Splits: failed to write run history %s", runs_path.wstring().c_str());
     }
 
     // Shared by Load() and ProtectedRunIndices() so both agree which run hold what.
     struct BestScan {
         std::optional<size_t> pb_idx;
         double pb_total = std::numeric_limits<double>::infinity();
-        std::vector<double> seg_real, seg_game;                 // inf = no run reached leg
+        std::vector<double> seg_real, seg_game; // inf = no run reached leg
         std::vector<std::optional<size_t>> seg_real_idx, seg_game_idx;
     };
 
@@ -105,15 +104,24 @@ namespace {
         for (size_t ri = 0; ri < runs.size(); ++ri) {
             const auto& run = runs[ri];
             if (run.failed.value_or(false) || run.splits.size() < n) continue;
-            if (run.total_real < s.pb_total) { s.pb_total = run.total_real; s.pb_idx = ri; }
+            if (run.total_real < s.pb_total) {
+                s.pb_total = run.total_real;
+                s.pb_idx = ri;
+            }
             double prev_real = 0.0, prev_game = 0.0;
             for (size_t g = 0; g < n; ++g) {
                 const auto& split = run.splits[g];
                 // Own start when recorded (parallel/out-of-order goals); relay goals' start equals the previous end anyway.
                 const double start_real = split.start_real_time >= 0.0 ? split.start_real_time : prev_real;
                 const double start_game = split.start_game_time >= 0.0 ? split.start_game_time : prev_game;
-                if (split.real_time - start_real < s.seg_real[g]) { s.seg_real[g] = split.real_time - start_real; s.seg_real_idx[g] = ri; }
-                if (split.game_time - start_game < s.seg_game[g]) { s.seg_game[g] = split.game_time - start_game; s.seg_game_idx[g] = ri; }
+                if (split.real_time - start_real < s.seg_real[g]) {
+                    s.seg_real[g] = split.real_time - start_real;
+                    s.seg_real_idx[g] = ri;
+                }
+                if (split.game_time - start_game < s.seg_game[g]) {
+                    s.seg_game[g] = split.game_time - start_game;
+                    s.seg_game_idx[g] = ri;
+                }
                 prev_real = split.real_time;
                 prev_game = split.game_time;
             }
@@ -127,23 +135,26 @@ namespace {
         const BestScan s = ScanBests(runs, goal_count);
         std::set<size_t> protected_idx;
         if (s.pb_idx) protected_idx.insert(*s.pb_idx);
-        for (const auto& i : s.seg_real_idx) if (i) protected_idx.insert(*i);
-        for (const auto& i : s.seg_game_idx) if (i) protected_idx.insert(*i);
+        for (const auto& i : s.seg_real_idx)
+            if (i) protected_idx.insert(*i);
+        for (const auto& i : s.seg_game_idx)
+            if (i) protected_idx.insert(*i);
         return protected_idx;
     }
-}
+} // namespace
 
 void RunHistory::Load(const std::filesystem::path& runs_path, const int goal_count, const bool refresh_comparisons)
 {
     const auto nan = std::numeric_limits<double>::quiet_NaN();
     pb_ = {};
-    pb_total_real_     = nan;
+    pb_total_real_ = nan;
     pb_attempt_number_ = 0;
     recent_runs_.clear();
     if (refresh_comparisons) {
         avg_ = {};
         sob_ = {};
-        best_seg_real_attempt_.clear(); best_seg_game_attempt_.clear();
+        best_seg_real_attempt_.clear();
+        best_seg_game_attempt_.clear();
     }
 
     if (goal_count <= 0) return;
@@ -188,11 +199,11 @@ void RunHistory::Load(const std::filesystem::path& runs_path, const int goal_cou
     {
         std::vector<double> sum_real(n, 0.0);
         std::vector<double> sum_game(n, 0.0);
-        std::vector<int>    count(n, 0);
+        std::vector<int> count(n, 0);
         // Own count: missing old Start must not pull average toward 0.
         std::vector<double> sum_start_real(n, 0.0);
         std::vector<double> sum_start_game(n, 0.0);
-        std::vector<int>    count_start(n, 0);
+        std::vector<int> count_start(n, 0);
         for (const auto& run : runs) {
             if (run.failed.value_or(false)) continue;
             for (size_t i = 0; i < std::min(n, run.splits.size()); ++i) {
@@ -243,10 +254,7 @@ void RunHistory::Load(const std::filesystem::path& runs_path, const int goal_cou
     }
 }
 
-void RunHistory::Save(const std::filesystem::path& runs_path, const GoalList& active_list, const bool failed,
-                       const double total_real, const int64_t run_start_unix,
-                       const std::string& run_char_name, const double total_paused,
-                       const std::string& start_zone)
+void RunHistory::Save(const std::filesystem::path& runs_path, const GoalList& active_list, const bool failed, const double total_real, const int64_t run_start_unix, const std::string& run_char_name, const double total_paused, const std::string& start_zone)
 {
     std::vector<SerializedRun> runs;
     if (!ReadRuns(runs_path, runs) && std::filesystem::exists(runs_path)) {
@@ -261,28 +269,30 @@ void RunHistory::Save(const std::filesystem::path& runs_path, const GoalList& ac
 
     auto status_name = [](GoalStatus s) -> std::string {
         switch (s) {
-            case GoalStatus::Started:   return "Started";
-            case GoalStatus::Completed: return "Completed";
-            case GoalStatus::Failed:    return "Failed";
-            default:                    return "NotStarted";
+            case GoalStatus::Started:
+                return "Started";
+            case GoalStatus::Completed:
+                return "Completed";
+            case GoalStatus::Failed:
+                return "Failed";
+            default:
+                return "NotStarted";
         }
     };
 
     SerializedRun run;
-    run.total_real      = total_real;
-    run.failed          = failed;
-    run.utc_start       = run_start_unix;
-    run.character_name  = run_char_name;
-    run.total_paused    = total_paused;
+    run.total_real = total_real;
+    run.failed = failed;
+    run.utc_start = run_start_unix;
+    run.character_name = run_char_name;
+    run.total_paused = total_paused;
     if (!start_zone.empty()) run.start_zone = start_zone;
 
     std::vector<SerializedRunGoal> rgoals;
     for (const auto& g : active_list.goals) {
         if (g.is_header) continue;
-        run.splits.push_back(SerializedRunSplit{g.split.real_time, g.split.game_time,
-                                                 g.start_real_time, g.start_game_time});
-        rgoals.push_back(SerializedRunGoal{g.label, status_name(g.status),
-                                            g.split.real_time, g.split.game_time});
+        run.splits.push_back(SerializedRunSplit{g.split.real_time, g.split.game_time, g.start_real_time, g.start_game_time});
+        rgoals.push_back(SerializedRunGoal{g.label, status_name(g.status), g.split.real_time, g.split.game_time});
     }
     run.goals = std::move(rgoals);
 
@@ -312,9 +322,12 @@ const ComparisonSplits& RunHistory::Comparison(const SplitsProfile::ComparisonMo
 {
     using CM = SplitsProfile::ComparisonMode;
     switch (mode) {
-        case CM::Average:   return avg_;
-        case CM::SumOfBest: return sob_;
-        default:            return pb_;
+        case CM::Average:
+            return avg_;
+        case CM::SumOfBest:
+            return sob_;
+        default:
+            return pb_;
     }
 }
 
@@ -325,7 +338,7 @@ std::vector<RecentRun> RunHistory::LoadFull(const std::filesystem::path& runs_pa
     if (!ReadRuns(runs_path, runs)) return out;
 
     out.reserve(runs.size());
-    for (size_t i = runs.size(); i-- > 0; )
+    for (size_t i = runs.size(); i-- > 0;)
         out.push_back(ToRecentRun(runs[i], static_cast<int>(i) + 1));
     return out;
 }
@@ -342,8 +355,7 @@ void RunHistory::DeleteRuns(const std::filesystem::path& runs_path, const std::v
     std::sort(sorted.begin(), sorted.end(), std::greater<>());
     for (const int attempt : sorted) {
         const size_t idx = static_cast<size_t>(attempt - 1);
-        if (attempt >= 1 && idx < runs.size())
-            runs.erase(runs.begin() + static_cast<long>(idx));
+        if (attempt >= 1 && idx < runs.size()) runs.erase(runs.begin() + static_cast<long>(idx));
     }
 
     WriteRuns(runs_path, runs);

@@ -819,9 +819,9 @@ namespace TextUtils {
     bool CaseInsensitiveContains(const std::string_view haystack, const std::string_view needle)
     {
         if (needle.empty()) return true;
-        const auto it = std::search(haystack.begin(), haystack.end(),
-            needle.begin(), needle.end(),
-            [](const char a, const char b) { return tolower(static_cast<unsigned char>(a)) == tolower(static_cast<unsigned char>(b)); });
+        const auto it = std::search(haystack.begin(), haystack.end(), needle.begin(), needle.end(), [](const char a, const char b) {
+            return tolower(static_cast<unsigned char>(a)) == tolower(static_cast<unsigned char>(b));
+        });
         return it != haystack.end();
     }
 }

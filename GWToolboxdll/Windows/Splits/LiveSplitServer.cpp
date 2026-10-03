@@ -13,10 +13,10 @@ struct LiveSplitServer::Impl {
     std::thread thread;
     // Guards app/loop/running and stop_requested: Stop() and Send() only touch the loop while the thread is inside run().
     std::mutex mutex;
-    uWS::App*  app            = nullptr;
-    uWS::Loop* loop           = nullptr;
-    bool       running        = false;
-    bool       stop_requested = false;
+    uWS::App* app = nullptr;
+    uWS::Loop* loop = nullptr;
+    bool running = false;
+    bool stop_requested = false;
 };
 
 LiveSplitServer::LiveSplitServer() : impl_(std::make_unique<Impl>()) {}
@@ -41,28 +41,36 @@ void LiveSplitServer::Start(const int port)
         {
             std::lock_guard lock(impl->mutex);
             if (impl->stop_requested) return;
-            impl->app     = &app;
-            impl->loop    = uWS::Loop::get();
+            impl->app = &app;
+            impl->loop = uWS::Loop::get();
             impl->running = true;
         }
-        app.ws<int>("/*",
-                    {.compression            = uWS::SHARED_COMPRESSOR,
-                     .maxPayloadLength       = 16 * 1024,
-                     .idleTimeout            = 10,
-                     .maxBackpressure        = 1 * 1024 * 1024,
-                     .sendPingsAutomatically = true,
-                     .upgrade                = nullptr,
-                     .open                   = [](auto ws) { ws->subscribe("splits"); }})
-            .listen(port,
-                    [port](auto* listen_socket) {
-                        if (listen_socket) Log::Log("Splits: LiveSplit server listening on port %d", port);
-                        else Log::Error("Splits: LiveSplit server could not listen on port %d", port);
-                    })
+        app.ws<int>(
+               "/*", {.compression = uWS::SHARED_COMPRESSOR,
+                      .maxPayloadLength = 16 * 1024,
+                      .idleTimeout = 10,
+                      .maxBackpressure = 1 * 1024 * 1024,
+                      .sendPingsAutomatically = true,
+                      .upgrade = nullptr,
+                      .open =
+                          [](auto ws) {
+                              ws->subscribe("splits");
+                          }}
+        )
+            .listen(
+                port,
+                [port](auto* listen_socket) {
+                    if (listen_socket)
+                        Log::Log("Splits: LiveSplit server listening on port %d", port);
+                    else
+                        Log::Error("Splits: LiveSplit server could not listen on port %d", port);
+                }
+            )
             .run();
         std::lock_guard lock(impl->mutex);
         impl->running = false;
-        impl->app     = nullptr;
-        impl->loop    = nullptr;
+        impl->app = nullptr;
+        impl->loop = nullptr;
     });
 }
 
@@ -72,7 +80,10 @@ void LiveSplitServer::Stop()
         std::lock_guard lock(impl_->mutex);
         impl_->stop_requested = true;
         // Only ask a live loop to close; closing the listener lets run() return on its own thread.
-        if (impl_->running) impl_->loop->defer([app = impl_->app]() { app->close(); });
+        if (impl_->running)
+            impl_->loop->defer([app = impl_->app]() {
+                app->close();
+            });
     }
     if (impl_->thread.joinable()) impl_->thread.join();
     std::lock_guard lock(impl_->mutex);

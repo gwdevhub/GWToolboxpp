@@ -19,24 +19,25 @@
 #include <Windows/Splits/GoalList.h>
 #include <Windows/Splits/NuzlockeState.h>
 
-NuzlockeState::NuzlockeState()  = default;
+NuzlockeState::NuzlockeState() = default;
 NuzlockeState::~NuzlockeState() = default;
 
 namespace {
-    constexpr ImVec4 kNuzlockeAlive     = ImVec4(1.f, 1.f, 1.f, 1.f);
+    constexpr ImVec4 kNuzlockeAlive = ImVec4(1.f, 1.f, 1.f, 1.f);
     constexpr ImVec4 kNuzlockeAvailable = ImVec4(0.35f, 1.f, 0.35f, 1.f);
-    constexpr ImVec4 kNuzlockeDead      = ImVec4(1.f, 0.35f, 0.35f, 1.f);
+    constexpr ImVec4 kNuzlockeDead = ImVec4(1.f, 0.35f, 0.35f, 1.f);
 
     std::wstring StripHenchBracket(const std::wstring& name)
     {
         std::wstring out = name;
         if (const auto bracket = out.find(L'['); bracket != std::wstring::npos) {
             out.erase(bracket);
-            while (!out.empty() && out.back() == L' ') out.pop_back();
+            while (!out.empty() && out.back() == L' ')
+                out.pop_back();
         }
         return out;
     }
-}
+} // namespace
 
 void NuzlockeState::OnInstanceLoad()
 {
@@ -53,9 +54,9 @@ void NuzlockeState::OnInstanceLoad()
 
 void NuzlockeState::OnPartyResigned()
 {
-    for (const auto& [agent_id, identity] : agents) dead_agents.insert(agent_id);
-    if (const uint32_t self_id = GW::Agents::GetControlledCharacterId(); self_id != 0)
-        dead_agents.insert(self_id);
+    for (const auto& [agent_id, identity] : agents)
+        dead_agents.insert(agent_id);
+    if (const uint32_t self_id = GW::Agents::GetControlledCharacterId(); self_id != 0) dead_agents.insert(self_id);
     if (const auto* party = GW::PartyMgr::GetPartyInfo()) {
         for (const auto& p : party->players) {
             const uint32_t agent_id = GW::Agents::GetAgentIdByLoginNumber(p.login_number);
@@ -78,12 +79,11 @@ void NuzlockeState::ResetProgress()
         if (identity.is_hero) {
             const auto [it, inserted] = heroes.try_emplace(identity.hero_id);
             if (inserted) {
-                if (const auto* hero_info = GW::PartyMgr::GetHeroInfo(identity.hero_id))
-                    it->second.profession = hero_info->primary;
+                if (const auto* hero_info = GW::PartyMgr::GetHeroInfo(identity.hero_id)) it->second.profession = hero_info->primary;
             }
-        } else if (!identity.hench_name.empty()) {
-            henches.try_emplace(identity.hench_name,
-                NuzlockeMember{identity.hench_name, 0, identity.hench_profession});
+        }
+        else if (!identity.hench_name.empty()) {
+            henches.try_emplace(identity.hench_name, NuzlockeMember{identity.hench_name, 0, identity.hench_profession});
         }
     }
 
@@ -117,14 +117,15 @@ void NuzlockeState::Update(const bool last_was_explorable)
             for (const auto& hm : party->henchmen) {
                 live_agents.insert(hm.agent_id);
                 if (agents.contains(hm.agent_id)) continue;
-                pending_hench_names.emplace_back(
-                    hm.agent_id, std::make_unique<GuiUtils::EncString>(GW::Agents::GetAgentEncName(hm.agent_id)));
+                pending_hench_names.emplace_back(hm.agent_id, std::make_unique<GuiUtils::EncString>(GW::Agents::GetAgentEncName(hm.agent_id)));
                 agents[hm.agent_id].hench_profession = static_cast<GW::Constants::Profession>(hm.profession);
             }
         }
         std::erase_if(agents, [&](const auto& kv) {
             if (live_agents.contains(kv.first)) return false;
-            std::erase_if(pending_hench_names, [&](const auto& p) { return p.first == kv.first; });
+            std::erase_if(pending_hench_names, [&](const auto& p) {
+                return p.first == kv.first;
+            });
             return true;
         });
     }
@@ -137,7 +138,7 @@ void NuzlockeState::Update(const bool last_was_explorable)
 
             const std::wstring key = HenchKey(raw_name);
             auto& identity = agents[agent_id];
-            identity.is_hero    = false;
+            identity.is_hero = false;
             identity.hench_name = key;
             henches.try_emplace(key, NuzlockeMember{key, 0, identity.hench_profession});
             return true;
@@ -146,7 +147,7 @@ void NuzlockeState::Update(const bool last_was_explorable)
 
     if (last_was_explorable) {
         for (const auto& [agent_id, identity] : agents) {
-            const auto* agent  = GW::Agents::GetAgentByID(agent_id);
+            const auto* agent = GW::Agents::GetAgentByID(agent_id);
             const auto* living = agent ? agent->GetAsAgentLiving() : nullptr;
             if (!living) continue;
             if (!living->GetIsDead()) {
@@ -157,13 +158,14 @@ void NuzlockeState::Update(const bool last_was_explorable)
             dead_agents.insert(agent_id);
             if (identity.is_hero) {
                 heroes[identity.hero_id].deaths++;
-            } else {
+            }
+            else {
                 const auto hit = henches.find(identity.hench_name);
                 if (hit != henches.end()) hit->second.deaths++;
             }
         }
         auto poll_player_death = [this](const uint32_t agent_id, const bool is_self) {
-            const auto* agent  = GW::Agents::GetAgentByID(agent_id);
+            const auto* agent = GW::Agents::GetAgentByID(agent_id);
             const auto* living = agent ? agent->GetAsAgentLiving() : nullptr;
             if (!living || !living->IsPlayer()) return;
             if (!living->GetIsDead()) {
@@ -172,8 +174,7 @@ void NuzlockeState::Update(const bool last_was_explorable)
             }
             if (dead_agents.contains(agent_id)) return;
             dead_agents.insert(agent_id);
-            const wchar_t* raw_name = is_self ? GW::PlayerMgr::GetPlayerName()
-                                               : GW::PlayerMgr::GetPlayerName(living->login_number);
+            const wchar_t* raw_name = is_self ? GW::PlayerMgr::GetPlayerName() : GW::PlayerMgr::GetPlayerName(living->login_number);
             if (!raw_name) return;
             const std::wstring name(raw_name);
             players.try_emplace(name, NuzlockeMember{name, 0}).first->second.deaths++;
@@ -197,9 +198,7 @@ void NuzlockeState::Update(const bool last_was_explorable)
     if (!world) return;
 
     const auto& ids = world->henchmen_agent_ids;
-    if (town_hench_all_resolved &&
-        std::equal(ids.begin(), ids.end(), last_town_hench_ids.begin(), last_town_hench_ids.end()))
-        return;
+    if (town_hench_all_resolved && std::equal(ids.begin(), ids.end(), last_town_hench_ids.begin(), last_town_hench_ids.end())) return;
 
     city_hench_available.clear();
     bool all_resolved = true;
@@ -207,7 +206,10 @@ void NuzlockeState::Update(const bool last_was_explorable)
         auto& enc = city_hench_names[agent_id];
         if (!enc) enc = std::make_unique<GuiUtils::EncString>(GW::Agents::GetAgentEncName(agent_id));
         const std::wstring raw_name = enc->wstring();
-        if (raw_name.empty()) { all_resolved = false; continue; }
+        if (raw_name.empty()) {
+            all_resolved = false;
+            continue;
+        }
 
         // Seed from hireable too, else never-hired hench never show.
         const std::wstring key = HenchKey(raw_name);
@@ -215,8 +217,7 @@ void NuzlockeState::Update(const bool last_was_explorable)
         // Not party members: no PartyInfo. Retry till primary set.
         if (it->second.profession == GW::Constants::Profession::None) {
             if (const auto* agent = GW::Agents::GetAgentByID(agent_id)) {
-                if (const auto* living = agent->GetAsAgentLiving())
-                    it->second.profession = static_cast<GW::Constants::Profession>(living->primary);
+                if (const auto* living = agent->GetAsAgentLiving()) it->second.profession = static_cast<GW::Constants::Profession>(living->primary);
             }
             if (it->second.profession == GW::Constants::Profession::None) all_resolved = false;
         }
@@ -236,14 +237,22 @@ void NuzlockeState::Draw()
     }
 
     ImGui::TextColored(kNuzlockeAlive, "White");
-    ImGui::SameLine(0, 4.f * ImGui::FontScale()); ImGui::TextDisabled("alive");
-    ImGui::SameLine(0, 12.f * ImGui::FontScale()); ImGui::TextColored(kNuzlockeAvailable, "Green");
-    ImGui::SameLine(0, 4.f * ImGui::FontScale()); ImGui::TextDisabled("henchman hireable here");
-    ImGui::SameLine(0, 12.f * ImGui::FontScale()); ImGui::TextColored(kNuzlockeDead, "Red");
-    ImGui::SameLine(0, 4.f * ImGui::FontScale()); ImGui::TextDisabled("out of lives");
+    ImGui::SameLine(0, 4.f * ImGui::FontScale());
+    ImGui::TextDisabled("alive");
+    ImGui::SameLine(0, 12.f * ImGui::FontScale());
+    ImGui::TextColored(kNuzlockeAvailable, "Green");
+    ImGui::SameLine(0, 4.f * ImGui::FontScale());
+    ImGui::TextDisabled("henchman hireable here");
+    ImGui::SameLine(0, 12.f * ImGui::FontScale());
+    ImGui::TextColored(kNuzlockeDead, "Red");
+    ImGui::SameLine(0, 4.f * ImGui::FontScale());
+    ImGui::TextDisabled("out of lives");
 
     if (!players.empty()) {
-        struct PlayerLabel { std::string text; int remaining; };
+        struct PlayerLabel {
+            std::string text;
+            int remaining;
+        };
         std::vector<PlayerLabel> labels;
         labels.reserve(players.size());
         const float sep_w = ImGui::CalcTextSize("    ").x;
@@ -251,8 +260,7 @@ void NuzlockeState::Draw()
         char buf[96];
         for (auto& [name, member] : players) {
             const int remaining = settings.player_lives - member.deaths;
-            snprintf(buf, sizeof(buf), "%s %d/%d", TextUtils::WStringToString(name).c_str(),
-                     remaining > 0 ? remaining : 0, settings.player_lives);
+            snprintf(buf, sizeof(buf), "%s %d/%d", TextUtils::WStringToString(name).c_str(), remaining > 0 ? remaining : 0, settings.player_lives);
             if (!labels.empty()) textw += sep_w;
             textw += ImGui::CalcTextSize(buf).x;
             labels.push_back({buf, remaining});
@@ -287,13 +295,14 @@ void NuzlockeState::Draw()
             const std::wstring display_name = StripHenchBracket(name);
 
             ImVec4 color = kNuzlockeAlive;
-            if (remaining <= 0) color = kNuzlockeDead;
-            else if (city_hench_available.contains(display_name)) color = kNuzlockeAvailable;
+            if (remaining <= 0)
+                color = kNuzlockeDead;
+            else if (city_hench_available.contains(display_name))
+                color = kNuzlockeAvailable;
 
             ImGui::Image(*Resources::GetProfessionIcon(member.profession), icon_size);
             ImGui::SameLine();
-            ImGui::TextColored(color, "%s - %d/%d", TextUtils::WStringToString(display_name).c_str(),
-                remaining > 0 ? remaining : 0, settings.hench_lives);
+            ImGui::TextColored(color, "%s - %d/%d", TextUtils::WStringToString(display_name).c_str(), remaining > 0 ? remaining : 0, settings.hench_lives);
         }
 
         ImGui::TableSetColumnIndex(1);
@@ -304,8 +313,7 @@ void NuzlockeState::Draw()
 
             ImGui::Image(*Resources::GetProfessionIcon(member.profession), icon_size);
             ImGui::SameLine();
-            ImGui::TextColored(color, "%s - %d/%d", name ? name->string().c_str() : "(hero)",
-                remaining > 0 ? remaining : 0, settings.hero_lives);
+            ImGui::TextColored(color, "%s - %d/%d", name ? name->string().c_str() : "(hero)", remaining > 0 ? remaining : 0, settings.hero_lives);
         }
 
         ImGui::EndTable();
@@ -319,21 +327,38 @@ int NuzlockeState::TotalPoints(const GoalList& list) const
     for (const auto& g : list.goals) {
         if (g.is_header || g.status != GoalStatus::Completed) continue;
         switch (g.trigger.type) {
-            case T::Manual:          total += settings.points_manual;       break;
+            case T::Manual:
+                total += settings.points_manual;
+                break;
             case T::MissionComplete:
-            case T::MissionBonus:    total += settings.points_missions;     break;
+            case T::MissionBonus:
+                total += settings.points_missions;
+                break;
             case T::MapEnter:
             case T::EnterExplorable:
             case T::ExitExplorable:
-            case T::VanquishComplete: total += settings.points_explorables; break;
+            case T::VanquishComplete:
+                total += settings.points_explorables;
+                break;
             case T::EnterOutpost:
-            case T::ExitOutpost:     total += settings.points_towns;        break;
-            case T::ReachTitleRank:  total += settings.points_titles;       break;
-            case T::ReachLevel:      total += settings.points_reach_level;  break;
+            case T::ExitOutpost:
+                total += settings.points_towns;
+                break;
+            case T::ReachTitleRank:
+                total += settings.points_titles;
+                break;
+            case T::ReachLevel:
+                total += settings.points_reach_level;
+                break;
             case T::QuestPickup:
-            case T::QuestComplete:   total += settings.points_quest;        break;
-            case T::SkillLearnt:     total += settings.points_skill_learnt; break;
-            default:                 break;
+            case T::QuestComplete:
+                total += settings.points_quest;
+                break;
+            case T::SkillLearnt:
+                total += settings.points_skill_learnt;
+                break;
+            default:
+                break;
         }
     }
     return total;

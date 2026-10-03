@@ -27,7 +27,7 @@ void GoalEngine::Attach(GoalList* list)
             if (g.starts_immediately) {
                 g.start_real_time = 0.0;
                 g.start_game_time = 0.0;
-                g.status          = GoalStatus::Started;
+                g.status = GoalStatus::Started;
             }
         }
     }
@@ -35,27 +35,27 @@ void GoalEngine::Attach(GoalList* list)
 
 void GoalEngine::Detach()
 {
-    list_    = nullptr;
+    list_ = nullptr;
     started_ = false;
 }
 
 void GoalEngine::Reset()
 {
-    started_              = false;
-    prev_map_             = GW::Constants::MapID::None;
-    last_real_            = 0.0;
-    last_game_            = 0.0;
-    mission_complete_map_   = GW::Constants::MapID::None;
-    mission_bonus_map_      = GW::Constants::MapID::None;
-    vanquish_complete_map_  = GW::Constants::MapID::None;
+    started_ = false;
+    prev_map_ = GW::Constants::MapID::None;
+    last_real_ = 0.0;
+    last_game_ = 0.0;
+    mission_complete_map_ = GW::Constants::MapID::None;
+    mission_bonus_map_ = GW::Constants::MapID::None;
+    vanquish_complete_map_ = GW::Constants::MapID::None;
     pending_bonus_check_map_ = GW::Constants::MapID::None;
-    bonus_check_timer_      = 0.f;
+    bonus_check_timer_ = 0.f;
     completion_check_timer_ = 0.f;
     completion_confirmed_incomplete_.clear();
-    primary_obj_id_         = 0;
+    primary_obj_id_ = 0;
     pending_incomplete_rezone_ = false;
     pending_wrong_map_entered_ = false;
-    pending_run_start_         = false;
+    pending_run_start_ = false;
     if (list_) list_->ResetRunState();
 }
 
@@ -75,10 +75,10 @@ bool GoalEngine::ConsumeIncompleteRezone()
 
 void GoalEngine::NotifyMissionComplete(GW::Constants::MapID map)
 {
-    mission_complete_map_   = map;
+    mission_complete_map_ = map;
     pending_bonus_check_map_ = map;
     // HM clear only set HM bits: poll read that mode.
-    pending_bonus_hm_        = GW::PartyMgr::GetIsPartyInHardMode();
+    pending_bonus_hm_ = GW::PartyMgr::GetIsPartyInHardMode();
 }
 
 // CompletionWindow, not raw WorldContext: raw give false positive right after kMissionComplete.
@@ -93,7 +93,7 @@ void GoalEngine::CheckPendingMissionBonus(const float delta)
     if (!char_context) return;
     const auto mode = pending_bonus_hm_ ? CompletionCheck::HardMode : CompletionCheck::NormalMode;
     if (CompletionWindow::IsAreaComplete(char_context->player_name, pending_bonus_check_map_, mode)) {
-        mission_bonus_map_       = pending_bonus_check_map_;
+        mission_bonus_map_ = pending_bonus_check_map_;
         pending_bonus_check_map_ = GW::Constants::MapID::None;
     }
 }
@@ -114,11 +114,10 @@ void GoalEngine::CheckPendingCompletions(const float delta, const GW::Constants:
         if (g.trigger.map_id != current_map) continue;
         // Bonus stay on own arm-then-poll.
         if (g.trigger.type == GoalTrigger::Type::MissionComplete) {
-            if (TrustedCompletionCheck(i, char_context->player_name, g.trigger))
-                NotifyMissionComplete(g.trigger.map_id);
-        } else if (g.trigger.type == GoalTrigger::Type::VanquishComplete) {
-            if (TrustedCompletionCheck(i, char_context->player_name, g.trigger))
-                NotifyVanquishComplete(g.trigger.map_id);
+            if (TrustedCompletionCheck(i, char_context->player_name, g.trigger)) NotifyMissionComplete(g.trigger.map_id);
+        }
+        else if (g.trigger.type == GoalTrigger::Type::VanquishComplete) {
+            if (TrustedCompletionCheck(i, char_context->player_name, g.trigger)) NotifyVanquishComplete(g.trigger.map_id);
         }
     }
 }
@@ -143,8 +142,7 @@ bool GoalEngine::TrustedCompletionCheck(const int goal_index, const wchar_t* pla
 
 void GoalEngine::NotifyObjectiveAdd(uint32_t obj_id, uint32_t type_flags)
 {
-    if (!(type_flags & 0x1))
-        primary_obj_id_ = obj_id;
+    if (!(type_flags & 0x1)) primary_obj_id_ = obj_id;
 }
 
 void GoalEngine::NotifyVanquishComplete(GW::Constants::MapID map)
@@ -152,37 +150,28 @@ void GoalEngine::NotifyVanquishComplete(GW::Constants::MapID map)
     vanquish_complete_map_ = map;
 }
 
-void GoalEngine::NotifyEvent(GoalTrigger::Type type, uint32_t id1, uint32_t id2,
-                             const wchar_t* str, size_t str_len)
+void GoalEngine::NotifyEvent(GoalTrigger::Type type, uint32_t id1, uint32_t id2, const wchar_t* str, size_t str_len)
 {
     PendingEvent ev;
     ev.type = type;
-    ev.id1  = id1;
-    ev.id2  = id2;
-    if (str && str_len > 0)
-        ev.str.assign(str, str_len);
+    ev.id1 = id1;
+    ev.id2 = id2;
+    if (str && str_len > 0) ev.str.assign(str, str_len);
     pending_events_.push_back(std::move(ev));
 }
 
-int GoalEngine::Update(const GoalClock& clock,
-                       GW::Constants::MapID current_map,
-                       bool just_entered_map,
-                       bool came_from_explorable,
-                       bool is_explorable,
-                       int  player_level,
-                       float delta)
+int GoalEngine::Update(const GoalClock& clock, GW::Constants::MapID current_map, bool just_entered_map, bool came_from_explorable, bool is_explorable, int player_level, float delta)
 {
     if (!list_ || list_->goals.empty()) {
-        prev_map_                = current_map;
-        mission_complete_map_    = GW::Constants::MapID::None;
-        mission_bonus_map_       = GW::Constants::MapID::None;
+        prev_map_ = current_map;
+        mission_complete_map_ = GW::Constants::MapID::None;
+        mission_bonus_map_ = GW::Constants::MapID::None;
         pending_bonus_check_map_ = GW::Constants::MapID::None;
         pending_events_.clear();
         return 0;
     }
 
-    if (!started_ && just_entered_map)
-        started_ = true;
+    if (!started_ && just_entered_map) started_ = true;
 
     int fired = 0;
 
@@ -214,8 +203,7 @@ int GoalEngine::Update(const GoalClock& clock,
         return type == GoalTrigger::Type::EnterExplorable || type == GoalTrigger::Type::EnterOutpost;
     };
     auto is_map_enter_or_exit = [&](GoalTrigger::Type type) -> bool {
-        return is_map_enter(type) ||
-               type == GoalTrigger::Type::ExitExplorable || type == GoalTrigger::Type::ExitOutpost;
+        return is_map_enter(type) || type == GoalTrigger::Type::ExitExplorable || type == GoalTrigger::Type::ExitOutpost;
     };
 
     auto matches_pending_trigger = [&](const GoalTrigger& tr) -> bool {
@@ -233,9 +221,7 @@ int GoalEngine::Update(const GoalClock& clock,
                     break;
                 case GoalTrigger::Type::ServerMessage:
                 case GoalTrigger::Type::DisplayDialogue:
-                    if (!tr.pattern.empty() && ev.str.size() >= tr.pattern.size() &&
-                        ev.str.compare(0, tr.pattern.size(), tr.pattern) == 0)
-                        return true;
+                    if (!tr.pattern.empty() && ev.str.size() >= tr.pattern.size() && ev.str.compare(0, tr.pattern.size(), tr.pattern) == 0) return true;
                     break;
                 default:
                     if (ev.id1 == tr.param1) return true;
@@ -247,9 +233,7 @@ int GoalEngine::Update(const GoalClock& clock,
 
     // Same trigger on two goals (hub MapEnter): only arm earliest per tick.
     auto triggers_equal = [](const GoalTrigger& a, const GoalTrigger& b) {
-        return a.type == b.type && a.map_id == b.map_id && a.param1 == b.param1 &&
-               a.param2 == b.param2 && a.level == b.level && a.title_id == b.title_id &&
-               a.hard_mode == b.hard_mode && a.pattern == b.pattern;
+        return a.type == b.type && a.map_id == b.map_id && a.param1 == b.param1 && a.param2 == b.param2 && a.level == b.level && a.title_id == b.title_id && a.hard_mode == b.hard_mode && a.pattern == b.pattern;
     };
 
     if (started_) {
@@ -262,19 +246,17 @@ int GoalEngine::Update(const GoalClock& clock,
         // Primary ObjectiveDone give real map_id where kMissionComplete wrong (GNW).
         if (primary_obj_id_ != 0) {
             for (const auto& ev : pending_events_) {
-                if (ev.type == GoalTrigger::Type::ObjectiveDone &&
-                    ev.id1 == primary_obj_id_ && ev.id2 != 0)
-                    NotifyMissionComplete(static_cast<GW::Constants::MapID>(ev.id2));
+                if (ev.type == GoalTrigger::Type::ObjectiveDone && ev.id1 == primary_obj_id_ && ev.id2 != 0) NotifyMissionComplete(static_cast<GW::Constants::MapID>(ev.id2));
             }
         }
 
         std::vector<const GoalTrigger*> claimed_this_tick;
         for (int i = 0; i < static_cast<int>(list_->goals.size()); ++i) {
             GoalEntry& g = list_->goals[i];
-            if (g.is_header)                       continue;
+            if (g.is_header) continue;
             if (g.status == GoalStatus::Completed) continue;
-            if (g.start_real_time >= 0.0)          continue;
-            if (!g.start_trigger.has_value())      continue;
+            if (g.start_real_time >= 0.0) continue;
+            if (!g.start_trigger.has_value()) continue;
             const GoalTrigger& st = g.start_trigger.value();
             bool start_fire = false;
             const GoalTrigger* fired_trigger = &st;
@@ -293,7 +275,11 @@ int GoalEngine::Update(const GoalClock& clock,
                     start_fire = matches_pending_trigger(st);
                     if (!start_fire) {
                         for (const auto& est : g.extra_start_triggers) {
-                            if (matches_pending_trigger(est)) { start_fire = true; fired_trigger = &est; break; }
+                            if (matches_pending_trigger(est)) {
+                                start_fire = true;
+                                fired_trigger = &est;
+                                break;
+                            }
                         }
                     }
                     break;
@@ -301,21 +287,24 @@ int GoalEngine::Update(const GoalClock& clock,
             if (start_fire) {
                 bool already_claimed = false;
                 for (const GoalTrigger* claimed : claimed_this_tick) {
-                    if (triggers_equal(*claimed, *fired_trigger)) { already_claimed = true; break; }
+                    if (triggers_equal(*claimed, *fired_trigger)) {
+                        already_claimed = true;
+                        break;
+                    }
                 }
                 if (already_claimed) continue;
                 claimed_this_tick.push_back(fired_trigger);
 
                 g.start_real_time = clock.RealTime();
                 g.start_game_time = clock.GameTime();
-                g.status          = GoalStatus::Started;
+                g.status = GoalStatus::Started;
                 CompletePreviousGoals(i, clock);
             }
         }
 
         for (int i = 0; i < static_cast<int>(list_->goals.size()); ++i) {
             GoalEntry& g = list_->goals[i];
-            if (g.is_header)                       continue;
+            if (g.is_header) continue;
             if (g.status == GoalStatus::Completed) continue;
             // Must be Started first, so start/end not fire same tick.
             if (g.start_trigger.has_value() && g.status == GoalStatus::NotStarted) {
@@ -366,8 +355,7 @@ int GoalEngine::Update(const GoalClock& clock,
 
                 case GoalTrigger::Type::ExitOutpost:
                     // Left a town (not a same-id explorable, GNW), and not just a district change.
-                    fire = just_entered_map && !came_from_explorable && (prev_map_ == t.map_id) &&
-                           (is_explorable || current_map != t.map_id);
+                    fire = just_entered_map && !came_from_explorable && (prev_map_ == t.map_id) && (is_explorable || current_map != t.map_id);
                     break;
 
                 case GoalTrigger::Type::ReachTitleRank: {
@@ -416,9 +404,7 @@ int GoalEngine::Update(const GoalClock& clock,
                     for (const auto& ev : pending_events_) {
                         if (ev.type != GoalTrigger::Type::MobKill) continue;
                         if (by_name && pattern_lower.empty()) pattern_lower = TextUtils::ToLower(t.pattern);
-                        const bool matches = by_name
-                            ? (!ev.str.empty() && TextUtils::ToLower(ev.str) == pattern_lower)
-                            : (ev.id1 == t.param1);
+                        const bool matches = by_name ? (!ev.str.empty() && TextUtils::ToLower(ev.str) == pattern_lower) : (ev.id1 == t.param1);
                         if (matches) ++kills_this_tick;
                     }
                     g.trigger_progress += kills_this_tick;
@@ -436,7 +422,8 @@ int GoalEngine::Update(const GoalClock& clock,
                 if (g.auto_complete_previous != 0 && !g.start_trigger.has_value()) {
                     CompletePreviousGoals(i, clock);
                     FireGoal(i, clock);
-                } else {
+                }
+                else {
                     FireGoal(i, clock);
                     CompletePreviousGoals(i, clock);
                 }
@@ -445,13 +432,9 @@ int GoalEngine::Update(const GoalClock& clock,
             }
             if (!fire && is_ordered(g.trigger.type)) {
                 // Wrong turn. start_real_time check skip goal whose start fired this tick.
-                if (just_entered_map && g.start_real_time != clock.RealTime() &&
-                    is_map_enter_or_exit(g.trigger.type))
-                    pending_wrong_map_entered_ = true;
+                if (just_entered_map && g.start_real_time != clock.RealTime() && is_map_enter_or_exit(g.trigger.type)) pending_wrong_map_entered_ = true;
                 // Started Manual goal not block later auto goals.
-                if (g.trigger.type == GoalTrigger::Type::Manual &&
-                    g.status == GoalStatus::Started)
-                    continue;
+                if (g.trigger.type == GoalTrigger::Type::Manual && g.status == GoalStatus::Started) continue;
                 break;
             }
         }
@@ -459,12 +442,11 @@ int GoalEngine::Update(const GoalClock& clock,
         // After Pass 2: current leg exit must get chance to complete first.
         if (just_entered_map) {
             for (const auto& g : list_->goals) {
-                if (g.is_header)                       continue;
+                if (g.is_header) continue;
                 if (g.status == GoalStatus::Completed) continue;
                 if (g.status != GoalStatus::NotStarted) break;
-                if (!g.start_trigger.has_value())      break;
-                if (is_map_enter(g.start_trigger->type))
-                    pending_wrong_map_entered_ = true;
+                if (!g.start_trigger.has_value()) break;
+                if (is_map_enter(g.start_trigger->type)) pending_wrong_map_entered_ = true;
                 break;
             }
         }
@@ -491,46 +473,43 @@ int GoalEngine::Update(const GoalClock& clock,
                     // Whole dungeon is the goal's area: a level change inside it isn't leaving.
                     const auto* dungeon = SCPresets::FindDungeon(g.trigger.map_id);
                     map_matches = SCPresets::FindDungeon(prev_map_) == dungeon && SCPresets::FindDungeon(current_map) != dungeon;
-                } else if (g.trigger.type == TT::VanquishComplete || g.trigger.type == TT::MissionComplete ||
-                    g.trigger.type == TT::DungeonReward || g.trigger.type == TT::CountdownStart) {
+                }
+                else if (g.trigger.type == TT::VanquishComplete || g.trigger.type == TT::MissionComplete || g.trigger.type == TT::DungeonReward || g.trigger.type == TT::CountdownStart) {
                     // Bonus excluded: own background poll finish it.
                     map_matches = (g.trigger.map_id == prev_map_);
-                } else if (g.trigger.type == TT::ObjectiveDone || g.trigger.type == TT::DoorOpen ||
-                           g.trigger.type == TT::DisplayDialogue || g.trigger.type == TT::ServerMessage ||
-                           g.trigger.type == TT::DoACompleteZone || g.trigger.type == TT::AgentUpdateAllegiance) {
+                }
+                else if (g.trigger.type == TT::ObjectiveDone || g.trigger.type == TT::DoorOpen || g.trigger.type == TT::DisplayDialogue || g.trigger.type == TT::ServerMessage || g.trigger.type == TT::DoACompleteZone ||
+                         g.trigger.type == TT::AgentUpdateAllegiance) {
                     // DoA: one map_id for all 4 zones, use header map.
-                    map_matches = (owning_header_map != GW::Constants::MapID::None &&
-                                    owning_header_map == prev_map_);
-                } else if (g.trigger.type == TT::MapEnter) {
+                    map_matches = (owning_header_map != GW::Constants::MapID::None && owning_header_map == prev_map_);
+                }
+                else if (g.trigger.type == TT::MapEnter) {
                     // Dungeon level goal map_id = NEXT level: use segment_start_map.
-                    map_matches = (segment_start_map != GW::Constants::MapID::None &&
-                                    segment_start_map == prev_map_);
+                    map_matches = (segment_start_map != GW::Constants::MapID::None && segment_start_map == prev_map_);
                 }
                 if (map_matches) {
                     // Poll throttled 1/sec, may lag. Recheck now; real abandon still fail.
                     const bool completion_backed = g.trigger.type == TT::VanquishComplete || g.trigger.type == TT::MissionComplete;
                     const auto* char_context = completion_backed ? GW::GetCharContext() : nullptr;
-                    if (!(char_context && TrustedCompletionCheck(gi, char_context->player_name, g.trigger)))
-                        pending_incomplete_rezone_ = true;
+                    if (!(char_context && TrustedCompletionCheck(gi, char_context->player_name, g.trigger))) pending_incomplete_rezone_ = true;
                 }
                 break;
             }
         }
     }
 
-    mission_complete_map_  = GW::Constants::MapID::None;
-    mission_bonus_map_     = GW::Constants::MapID::None;
+    mission_complete_map_ = GW::Constants::MapID::None;
+    mission_bonus_map_ = GW::Constants::MapID::None;
     vanquish_complete_map_ = GW::Constants::MapID::None;
     pending_events_.clear();
-    if (current_map != GW::Constants::MapID::None)
-        prev_map_ = current_map;
+    if (current_map != GW::Constants::MapID::None) prev_map_ = current_map;
 
     return fired;
 }
 
 void GoalEngine::ForceStarted()
 {
-    started_          = true;
+    started_ = true;
     pending_run_start_ = true;
 }
 
@@ -551,8 +530,8 @@ void GoalEngine::TriggerManual(const GoalClock& clock)
 
 void GoalEngine::StampSplit(GoalEntry& g, const GoalClock& clock) const
 {
-    g.split.real_time    = clock.RealTime();
-    g.split.game_time    = clock.GameTime();
+    g.split.real_time = clock.RealTime();
+    g.split.game_time = clock.GameTime();
     g.split.segment_real = clock.RealTime() - last_real_;
     g.split.segment_game = clock.GameTime() - last_game_;
 }
@@ -573,8 +552,7 @@ void GoalEngine::FireGoal(int index, const GoalClock& clock)
         if (nxt.start_real_time < 0.0 && !nxt.start_trigger.has_value()) {
             nxt.start_real_time = g.split.real_time;
             nxt.start_game_time = g.split.game_time;
-            if (nxt.status == GoalStatus::NotStarted)
-                nxt.status = GoalStatus::Started;
+            if (nxt.status == GoalStatus::NotStarted) nxt.status = GoalStatus::Started;
         }
     }
 }
@@ -584,14 +562,11 @@ void GoalEngine::CompletePreviousGoals(int index, const GoalClock& clock)
     const GoalEntry& g = list_->goals[index];
     if (g.auto_complete_previous == 0) return;
 
-    const int from = (g.auto_complete_previous < 0)
-        ? 0
-        : std::max(0, index - g.auto_complete_previous);
+    const int from = (g.auto_complete_previous < 0) ? 0 : std::max(0, index - g.auto_complete_previous);
 
     for (int j = from; j < index; ++j) {
         if (list_->goals[j].is_header) continue;
-        if (list_->goals[j].status != GoalStatus::Completed)
-            FireGoal(j, clock);
+        if (list_->goals[j].status != GoalStatus::Completed) FireGoal(j, clock);
     }
 }
 

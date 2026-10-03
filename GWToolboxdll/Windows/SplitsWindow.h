@@ -19,13 +19,13 @@ struct RecentRun;
 
 inline constexpr int kProfileCount = 3;
 // int, not enum: also index arrays + settings.
-inline constexpr int kProfileManual  = 0;
+inline constexpr int kProfileManual = 0;
 inline constexpr int kProfileRunning = 1;
-inline constexpr int kProfileSC      = 2;
+inline constexpr int kProfileSC = 2;
 
 // State lives in SplitsWindow.cpp's anonymous namespace, like other toolbox windows; this header is the interface.
 class SplitsWindow : public ToolboxWindow {
-    SplitsWindow()           = default;
+    SplitsWindow() = default;
     ~SplitsWindow() override = default;
 
 public:
@@ -63,15 +63,15 @@ public:
     Color& ColorPbAhead();
     Color& ColorPbBehind();
 
-    [[nodiscard]] SplitsProfile&       ActiveProfile();
+    [[nodiscard]] SplitsProfile& ActiveProfile();
     [[nodiscard]] const SplitsProfile& ActiveProfile() const;
-    [[nodiscard]] int                  ActiveProfileIdx() const;
+    [[nodiscard]] int ActiveProfileIdx() const;
     [[nodiscard]] std::array<SplitsProfile, kProfileCount>& Profiles();
 
     [[nodiscard]] const GoalClock& Clock() const;
-    [[nodiscard]] GoalList*        List();
-    [[nodiscard]] bool             RunComplete() const;
-    [[nodiscard]] bool             RunFailed() const;
+    [[nodiscard]] GoalList* List();
+    [[nodiscard]] bool RunComplete() const;
+    [[nodiscard]] bool RunFailed() const;
     // Include current pause so display tick live.
     [[nodiscard]] double TotalPausedReal() const;
 
@@ -91,10 +91,10 @@ public:
     [[nodiscard]] const ComparisonSplits& Comparison(SplitsProfile::ComparisonMode mode) const;
 
     [[nodiscard]] const std::vector<RecentRun>& RecentRuns() const;
-    [[nodiscard]] int                           PBAttemptNumber() const;
-    [[nodiscard]] double                        PBTotalReal() const;
-    [[nodiscard]] const std::vector<int>&       BestSegRealAttempt() const;
-    [[nodiscard]] const std::vector<int>&       BestSegGameAttempt() const;
+    [[nodiscard]] int PBAttemptNumber() const;
+    [[nodiscard]] double PBTotalReal() const;
+    [[nodiscard]] const std::vector<int>& BestSegRealAttempt() const;
+    [[nodiscard]] const std::vector<int>& BestSegGameAttempt() const;
 
     [[nodiscard]] std::vector<RecentRun> LoadFullRunHistory() const;
     // Renumbers: reload LoadFullRunHistory() after.
@@ -102,9 +102,9 @@ public:
     void ClearRunHistory();
 
     // Nuzlocke runtime Manual-only; settings stay editable.
-    void               DrawNuzlockeSection();
+    void DrawNuzlockeSection();
     [[nodiscard]] bool NuzlockePointsEnabled() const;
-    [[nodiscard]] int  NuzlockeTotalPoints() const;
+    [[nodiscard]] int NuzlockeTotalPoints() const;
 
 private:
     // Bound through the Hotkeys window's Send Chat action, like /pcons.
