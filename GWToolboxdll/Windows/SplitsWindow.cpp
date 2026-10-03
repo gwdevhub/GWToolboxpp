@@ -81,45 +81,45 @@ using namespace SplitsWindowJson;
 
 using SkillID = GW::Constants::SkillID;
 
-// Shadow steps start Running like movement (same list as GWChrono).
-constexpr SkillID kShadowStepSkills[] = {
-    SkillID::Vipers_Defense,
-    SkillID::Return,
-    SkillID::Aura_of_Displacement,
-    SkillID::Beguiling_Haze,
-    SkillID::Scorpion_Wire,
-    SkillID::Ride_the_Lightning,
-    SkillID::Recall,
-    SkillID::Deaths_Charge,
-    SkillID::Heart_of_Shadow,
-    SkillID::Spirit_Walk,
-    SkillID::Dark_Prison,
-    SkillID::Wastrels_Collapse,
-    SkillID::Augury_of_Death,
-    SkillID::Shadow_Walk,
-    SkillID::Deaths_Retreat,
-    SkillID::Shadow_Prison,
-    SkillID::Swap,
-    SkillID::Shadow_Meld,
-    SkillID::Shadow_Fang,
-    SkillID::Ebon_Escape,
-    SkillID::Shadow_Theft,
-};
-
-// Ready-check wait pause game time. Vizunah/Unwaking lock party; Ascalon Academy solo, countdown packet only.
-static bool IsMissionQueueMap(GW::Constants::MapID map)
-{
-    static constexpr GW::Constants::MapID kQueueMaps[] = {
-        GW::Constants::MapID::Vizunah_Square_Local_Quarter_outpost,
-        GW::Constants::MapID::Vizunah_Square_Foreign_Quarter_outpost,
-        GW::Constants::MapID::Unwaking_Waters_Luxon_outpost,
-        GW::Constants::MapID::Unwaking_Waters_Kurzick_outpost,
-        GW::Constants::MapID::Ascalon_City_pre_searing,
-    };
-    return std::ranges::contains(kQueueMaps, map);
-}
-
 namespace {
+    // Shadow steps start Running like movement (same list as GWChrono).
+    constexpr SkillID kShadowStepSkills[] = {
+        SkillID::Vipers_Defense,
+        SkillID::Return,
+        SkillID::Aura_of_Displacement,
+        SkillID::Beguiling_Haze,
+        SkillID::Scorpion_Wire,
+        SkillID::Ride_the_Lightning,
+        SkillID::Recall,
+        SkillID::Deaths_Charge,
+        SkillID::Heart_of_Shadow,
+        SkillID::Spirit_Walk,
+        SkillID::Dark_Prison,
+        SkillID::Wastrels_Collapse,
+        SkillID::Augury_of_Death,
+        SkillID::Shadow_Walk,
+        SkillID::Deaths_Retreat,
+        SkillID::Shadow_Prison,
+        SkillID::Swap,
+        SkillID::Shadow_Meld,
+        SkillID::Shadow_Fang,
+        SkillID::Ebon_Escape,
+        SkillID::Shadow_Theft,
+    };
+
+    // Ready-check wait pause game time. Vizunah/Unwaking lock party; Ascalon Academy solo, countdown packet only.
+    bool IsMissionQueueMap(GW::Constants::MapID map)
+    {
+        static constexpr GW::Constants::MapID kQueueMaps[] = {
+            GW::Constants::MapID::Vizunah_Square_Local_Quarter_outpost,
+            GW::Constants::MapID::Vizunah_Square_Foreign_Quarter_outpost,
+            GW::Constants::MapID::Unwaking_Waters_Luxon_outpost,
+            GW::Constants::MapID::Unwaking_Waters_Kurzick_outpost,
+            GW::Constants::MapID::Ascalon_City_pre_searing,
+        };
+        return std::ranges::contains(kQueueMaps, map);
+    }
+
     constexpr std::array<const char*, kProfileCount>    kProfileSections    = {"Splits.Manual", "Splits.Running", "Splits.SC"};
     constexpr std::array<const wchar_t*, kProfileCount> kProfileFolderNames = {L"manual", L"running", L"sc"};
 
@@ -292,14 +292,14 @@ void SplitsWindow::Initialize()
     GW::UI::RegisterUIMessageCallback(
         &ui_hooks,
         GW::UI::UIMessage::kMissionComplete,
-        [this](GW::HookStatus*, GW::UI::UIMessage, void*, void*) {
+        [](GW::HookStatus*, GW::UI::UIMessage, void*, void*) {
             engine.NotifyMissionComplete(GW::Map::GetMapID());
         });
 
     GW::UI::RegisterUIMessageCallback(
         &ui_hooks,
         GW::UI::UIMessage::kVanquishComplete,
-        [this](GW::HookStatus*, GW::UI::UIMessage, void*, void*) {
+        [](GW::HookStatus*, GW::UI::UIMessage, void*, void*) {
             engine.NotifyVanquishComplete(GW::Map::GetMapID());
         });
 
@@ -320,7 +320,7 @@ void SplitsWindow::Initialize()
     GW::UI::RegisterUIMessageCallback(
         &ui_hooks,
         GW::UI::UIMessage::kObjectiveAdd,
-        [this](GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*) {
+        [](GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*) {
             if (!wparam) return;
             const auto* p = static_cast<GW::UI::UIPacket::kObjectiveAdd*>(wparam);
             engine.NotifyObjectiveAdd(p->objective_id, p->type);
@@ -329,7 +329,7 @@ void SplitsWindow::Initialize()
     GW::UI::RegisterUIMessageCallback(
         &ui_hooks,
         GW::UI::UIMessage::kObjectiveComplete,
-        [this](GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*) {
+        [](GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*) {
             if (!wparam) return;
             const auto* p = static_cast<GW::UI::UIPacket::kObjectiveComplete*>(wparam);
             const auto map_id = static_cast<uint32_t>(GW::Map::GetMapID());
@@ -339,7 +339,7 @@ void SplitsWindow::Initialize()
     GW::UI::RegisterUIMessageCallback(
         &ui_hooks,
         GW::UI::UIMessage::kObjectiveUpdated,
-        [this](GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*) {
+        [](GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*) {
             if (!wparam) return;
             const auto* p = static_cast<GW::UI::UIPacket::kObjectiveUpdated*>(wparam);
             engine.NotifyEvent(GoalTrigger::Type::ObjectiveStarted, p->objective_id);
@@ -347,7 +347,7 @@ void SplitsWindow::Initialize()
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ManipulateMapObject>(
         &stoc_hooks,
-        [this](GW::HookStatus*, const GW::Packet::StoC::ManipulateMapObject* p) {
+        [](GW::HookStatus*, const GW::Packet::StoC::ManipulateMapObject* p) {
             if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) return;
             if (p->animation_type == 16 && p->animation_stage == 2) {
                 engine.NotifyEvent(GoalTrigger::Type::DoorOpen, p->object_id);
@@ -358,7 +358,7 @@ void SplitsWindow::Initialize()
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentUpdateAllegiance>(
         &stoc_hooks,
-        [this](GW::HookStatus*, const GW::Packet::StoC::AgentUpdateAllegiance* p) {
+        [](GW::HookStatus*, const GW::Packet::StoC::AgentUpdateAllegiance* p) {
             const auto* agent = GW::Agents::GetAgentByID(p->agent_id);
             if (!agent) return;
             const auto* living = agent->GetAsAgentLiving();
@@ -368,7 +368,7 @@ void SplitsWindow::Initialize()
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DoACompleteZone>(
         &stoc_hooks,
-        [this](GW::HookStatus*, const GW::Packet::StoC::DoACompleteZone* p) {
+        [](GW::HookStatus*, const GW::Packet::StoC::DoACompleteZone* p) {
             if (p->message[0] != 0x8101) return;
             engine.NotifyEvent(GoalTrigger::Type::DoACompleteZone, p->message[1]);
         });
@@ -376,14 +376,14 @@ void SplitsWindow::Initialize()
     GW::UI::RegisterUIMessageCallback(
         &ui_hooks,
         GW::UI::UIMessage::kDungeonComplete,
-        [this](GW::HookStatus*, GW::UI::UIMessage, void*, void*) {
+        [](GW::HookStatus*, GW::UI::UIMessage, void*, void*) {
             const auto map_id = static_cast<uint32_t>(GW::Map::GetMapID());
             engine.NotifyEvent(GoalTrigger::Type::DungeonReward, map_id);
         });
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageServer>(
         &stoc_hooks,
-        [this](GW::HookStatus*, GW::Packet::StoC::MessageServer*) {
+        [](GW::HookStatus*, GW::Packet::StoC::MessageServer*) {
             const wchar_t* msg = ToolboxUtils::GetMessageCore();
             if (!msg || !*msg) return;
             engine.NotifyEvent(GoalTrigger::Type::ServerMessage, 0, 0, msg, wcslen(msg));
@@ -391,7 +391,7 @@ void SplitsWindow::Initialize()
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DisplayDialogue>(
         &stoc_hooks,
-        [this](GW::HookStatus*, const GW::Packet::StoC::DisplayDialogue* p) {
+        [](GW::HookStatus*, const GW::Packet::StoC::DisplayDialogue* p) {
             const auto len = wcslen(p->message);
             engine.NotifyEvent(GoalTrigger::Type::DisplayDialogue, 0, 0, p->message, len);
         });
@@ -399,7 +399,7 @@ void SplitsWindow::Initialize()
     // Gate to queue maps so other countdowns not pause game time.
     GW::StoC::RegisterPacketCallback(
         &stoc_hooks, GAME_SMSG_INSTANCE_COUNTDOWN,
-        [this](GW::HookStatus*, GW::Packet::StoC::PacketBase*) {
+        [](GW::HookStatus*, GW::Packet::StoC::PacketBase*) {
             const auto map_id = static_cast<uint32_t>(GW::Map::GetMapID());
             if (IsMissionQueueMap(static_cast<GW::Constants::MapID>(map_id)))
                 in_mission_queue = true;
@@ -409,7 +409,7 @@ void SplitsWindow::Initialize()
     GW::UI::RegisterUIMessageCallback(
         &ui_hooks,
         GW::UI::UIMessage::kSkillActivated,
-        [this](GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*) {
+        [](GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*) {
             if (!wparam) return;
             const auto* p = static_cast<GW::UI::UIPacket::kAgentSkillPacket*>(wparam);
             if (p->agent_id == GW::Agents::GetControlledCharacterId())
@@ -419,7 +419,7 @@ void SplitsWindow::Initialize()
     // Gate to queue maps so other party locks not touch game time.
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyLock>(
         &stoc_hooks,
-        [this](GW::HookStatus*, const GW::Packet::StoC::PartyLock* p) {
+        [](GW::HookStatus*, const GW::Packet::StoC::PartyLock* p) {
             if (!p->unk2) {
                 in_mission_queue = false;
             } else if (IsMissionQueueMap(last_map)) {
@@ -448,14 +448,14 @@ void SplitsWindow::Initialize()
     // Before InstanceLoadInfo: covers district change, same map.
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(
         &stoc_hooks,
-        [this](GW::HookStatus*, const GW::Packet::StoC::GameSrvTransfer*) {
+        [](GW::HookStatus*, const GW::Packet::StoC::GameSrvTransfer*) {
             in_mission_queue = false;
         });
 
     // DoA rotation depend on spawn, not map_id.
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadFile>(
         &stoc_hooks,
-        [this](GW::HookStatus*, const GW::Packet::StoC::InstanceLoadFile* p) {
+        [](GW::HookStatus*, const GW::Packet::StoC::InstanceLoadFile* p) {
             pending_doa_file_id = p->map_fileID;
             pending_doa_spawn   = p->spawn_point;
         }, 0x8000);
@@ -465,7 +465,7 @@ void SplitsWindow::Initialize()
     GW::UI::RegisterUIMessageCallback(
         &ui_hooks,
         GW::UI::UIMessage::kWriteToChatLog,
-        [this](GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*) {
+        [](GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*) {
             if (!wparam) return;
             const auto* p = static_cast<GW::UI::UIPacket::kWriteToChatLog*>(wparam);
             const wchar_t* message = p->message;
@@ -477,7 +477,7 @@ void SplitsWindow::Initialize()
     GW::UI::RegisterUIMessageCallback(
         &ui_hooks,
         GW::UI::UIMessage::kMessage_0x10000014,
-        [this](GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*) {
+        [](GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*) {
             if (!wparam) return;
             struct AgentLevelChanged { uint32_t agent_id; uint32_t level; };
             const auto* p = static_cast<AgentLevelChanged*>(wparam);
@@ -489,7 +489,7 @@ void SplitsWindow::Initialize()
     GW::UI::RegisterUIMessageCallback(
         &ui_hooks,
         GW::UI::UIMessage::kQuestAdded,
-        [this](GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*) {
+        [](GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*) {
             if (!wparam) return;
             const auto quest_id = *static_cast<GW::Constants::QuestID*>(wparam);
             auto* quest = GW::QuestMgr::GetQuest(quest_id);
@@ -501,7 +501,7 @@ void SplitsWindow::Initialize()
     GW::UI::RegisterUIMessageCallback(
         &ui_hooks,
         GW::UI::UIMessage::kQuestDetailsChanged,
-        [this](GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*) {
+        [](GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*) {
             if (!wparam) return;
             const auto quest_id = *static_cast<GW::Constants::QuestID*>(wparam);
             auto* quest = GW::QuestMgr::GetQuest(quest_id);
@@ -513,7 +513,7 @@ void SplitsWindow::Initialize()
     GW::UI::RegisterUIMessageCallback(
         &ui_hooks,
         GW::UI::UIMessage::kQuestRemoved,
-        [this](GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*) {
+        [](GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*) {
             // Null seen: pre-Searing ending clears whole quest log, crashed here.
             if (!wparam) return;
             const auto quest_id = *static_cast<GW::Constants::QuestID*>(wparam);
