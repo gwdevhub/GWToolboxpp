@@ -1,4 +1,4 @@
-# GWToolbox++
+# GWSlopbox++
 
 ## A set of tools for Guild Wars Players
 
