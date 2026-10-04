@@ -569,13 +569,47 @@ namespace {
             return true;
         };
 
-        const auto pos = ClampBreakoutPos(desired, size);
+        // If the button was dropped roughly beside/above/below another one, snap it flush against that button and in line with it.
+        const auto snap_to_neighbour = [self_element, size](ImVec2 p) {
+            const float threshold = ImMax(size.x, size.y) * 0.75f;
+            const ImRect* nearest = nullptr;
+            float nearest_dist = FLT_MAX;
+            const ImVec2 center = {p.x + size.x * 0.5f, p.y + size.y * 0.5f};
+            for (const auto& [element, rect] : breakout_button_rects) {
+                if (element == self_element) continue;
+                if (p.x > rect.Max.x + threshold || p.x + size.x < rect.Min.x - threshold) continue;
+                if (p.y > rect.Max.y + threshold || p.y + size.y < rect.Min.y - threshold) continue;
+                const float dx = center.x - rect.GetCenter().x;
+                const float dy = center.y - rect.GetCenter().y;
+                if (dx * dx + dy * dy < nearest_dist) {
+                    nearest_dist = dx * dx + dy * dy;
+                    nearest = &rect;
+                }
+            }
+            if (!nearest) return p;
+            const float dx = center.x - nearest->GetCenter().x;
+            const float dy = center.y - nearest->GetCenter().y;
+            if (fabsf(dx) >= fabsf(dy)) {
+                // Horizontal neighbour: flush on the left/right, same y
+                p.x = dx >= 0.f ? nearest->Max.x : nearest->Min.x - size.x;
+                p.y = nearest->Min.y;
+            }
+            else {
+                // Vertical neighbour: flush above/below, same x
+                p.y = dy >= 0.f ? nearest->Max.y : nearest->Min.y - size.y;
+                p.x = nearest->Min.x;
+            }
+            return p;
+        };
+
+        const auto pos = ClampBreakoutPos(snap_to_neighbour(desired), size);
         if (fits(pos)) return pos;
 
         const auto vp = ImGui::GetMainViewport();
         const auto max = ClampBreakoutPos({vp->WorkPos.x + vp->WorkSize.x, vp->WorkPos.y + vp->WorkSize.y}, size);
-        std::vector<float> xs = {vp->WorkPos.x, max.x};
-        std::vector<float> ys = {vp->WorkPos.y, max.y};
+        // Include the desired x/y so a button can sit flush against another's edge while keeping its dragged position along that edge
+        std::vector<float> xs = {vp->WorkPos.x, max.x, pos.x};
+        std::vector<float> ys = {vp->WorkPos.y, max.y, pos.y};
         for (const auto& [element, rect] : breakout_button_rects) {
             if (element == self_element) continue;
             xs.push_back(ImClamp(rect.Min.x - size.x, vp->WorkPos.x, max.x));
