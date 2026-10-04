@@ -66,18 +66,20 @@ namespace account_inventory_json {
         std::optional<FreeSlotsJson> free_slots; // absent => not known
         std::map<uint32_t /*bag_id*/, BagJson> bags;
         std::map<uint32_t /*hero_id*/, BagJson> heroes;
+        std::optional<uint32_t> gold;
         struct glaze {
             using T = CharacterJson;
-            static constexpr auto value = glz::object("fs", &T::free_slots, "b", &T::bags, "h", &T::heroes);
+            static constexpr auto value = glz::object("fs", &T::free_slots, "b", &T::bags, "h", &T::heroes, "g", &T::gold);
         };
     };
     struct ChestJson {
         bool anniversary_pane_active{};
         std::optional<FreeSlotsJson> free_slots; // inventory only; absent => not known
         std::map<uint32_t /*bag_id*/, BagJson> bags;
+        std::optional<uint32_t> gold;
         struct glaze {
             using T = ChestJson;
-            static constexpr auto value = glz::object("a", &T::anniversary_pane_active, "fs", &T::free_slots, "b", &T::bags);
+            static constexpr auto value = glz::object("a", &T::anniversary_pane_active, "fs", &T::free_slots, "b", &T::bags, "g", &T::gold);
         };
     };
     struct AccountJson {
@@ -267,6 +269,7 @@ namespace {
         std::unordered_map<GW::Constants::Bag, Bag> bags;
         std::unordered_map<GW::Constants::HeroID, Hero> heroes;
         FreeSlotInfo free_slots;
+        std::optional<uint32_t> gold;
     };
     struct Account {
         GUID uuid{};
@@ -275,6 +278,7 @@ namespace {
         std::string account_representing_character; // tooltip helper
         bool anniversary_pane_active = false;
         FreeSlotInfo chest_free_slots; // equipment unused for chest
+        std::optional<uint32_t> chest_gold;
     };
 
     // Ephemeral flattened view of one item, rebuilt by traversing the hierarchy.
@@ -1063,6 +1067,7 @@ namespace {
         aj.representing_character = acc.account_representing_character;
         aj.chest.anniversary_pane_active = acc.anniversary_pane_active;
         if (acc.chest_free_slots.known) aj.chest.free_slots = ToJson(acc.chest_free_slots);
+        aj.chest.gold = acc.chest_gold;
         for (auto& [bag_id, bag] : acc.chest)
             for (auto& [slot, item] : bag.items)
                 aj.chest.bags[(uint32_t)bag_id][slot] = ToJson(item);
@@ -1071,6 +1076,10 @@ namespace {
             bool any = false;
             if (ch.free_slots.known) {
                 cj.free_slots = ToJson(ch.free_slots);
+                any = true;
+            }
+            if (ch.gold) {
+                cj.gold = ch.gold;
                 any = true;
             }
             for (auto& [bag_id, bag] : ch.bags)
@@ -1090,7 +1099,7 @@ namespace {
 
     bool AccountJsonHasData(const AccountJson& aj)
     {
-        return !aj.characters.empty() || !aj.chest.bags.empty() || aj.chest.free_slots.has_value();
+        return !aj.characters.empty() || !aj.chest.bags.empty() || aj.chest.free_slots.has_value() || aj.chest.gold.has_value();
     }
 
     void ApplyItemJson(Item& item, const ItemJson& j)
@@ -1121,6 +1130,7 @@ namespace {
         if (!aj.representing_character.empty()) acc.account_representing_character = aj.representing_character;
         acc.anniversary_pane_active = aj.chest.anniversary_pane_active;
         if (aj.chest.free_slots) ApplyFreeSlots(acc.chest_free_slots, *aj.chest.free_slots);
+        if (aj.chest.gold) acc.chest_gold = aj.chest.gold;
         for (const auto& [bag_id, bag] : aj.chest.bags)
             for (const auto& [slot, item] : bag)
                 ApplyItemJson(GetOrCreateItem(account, "(Chest)", GW::Constants::HeroID::NoHero, (GW::Constants::Bag)bag_id, slot), item);
@@ -1128,12 +1138,31 @@ namespace {
             Character& ch = acc.characters[name];
             ch.name = name;
             if (cj.free_slots) ApplyFreeSlots(ch.free_slots, *cj.free_slots);
+            if (cj.gold) ch.gold = cj.gold;
             for (const auto& [bag_id, bag] : cj.bags)
                 for (const auto& [slot, item] : bag)
                     ApplyItemJson(GetOrCreateItem(account, name, GW::Constants::HeroID::NoHero, (GW::Constants::Bag)bag_id, slot), item);
             for (const auto& [hero_id, bag] : cj.heroes)
                 for (const auto& [slot, item] : bag)
                     ApplyItemJson(GetOrCreateItem(account, name, (GW::Constants::HeroID)hero_id, GW::Constants::Bag::Equipped_Items, slot), item);
+        }
+    }
+
+    void UpdateGold()
+    {
+        if (initializing || !GW::Map::GetIsMapLoaded()) return;
+        Account& acc = GetOrCreateAccount(current_account);
+        Character& ch = acc.characters[current_character];
+        ch.name = current_character;
+        const uint32_t character_gold = GW::Items::GetGoldAmountOnCharacter();
+        const uint32_t storage_gold = GW::Items::GetGoldAmountInStorage();
+        if (ch.gold != character_gold) {
+            ch.gold = character_gold;
+            inventory_dirty.insert(GetIniID(current_account, current_character));
+        }
+        if (acc.chest_gold != storage_gold) {
+            acc.chest_gold = storage_gold;
+            inventory_dirty.insert(GetIniID(current_account, "(Chest)"));
         }
     }
 
@@ -1533,6 +1562,8 @@ void AccountInventoryWindow::Initialize()
         GW::UI::UIMessage::kPartyAddHero,
         GW::UI::UIMessage::kMapChange,
         GW::UI::UIMessage::kMapLoaded,
+        GW::UI::UIMessage::kUpdateGoldCharacter,
+        GW::UI::UIMessage::kUpdateGoldStorage,
         GW::UI::UIMessage::kLogout
     };
     for (auto message_id : ui_messages) {
@@ -1568,6 +1599,10 @@ void AccountInventoryWindow::Initialize()
                     break;
                 case GW::UI::UIMessage::kMapLoaded:
                     PostMapLoad();
+                    break;
+                case GW::UI::UIMessage::kUpdateGoldCharacter:
+                case GW::UI::UIMessage::kUpdateGoldStorage:
+                    UpdateGold();
                     break;
                 case GW::UI::UIMessage::kLogout: {
                     // prepare for potentially changing accounts.
@@ -1963,6 +1998,7 @@ void AccountInventoryWindow::PostMapLoad()
         last_available_chars = availableChars;
     }
 
+    UpdateGold();
     needs_sorting = true;
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
         SaveToFiles(false); // save inventory in outposts only to avoid impacting gameplay
