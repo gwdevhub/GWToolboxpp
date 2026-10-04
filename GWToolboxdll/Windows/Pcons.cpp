@@ -123,54 +123,15 @@ IDirect3DTexture9** Pcon::GetTexture()
     return texture;
 }
 
-// Crops uv0/uv1 to the opaque content of the icon, expanded to a square so the (square) button never stretches it.
-void Pcon::ResolveContentUV(IDirect3DTexture9* tex)
-{
-    if (uv_resolved || !tex)
-        return; // already resolved, or not loaded yet (try again next draw)
-    uv_resolved = true;
-    D3DSURFACE_DESC tex_desc;
-    if (FAILED(tex->GetLevelDesc(0, &tex_desc)) || !tex_desc.Width || !tex_desc.Height)
-        return;
-    if (tex_desc.Format != D3DFMT_A8R8G8B8 && tex_desc.Format != D3DFMT_A8B8G8R8)
-        return; // no alpha channel in the top byte; leave the full image
-    D3DLOCKED_RECT locked;
-    if (FAILED(tex->LockRect(0, &locked, nullptr, D3DLOCK_READONLY)) || !locked.pBits)
-        return;
-    constexpr uint8_t alpha_threshold = 16;
-    UINT min_x = tex_desc.Width, min_y = tex_desc.Height, max_x = 0, max_y = 0;
-    for (UINT y = 0; y < tex_desc.Height; y++) {
-        const auto row = reinterpret_cast<const uint32_t*>(static_cast<const uint8_t*>(locked.pBits) + static_cast<size_t>(y) * locked.Pitch);
-        for (UINT x = 0; x < tex_desc.Width; x++) {
-            if ((row[x] >> 24) <= alpha_threshold)
-                continue;
-            min_x = std::min(min_x, x);
-            max_x = std::max(max_x, x);
-            min_y = std::min(min_y, y);
-            max_y = std::max(max_y, y);
-        }
-    }
-    tex->UnlockRect(0);
-    if (min_x > max_x || min_y > max_y)
-        return; // fully transparent
-
-    const float w = static_cast<float>(tex_desc.Width);
-    const float h = static_cast<float>(tex_desc.Height);
-    const float cx = (min_x + max_x + 1) * 0.5f;
-    const float cy = (min_y + max_y + 1) * 0.5f;
-    const float side = std::max(static_cast<float>(max_x + 1 - min_x), static_cast<float>(max_y + 1 - min_y));
-    // Square centered on the content, shifted back inside the texture if it overhangs.
-    const float x0 = std::clamp(cx - side * 0.5f, 0.f, std::max(0.f, w - side));
-    const float y0 = std::clamp(cy - side * 0.5f, 0.f, std::max(0.f, h - side));
-    uv0 = {x0 / w, y0 / h};
-    uv1 = {std::min(x0 + side, w) / w, std::min(y0 + side, h) / h};
-}
-
 void Pcon::Draw(IDirect3DDevice9*)
 {
     const auto t = GetTexture();
     if (!(t && *t)) return;
-    ResolveContentUV(*t);
+    if (!uv_resolved) {
+        // Crop to the icon's opaque content (squared) so the square button never stretches it
+        uv_resolved = true;
+        ImGui::GetOpaqueContentUv(*t, &uv0, &uv1);
+    }
     const ImVec2 pos = ImGui::GetCursorPos();
     const ImVec2 s(size, size);
     const ImVec4 bg = IsEnabled() ? ImColor(enabled_bg_color.value).Value : ImVec4(0, 0, 0, 0);

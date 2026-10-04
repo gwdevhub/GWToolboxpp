@@ -143,11 +143,10 @@ protected:
 private:
     static std::map<GW::Constants::SkillID, clock_t> effect_triggered_at;
     IDirect3DTexture9** texture = nullptr;
-    // Opaque-content crop of the icon, computed from the texture alpha on first draw. Squared so the button never stretches it.
+    // Opaque-content crop of the icon, resolved from the texture alpha on first draw.
     ImVec2 uv0 = {0, 0};
     ImVec2 uv1 = {1, 1};
     bool uv_resolved = false;
-    void ResolveContentUV(IDirect3DTexture9* tex);
 };
 
 class PconGeneric : public Pcon {

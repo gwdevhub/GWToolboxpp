@@ -655,6 +655,47 @@ namespace ImGui {
         return true;
     }
 
+    bool GetOpaqueContentUv(ImTextureID user_texture_id, ImVec2* uv0_out, ImVec2* uv1_out)
+    {
+        if (!user_texture_id)
+            return false;
+        const auto texture = static_cast<IDirect3DTexture9*>(user_texture_id);
+        D3DSURFACE_DESC desc;
+        if (FAILED(texture->GetLevelDesc(0, &desc)) || !desc.Width || !desc.Height)
+            return false;
+        if (desc.Format != D3DFMT_A8R8G8B8 && desc.Format != D3DFMT_A8B8G8R8)
+            return false; // no alpha in the top byte
+        D3DLOCKED_RECT locked;
+        if (FAILED(texture->LockRect(0, &locked, nullptr, D3DLOCK_READONLY)) || !locked.pBits)
+            return false;
+        constexpr uint8_t alpha_threshold = 16;
+        UINT min_x = desc.Width, min_y = desc.Height, max_x = 0, max_y = 0;
+        for (UINT y = 0; y < desc.Height; y++) {
+            const auto row = reinterpret_cast<const uint32_t*>(static_cast<const uint8_t*>(locked.pBits) + static_cast<size_t>(y) * locked.Pitch);
+            for (UINT x = 0; x < desc.Width; x++) {
+                if ((row[x] >> 24) <= alpha_threshold)
+                    continue;
+                min_x = std::min(min_x, x);
+                max_x = std::max(max_x, x);
+                min_y = std::min(min_y, y);
+                max_y = std::max(max_y, y);
+            }
+        }
+        texture->UnlockRect(0);
+        if (min_x > max_x || min_y > max_y)
+            return false; // fully transparent
+
+        const float w = static_cast<float>(desc.Width);
+        const float h = static_cast<float>(desc.Height);
+        const float side = static_cast<float>(std::max(max_x + 1 - min_x, max_y + 1 - min_y));
+        // Square centered on the content, shifted back inside the texture if it overhangs.
+        const float x0 = std::clamp((min_x + max_x + 1 - side) * 0.5f, 0.f, std::max(0.f, w - side));
+        const float y0 = std::clamp((min_y + max_y + 1 - side) * 0.5f, 0.f, std::max(0.f, h - side));
+        *uv0_out = {x0 / w, y0 / h};
+        *uv1_out = {std::min(x0 + side, w) / w, std::min(y0 + side, h) / h};
+        return true;
+    }
+
     void ImageCropped(ImTextureID user_texture_id, const ImVec2& size)
     {
         Image(user_texture_id, size, {0, 0}, CalculateUvCrop(user_texture_id, size));
