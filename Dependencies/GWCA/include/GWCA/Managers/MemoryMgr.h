@@ -1,7 +1,5 @@
 #pragma once
 
-#include <functional>
-
 namespace GW {
 
     struct HookEntry;
