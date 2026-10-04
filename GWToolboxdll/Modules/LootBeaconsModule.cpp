@@ -19,6 +19,7 @@
 #include <Modules/GwDatModule.h>
 #include <Modules/LootBeaconsModule.h>
 #include <Modules/PriceCheckerModule.h>
+#include <Timer.h>
 #include <Utils/GameWorldCompositor.h>
 #include <Utils/SettingsRegistry.h>
 #include <Utils/TerrainDrape.h>
@@ -41,19 +42,19 @@ struct LegacyNameBeaconRarity {
 };
 
 namespace {
-    constexpr int kMaxBuildsPerFrame = 4;   // caps terrain-drape heightfield builds spent per frame
-    constexpr int kDrapeGrid = 16;          // heightfield resolution sampled across a beacon's footprint
-    constexpr int kRingDivs = 16;           // ring quad subdivision, so the sprite bends to follow the ground
+    constexpr int kMaxBuildsPerFrame = 4;           // caps terrain-drape heightfield builds spent per frame
+    constexpr int kDrapeGrid = 16;                  // heightfield resolution sampled across a beacon's footprint
+    constexpr int kRingDivs = 16;                   // ring quad subdivision, so the sprite bends to follow the ground
     constexpr uint32_t kRingTextureFileId = 0x2381; // GW dat texture for the pulsing ring sprite
 
     // Not user-configurable.
-    constexpr float kRingSpacing = 4.f;    // gwinches, how far the two rings start from the true diameter
-    constexpr float kRingDiameter = 90.f;  // the true diameter the two rings pulse toward/away from
+    constexpr float kRingSpacing = 4.f;   // gwinches, how far the two rings start from the true diameter
+    constexpr float kRingDiameter = 90.f; // the true diameter the two rings pulse toward/away from
     constexpr float kTrueRingRadius = kRingDiameter * 0.5f;
     constexpr float kFieldRadius = kRingDiameter * 0.5f + kRingSpacing; // footprint half-extent = the largest ring radius
-    constexpr float kBeamWidth = 35.f;     // beam width
-    constexpr float kBeamOpacity = 1.f;    // beam is unpulsed and always drawn at full opacity
-    constexpr float kPulseInterval = 0.85f; // seconds for the two rings to go from spread apart to meeting in the middle
+    constexpr float kBeamWidth = 35.f;                                  // beam width
+    constexpr float kBeamOpacity = 1.f;                                 // beam is unpulsed and always drawn at full opacity
+    constexpr float kPulseInterval = 0.85f;                             // seconds for the two rings to go from spread apart to meeting in the middle
     constexpr float kNoDistanceLimit = 1e9f;
 
     float beam_height = 225.f;
@@ -114,12 +115,23 @@ namespace {
     {
         uint32_t argb; // palette entries are 0xAARRGGBB
         switch (rarity) {
-            case GW::Constants::Rarity::White: argb = GW::Chat::TextColor::ColorItemCommon; break;
-            case GW::Constants::Rarity::Blue: argb = GW::Chat::TextColor::ColorItemEnhance; break;
-            case GW::Constants::Rarity::Purple: argb = GW::Chat::TextColor::ColorItemUncommon; break;
-            case GW::Constants::Rarity::Gold: argb = GW::Chat::TextColor::ColorItemRare; break;
-            case GW::Constants::Rarity::Green: argb = GW::Chat::TextColor::ColorItemUnique; break;
-            default: return 0;
+            case GW::Constants::Rarity::White:
+                argb = GW::Chat::TextColor::ColorItemCommon;
+                break;
+            case GW::Constants::Rarity::Blue:
+                argb = GW::Chat::TextColor::ColorItemEnhance;
+                break;
+            case GW::Constants::Rarity::Purple:
+                argb = GW::Chat::TextColor::ColorItemUncommon;
+                break;
+            case GW::Constants::Rarity::Gold:
+                argb = GW::Chat::TextColor::ColorItemRare;
+                break;
+            case GW::Constants::Rarity::Green:
+                argb = GW::Chat::TextColor::ColorItemUnique;
+                break;
+            default:
+                return 0;
         }
         return Colors::ARGB(kRarityBeaconAlpha, (argb >> 16) & 0xFF, (argb >> 8) & 0xFF, argb & 0xFF);
     }
@@ -151,6 +163,7 @@ namespace {
     };
 
     std::unordered_map<uint32_t, Beacon> beacons;
+    std::unordered_set<uint32_t> pending_agent_ids;
     std::vector<BeaconVertex> scratch;
     std::vector<RingVertex> ring_scratch;
     uint32_t scan_counter = 0;
@@ -176,10 +189,7 @@ namespace {
     {
         if (ring_vs && ring_ps && ring_decl) return true;
         constexpr D3DVERTEXELEMENT9 decl[] = {
-            {0, 0, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 0},
-            {0, 12, D3DDECLTYPE_D3DCOLOR, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_COLOR, 0},
-            {0, 16, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 0},
-            D3DDECL_END()
+            {0, 0, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 0}, {0, 12, D3DDECLTYPE_D3DCOLOR, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_COLOR, 0}, {0, 16, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 0}, D3DDECL_END()
         };
         if (!ring_decl && device->CreateVertexDeclaration(decl, &ring_decl) != D3D_OK) return false;
         if (!ring_vs && device->CreateVertexShader(reinterpret_cast<const DWORD*>(&loot_beacon_ring_vs), &ring_vs) != D3D_OK) return false;
@@ -259,10 +269,7 @@ namespace {
     {
         const float factor = radius / kTrueRingRadius;
         for (const RingVertex& v : cache) {
-            out.push_back({beacon.pos.x + (v.x - beacon.pos.x) * factor,
-                           beacon.pos.y + (v.y - beacon.pos.y) * factor,
-                           beacon.z + (v.z - beacon.z) * factor,
-                           col, v.u, v.v});
+            out.push_back({beacon.pos.x + (v.x - beacon.pos.x) * factor, beacon.pos.y + (v.y - beacon.pos.y) * factor, beacon.z + (v.z - beacon.z) * factor, col, v.u, v.v});
         }
     }
 
@@ -304,12 +311,23 @@ namespace {
             else {
                 const RarityBeacon* by_rarity = nullptr;
                 switch (rarity) {
-                    case GW::Constants::Rarity::White: by_rarity = &rarity_white; break;
-                    case GW::Constants::Rarity::Blue: by_rarity = &rarity_blue; break;
-                    case GW::Constants::Rarity::Purple: by_rarity = &rarity_purple; break;
-                    case GW::Constants::Rarity::Gold: by_rarity = &rarity_gold; break;
-                    case GW::Constants::Rarity::Green: by_rarity = &rarity_green; break;
-                    default: break;
+                    case GW::Constants::Rarity::White:
+                        by_rarity = &rarity_white;
+                        break;
+                    case GW::Constants::Rarity::Blue:
+                        by_rarity = &rarity_blue;
+                        break;
+                    case GW::Constants::Rarity::Purple:
+                        by_rarity = &rarity_purple;
+                        break;
+                    case GW::Constants::Rarity::Gold:
+                        by_rarity = &rarity_gold;
+                        break;
+                    case GW::Constants::Rarity::Green:
+                        by_rarity = &rarity_green;
+                        break;
+                    default:
+                        break;
                 }
                 if (by_rarity && by_rarity->enabled) {
                     color = RarityBeaconColor(rarity);
@@ -356,22 +374,26 @@ namespace {
             const auto* agent_item = agent ? agent->GetAsAgentItem() : nullptr;
             ProcessItemAgent(agent_item, agent_item ? GW::Items::GetItemById(agent_item->item_id) : nullptr);
         }
-        std::erase_if(beacons, [](const auto& entry) { return entry.second.seen != scan_counter; });
+        std::erase_if(beacons, [](const auto& entry) {
+            return entry.second.seen != scan_counter;
+        });
     }
 
     void OnPostUIMessage(GW::HookStatus*, const GW::UI::UIMessage message_id, void* wparam, void*)
     {
         switch (message_id) {
-            case GW::UI::UIMessage::kAgentUpdate: {
-                const auto agent_id = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(wparam));
-                const auto* agent = GW::Agents::GetAgentByID(agent_id);
-                const auto* agent_item = agent ? agent->GetAsAgentItem() : nullptr;
-                ProcessItemAgent(agent_item, agent_item ? GW::Items::GetItemById(agent_item->item_id) : nullptr);
+            case GW::UI::UIMessage::kShowAgentNameTag: {
+                const auto* info = static_cast<const GW::UI::AgentNameTagInfo*>(wparam);
+                if (info) pending_agent_ids.insert(info->agent_id);
                 break;
             }
-            case GW::UI::UIMessage::kAgentDestroy:
-                beacons.erase(static_cast<uint32_t>(reinterpret_cast<uintptr_t>(wparam)));
+            case GW::UI::UIMessage::kHideAgentNameTag: {
+                const auto agent_id = reinterpret_cast<uint32_t>(wparam);
+                if (GW::Agents::GetAgentByID(agent_id)) break;
+                pending_agent_ids.erase(agent_id);
+                beacons.erase(agent_id);
                 break;
+            }
             case GW::UI::UIMessage::kMapLoaded:
                 pending_full_scan = true;
                 break;
@@ -460,13 +482,26 @@ void LootBeaconsModule::DrawInWorld(IDirect3DDevice9* device)
 {
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) {
         beacons.clear();
+        pending_agent_ids.clear();
         return;
     }
-    if (pending_full_scan && GW::Map::GetIsMapLoaded() && !GW::UI::IsLoadingScreenShown() && GW::Agents::GetAgentArray()) {
-        ScanItems();
-        pending_full_scan = false;
+    if (GW::Map::GetIsMapLoaded() && !GW::UI::IsLoadingScreenShown()) {
+        if (pending_full_scan && GW::Agents::GetAgentArray()) {
+            ScanItems();
+            pending_full_scan = false;
+        }
+        for (auto it = pending_agent_ids.begin(); it != pending_agent_ids.end();) {
+            const auto* agent = GW::Agents::GetAgentByID(*it);
+            const auto* agent_item = agent ? agent->GetAsAgentItem() : nullptr;
+            const auto* item = agent_item ? GW::Items::GetItemById(agent_item->item_id) : nullptr;
+            if (item) ProcessItemAgent(agent_item, item);
+            if (agent && (!agent_item || item))
+                it = pending_agent_ids.erase(it);
+            else
+                ++it;
+        }
     }
-    const auto now = GetTickCount64();
+    const auto now = TIMER_INIT();
     RefreshBeacons();
     if (beacons.empty()) return;
 
@@ -476,11 +511,11 @@ void LootBeaconsModule::DrawInWorld(IDirect3DDevice9* device)
     }
 
     const auto n_planes = TerrainDrape::PathingPlaneCount();
-    const float t_seconds = static_cast<float>(now % 3600000) / 1000.f;
-
     // One shared timer for every beacon - a single global interval, not per-beacon - so the rings' radii
     // are a single value per frame, not per-vertex data. The beam doesn't pulse at all, just the rings.
-    const float cycle = t_seconds * (DirectX::XM_PIDIV2 / kPulseInterval);
+    // Wrapping on the full loop (4 x kPulseInterval) keeps the float small without a visible phase jump.
+    constexpr auto period_ms = static_cast<clock_t>(4 * kPulseInterval * CLOCKS_PER_SEC);
+    const float cycle = static_cast<float>(now % period_ms) * (DirectX::XM_2PI / period_ms);
     const float osc01 = 0.5f - 0.5f * std::cos(cycle);
     const float true_radius = kRingDiameter * 0.5f;
     const float r_min = std::max(1.f, true_radius - kRingSpacing);
@@ -531,8 +566,7 @@ void LootBeaconsModule::DrawInWorld(IDirect3DDevice9* device)
     IDirect3DTexture9* ring_tex = ring_tex_pp ? *ring_tex_pp : nullptr;
     if (!ring_scratch.empty() && ring_tex && EnsureRingShaders(device)) {
         const D3DStateGuard state_guard(device);
-        if (device->SetVertexShader(ring_vs) == D3D_OK && device->SetPixelShader(ring_ps) == D3D_OK && device->SetVertexDeclaration(ring_decl) == D3D_OK &&
-            GameWorldCompositor::SetWorldViewProj(device)) {
+        if (device->SetVertexShader(ring_vs) == D3D_OK && device->SetPixelShader(ring_ps) == D3D_OK && device->SetVertexDeclaration(ring_decl) == D3D_OK && GameWorldCompositor::SetWorldViewProj(device)) {
             // Static depth keeps walls/props occluding overlays; agents draw later in GW's pass.
             GameWorldCompositor::SetWorldRenderStates(device, true);
             constexpr float slope_bias = -1.5f;
@@ -573,8 +607,8 @@ void LootBeaconsModule::Initialize()
     RegisterSettings(this);
     pending_full_scan = true;
     const GW::UI::UIMessage ui_messages[] = {
-        GW::UI::UIMessage::kAgentUpdate,
-        GW::UI::UIMessage::kAgentDestroy,
+        GW::UI::UIMessage::kShowAgentNameTag,
+        GW::UI::UIMessage::kHideAgentNameTag,
         GW::UI::UIMessage::kMapLoaded,
     };
     for (const auto message_id : ui_messages) {
@@ -591,6 +625,7 @@ void LootBeaconsModule::SignalTerminate()
     }
     GW::UI::RemoveUIMessageCallback(&agent_ui_message_entry);
     beacons.clear();
+    pending_agent_ids.clear();
     pending_full_scan = false;
 }
 
@@ -601,8 +636,7 @@ void LootBeaconsModule::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
     doc.Get(Name(), VAR_NAME(name_beacons), legacy_rarities);
     doc.Get(Name(), VAR_NAME(name_beacons), name_beacons);
     for (size_t i = 0; i < std::min(name_beacons.size(), legacy_rarities.size()); ++i) {
-        if (legacy_rarities[i].rarity != GW::Constants::Rarity::Unknown)
-            name_beacons[i].rarities = 1u << static_cast<uint32_t>(legacy_rarities[i].rarity);
+        if (legacy_rarities[i].rarity != GW::Constants::Rarity::Unknown) name_beacons[i].rarities = 1u << static_cast<uint32_t>(legacy_rarities[i].rarity);
     }
     beacons_dirty = true;
     name_beacons_dirty = true;
@@ -625,7 +659,9 @@ void LootBeaconsModule::DrawSettingsInternal()
         ImGui::TextDisabled("In-world compositor: not installed yet.");
 
     ImGui::TextUnformatted("Beacon by gold value");
-    ImGui::ShowHelp("Any drop whose trader price (Kamadan, or presearing.com's price sheet while pre-searing) meets a threshold gets a beacon,\nregardless of rarity - catches ectos, gemstones, dyes and other white-rarity valuables.\nAn item that clears both thresholds uses the higher tier's colour.");
+    ImGui::ShowHelp(
+        "Any drop whose trader price (Kamadan, or presearing.com's price sheet while pre-searing) meets a threshold gets a beacon,\nregardless of rarity - catches ectos, gemstones, dyes and other white-rarity valuables.\nAn item that clears both thresholds uses the higher tier's colour."
+    );
     for (auto* value : {&value_low, &value_high}) {
         ImGui::PushID(value->label);
         bool changed = ImGui::Checkbox("##enabled", &value->enabled);
@@ -639,12 +675,14 @@ void LootBeaconsModule::DrawSettingsInternal()
     }
     ImGui::Separator();
     ImGui::TextUnformatted("Custom item beacons");
-    ImGui::ShowHelp("Any drop whose name contains the text gets a beacon in its rarity colour by default, whatever its value.\n"
-                    "Matching ignores case and uses the item name as it's shown in-game, e.g. \"scroll\" or \"glob of ectoplasm\".\n"
-                    "Text wrapped in slashes is a regular expression instead, e.g. /^Superb Charr Carving$/ - add flags after\n"
-                    "the closing slash as in the chat filter (I turns case sensitivity back on).\n"
-                    "Select the rarities to match (none disables the rule). Use the colour picker to override the default colour;\n"
-                    "transparent uses the default. Name rules are checked first; the first matching rule in this list wins.");
+    ImGui::ShowHelp(
+        "Any drop whose name contains the text gets a beacon in its rarity colour by default, whatever its value.\n"
+        "Matching ignores case and uses the item name as it's shown in-game, e.g. \"scroll\" or \"glob of ectoplasm\".\n"
+        "Text wrapped in slashes is a regular expression instead, e.g. /^Superb Charr Carving$/ - add flags after\n"
+        "the closing slash as in the chat filter (I turns case sensitivity back on).\n"
+        "Select the rarities to match (none disables the rule). Use the colour picker to override the default colour;\n"
+        "transparent uses the default. Name rules are checked first; the first matching rule in this list wins."
+    );
     if (name_beacons_dirty) CompileNameBeacons();
     for (size_t i = 0; i < name_beacons.size(); i++) {
         auto& name_beacon = name_beacons[i];
