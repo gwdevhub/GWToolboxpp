@@ -410,14 +410,17 @@ static ExeUpdateInfo FindExeUpdate(const std::vector<Release>& releases)
     return info;
 }
 
-static constexpr wchar_t kReleasesPage[] = L"https://github.com/gwdevhub/GWToolboxpp/releases";
+static constexpr wchar_t kUpdateSecurityHelp[] =
+    L"Anti-virus software or Windows Controlled Folder Access may be blocking the update. Follow the troubleshooting steps for antivirus exclusions and protected folder access, then retry the update:\n\n"
+    L"https://www.gwtoolbox.com/docs/troubleshooting/#antivirus-exclusions\n\n"
+    L"https://www.gwtoolbox.com/docs/troubleshooting/#controlled-folder-access";
 
 static bool VerifyInstalledAsset(const std::filesystem::path& path, const Asset& asset, std::wstring& error)
 {
     if (!AssetSha256(asset) || !FileMatchesAsset(path, asset))
         return error = std::format(
-                   L"The update didn't stick - {} is missing, unreadable, or doesn't match the downloaded release.\n\nAnti-virus software may be reverting or quarantining it. Check your security software, or download the latest version manually from {}.",
-                   path.wstring(), kReleasesPage
+                   L"The update didn't stick - {} is missing, unreadable, or doesn't match the downloaded release.\n\n{}",
+                   path.wstring(), kUpdateSecurityHelp
                ),
                false;
     return true;
@@ -426,7 +429,7 @@ static bool VerifyInstalledAsset(const std::filesystem::path& path, const Asset&
 static bool WriteVerifiedAsset(const std::filesystem::path& path, const std::string& data, const Asset& asset, std::wstring& error)
 {
     if (!WriteEntireFile(path.wstring().c_str(), data.c_str(), data.size()))
-        return error = std::format(L"WriteEntireFile failed on '{}' with {} bytes", path.wstring(), data.size()), false;
+        return error = std::format(L"Couldn't write the update to {} ({} bytes).\n\n{}", path.wstring(), data.size(), kUpdateSecurityHelp), false;
     return VerifyInstalledAsset(path, asset, error);
 }
 
@@ -441,7 +444,7 @@ static bool ReplaceExeFile(const std::filesystem::path& exe_path, const std::str
 
     if (!WriteEntireFile(new_path.wstring().c_str(), data.c_str(), data.size()))
         return error = std::format(
-                   L"Couldn't write the update to {}.\n\nThe folder may be read-only, or anti-virus may have quarantined the file.", new_path.wstring()
+                   L"Couldn't write the update to {}.\n\n{}", new_path.wstring(), kUpdateSecurityHelp
                ),
                false;
 
