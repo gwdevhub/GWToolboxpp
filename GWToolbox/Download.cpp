@@ -209,7 +209,7 @@ static std::string Sha256Hex(const std::filesystem::path& path)
         }
 
         unsigned char digest[32];
-        if (ok && BCryptFinishHash(hash, digest, sizeof(digest), 0) == 0) {
+        if (ok && file.eof() && !file.bad() && BCryptFinishHash(hash, digest, sizeof(digest), 0) == 0) {
             char hex[2 * sizeof(digest) + 1];
             for (size_t i = 0; i < sizeof(digest); ++i)
                 sprintf_s(hex + i * 2, 3, "%02x", digest[i]);
@@ -412,7 +412,24 @@ static ExeUpdateInfo FindExeUpdate(const std::vector<Release>& releases)
 
 static constexpr wchar_t kReleasesPage[] = L"https://github.com/gwdevhub/GWToolboxpp/releases";
 
-// Windows won't let a running exe be overwritten but does allow it to be renamed, so we move it aside and drop the already-downloaded `data` in its place; the swap takes effect next launch since this process keeps running its already-loaded image.
+static bool VerifyInstalledAsset(const std::filesystem::path& path, const Asset& asset, std::wstring& error)
+{
+    if (!AssetSha256(asset) || !FileMatchesAsset(path, asset))
+        return error = std::format(
+                   L"The update didn't stick - {} is missing, unreadable, or doesn't match the downloaded release.\n\nAnti-virus software may be reverting or quarantining it. Check your security software, or download the latest version manually from {}.",
+                   path.wstring(), kReleasesPage
+               ),
+               false;
+    return true;
+}
+
+static bool WriteVerifiedAsset(const std::filesystem::path& path, const std::string& data, const Asset& asset, std::wstring& error)
+{
+    if (!WriteEntireFile(path.wstring().c_str(), data.c_str(), data.size()))
+        return error = std::format(L"WriteEntireFile failed on '{}' with {} bytes", path.wstring(), data.size()), false;
+    return VerifyInstalledAsset(path, asset, error);
+}
+
 static bool ReplaceExeFile(const std::filesystem::path& exe_path, const std::string& data, const Asset& asset, std::wstring& error)
 {
     const auto asset_filename = exe_path.filename();
@@ -444,15 +461,7 @@ static bool ReplaceExeFile(const std::filesystem::path& exe_path, const std::str
         return error = std::format(L"Couldn't move the update into place (error {}).", err), false;
     }
 
-    // Confirm the new file actually landed; anti-virus has been seen to silently restore or quarantine the replacement.
-    std::error_code ec;
-    if (!std::filesystem::exists(exe_path, ec) || ec || !FileMatchesAsset(exe_path, asset))
-        return error = std::format(
-                   L"The update didn't stick - {} still doesn't match the new version.\n\nAnti-virus software may be reverting or quarantining it. Add an exclusion for the GWToolbox folder, or download the latest version manually from {}.",
-                   asset_filename.wstring(), kReleasesPage
-               ),
-               false;
-    return true;
+    return VerifyInstalledAsset(exe_path, asset, error);
 }
 
 // Bodies of whichever releases are being applied, newest/most-relevant first, deduped when exe/dll/gwmod share a tag.
@@ -527,8 +536,7 @@ bool DownloadWindow::DownloadDll(const std::vector<Release>& releases, std::wstr
     std::string data;
     if (!DownloadAssetWithProgress(window, *info.asset, data, error)) return false;
 
-    if (!WriteEntireFile(info.dll_path.wstring().c_str(), data.c_str(), data.size()))
-        return error = std::format(L"WriteEntireFile failed on '{}' with {} bytes", info.dll_path.wstring(), data.size()), false;
+    if (!WriteVerifiedAsset(info.dll_path, data, *info.asset, error)) return false;
 
     SetWindowTextW(window.m_hStatusLabel, L"Download complete! Review the release notes above, then click 'Close' to continue.");
     if (!window.ShouldClose()) window.WaitMessages();
@@ -564,10 +572,7 @@ bool DownloadWindow::ApplyUpdates(const std::vector<Release>& releases, const Ex
         SendMessageW(window.m_hProgressBar, PBM_SETPOS, 0, 0);
         std::string data;
         ok = DownloadAssetWithProgress(window, *dll_info.asset, data, error);
-        if (ok && !WriteEntireFile(dll_info.dll_path.wstring().c_str(), data.c_str(), data.size())) {
-            error = std::format(L"WriteEntireFile failed on '{}' with {} bytes", dll_info.dll_path.wstring(), data.size());
-            ok = false;
-        }
+        if (ok) ok = WriteVerifiedAsset(dll_info.dll_path, data, *dll_info.asset, error);
     }
 
     if (ok && gwmod_available) {
@@ -652,7 +657,7 @@ bool UpdateChecker::ApplyUpdates(std::wstring& error)
 bool DownloadWindow::DownloadDll(std::wstring& error)
 {
     std::vector<Release> releases;
-    if (!DownloadReleases(releases)) return error = L"Couldn't download the latest releases of GWToolboxpp", true;
+    if (!DownloadReleases(releases)) return error = L"Couldn't download the latest releases of GWToolboxpp", false;
     return DownloadDll(releases, error);
 }
 
