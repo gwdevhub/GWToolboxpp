@@ -62,6 +62,7 @@ public:
 
     bool show_hidden_npcs = false;
     bool show_quest_npcs_on_minimap = false;
+    bool show_props_on_minimap = false;
     bool enemies_colors_by_profession = true;
     bool only_color_bosses = true;
     float agent_border_thickness = 0.f;
@@ -171,6 +172,8 @@ private:
         bool DrawHeader();
         bool DrawSettings();
         [[nodiscard]] const char* AgentTypeName() const;
+        [[nodiscard]] std::string DefaultLabel() const;
+        [[nodiscard]] std::string Label() const;
         [[nodiscard]] Settings ToSettings() const;
         void ApplyLegacyFlags(const LegacyFlags& flags);
 
