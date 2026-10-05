@@ -865,14 +865,14 @@ void AgentAppearanceWindow::DrawSettings()
     auto target_color = Color{0};
     auto target_border_color = Color{0};
     auto target_text_color = Color{0};
-    auto target_border_thickness = 0.f;
+    auto resolved_border_thickness = 0.f;
     auto target_size = 0.f;
     std::vector<const AppearanceRule*> target_rules;
     std::unordered_set<unsigned int> matching_rule_ids;
     size_t applied_rules = 0;
     uint32_t resolved_properties = 0;
     if (target) {
-        GetAgentAppearance(target, &target_shape, &target_color, &target_border_color, &target_border_thickness,
+        GetAgentAppearance(target, &target_shape, &target_color, &target_border_color, &resolved_border_thickness,
             &target_text_color, &target_size, &target_rules);
         for (const auto* rule : target_rules) {
             matching_rule_ids.insert(rule->ui_id);
@@ -993,7 +993,7 @@ void AgentAppearanceWindow::DrawSettings()
     else {
         draw_color_readout("Target border", target_border_color);
         ImGui::SameLine();
-        ImGui::Text("Width: %.1f, inner: %.1f", target_border_thickness, target->GetIsLivingType() ? agent_border_thickness : 0.f);
+        ImGui::Text("Width: %.1f, inner: %.1f", resolved_border_thickness, target->GetIsLivingType() ? agent_border_thickness : 0.f);
     }
     if (resolved_properties & 8u) draw_color_readout("Name tag", target_text_color);
     else ImGui::TextDisabled("Name tag: game default");
