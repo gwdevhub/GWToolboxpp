@@ -649,7 +649,7 @@ namespace {
 
         const auto profession = static_cast<GW::Constants::Profession>(skill->profession);
         const auto prof_color = (settings.color_elite_icons_by_profession && profession != GW::Constants::Profession::None)
-            ? AgentRenderer::Instance().GetProfessionColor(profession)
+            ? AgentRenderer::GetProfessionColor(profession)
             : 0u;
 
         bool hovered = false;

@@ -12,7 +12,7 @@ void AgentAppearanceWindow::Show()
 void AgentAppearanceWindow::Draw(IDirect3DDevice9*)
 {
     if (!visible) {
-        AgentRenderer::Instance().DrawRuleEditor();
+        AgentRenderer::DrawRuleEditor();
         return;
     }
 
@@ -24,8 +24,8 @@ void AgentAppearanceWindow::Draw(IDirect3DDevice9*)
         pending_focus = false;
     }
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
-        AgentRenderer::Instance().DrawSettings();
+        AgentRenderer::DrawSettings();
     }
     ImGui::End();
-    AgentRenderer::Instance().DrawRuleEditor();
+    AgentRenderer::DrawRuleEditor();
 }

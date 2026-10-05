@@ -40,45 +40,42 @@ public:
     AgentRenderer();
 
     void Terminate() override;
-    static AgentRenderer& Instance();
     static bool AppearanceRulesLoaded();
 
     void Render(IDirect3DDevice9* device) override;
 
-    void DrawSettings();
-    void DrawRuleEditor();
-    void RegisterSettings(ToolboxModule* module);
-    void RegisterMinimapSettings(ToolboxModule* module);
-    void LoadCustomAgents(SettingsDoc& doc, ToolboxIni* legacy);
-    void SaveCustomAgents(SettingsDoc& doc) const;
-    bool ApplyNameTagColor(const GW::Agent* agent, Color& color);
-    void InvalidateAppearance(uint32_t agent_id);
-    void ReleaseAppearanceHooks();
+    static void DrawSettings();
+    static void DrawRuleEditor();
+    static void RegisterSettings(ToolboxModule* module);
+    static void RegisterMinimapSettings(ToolboxModule* module);
+    static void LoadCustomAgents(SettingsDoc& doc, ToolboxIni* legacy);
+    static void SaveCustomAgents(SettingsDoc& doc);
+    static bool ApplyNameTagColor(const GW::Agent* agent, Color& color);
+    static void InvalidateAppearance(uint32_t agent_id);
+    static void ReleaseAppearanceHooks();
 
-    void LoadDefaultColors();
-    void LoadDefaultSizes();
-    void ResetAppearanceSettings();
-    void LoadLegacyAppearanceDefaults(const SettingsDoc& doc, const ToolboxIni* legacy);
+    static void LoadDefaultColors();
+    static void LoadDefaultSizes();
+    static void ResetAppearanceSettings();
+    static void LoadLegacyAppearanceDefaults(const SettingsDoc& doc, const ToolboxIni* legacy);
 
-    Color GetProfessionColor(GW::Constants::Profession profession) const;
+    static Color GetProfessionColor(GW::Constants::Profession profession);
 
     enum Shape_e { Shape_None = -1, Tear, Circle, Quad, BigCircle, Star };
 
-    bool show_hidden_npcs = false;
-    bool show_quest_npcs_on_minimap = false;
-    bool show_props_on_minimap = false;
-    bool enemies_colors_by_profession = true;
-    bool only_color_bosses = true;
-    float agent_border_thickness = 0.f;
-    float target_border_thickness = 50.f;
+    inline static bool show_hidden_npcs = false;
+    inline static bool show_quest_npcs_on_minimap = false;
+    inline static bool show_props_on_minimap = false;
+    inline static bool enemies_colors_by_profession = true;
+    inline static bool only_color_bosses = true;
+    inline static float agent_border_thickness = 0.f;
+    inline static float target_border_thickness = 50.f;
 
-    uint32_t auto_target_id = 0;
+    inline static uint32_t auto_target_id = 0;
 
     DWORD last_check = 0;
 
 private:
-    static AgentRenderer* instance;
-
     static constexpr size_t shape_size = 5;
 
     enum Color_Modifier {
@@ -220,11 +217,16 @@ public:
 
     using AppearanceRule = CustomAgent;
 
-private:
-    friend void GetAgentAppearanceRules(std::vector<AppearanceRule*>& out);
-    friend bool GetAgentAppearance(const GW::Agent* agent, Shape_e* shape_out, Color* color_out, Color* border_color_out, float* border_thickness_out, Color* text_color_out);
+    static void GetAgentAppearanceRules(std::vector<AppearanceRule*>& out);
+    static const std::vector<const AppearanceRule*>* GetAppearanceRules(const GW::Agent* agent);
+    static bool GetAgentAppearance(const GW::Agent* agent, Shape_e* shape_out = nullptr, Color* color_out = nullptr,
+        Color* border_color_out = nullptr, float* border_thickness_out = nullptr, Color* text_color_out = nullptr, float* size_out = nullptr);
+    static Shape_e GetShape(const GW::Agent* agent);
+    static Color GetColor(const GW::Agent* agent);
+    static float GetSize(const GW::Agent* agent);
 
-    void EditRule(CustomAgent* rule);
+private:
+    static void EditRule(CustomAgent* rule);
 
     struct Shape_Vertex : GW::Vec2f {
         Shape_Vertex(const float x, const float y, const Color_Modifier mod)
@@ -243,9 +245,9 @@ private:
     void Initialize(IDirect3DDevice9* device) override;
 
 
-    Color GetColor(const GW::Agent* agent, const CustomAgent* ca = nullptr) const;
-    float GetSize(const GW::Agent* agent, const CustomAgent* ca = nullptr) const;
-    Shape_e GetShape(const GW::Agent* agent, const CustomAgent* ca = nullptr) const;
+    static Color GetDefaultColor(const GW::Agent* agent, const CustomAgent* ca = nullptr);
+    static float GetDefaultSize(const GW::Agent* agent);
+    static Shape_e GetDefaultShape(const GW::Agent* agent);
 
     struct CachedPolygon {
         const CustomRenderer::CustomPolygon* polygon = nullptr;
@@ -256,8 +258,8 @@ private:
         float radius_squared = 0.f;
     };
     void RefreshRelevantPolys();
-    std::vector<CachedPolygon> relevant_polygons;
-    std::vector<CachedMarker> relevant_markers;
+    inline static std::vector<CachedPolygon> relevant_polygons;
+    inline static std::vector<CachedMarker> relevant_markers;
 
 
     struct RenderPosition {
@@ -266,13 +268,12 @@ private:
         GW::Vec2f position;
     };
 
-    void Enqueue(const GW::Agent* agent, const CustomAgent* ca = nullptr);
-    void Enqueue(Shape_e shape, const GW::Agent* agent, float size, Color color);
+    void Enqueue(const GW::Agent* agent);
+    void Enqueue(Shape_e shape, const GW::Agent* agent, float size, Color color, Color border_color = 0, float border_thickness = 0.f);
     void Enqueue(Shape_e shape, const GW::MapProp* agent, float size, Color color);
     void Enqueue(Shape_e shape, const RenderPosition& pos, float size, Color color, Color modifier = 0);
 
-    std::vector<const CustomAgent*>* GetCustomAgentsToDraw(const GW::Agent* agent);
-    void RefreshMatches(const GW::Agent* agent);
+    static void RefreshMatches(const GW::Agent* agent);
     static void OnNameDecoded(void* context, const wchar_t* decoded);
     struct MatchCache {
         const GW::Agent* agent = nullptr;
@@ -289,83 +290,78 @@ private:
         std::wstring name;
         std::vector<const CustomAgent*> matches;
     };
-    std::unordered_map<uint32_t, MatchCache> match_cache;
-    std::unordered_map<uint32_t, std::pair<uint32_t, uint32_t>> pending_names;
-    uint32_t next_name_token = 0;
-    bool rules_changed = true;
+    inline static std::unordered_map<uint32_t, MatchCache> match_cache;
+    inline static std::unordered_map<uint32_t, std::pair<uint32_t, uint32_t>> pending_names;
+    inline static uint32_t next_name_token = 0;
+    inline static bool rules_changed = true;
 
 
-    Color color_agent_modifier = 0x001E1E1E;
-    Color color_agent_damaged_modifier = 0x00505050;
-    Color color_eoe = 0x3200FF00;
-    Color color_qz = 0x320000FF;
-    Color color_winnowing = 0x3200FFFF;
-    Color color_frozen_soil = 0x00FEFFFF;
-    Color color_symbiosis = 0x00FF00FF;
-    Color color_target = 0xFFFFFF00;
-    Color color_player = 0xFFFF8000;
-    Color color_player_dead = 0x64FF8000;
-    Color color_signpost = 0xFF0000C8;
-    Color color_locked_chest = 0xFF0000C8;
-    Color color_locked_chest_open = 0xFF0000C8;
-    Color color_item = 0xFF0000F0;
-    Color color_hostile = 0xFFF00000;
-    Color color_hostile_dead = 0xFF320000;
-    Color color_neutral = 0xFF0000DC;
-    Color color_ally = 0xFF00B300;
-    Color color_ally_npc = 0xFF99FF99;
-    Color color_ally_npc_quest = 0xFF99FF99;
-    Color color_ally_spirit = 0xFF608000;
-    Color color_ally_minion = 0xFF008060;
-    Color color_ally_dead = 0x64006400;
-    Color color_marked_target = 0xFFFFFC00;
+    inline static Color color_agent_modifier = 0x001E1E1E;
+    inline static Color color_agent_damaged_modifier = 0x00505050;
+    inline static Color color_eoe = 0x3200FF00;
+    inline static Color color_qz = 0x320000FF;
+    inline static Color color_winnowing = 0x3200FFFF;
+    inline static Color color_frozen_soil = 0x00FEFFFF;
+    inline static Color color_symbiosis = 0x00FF00FF;
+    inline static Color color_target = 0xFFFFFF00;
+    inline static Color color_player = 0xFFFF8000;
+    inline static Color color_player_dead = 0x64FF8000;
+    inline static Color color_signpost = 0xFF0000C8;
+    inline static Color color_locked_chest = 0xFF0000C8;
+    inline static Color color_locked_chest_open = 0xFF0000C8;
+    inline static Color color_item = 0xFF0000F0;
+    inline static Color color_hostile = 0xFFF00000;
+    inline static Color color_hostile_dead = 0xFF320000;
+    inline static Color color_neutral = 0xFF0000DC;
+    inline static Color color_ally = 0xFF00B300;
+    inline static Color color_ally_npc = 0xFF99FF99;
+    inline static Color color_ally_npc_quest = 0xFF99FF99;
+    inline static Color color_ally_spirit = 0xFF608000;
+    inline static Color color_ally_minion = 0xFF008060;
+    inline static Color color_ally_dead = 0x64006400;
+    inline static Color color_marked_target = 0xFFFFFC00;
 
     static constexpr std::array<Color, 11> DefaultProfessionColors()
     {
         return {0xFF666666, 0xFFEEAA33, 0xFF55AA00, 0xFF4444BB, 0xFF00AA55, 0xFF8800AA,
                 0xFFBB3333, 0xFFAA0088, 0xFF00AAAA, 0xFF996600, 0xFF7777CC};
     }
-    std::array<Color, 11> profession_colors = DefaultProfessionColors();
+    inline static std::array<Color, 11> profession_colors = DefaultProfessionColors();
 
-    std::vector<CustomAgent*> custom_agents{};
-    std::unordered_map<const CustomAgent*, TextUtils::SearchPattern<wchar_t>> compiled_name_patterns;
-    bool check_friends = false;
-    bool check_guild = false;
-    bool check_party = false;
-    void RebuildRuleMatchers();
-    void SeedDefaultCustomAgents();
-    void SeedAppearanceDefaults(const SettingsDoc& doc, const ToolboxIni* legacy);
-    bool custom_agent_defaults_seeded = false;
-    bool appearance_defaults_seeded = false;
+    inline static std::vector<CustomAgent*> custom_agents{};
+    inline static std::unordered_map<const CustomAgent*, TextUtils::SearchPattern<wchar_t>> compiled_name_patterns;
+    inline static bool check_friends = false;
+    inline static bool check_guild = false;
+    inline static bool check_party = false;
+    static void RebuildRuleMatchers();
+    static void SeedDefaultCustomAgents();
+    static void SeedAppearanceDefaults(const SettingsDoc& doc, const ToolboxIni* legacy);
+    inline static bool custom_agent_defaults_seeded = false;
+    inline static bool appearance_defaults_seeded = false;
 
-    float size_default = 100.f;
-    float size_player = 100.f;
-    float size_signpost = 50.f;
-    float size_locked_chest = 50.f;
-    float size_locked_chest_open = 50.f;
-    float size_item = 25.f;
-    float size_boss = 125.f;
-    float size_minion = 50.f;
-    float size_marked_target = 100.f;
-    float size_hostile = 100.f;
-    float size_neutral = 100.f;
-    float size_ally = 100.f;
-    float size_ally_npc = 100.f;
-    float size_ally_npc_quest = 100.f;
-    float size_ally_spirit = 100.f;
-    Shape_e default_shape = Tear;
-    Shape_e shape_player = Tear;
-    Shape_e shape_players = Tear;
+    inline static float size_default = 100.f;
+    inline static float size_player = 100.f;
+    inline static float size_signpost = 50.f;
+    inline static float size_locked_chest = 50.f;
+    inline static float size_locked_chest_open = 50.f;
+    inline static float size_item = 25.f;
+    inline static float size_boss = 125.f;
+    inline static float size_minion = 50.f;
+    inline static float size_marked_target = 100.f;
+    inline static float size_hostile = 100.f;
+    inline static float size_neutral = 100.f;
+    inline static float size_ally = 100.f;
+    inline static float size_ally_npc = 100.f;
+    inline static float size_ally_npc_quest = 100.f;
+    inline static float size_ally_spirit = 100.f;
+    inline static Shape_e default_shape = Tear;
+    inline static Shape_e shape_player = Tear;
+    inline static Shape_e shape_players = Tear;
 
-    bool custom_agents_loaded = false; // guards SaveCustomAgents against clobbering a file that was never read
+    inline static bool custom_agents_loaded = false;
 
-    GW::HookEntry UIMsg_Entry;
+    inline static GW::HookEntry UIMsg_Entry;
     static void OnUIMessage(GW::HookStatus* status, GW::UI::UIMessage msgid, void* wParam, void*);
 };
 
 using AppearanceRule = AgentRenderer::AppearanceRule;
-
-void GetAgentAppearanceRules(std::vector<AppearanceRule*>& out);
-
-bool GetAgentAppearance(const GW::Agent* agent, AgentRenderer::Shape_e* shape_out = nullptr, Color* color_out = nullptr,
-    Color* border_color_out = nullptr, float* border_thickness_out = nullptr, Color* text_color_out = nullptr);

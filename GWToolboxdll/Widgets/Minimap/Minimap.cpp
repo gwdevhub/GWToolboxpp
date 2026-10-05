@@ -824,7 +824,7 @@ void Minimap::Initialize()
     SettingsRegistry::RegisterField(this, "cardinal_offset", &cardinal_offset);
     SettingsRegistry::RegisterField(this, "cardinal_font_size", &cardinal_font_size);
     range_renderer.RegisterSettings(this);
-    agent_renderer.RegisterMinimapSettings(this);
+    AgentRenderer::RegisterMinimapSettings(this);
     pingslines_renderer.RegisterSettings(this);
     symbols_renderer.RegisterSettings(this);
     custom_renderer.RegisterSettings(this);
@@ -917,11 +917,11 @@ void Minimap::OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessage msgid,
         } break;
         case GW::UI::UIMessage::kMapChange: {
             loading = true;
-            instance.agent_renderer.auto_target_id = 0;
+            AgentRenderer::auto_target_id = 0;
         } break;
         case GW::UI::UIMessage::kChangeTarget: {
             const auto msg = static_cast<GW::UI::UIPacket::kChangeTarget*>(wParam);
-            instance.agent_renderer.auto_target_id = GW::Agents::GetTargetId() ? 0 : msg->auto_target_id;
+            AgentRenderer::auto_target_id = GW::Agents::GetTargetId() ? 0 : msg->auto_target_id;
         } break;
         default:
             break;
@@ -1087,7 +1087,7 @@ void Minimap::DrawSettingsInternal()
         AgentAppearanceWindow::Instance().Show();
     }
 #ifdef _DEBUG
-    ImGui::Checkbox("Show props on minimap", &agent_renderer.show_props_on_minimap);
+    ImGui::Checkbox("Show props on minimap", &AgentRenderer::show_props_on_minimap);
 #endif
     ImGui::Text("You can set the color alpha to 0 to disable any minimap feature.");
     if (SettingsWindow::SubSectionHeader(SettingsName(), "Ranges")) {
@@ -1135,9 +1135,9 @@ void Minimap::DrawSettingsInternal()
     }
     ImGui::StartSpacedElements(300.f);
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Show hidden NPCs", &agent_renderer.show_hidden_npcs, "Show NPCs that aren't usually visible on the minimap\ne.g. minipets, invisible NPCs");
+    ImGui::CheckboxWithHelp("Show hidden NPCs", &AgentRenderer::show_hidden_npcs, "Show NPCs that aren't usually visible on the minimap\ne.g. minipets, invisible NPCs");
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Show symbol for quest NPCs", &agent_renderer.show_quest_npcs_on_minimap, "Show a star for NPCs that have quest progress available");
+    ImGui::CheckboxWithHelp("Show symbol for quest NPCs", &AgentRenderer::show_quest_npcs_on_minimap, "Show a star for NPCs that have quest progress available");
 
 
     ImGui::Text("Allow mouse click-through in:");
