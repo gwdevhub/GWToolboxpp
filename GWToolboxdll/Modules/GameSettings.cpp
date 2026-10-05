@@ -56,6 +56,7 @@
 #include <Modules/DialogModule.h>
 #include <Modules/GameSettings.h>
 #include <Modules/Resources.h>
+#include <Windows/AgentAppearanceWindow.h>
 #include <Windows/CompletionWindow.h>
 
 #include <Color.h>
@@ -1929,9 +1930,9 @@ void GameSettings::DrawSettingsInternal()
     ImGui::Unindent();
     ImGui::NewLine();
     ImGui::Checkbox("Show 'You have N Lockpicks' on Locked Chest name tags", &settings.show_amount_of_lockpicks_under_locked_chest_nametag);
-    AgentRenderer::Instance().DrawSettings();
-    ImGui::SliderFloat("Agent Border thickness", &AgentRenderer::Instance().agent_border_thickness, 0.f, 100.f, "%.0f");
-    ImGui::SliderFloat("Target Border thickness", &AgentRenderer::Instance().target_border_thickness, 0.f, 100.f, "%.0f");
+    if (ImGui::Button("Agent Appearance")) {
+        AgentAppearanceWindow::Instance().Show();
+    }
 
     ImGui::NewLine();
     ImGui::Text("Hide skill descriptions in:");
