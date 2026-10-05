@@ -42,6 +42,9 @@ constexpr auto AGENTCOLOR_JSONFILENAME = L"AgentColors.json";
 
 namespace {
 
+    constexpr const char* profession_names[] = {"Any", "Warrior", "Ranger", "Monk", "Necromancer", "Mesmer", "Elementalist", "Assassin", "Ritualist", "Paragon", "Dervish"};
+    constexpr const char* allegiance_names[] = {"Any", "Ally", "Neutral", "Enemy", "Spirit/Pet", "Minion", "NPC/Minipet"};
+
     uint32_t StateMaskFromLegacy(const int state)
     {
         return state >= 0 && state < 2 ? 1u << state : 0;
@@ -355,8 +358,8 @@ void AgentRenderer::LoadCustomAgents(SettingsDoc& doc, ToolboxIni* legacy)
 
 void AgentRenderer::SeedAppearanceDefaults(const SettingsDoc& doc, const ToolboxIni* legacy)
 {
-    const auto add = [this](const char* label, const AgentType agent_type, const Color color, const float size, const Shape_e shape, const int allegiance = -1, const DeadState dead = EitherDeadState) {
-        auto* rule = new CustomAgent(0, color, label);
+    const auto add = [this](const AgentType agent_type, const Color color, const float size, const Shape_e shape, const int allegiance = -1, const DeadState dead = EitherDeadState) {
+        auto* rule = new CustomAgent(0, color, "");
         rule->agent_type = agent_type;
         rule->allegiance = allegiance;
         rule->dead_states = StateMaskFromLegacy(dead);
@@ -367,64 +370,59 @@ void AgentRenderer::SeedAppearanceDefaults(const SettingsDoc& doc, const Toolbox
         custom_agents.push_back(rule);
         return rule;
     };
-    auto* target = add("Target", Any, 0, 0.f, Shape_None);
+    auto* target = add(Any, 0, 0.f, Shape_None);
     target->target_state = Targeted;
     target->border_color = color_target;
-    add("Marked Target", Any, color_marked_target, size_marked_target, default_shape)->target_state = Marked;
-    auto* boss = add("Boss", NPC, 0, size_boss, Shape_None);
+    add(Any, color_marked_target, size_marked_target, default_shape)->target_state = Marked;
+    auto* boss = add(NPC, 0, size_boss, Shape_None);
     boss->boss_states = 1u;
-    add("Hostile (dead)", NPC, color_hostile_dead, size_hostile, Shape_None, static_cast<int>(GW::Constants::Allegiance::Enemy), Dead);
+    add(NPC, color_hostile_dead, size_hostile, Shape_None, static_cast<int>(GW::Constants::Allegiance::Enemy), Dead);
     using GW::Constants::Profession;
-    constexpr std::array<std::pair<Profession, const char*>, 10> professions = {{
-        {Profession::Warrior, "Warrior"}, {Profession::Ranger, "Ranger"}, {Profession::Monk, "Monk"},
-        {Profession::Necromancer, "Necromancer"}, {Profession::Mesmer, "Mesmer"}, {Profession::Elementalist, "Elementalist"},
-        {Profession::Assassin, "Assassin"}, {Profession::Ritualist, "Ritualist"}, {Profession::Paragon, "Paragon"},
-        {Profession::Dervish, "Dervish"}
-    }};
-    for (const auto& [profession, label] : professions) {
-        auto* rule = add(label, NPC, profession_colors[static_cast<size_t>(profession)], 0.f, Shape_None, static_cast<int>(GW::Constants::Allegiance::Enemy), Alive);
+    for (size_t i = 1; i < _countof(profession_names); ++i) {
+        const auto profession = static_cast<Profession>(i);
+        auto* rule = add(NPC, profession_colors[i], 0.f, Shape_None, static_cast<int>(GW::Constants::Allegiance::Enemy), Alive);
         rule->profession = profession;
         rule->boss_states = only_color_bosses ? 1u : 0;
         rule->active = enemies_colors_by_profession;
     }
-    add("Hostile", NPC, color_hostile, size_hostile, Shape_None, static_cast<int>(GW::Constants::Allegiance::Enemy), Alive);
+    add(NPC, color_hostile, size_hostile, Shape_None, static_cast<int>(GW::Constants::Allegiance::Enemy), Alive);
     for (const auto allegiance : {GW::Constants::Allegiance::Ally_NonAttackable, GW::Constants::Allegiance::Npc_Minipet, GW::Constants::Allegiance::Spirit_Pet, GW::Constants::Allegiance::Minion}) {
-        add("Ally (dead)", NPC, color_ally_dead, size_ally, Shape_None, static_cast<int>(allegiance), Dead);
-        add("Ally (quest giver)", NPC, color_ally_npc_quest, size_ally_npc_quest, Shape_None, static_cast<int>(allegiance), Alive)->quest_states = 1u << QuestGiver;
+        add(NPC, color_ally_dead, size_ally, Shape_None, static_cast<int>(allegiance), Dead);
+        add(NPC, color_ally_npc_quest, size_ally_npc_quest, Shape_None, static_cast<int>(allegiance), Alive)->quest_states = 1u << QuestGiver;
     }
-    add("Item", Item, color_item, size_item, Quad);
-    add("Locked chest (closed)", Gadget, color_locked_chest, size_locked_chest, Quad)->gadget_state = ClosedChest;
-    add("Locked chest (opened)", Gadget, color_locked_chest_open, size_locked_chest_open, Quad)->gadget_state = OpenedChest;
-    add("Gadget", Gadget, color_signpost, size_signpost, Quad)->gadget_state = OtherGadget;
-    add("Player", Player, color_player, size_player, shape_player, -1, Alive)->player_relation = Self;
-    add("Player (dead)", Player, color_player_dead, size_player, shape_player, -1, Dead)->player_relation = Self;
-    add("Other player", Player, color_ally, size_ally, shape_players, -1, Alive)->player_relation = Other;
+    add(Item, color_item, size_item, Quad);
+    add(Gadget, color_locked_chest, size_locked_chest, Quad)->gadget_state = ClosedChest;
+    add(Gadget, color_locked_chest_open, size_locked_chest_open, Quad)->gadget_state = OpenedChest;
+    add(Gadget, color_signpost, size_signpost, Quad)->gadget_state = OtherGadget;
+    add(Player, color_player, size_player, shape_player, -1, Alive)->player_relation = Self;
+    add(Player, color_player_dead, size_player, shape_player, -1, Dead)->player_relation = Self;
+    add(Player, color_ally, size_ally, shape_players, -1, Alive)->player_relation = Other;
     const auto tag_start = custom_agents.size();
     bool enabled = false;
     if (!doc.Get("Game Settings", "override_name_tag_colors", enabled) && legacy) {
         enabled = legacy->GetBoolValue("Game Settings", "override_name_tag_colors", false);
     }
     if (enabled) {
-        const auto add_tag = [&doc, legacy, &add](const char* key, const char* label, const AgentType agent_type, const int allegiance = -1, const PlayerRelation relation = AnyRelation, const Color fallback = 0) {
+        const auto add_tag = [&doc, legacy, &add](const char* key, const AgentType agent_type, const int allegiance = -1, const PlayerRelation relation = AnyRelation, const Color fallback = 0) {
             Colors::SettingColor setting(fallback);
             if (!doc.Get("Game Settings", key, setting)) {
                 if (legacy && legacy->KeyExists("Game Settings", key)) setting = Colors::Load(legacy, "Game Settings", key, setting.value);
                 else if (!fallback) return;
             }
-            auto* rule = add(label, agent_type, 0, 0.f, Shape_None, allegiance);
+            auto* rule = add(agent_type, 0, 0.f, Shape_None, allegiance);
             rule->player_relation = relation;
             rule->color_text = setting.value;
         };
-        add_tag("nametag_color_npc", "NPC name tag", NPC);
-        add_tag("nametag_color_enemy", "Enemy name tag", NPC, static_cast<int>(GW::Constants::Allegiance::Enemy));
-        add_tag("nametag_color_gadget", "Gadget name tag", Gadget);
-        add_tag("nametag_color_item", "Item name tag", Item);
-        add_tag("nametag_color_player_other", "Other player name tag", Player, -1, Other);
-        add_tag("nametag_color_player_self", "My name tag", Player, -1, Self);
-        add_tag("nametag_color_player_in_my_party", "Party name tag", Player, -1, MyParty);
-        add_tag("nametag_color_player_in_party", "Player in party name tag", Player, -1, InParty);
-        add_tag("nametag_color_friends", "Friend name tag", Player, -1, Friend, 0xFF60FF60);
-        add_tag("nametag_color_guild_members", "Guild name tag", Player, -1, Guild, 0xFFFFD060);
+        add_tag("nametag_color_npc", NPC);
+        add_tag("nametag_color_enemy", NPC, static_cast<int>(GW::Constants::Allegiance::Enemy));
+        add_tag("nametag_color_gadget", Gadget);
+        add_tag("nametag_color_item", Item);
+        add_tag("nametag_color_player_other", Player, -1, Other);
+        add_tag("nametag_color_player_self", Player, -1, Self);
+        add_tag("nametag_color_player_in_my_party", Player, -1, MyParty);
+        add_tag("nametag_color_player_in_party", Player, -1, InParty);
+        add_tag("nametag_color_friends", Player, -1, Friend, 0xFF60FF60);
+        add_tag("nametag_color_guild_members", Player, -1, Guild, 0xFFFFD060);
     }
     enabled = false;
     if (!doc.Get("Friend List", "friend_name_tag_enabled", enabled) && legacy) {
@@ -435,7 +433,7 @@ void AgentRenderer::SeedAppearanceDefaults(const SettingsDoc& doc, const Toolbox
         if (!doc.Get("Friend List", "friend_name_tag_color", setting) && legacy && legacy->KeyExists("Friend List", "friend_name_tag_color")) {
             setting = Colors::Load(legacy, "Friend List", "friend_name_tag_color", setting.value);
         }
-        auto* rule = add("Friend (outpost) name tag", Player, 0, 0.f, Shape_None);
+        auto* rule = add(Player, 0, 0.f, Shape_None);
         rule->player_relation = Friend;
         rule->outpost_only = true;
         rule->color_text = setting.value;
@@ -456,21 +454,20 @@ void AgentRenderer::SeedAppearanceDefaults(const SettingsDoc& doc, const Toolbox
 void AgentRenderer::SeedDefaultCustomAgents()
 {
     struct DefaultRow {
-        const char* label;
         GW::Constants::Allegiance allegiance;
         QuestState quest_state;
         Color* color;
         float* size;
     };
     const DefaultRow rows[] = {
-        {"Neutral", GW::Constants::Allegiance::Neutral, EitherQuestState, &color_neutral, &size_neutral},
-        {"Ally", GW::Constants::Allegiance::Ally_NonAttackable, NotQuestGiver, &color_ally, &size_ally},
-        {"Ally (NPC)", GW::Constants::Allegiance::Npc_Minipet, NotQuestGiver, &color_ally_npc, &size_ally_npc},
-        {"Ally (Spirit/Pet)", GW::Constants::Allegiance::Spirit_Pet, NotQuestGiver, &color_ally_spirit, &size_ally_spirit},
-        {"Ally (Minion)", GW::Constants::Allegiance::Minion, NotQuestGiver, &color_ally_minion, &size_minion},
+        {GW::Constants::Allegiance::Neutral, EitherQuestState, &color_neutral, &size_neutral},
+        {GW::Constants::Allegiance::Ally_NonAttackable, NotQuestGiver, &color_ally, &size_ally},
+        {GW::Constants::Allegiance::Npc_Minipet, NotQuestGiver, &color_ally_npc, &size_ally_npc},
+        {GW::Constants::Allegiance::Spirit_Pet, NotQuestGiver, &color_ally_spirit, &size_ally_spirit},
+        {GW::Constants::Allegiance::Minion, NotQuestGiver, &color_ally_minion, &size_minion},
     };
     for (const auto& row : rows) {
-        auto* ca = new CustomAgent(0, *row.color, row.label);
+        auto* ca = new CustomAgent(0, *row.color, "");
         ca->allegiance = static_cast<int>(row.allegiance);
         ca->agent_type = NPC;
         ca->quest_states = StateMaskFromLegacy(row.quest_state);
@@ -815,6 +812,22 @@ void AgentRenderer::DrawSettings()
         if (changed) {
             RebuildRuleMatchers();
         }
+        ImGui::SmallConfirmButton("Restore Defaults", "Replace all appearance rules with defaults?\nColours, sizes and border thickness will also be reset.\nThis cannot be undone.", [this](const bool confirmed, void*) {
+            if (!confirmed) return;
+            match_cache.clear();
+            pending_names.clear();
+            for (const auto* rule : custom_agents) {
+                delete rule;
+            }
+            custom_agents.clear();
+            ResetAppearanceSettings();
+            SeedDefaultCustomAgents();
+            SeedAppearanceDefaults(SettingsDoc{}, nullptr);
+            custom_agent_defaults_seeded = true;
+            appearance_defaults_seeded = true;
+            custom_agents_loaded = true;
+            group_filter[0] = '\0';
+        });
         ImGui::EndTabItem();
     }
     ImGui::EndTabBar();
@@ -1941,6 +1954,31 @@ std::string AgentRenderer::CustomAgent::DefaultLabel() const
         default:
             break;
     }
+    const auto append_detail = [&](const std::string_view detail) {
+        const auto reserved = target_suffix.size() + (match_name[0] ? 11 : 0);
+        if (!detail.empty() && label.size() + detail.size() + 1 + reserved <= 64) {
+            label += ' ';
+            label += detail;
+        }
+    };
+    if (allegiance > 0 && static_cast<size_t>(allegiance) < _countof(allegiance_names)) {
+        append_detail(allegiance_names[allegiance]);
+    }
+    const auto profession_index = static_cast<size_t>(profession);
+    if (profession_index > 0 && profession_index < _countof(profession_names)) {
+        append_detail(profession_names[profession_index]);
+    }
+    if (boss_states == 1u) append_detail("Boss");
+    else if (boss_states == 2u) append_detail("Not boss");
+    else if (boss_states == 3u) append_detail("Boss/Not boss");
+    if (dead_states == 1u) append_detail("Dead");
+    else if (dead_states == 2u) append_detail("Alive");
+    else if (dead_states == 3u) append_detail("Dead/Alive");
+    if (quest_states == 1u) append_detail("Quest");
+    else if (quest_states == 2u) append_detail("No quest");
+    else if (quest_states == 3u) append_detail("Quest/No quest");
+    if (outpost_only) append_detail("Outpost");
+    if (Colors::IsVisible(color_text)) append_detail("Name tag");
     const auto fixed_length = label.size() + target_suffix.size() + 3;
     const auto match_limit = fixed_length < 64 ? std::min(size_t{24}, 64 - fixed_length) : 0;
     if (match_name[0] && match_limit >= 3) {
@@ -2029,7 +2067,7 @@ bool AgentRenderer::CustomAgent::DrawSettings()
         if (ImGui::InputTextWithHint("Label", default_label.c_str(), name, sizeof(name))) {
             changed = true;
         }
-        ImGui::ShowHelp("An optional label for this rule. Leave empty to use a short label based on agent type, identifier, match name and target state.");
+        ImGui::ShowHelp("An optional label for this rule. Leave empty to generate a short label from its type and filters.");
         ImGui::SetCursorPosX(x);
         if (ImGui::InputText("Group", group, sizeof(group))) {
             changed = true;
@@ -2080,10 +2118,9 @@ bool AgentRenderer::CustomAgent::DrawSettings()
         static const char* target_states[] = {"Either", "Targeted", "Not targeted", "Marked (/marktarget)"};
         if (ImGui::Combo("Target state", reinterpret_cast<int*>(&target_state), target_states, _countof(target_states))) changed = true;
         ImGui::SetCursorPosX(x);
-        static const char* professions[] = {"Any", "Warrior", "Ranger", "Monk", "Necromancer", "Mesmer", "Elementalist", "Assassin", "Ritualist", "Paragon", "Dervish"};
         ImGui::BeginDisabled(agent_type != NPC);
         auto profession_selection = static_cast<int>(profession);
-        if (ImGui::Combo("Profession", &profession_selection, professions, _countof(professions))) {
+        if (ImGui::Combo("Profession", &profession_selection, profession_names, _countof(profession_names))) {
             profession = static_cast<GW::Constants::Profession>(profession_selection);
             changed = true;
         }
@@ -2094,10 +2131,9 @@ bool AgentRenderer::CustomAgent::DrawSettings()
         ImGui::SetCursorPosX(x);
         if (ImGui::Checkbox("Outposts only", &outpost_only)) changed = true;
         ImGui::SetCursorPosX(x);
-        static const char* typed_allegiances[] = {"Any", "Ally", "Neutral", "Enemy", "Spirit/Pet", "Minion", "NPC/Minipet"};
         int allegiance_combo = allegiance < 0 ? 0 : allegiance;
         if ((agent_type == NPC || agent_type == Player) &&
-            ImGui::Combo("Allegiance", &allegiance_combo, typed_allegiances, 7)) {
+            ImGui::Combo("Allegiance", &allegiance_combo, allegiance_names, _countof(allegiance_names))) {
             allegiance = allegiance_combo == 0 ? -1 : allegiance_combo;
             changed = true;
         }
