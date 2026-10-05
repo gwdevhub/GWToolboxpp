@@ -208,6 +208,7 @@ bool AgentRenderer::GetAgentAppearance(const GW::Agent* agent, Shape_e* shape_ou
     if (!agent || (!shape_out && !color_out && !border_color_out && !border_thickness_out && !text_color_out && !size_out)) {
         return false;
     }
+    const auto requested_color_out = color_out;
     if (border_thickness_out) *border_thickness_out = target_border_thickness;
 
     if (!shape_out && !color_out && !border_color_out && !text_color_out && !size_out) return false;
@@ -245,6 +246,13 @@ bool AgentRenderer::GetAgentAppearance(const GW::Agent* agent, Shape_e* shape_ou
     if (color_out) *color_out = GetDefaultColor(agent);
     if (border_color_out) *border_color_out = color_target;
     if (size_out) *size_out = GetDefaultSize(agent);
+    if (requested_color_out) {
+        const auto* living = agent->GetAsAgentLiving();
+        const auto* dead_npc = living && living->GetIsDead() && living->IsNPC() ? GW::Agents::GetNPCByID(living->player_number) : nullptr;
+        if (dead_npc && (dead_npc->model_file_id == 0x22A34 || dead_npc->model_file_id == 0x2D0E4 || dead_npc->model_file_id == 0x2D07E)) {
+            *requested_color_out = IM_COL32(0, 0, 0, 0);
+        }
+    }
     return overridden;
 }
 
@@ -1464,10 +1472,6 @@ Color AgentRenderer::GetDefaultColor(const GW::Agent* agent, const CustomAgent* 
 {
     const GW::AgentLiving* living = agent->GetAsAgentLiving();
     const auto is_dead = living ? living->GetIsDead() : false;
-    const auto* dead_npc = is_dead && living->IsNPC() ? GW::Agents::GetNPCByID(living->player_number) : nullptr;
-    if (dead_npc && (dead_npc->model_file_id == 0x22A34 || dead_npc->model_file_id == 0x2D0E4 || dead_npc->model_file_id == 0x2D07E)) {
-        return IM_COL32(0, 0, 0, 0);
-    }
     if (ca && ca->override_color) {
         if (living && !is_dead && ca->target_state != Marked && living->allegiance == GW::Constants::Allegiance::Enemy && living->hp <= 0.9f) {
             return Colors::Sub(ca->color, color_agent_damaged_modifier);
