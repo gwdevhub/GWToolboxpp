@@ -16,13 +16,14 @@ void AgentAppearanceWindow::Draw(IDirect3DDevice9*)
         return;
     }
 
-    ImGui::SetNextWindowSizeConstraints(ImVec2(650.f, 0.f), ImVec2(FLT_MAX, FLT_MAX));
+    ImGui::SetNextWindowSize(ImVec2(650.f, 650.f), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSizeConstraints(ImVec2(650.f, 350.f), ImVec2(FLT_MAX, FLT_MAX));
     if (pending_focus) {
         ImGui::SetNextWindowFocus();
         ImGui::SetNextWindowCollapsed(false);
         pending_focus = false;
     }
-    if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags(ImGuiWindowFlags_AlwaysAutoResize))) {
+    if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
         AgentRenderer::Instance().DrawSettings();
     }
     ImGui::End();

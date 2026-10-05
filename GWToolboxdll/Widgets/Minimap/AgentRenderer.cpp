@@ -745,7 +745,8 @@ void AgentRenderer::DrawSettings()
         bool changed = false;
         CustomAgent* move_rule = nullptr;
         int move_offset = 0;
-        ImGui::BeginChild("##custom_agents_scroll", ImVec2(0.f, 400.f), true);
+        const auto footer_height = ImGui::GetTextLineHeight() + ImGui::GetStyle().ItemSpacing.y;
+        ImGui::BeginChild("##custom_agents_scroll", ImVec2(0.f, -footer_height), true);
         if (ImGui::BeginTable("AppearanceRules", 2, ImGuiTableFlags_SizingStretchProp)) {
             const auto button_size = ImGui::GetFrameHeight();
             const auto spacing = ImGui::GetStyle().ItemSpacing.x;
