@@ -73,8 +73,9 @@ namespace GW {
         uint32_t skill_point_cost;
         uint32_t material_cost_count;
         MaterialCost* material_cost_buffer; // NB: The game stores a cached array of material amounts that the player has in inventory; we don't care about it though!
+        uint32_t h0014; // added to GW 2026-09-30
     };
-    static_assert(sizeof(ItemFormula) == 0x14);
+    static_assert(sizeof(ItemFormula) == 0x18);
 
     struct Bag { // total: 0x28/40
         /* +h0000 */ Constants::BagType bag_type;

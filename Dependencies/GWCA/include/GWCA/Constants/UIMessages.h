@@ -34,8 +34,7 @@ namespace GW {
 		enum class StringPreference : uint32_t;
 		enum class EnumPreference : uint32_t;
 		enum class UiProfileSetting : uint32_t;
-		
-        struct CompassPoint {
+		struct CompassPoint {
 			CompassPoint() : x(0), y(0) {}
 			CompassPoint(int _x, int _y) : x(_x), y(_y) {}
 			int x;
@@ -296,7 +295,7 @@ namespace GW {
 			kDialogueMessageUpdated,                 // 0x1000009c
 			kLogout,                                 // 0x1000009d, wparam = { bool unknown, bool character_select }
 			kCompassDraw,                            // 0x1000009e, wparam = UIPacket::kCompassDraw*
-			kCompassPing,                            // 0x1000009f, wParam = UIPacket::kCompassPing*
+			kCompassPing,                            // 0x1000009f, wparam = UIPacket::kCompassPing*
 			kMessage_0x100000a0,                     // 0x100000a0
 			kMessage_0x100000a1,                     // 0x100000a1
 			kOnScreenMessage,                        // 0x100000a2, wparam = wchar_** encoded_string
@@ -412,196 +411,199 @@ namespace GW {
 			kMessage_0x10000110,                     // 0x10000110
 			kMapChange,                              // 0x10000111, wparam = map id
 			kMessage_0x10000112,                     // 0x10000112
-			kMessage_0x10000113,                     // 0x10000113
-			kMessage_0x10000114,                     // 0x10000114
-			kCalledTargetChange,                     // 0x10000115, wparam = { player_number, target_id }
-			kMessage_0x10000116,                     // 0x10000116
-			kMessage_0x10000117,                     // 0x10000117
-			kMessage_0x10000118,                     // 0x10000118
-			kErrorMessage,                           // 0x10000119, wparam = { int error_index, wchar_t* error_encoded_string }
-			kPartyHardModeChanged,                   // 0x1000011a, wparam = { int is_hard_mode }
-			kPartyAddHenchman,                       // 0x1000011b
-			kPartyRemoveHenchman,                    // 0x1000011c
-			kMessage_0x1000011d,                     // 0x1000011d
-			kPartyAddHero,                           // 0x1000011e
-			kPartyRemoveHero,                        // 0x1000011f
-			kMessage_0x10000120,                     // 0x10000120
-			kMessage_0x10000121,                     // 0x10000121
-			kMessage_0x10000122,                     // 0x10000122
-			kMessage_0x10000123,                     // 0x10000123
-			kPartyAddPlayer,                         // 0x10000124
-			kMessage_0x10000125,                     // 0x10000125
-			kPartyRemovePlayer,                      // 0x10000126
-			kMessage_0x10000127,                     // 0x10000127
-			kMessage_0x10000128,                     // 0x10000128
-			kMessage_0x10000129,                     // 0x10000129
-			kDisableEnterMissionBtn,                 // 0x1000012a, wparam = boolean (1 = disabled, 0 = enabled)
-			kMessage_0x1000012b,                     // 0x1000012b
-			kMessage_0x1000012c,                     // 0x1000012c
-			kShowCancelEnterMissionBtn,              // 0x1000012d
-			kMessage_0x1000012e,                     // 0x1000012e
-			kPartyDefeated,                          // 0x1000012f
-			kMessage_0x10000130,                     // 0x10000130
-			kMessage_0x10000131,                     // 0x10000131
-			kMessage_0x10000132,                     // 0x10000132
-			kPartySearchCreated,                     // 0x10000133, wparam = GW::PartySearch*
-			kPartySearchIdChanged,                   // 0x10000134, wparam = uint32_t* party_search_id
-			kPartySearchRemoved,                     // 0x10000135, wparam = uint32_t* party_search_id
-			kPartySearchUpdated,                     // 0x10000136, wparam = GW::PartySearch*
-			kPartySearchInviteReceived,              // 0x10000137, wparam = UIPacket::kPartySearchInviteReceived*
-			kMessage_0x10000138,                     // 0x10000138
-			kPartySearchInviteSent,                  // 0x10000139
-			kPartyShowConfirmDialog,                 // 0x1000013a, wparam = UIPacket::kPartyShowConfirmDialog
-			kMessage_0x1000013b,                     // 0x1000013b
-			kMessage_0x1000013c,                     // 0x1000013c
-			kMessage_0x1000013d,                     // 0x1000013d
-			kMessage_0x1000013e,                     // 0x1000013e
-			kMessage_0x1000013f,                     // 0x1000013f
-			kPreferenceEnumChanged,                  // 0x10000140, wparam = UiPacket::kPreferenceEnumChanged
-			kPreferenceFlagChanged,                  // 0x10000141, wparam = UiPacket::kPreferenceFlagChanged
-			kPreferenceValueChanged,                 // 0x10000142, wparam = UiPacket::kPreferenceValueChanged
-			kUIPositionChanged,                      // 0x10000143, wparam = UIPacket::kUIPositionChanged
-			kPreBuildLoginScene,                     // 0x10000144, Called with no args right before login scene is drawn
-			kMessage_0x10000145,                     // 0x10000145
-			kMessage_0x10000146,                     // 0x10000146
-			kMessage_0x10000147,                     // 0x10000147
-			kMessage_0x10000148,                     // 0x10000148
-			kMessage_0x10000149,                     // 0x10000149
-			kMessage_0x1000014a,                     // 0x1000014a
-			kMessage_0x1000014b,                     // 0x1000014b
-			kMessage_0x1000014c,                     // 0x1000014c
-			kMessage_0x1000014d,                     // 0x1000014d
-			kQuestAdded,                             // 0x1000014e, wparam = { quest_id, ... }
-			kQuestDetailsChanged,                    // 0x1000014f, wparam = { quest_id, ... }
-			kQuestRemoved,                           // 0x10000150, wparam = { quest_id, ... }
-			kClientActiveQuestChanged,               // 0x10000151, wparam = { quest_id, ... }. Triggered when the game requests the current quest to change
-			kMessage_0x10000152,                     // 0x10000152
-			kServerActiveQuestChanged,               // 0x10000153, wparam = UIPacket::kServerActiveQuestChanged*. Triggered when the server requests the current quest to change
-			kUnknownQuestRelated,                    // 0x10000154
-			kMessage_0x10000155,                     // 0x10000155
-			kDungeonComplete,                        // 0x10000156
-			kMissionComplete,                        // 0x10000157
-			kMessage_0x10000158,                     // 0x10000158
-			kVanquishComplete,                       // 0x10000159
-			kObjectiveAdd,                           // 0x1000015a, wparam = UIPacket::kObjectiveAdd*
-			kObjectiveComplete,                      // 0x1000015b, wparam = UIPacket::kObjectiveComplete*
-			kObjectiveUpdated,                       // 0x1000015c, wparam = UIPacket::kObjectiveUpdated*
-			kMessage_0x1000015d,                     // 0x1000015d
-			kMessage_0x1000015e,                     // 0x1000015e
-			kMessage_0x1000015f,                     // 0x1000015f
-			kMessage_0x10000160,                     // 0x10000160
-			kMessage_0x10000161,                     // 0x10000161
-			kMessage_0x10000162,                     // 0x10000162
-			kMessage_0x10000163,                     // 0x10000163
-			kMessage_0x10000164,                     // 0x10000164
-			kTradeSessionStart,                      // 0x10000165, wparam = { trade_state, player_number }
-			kMessage_0x10000166,                     // 0x10000166
-			kMessage_0x10000167,                     // 0x10000167
-			kMessage_0x10000168,                     // 0x10000168
-			kMessage_0x10000169,                     // 0x10000169
-			kMessage_0x1000016a,                     // 0x1000016a
-			kTradeSessionUpdated,                    // 0x1000016b, no args
-			kMessage_0x1000016c,                     // 0x1000016c
-			kMessage_0x1000016d,                     // 0x1000016d
-			kMessage_0x1000016e,                     // 0x1000016e
-			kMessage_0x1000016e_1,                   // 0x1000016f, added to GW 2026-04-28
-			kMessage_0x1000016f,                     // 0x10000170
-			kMessage_0x10000170,                     // 0x10000171
-			kMessage_0x10000171,                     // 0x10000172
-			kMessage_0x10000172,                     // 0x10000173
-			kMessage_0x10000173,                     // 0x10000174
-			kMessage_0x10000174,                     // 0x10000175
-			kCheckUIState,                           // 0x10000176
-			kMessage_0x10000176,                     // 0x10000177
-			kMessage_0x10000177,                     // 0x10000178
-			kMessage_0x10000178,                     // 0x10000179
-			kMessage_0x10000178_1,                   // 0x1000017a, added to GW 2026-02-26
-			kMessage_0x10000178_2,                   // 0x1000017b, added to GW 2026-02-26
-			kMessage_0x10000178_3,                   // 0x1000017c, added to GW 2026-02-26
-			kDestroyUIPositionOverlay,               // 0x1000017d
-			kEnableUIPositionOverlay,                // 0x1000017e, wparam = uint32_t enable
-			kMessage_0x1000017b,                     // 0x1000017f
-			kGuildHall,                              // 0x10000180, wparam = gh key (uint32_t[4])
-			kMessage_0x1000017d,                     // 0x10000181
-			kLeaveGuildHall,                         // 0x10000182
-			kTravel,                                 // 0x10000183
-			kOpenWikiUrl,                            // 0x10000184, wparam = char* url
-			kMessage_0x10000181,                     // 0x10000185
-			kOpenUrlNoPrompt,                        // 0x10000186, wparam = char* url
-			kSetPreGameContext_Value0,               // 0x10000187, wparam = uint32_t value
-			kMessage_0x10000184,                     // 0x10000188
-			kGetPreGameContext_Value0,               // 0x10000189, lparam = *uint32_t value_out
-			kSetPreGameContext_Value1,               // 0x1000018a, wparam = uint32_t value     , added to GW 2026-02-06
-			kGetPreGameContext_Value1,               // 0x1000018b, lparam = *uint32_t value_out, added to GW 2026-02-06
-			kMessage_0x10000186,                     // 0x1000018c
-			kMessage_0x10000187,                     // 0x1000018d
-			kMessage_0x10000188,                     // 0x1000018e
-			kMessage_0x10000189,                     // 0x1000018f
-			kMessage_0x1000018a,                     // 0x10000190
-			kMessage_0x1000018b,                     // 0x10000191
-			kMessage_0x1000018c,                     // 0x10000192
-			kMessage_0x1000018d,                     // 0x10000193
-			kMessage_0x1000018d_2,                   // 0x10000194, added to GW 2026-06-17
-			kAppendMessageToChat,                    // 0x10000195, wparam = wchar_t* message
-			kMessage_0x1000018f,                     // 0x10000196
-			kMessage_0x10000190,                     // 0x10000197
-			kMessage_0x10000191,                     // 0x10000198
-			kMessage_0x10000192,                     // 0x10000199
-			kMessage_0x10000193,                     // 0x1000019a
-			kMessage_0x10000194,                     // 0x1000019b
-			kMessage_0x10000195,                     // 0x1000019c
-			kMessage_0x10000196,                     // 0x1000019d
-			kMessage_0x10000197,                     // 0x1000019e
-			kMessage_0x10000198,                     // 0x1000019f
-			kMessage_0x10000199,                     // 0x100001a0
-			kMessage_0x1000019a,                     // 0x100001a1
-			kMessage_0x1000019b,                     // 0x100001a2
-			kHideHeroPanel,                          // 0x100001a3, wparam = hero_id
-			kShowHeroPanel,                          // 0x100001a4, wparam = hero_id
-			kMessage_0x1000019e,                     // 0x100001a5
-			kMessage_0x1000019f,                     // 0x100001a6
-			kQuerySuppressedKeyAction,               // 0x100001a7, wparam = 0, lparam = bool*. Used to check if the suppress action is pressed (usually shift)
-			kGetInventoryAgentId,                    // 0x100001a8, wparam = 0, lparam = uint32_t* agent_id_out. Used to fetch which agent is selected
-			kInventoryRelated1,                      // 0x100001a9, added to GW 2026-02-26
-			kInventoryRelated2,                      // 0x100001aa, added to GW 2026-02-26
-			kInventoryRelated3,                      // 0x100001ab, added to GW 2026-02-26
-			kInventoryRelated4,                      // 0x100001ac, added to GW 2026-04-28
-			kInventoryRelated4_1,                    // 0x100001ad, added to GW 2026-08-07
-			kEquipItem,                              // 0x100001ae, wparam = { item_id, agent_id }
-			kMoveItem,                               // 0x100001af, wparam = { item_id, to_bag, to_slot, bool prompt }
-			kItemRelated_1,                          // 0x100001b0
-			kItemTooltip,                            // 0x100001b1
-			kItemRelated_3,                          // 0x100001b2, added to GW 2026-02-26
-			kItemRelated_4,                          // 0x100001b3, added to GW 2026-02-26
-			kItemRelated_5,                          // 0x100001b4, added to GW 2026-04-28
-			kInitiateTrade,                          // 0x100001b5
-			kMessage_0x100001a7,                     // 0x100001b6
-			kMessage_0x100001a8,                     // 0x100001b7
-			kMessage_0x100001a9,                     // 0x100001b8
-			kMessage_0x100001aa,                     // 0x100001b9
-			kPartySearchWindowDestroyed,             // 0x100001ba
-			kMessage_0x100001ac,                     // 0x100001bb
-			kPartySearchWindowCreated,               // 0x100001bc
-			kMessage_0x100001ae,                     // 0x100001bd
-			kMessage_0x100001af,                     // 0x100001be
-			kMessage_0x100001b0,                     // 0x100001bf
-			kMessage_0x100001b1,                     // 0x100001c0
-			kMessage_0x100001b2,                     // 0x100001c1
-			kMessage_0x100001b3,                     // 0x100001c2
-			kMessage_0x100001b4,                     // 0x100001c3
-			kMessage_0x100001b5,                     // 0x100001c4
-			kInventoryAgentChanged,                  // 0x100001c5, Triggered when inventory needs updating due to agent change; no args
-			kInventoryRelated_1,                     // 0x100001c6
-			kInventoryRelated_2,                     // 0x100001c7
-			kMissionStatusRelated,                   // 0x100001c8
-			kUnused_1c2,                             // 0x100001c9
-			kCollapseExpandSkillListSection,         // 0x100001ca
-			kPromptLoadTemplate,                     // 0x100001cb
-			kOpenTemplateManager,                    // 0x100001cc
-			kPromptSaveTemplate,                     // 0x100001cd
-			kOpenTemplate,                           // 0x100001ce, wparam = GW::UI::ChatTemplate*
-			kTemplateRelated_3,                      // 0x100001cf
-			kTemplateRelated_4,                      // 0x100001d0
+			kAttribBtnRelated,                       // 0x10000113, added to GW 2026-09-30
+			kMessage_0x10000113,                     // 0x10000114
+			kMessage_0x10000114,                     // 0x10000115
+			kCalledTargetChange,                     // 0x10000116, wparam = { player_number, target_id }
+			kMessage_0x10000116,                     // 0x10000117
+			kMessage_0x10000117,                     // 0x10000118
+			kMessage_0x10000118,                     // 0x10000119
+			kErrorMessage,                           // 0x1000011a, wparam = { int error_index, wchar_t* error_encoded_string }
+			kPartyHardModeChanged,                   // 0x1000011b, wparam = { int is_hard_mode }
+			kPartyAddHenchman,                       // 0x1000011c
+			kPartyRemoveHenchman,                    // 0x1000011d
+			kMessage_0x1000011d,                     // 0x1000011e
+			kPartyAddHero,                           // 0x1000011f
+			kPartyRemoveHero,                        // 0x10000120
+			kMessage_0x10000120,                     // 0x10000121
+			kMessage_0x10000121,                     // 0x10000122
+			kMessage_0x10000122,                     // 0x10000123
+			kMessage_0x10000123,                     // 0x10000124
+			kPartyAddPlayer,                         // 0x10000125
+			kMessage_0x10000125,                     // 0x10000126
+			kPartyRemovePlayer,                      // 0x10000127
+			kMessage_0x10000127,                     // 0x10000128
+			kMessage_0x10000128,                     // 0x10000129
+			kMessage_0x10000129,                     // 0x1000012a
+			kDisableEnterMissionBtn,                 // 0x1000012b, wparam = boolean (1 = disabled, 0 = enabled)
+			kMessage_0x1000012b,                     // 0x1000012c
+			kMessage_0x1000012c,                     // 0x1000012d
+			kShowCancelEnterMissionBtn,              // 0x1000012e
+			kMessage_0x1000012e,                     // 0x1000012f
+			kPartyDefeated,                          // 0x10000130
+			kMessage_0x10000130,                     // 0x10000131
+			kMessage_0x10000131,                     // 0x10000132
+			kMessage_0x10000132,                     // 0x10000133
+			kPartySearchCreated,                     // 0x10000134, wparam = GW::PartySearch*
+			kPartySearchIdChanged,                   // 0x10000135, wparam = uint32_t* party_search_id
+			kPartySearchRemoved,                     // 0x10000136, wparam = uint32_t* party_search_id
+			kPartySearchUpdated,                     // 0x10000137, wparam = GW::PartySearch*
+			kPartySearchInviteReceived,              // 0x10000138, wparam = UIPacket::kPartySearchInviteReceived*
+			kMessage_0x10000138,                     // 0x10000139
+			kPartySearchInviteSent,                  // 0x1000013a
+			kPartyShowConfirmDialog,                 // 0x1000013b, wparam = UIPacket::kPartyShowConfirmDialog
+			kMessage_0x1000013b,                     // 0x1000013c
+			kMessage_0x1000013c,                     // 0x1000013d
+			kMessage_0x1000013d,                     // 0x1000013e
+			kMessage_0x1000013e,                     // 0x1000013f
+			kMessage_0x1000013f,                     // 0x10000140
+			kPreferenceEnumChanged,                  // 0x10000141, wparam = UiPacket::kPreferenceEnumChanged
+			kPreferenceFlagChanged,                  // 0x10000142, wparam = UiPacket::kPreferenceFlagChanged
+			kPreferenceValueChanged,                 // 0x10000143, wparam = UiPacket::kPreferenceValueChanged
+			kUIPositionChanged,                      // 0x10000144, wparam = UIPacket::kUIPositionChanged
+			kPreBuildLoginScene,                     // 0x10000145, Called with no args right before login scene is drawn
+			kMessage_0x10000145,                     // 0x10000146
+			kMessage_0x10000146,                     // 0x10000147
+			kProximityInteractionRelated_1,          // 0x10000148, added to GW 2026-09-30
+			kMessage_0x10000147,                     // 0x10000149
+			kMessage_0x10000148,                     // 0x1000014a
+			kMessage_0x10000149,                     // 0x1000014b
+			kMessage_0x1000014a,                     // 0x1000014c
+			kMessage_0x1000014b,                     // 0x1000014d
+			kMessage_0x1000014c,                     // 0x1000014e
+			kMessage_0x1000014d,                     // 0x1000014f
+			kQuestAdded,                             // 0x10000150, wparam = { quest_id, ... }
+			kQuestDetailsChanged,                    // 0x10000151, wparam = { quest_id, ... }
+			kQuestRemoved,                           // 0x10000152, wparam = { quest_id, ... }
+			kClientActiveQuestChanged,               // 0x10000153, wparam = { quest_id, ... }. Triggered when the game requests the current quest to change
+			kMessage_0x10000152,                     // 0x10000154
+			kServerActiveQuestChanged,               // 0x10000155, wparam = UIPacket::kServerActiveQuestChanged*. Triggered when the server requests the current quest to change
+			kUnknownQuestRelated,                    // 0x10000156
+			kMessage_0x10000155,                     // 0x10000157
+			kDungeonComplete,                        // 0x10000158
+			kMissionComplete,                        // 0x10000159
+			kMessage_0x10000158,                     // 0x1000015a
+			kVanquishComplete,                       // 0x1000015b
+			kObjectiveAdd,                           // 0x1000015c, wparam = UIPacket::kObjectiveAdd*
+			kObjectiveComplete,                      // 0x1000015d, wparam = UIPacket::kObjectiveComplete*
+			kObjectiveUpdated,                       // 0x1000015e, wparam = UIPacket::kObjectiveUpdated*
+			kMessage_0x1000015d,                     // 0x1000015f
+			kMessage_0x1000015e,                     // 0x10000160
+			kMessage_0x1000015f,                     // 0x10000161
+			kMessage_0x10000160,                     // 0x10000162
+			kMessage_0x10000161,                     // 0x10000163
+			kMessage_0x10000162,                     // 0x10000164
+			kMessage_0x10000163,                     // 0x10000165
+			kMessage_0x10000164,                     // 0x10000166
+			kTradeSessionStart,                      // 0x10000167, wparam = { trade_state, player_number }
+			kMessage_0x10000166,                     // 0x10000168
+			kMessage_0x10000167,                     // 0x10000169
+			kMessage_0x10000168,                     // 0x1000016a
+			kMessage_0x10000169,                     // 0x1000016b
+			kMessage_0x1000016a,                     // 0x1000016c
+			kTradeSessionUpdated,                    // 0x1000016d, no args
+			kMessage_0x1000016c,                     // 0x1000016e
+			kMessage_0x1000016d,                     // 0x1000016f
+			kMessage_0x1000016e,                     // 0x10000170
+			kMessage_0x1000016e_1,                   // 0x10000171, added to GW 2026-04-28
+			kMessage_0x1000016f,                     // 0x10000172
+			kMessage_0x10000170,                     // 0x10000173
+			kMessage_0x10000171,                     // 0x10000174
+			kMessage_0x10000172,                     // 0x10000175
+			kMessage_0x10000173,                     // 0x10000176
+			kMessage_0x10000174,                     // 0x10000177
+			kCheckUIState,                           // 0x10000178
+			kMessage_0x10000176,                     // 0x10000179
+			kMessage_0x10000177,                     // 0x1000017a
+			kMessage_0x10000178,                     // 0x1000017b
+			kMessage_0x10000178_1,                   // 0x1000017c, added to GW 2026-02-26
+			kMessage_0x10000178_2,                   // 0x1000017d, added to GW 2026-02-26
+			kMessage_0x10000178_3,                   // 0x1000017e, added to GW 2026-02-26
+			kDestroyUIPositionOverlay,               // 0x1000017f
+			kEnableUIPositionOverlay,                // 0x10000180, wparam = uint32_t enable
+			kProximityInteractionRelated_2,          // 0x10000181, added to GW 2026-09-30, no args
+			kMessage_0x1000017b,                     // 0x10000182
+			kGuildHall,                              // 0x10000183, wparam = gh key (uint32_t[4])
+			kMessage_0x1000017d,                     // 0x10000184
+			kLeaveGuildHall,                         // 0x10000185
+			kTravel,                                 // 0x10000186
+			kOpenWikiUrl,                            // 0x10000187, wparam = char* url
+			kMessage_0x10000181,                     // 0x10000188
+			kOpenUrlNoPrompt,                        // 0x10000189, wparam = char* url
+			kSetPreGameContext_Value0,               // 0x1000018a, wparam = uint32_t value
+			kMessage_0x10000184,                     // 0x1000018b
+			kGetPreGameContext_Value0,               // 0x1000018c, lparam = *uint32_t value_out
+			kSetPreGameContext_Value1,               // 0x1000018d, wparam = uint32_t value     , added to GW 2026-02-06
+			kGetPreGameContext_Value1,               // 0x1000018e, lparam = *uint32_t value_out, added to GW 2026-02-06
+			kMessage_0x10000186,                     // 0x1000018f
+			kMessage_0x10000187,                     // 0x10000190
+			kMessage_0x10000188,                     // 0x10000191
+			kMessage_0x10000189,                     // 0x10000192
+			kMessage_0x1000018a,                     // 0x10000193
+			kMessage_0x1000018b,                     // 0x10000194
+			kMessage_0x1000018c,                     // 0x10000195
+			kMessage_0x1000018d,                     // 0x10000196
+			kMessage_0x1000018d_2,                   // 0x10000197, added to GW 2026-06-17
+			kAppendMessageToChat,                    // 0x10000198, wparam = wchar_t* message
+			kMessage_0x1000018f,                     // 0x10000199
+			kMessage_0x10000190,                     // 0x1000019a
+			kMessage_0x10000191,                     // 0x1000019b
+			kMessage_0x10000192,                     // 0x1000019c
+			kMessage_0x10000193,                     // 0x1000019d
+			kMessage_0x10000194,                     // 0x1000019e
+			kMessage_0x10000195,                     // 0x1000019f
+			kMessage_0x10000196,                     // 0x100001a0
+			kMessage_0x10000197,                     // 0x100001a1
+			kMessage_0x10000198,                     // 0x100001a2
+			kMessage_0x10000199,                     // 0x100001a3
+			kMessage_0x1000019a,                     // 0x100001a4
+			kMessage_0x1000019b,                     // 0x100001a5
+			kHideHeroPanel,                          // 0x100001a6, wparam = hero_id
+			kShowHeroPanel,                          // 0x100001a7, wparam = hero_id
+			kMessage_0x1000019e,                     // 0x100001a8
+			kMessage_0x1000019f,                     // 0x100001a9
+			kQuerySuppressedKeyAction,               // 0x100001aa, wparam = 0, lparam = bool*. Used to check if the suppress action is pressed (usually shift)
+			kGetInventoryAgentId,                    // 0x100001ab, wparam = 0, lparam = uint32_t* agent_id_out. Used to fetch which agent is selected
+			kInventoryRelated1,                      // 0x100001ac, added to GW 2026-02-26
+			kInventoryRelated2,                      // 0x100001ad, added to GW 2026-02-26
+			kInventoryRelated3,                      // 0x100001ae, added to GW 2026-02-26
+			kInventoryRelated4,                      // 0x100001af, added to GW 2026-04-28
+			kInventoryRelated4_1,                    // 0x100001b0, added to GW 2026-08-07
+			kEquipItem,                              // 0x100001b1, wparam = { item_id, agent_id }
+			kMoveItem,                               // 0x100001b2, wparam = { item_id, to_bag, to_slot, bool prompt }
+			kItemRelated_1,                          // 0x100001b3
+			kItemTooltip,                            // 0x100001b4
+			kItemRelated_3,                          // 0x100001b5, added to GW 2026-02-26
+			kItemRelated_4,                          // 0x100001b6, added to GW 2026-02-26
+			kItemRelated_5,                          // 0x100001b7, added to GW 2026-04-28
+			kInitiateTrade,                          // 0x100001b8
+			kMessage_0x100001a7,                     // 0x100001b9
+			kMessage_0x100001a8,                     // 0x100001ba
+			kMessage_0x100001a9,                     // 0x100001bb
+			kMessage_0x100001aa,                     // 0x100001bc
+			kPartySearchWindowDestroyed,             // 0x100001bd
+			kMessage_0x100001ac,                     // 0x100001be
+			kPartySearchWindowCreated,               // 0x100001bf
+			kMessage_0x100001ae,                     // 0x100001c0
+			kMessage_0x100001af,                     // 0x100001c1
+			kMessage_0x100001b0,                     // 0x100001c2
+			kMessage_0x100001b1,                     // 0x100001c3
+			kMessage_0x100001b2,                     // 0x100001c4
+			kMessage_0x100001b3,                     // 0x100001c5
+			kMessage_0x100001b4,                     // 0x100001c6
+			kMessage_0x100001b5,                     // 0x100001c7
+			kInventoryAgentChanged,                  // 0x100001c8, Triggered when inventory needs updating due to agent change; no args
+			kInventoryRelated_1,                     // 0x100001c9
+			kInventoryRelated_2,                     // 0x100001ca
+			kMissionStatusRelated,                   // 0x100001cb
+			kUnused_1c2,                             // 0x100001cc
+			kCollapseExpandSkillListSection,         // 0x100001cd
+			kPromptLoadTemplate,                     // 0x100001ce
+			kOpenTemplateManager,                    // 0x100001cf
+			kPromptSaveTemplate,                     // 0x100001d0
+			kOpenTemplate,                           // 0x100001d1, wparam = GW::UI::ChatTemplate*
+			kTemplateRelated_3,                      // 0x100001d2
+			kTemplateRelated_4,                      // 0x100001d3
 
 			// GWCA Client to Server commands. Only added the ones that are used for hooks, everything else goes straight into GW
 
@@ -633,7 +635,8 @@ namespace GW {
 			kChatLinkClicked = 0x30000000 | 0x25     // 0x30000025, wparam = UIPacket::kChatLinkClicked. Triggered when the player clicks an <a> link in chat, e.g. build code
 		};
 
-		static_assert(GW::UI::UIMessage::kOpenTemplate == (GW::UI::UIMessage)0x100001ce);
+		static_assert(GW::UI::UIMessage::kQuestAdded == (GW::UI::UIMessage)0x10000150);
+		static_assert(GW::UI::UIMessage::kOpenTemplate == (GW::UI::UIMessage)0x100001d1);
 
 		namespace UIPacket {
 			struct kUIFeatureChanged {
@@ -983,11 +986,11 @@ namespace GW {
 				uint32_t number_of_points;
 				CompassPoint* points;
 			};
-            struct kCompassPing {
-                CompassPoint point;
-                uint32_t color; // ARGB
-                bool muted;
-            };
+			struct kCompassPing {
+				CompassPoint point;
+				uint32_t color;
+				bool muted;
+			};
 			struct kObjectiveAdd {
 				uint32_t objective_id;
 				wchar_t* name;

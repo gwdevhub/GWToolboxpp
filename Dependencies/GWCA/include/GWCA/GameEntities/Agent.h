@@ -249,12 +249,22 @@ namespace GW {
     static_assert(sizeof(AgentGadget) == 228, "struct AgentGadget has incorrect size");
     static_assert(offsetof(AgentGadget, h00C4) == 0xC4, "struct AgentGadget offsets are incorrect");
 
+    // Internal engine-only action-queue node: one per skill/attack state change (activated, stopped,
+    // interrupted, cast started, knocked down...) from StoC GenericValue/GenericValueTarget packets, drained
+    // to broadcast the matching kAgentSkill* UI message. GenericValueID::interrupted (35) does NOT queue one
+    // of these (it only drives a cosmetic flash), so this queue can't distinguish a real interrupt from a
+    // self-cancel - hook the raw StoC packet for that. Layout unknown beyond the linkage below; opaque/internal.
+    struct ActionChar;
+
     struct AgentLiving : public Agent { // total: 0x1C4/452
-        /* +h00C4 */ AgentID owner;
-        /* +h00C8 */ uint32_t h00C8;
-        /* +h00CC */ uint32_t h00CC;
-        /* +h00D0 */ uint32_t h00D0;
-        /* +h00D4 */ uint32_t h00D4[3];
+        // +h00C4/+h00C8/+h00CC: for Livings, repurposed as a GW::TList<ActionChar> (offset + TLink) queuing
+        // not-yet-processed ActionChar events. +h00D0/+h00D4[0,1]: a second TList recycling drained nodes
+        // back to their pool (model_state bit 0x400 flags it non-empty).
+        /* +h00C4 */ AgentID owner; // AgentItem only; TList offset field for Livings (see above).
+        /* +h00C8 */ TLink<ActionChar> action_queue; // Internal; next_node low bit set = empty.
+        /* +h00D0 */ uint32_t h00D0; // Internal; TList offset field for action_queue_recycle.
+        /* +h00D4 */ TLink<ActionChar> action_queue_recycle; // Internal; see above.
+        /* +h00DC */ uint32_t h00DC; // Unidentified.
         /* +h00E0 */ float animation_type;
         /* +h00E4 */ uint32_t h00E4[2];
         /* +h00EC */ float weapon_attack_speed; // The base attack speed in float of last attacks weapon. 1.33 = axe, sWORD, daggers etc.
@@ -290,8 +300,8 @@ namespace GW {
         /* +h014c */ uint32_t h014c;
         /* +h0150 */ uint32_t h0150;
         /* +h0154 */ uint32_t h0154;
-        /* +h0158 */ uint32_t model_state; // Different values for different states of the model.
-        /* +h015C */ uint32_t type_map; // Odd variable! 0x08 = dead, 0xC00 = boss, 0x40000 = spirit, 0x400000 = player
+        /* +h0158 */ uint32_t model_state; // Different values for different states of the model. Bit 0x400 (internal): action_queue_recycle above has pending nodes.
+        /* +h015C */ uint32_t type_map; // Odd variable! 0x08 = dead, 0xC00 = boss, 0x40000 = spirit, 0x400000 = player. Bit 0x10000 (internal): action_queue above is being torn down.
         /* +h0160 */ uint32_t h0160[4];
         /* +h0170 */ uint32_t in_spirit_range; // Tells if agent is within spirit range of you. Doesn't work anymore?
         /* +h0174 */ VisibleEffectList visible_effects;
@@ -300,12 +310,15 @@ namespace GW {
         /* +h0188 */ float    animation_speed;  // Speed of the current animation
         /* +h018C */ uint32_t animation_code; // related to animations
         /* +h0190 */ uint32_t animation_id;     // Id of the current animation
+        // +h01A8/+h01AC/+h01B0 (within h0194 below): a third, unrelated TList - a generic deferred/one-shot
+        // notification queue (target agent_id, fired flag, type index, optional callback fn), not part of the
+        // ActionChar subsystem above. +h0194-+h01A7 (20 bytes) are still unidentified.
         /* +h0194 */ uint8_t  h0194[32];
         /* +h01B4 */ uint8_t  dagger_status; // 0x1 = used lead attack, 0x2 = used offhand attack, 0x3 = used dual attack
         /* +h01B5 */ Constants::Allegiance  allegiance; // 0x1 = ally/non-attackable, 0x2 = neutral, 0x3 = enemy, 0x4 = spirit/pet, 0x5 = minion, 0x6 = npc/minipet
         /* +h01B6 */ uint16_t  weapon_type; // 1=bow, 2=axe, 3=hammer, 4=daggers, 5=scythe, 6=spear, 7=sWORD, 10=wand, 12=staff, 14=staff
         /* +h01B8 */ uint16_t  skill; // 0 = not using a skill. Anything else is the Id of that skill
-        /* +h01BA */ uint16_t  h01BA;
+        /* +h01BA */ uint16_t  h01BA; // Low byte (internal): per-agent index/tint used when formatting skill activated/stopped/interrupted floating text.
         /* +h01BC */ uint8_t  weapon_item_type;
         /* +h01BD */ uint8_t  offhand_item_type;
         /* +h01BE */ uint16_t  weapon_item_id;
