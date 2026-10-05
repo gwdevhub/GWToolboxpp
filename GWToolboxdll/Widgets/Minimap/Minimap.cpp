@@ -1086,6 +1086,9 @@ void Minimap::DrawSettingsInternal()
     if (ImGui::Button("Agent Appearance")) {
         AgentAppearanceWindow::Instance().Show();
     }
+#ifdef _DEBUG
+    ImGui::Checkbox("Show props on minimap", &agent_renderer.show_props_on_minimap);
+#endif
     ImGui::Text("You can set the color alpha to 0 to disable any minimap feature.");
     if (SettingsWindow::SubSectionHeader(SettingsName(), "Ranges")) {
         range_renderer.DrawSettings();

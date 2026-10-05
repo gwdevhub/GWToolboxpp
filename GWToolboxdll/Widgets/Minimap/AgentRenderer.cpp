@@ -63,8 +63,6 @@ namespace {
         return static_cast<GW::Constants::Profession>(npc->primary);
     }
 
-    bool show_props_on_minimap = false;
-
     bool target_drawn = false;
 
     bool IsLockedChest(const GW::Agent* agent)
@@ -636,9 +634,6 @@ void AgentRenderer::LoadDefaultColors()
 
 void AgentRenderer::DrawSettings()
 {
-#ifdef _DEBUG
-    ImGui::Checkbox("Show props on minimap", &show_props_on_minimap);
-#endif
     if (!ImGui::BeginTabBar("AgentAppearanceTabs")) {
         return;
     }
