@@ -12,6 +12,7 @@ void AgentAppearanceWindow::Show()
 void AgentAppearanceWindow::Draw(IDirect3DDevice9*)
 {
     if (!visible) {
+        AgentRenderer::Instance().DrawRuleEditors();
         return;
     }
 
@@ -25,4 +26,5 @@ void AgentAppearanceWindow::Draw(IDirect3DDevice9*)
         AgentRenderer::Instance().DrawSettings();
     }
     ImGui::End();
+    AgentRenderer::Instance().DrawRuleEditors();
 }

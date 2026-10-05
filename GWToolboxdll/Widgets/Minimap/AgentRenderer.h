@@ -44,6 +44,7 @@ public:
     void Render(IDirect3DDevice9* device) override;
 
     void DrawSettings();
+    void DrawRuleEditors();
     void RegisterSettings(ToolboxModule* module);
     void RegisterMinimapSettings(ToolboxModule* module);
     void LoadCustomAgents(SettingsDoc& doc, ToolboxIni* legacy);
@@ -100,13 +101,6 @@ private:
         static unsigned int cur_ui_id;
 
     public:
-        enum class Operation {
-            None,
-            MoveUp,
-            MoveDown,
-            Delete
-        };
-
         struct Settings {
             bool active = true;
             std::string name;
@@ -149,13 +143,14 @@ private:
         CustomAgent(DWORD model_id, Color _color, const char* _name);
 
         bool DrawHeader();
-        bool DrawSettings(Operation& op);
+        bool DrawSettings();
         [[nodiscard]] Settings ToSettings() const;
         void ApplyLegacyFlags(const LegacyFlags& flags);
 
-        // utility
-        const unsigned int ui_id = 0; // to ensure UI consistency
-        size_t index = 0;             // index in the array. Used for faster sorting.
+        const unsigned int ui_id = 0;
+        size_t index = 0;
+        bool edit_open = false;
+        bool focus_editor = false;
 
         // define the agent
         bool active = true;

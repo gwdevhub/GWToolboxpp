@@ -733,65 +733,72 @@ void AgentRenderer::DrawSettings()
         };
 
         bool changed = false;
+        CustomAgent* move_rule = nullptr;
+        int move_offset = 0;
         ImGui::BeginChild("##custom_agents_scroll", ImVec2(0.f, 400.f), true);
-        for (unsigned i = 0; i < custom_agents.size(); ++i) {
-            CustomAgent* custom = custom_agents[i];
-            if (!custom) {
-                continue;
-            }
-            if (!matches_filter(custom)) {
-                continue;
-            }
+        if (ImGui::BeginTable("AppearanceRules", 2, ImGuiTableFlags_SizingStretchProp)) {
+            const auto button_size = ImGui::GetFrameHeight();
+            const auto spacing = ImGui::GetStyle().ItemSpacing.x;
+            ImGui::TableSetupColumn("Rule", ImGuiTableColumnFlags_WidthStretch);
+            ImGui::TableSetupColumn("Actions", ImGuiTableColumnFlags_WidthFixed, button_size * 4.f + spacing * 3.f);
+            for (unsigned i = 0; i < custom_agents.size(); ++i) {
+                auto* custom = custom_agents[i];
+                if (!custom || !matches_filter(custom)) {
+                    continue;
+                }
 
-            ImGui::PushID(static_cast<int>(custom->ui_id));
-
-            auto op = CustomAgent::Operation::None;
-            if (custom->DrawSettings(op)) {
-                changed = true;
+                ImGui::PushID(static_cast<int>(custom->ui_id));
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                changed |= custom->DrawHeader();
+                ImGui::TableNextColumn();
+                if (ImGui::ButtonWithHint(ICON_FA_EDIT, "Edit appearance rule", ImVec2(button_size, button_size))) {
+                    custom->edit_open = custom->focus_editor = true;
+                }
+                ImGui::SameLine();
+                ImGui::BeginDisabled(i == 0);
+                if (ImGui::ButtonWithHint(ICON_FA_ARROW_UP, "Move rule up", ImVec2(button_size, button_size))) {
+                    move_rule = custom;
+                    move_offset = -1;
+                }
+                ImGui::EndDisabled();
+                ImGui::SameLine();
+                ImGui::BeginDisabled(i + 1 == custom_agents.size());
+                if (ImGui::ButtonWithHint(ICON_FA_ARROW_DOWN, "Move rule down", ImVec2(button_size, button_size))) {
+                    move_rule = custom;
+                    move_offset = 1;
+                }
+                ImGui::EndDisabled();
+                ImGui::SameLine();
+                if (ImGui::ButtonWithHint(ICON_FA_TRASH, "Delete appearance rule", ImVec2(button_size, button_size))) {
+                    const auto message = std::format("Delete appearance rule '{}'?\nThis cannot be undone.", custom->name);
+                    ImGui::ConfirmDialog(message.c_str(), [rule_id = custom->ui_id](const bool confirmed, void*) {
+                        if (!confirmed) return;
+                        auto& renderer = AgentRenderer::Instance();
+                        auto& rules = renderer.custom_agents;
+                        const auto it = std::ranges::find_if(rules, [rule_id](const CustomAgent* rule) { return rule && rule->ui_id == rule_id; });
+                        if (it == rules.end()) return;
+                        delete *it;
+                        rules.erase(it);
+                        for (size_t j = 0; j < rules.size(); ++j) {
+                            rules[j]->index = j;
+                        }
+                        renderer.RebuildRuleMatchers();
+                    });
+                }
+                ImGui::PopID();
             }
-
-            ImGui::PopID();
-
-            switch (op) {
-                case CustomAgent::Operation::None:
-                    break;
-                case CustomAgent::Operation::MoveUp:
-                    if (i > 0) {
-                        std::swap(custom_agents[i], custom_agents[i - 1]);
-                    }
-                    break;
-                case CustomAgent::Operation::MoveDown:
-                    if (i < custom_agents.size() - 1) {
-                        std::swap(custom_agents[i], custom_agents[i + 1]);
-                        ++i;
-                        ImGui::PushID(static_cast<int>(custom_agents[i]->ui_id));
-                        auto op2 = CustomAgent::Operation::None;
-                        custom_agents[i]->DrawSettings(op2);
-                        ImGui::PopID();
-                    }
-                    break;
-                case CustomAgent::Operation::Delete:
-                    custom_agents.erase(custom_agents.begin() + static_cast<int>(i));
-                    delete custom;
-                    --i;
-                    break;
-                default:
-                    break;
-            }
-
-            switch (op) {
-                case CustomAgent::Operation::MoveUp:
-                case CustomAgent::Operation::MoveDown:
-                case CustomAgent::Operation::Delete:
-                    for (size_t j = 0; j < custom_agents.size(); ++j) {
-                        custom_agents[j]->index = j;
-                    }
-                    changed = true;
-                default:
-                    break;
-            }
+            ImGui::EndTable();
         }
         ImGui::EndChild();
+        if (move_rule) {
+            const auto from = move_rule->index;
+            const auto to = move_offset < 0 ? from - 1 : from + 1;
+            std::swap(custom_agents[from], custom_agents[to]);
+            custom_agents[from]->index = from;
+            custom_agents[to]->index = to;
+            changed = true;
+        }
         if (changed) {
             RebuildRuleMatchers();
         }
@@ -799,11 +806,25 @@ void AgentRenderer::DrawSettings()
             custom_agents.push_back(new CustomAgent(0, 0, "<name>"));
             custom_agents.back()->index = custom_agents.size() - 1;
             custom_agents.back()->active = false;
+            custom_agents.back()->edit_open = custom_agents.back()->focus_editor = true;
             rules_changed = true;
         }
         ImGui::EndTabItem();
     }
     ImGui::EndTabBar();
+}
+
+void AgentRenderer::DrawRuleEditors()
+{
+    bool changed = false;
+    for (auto* rule : custom_agents) {
+        if (rule && rule->edit_open) {
+            changed |= rule->DrawSettings();
+        }
+    }
+    if (changed) {
+        RebuildRuleMatchers();
+    }
 }
 
 void AgentRenderer::Terminate()
@@ -1877,7 +1898,6 @@ AgentRenderer::CustomAgent::Settings AgentRenderer::CustomAgent::ToSettings() co
 
 bool AgentRenderer::CustomAgent::DrawHeader()
 {
-    ImGui::SameLine(0, 18);
     bool changed = ImGui::Checkbox("##visible", &active);
     const ImGuiStyle& style = ImGui::GetStyle();
     const float button_width = ImGui::GetFrameHeight() + style.ItemInnerSpacing.x;
@@ -1904,18 +1924,26 @@ bool AgentRenderer::CustomAgent::DrawHeader()
     ImGui::SetCursorPosX(cursor_pos += button_width);
     static const char* types[] = {"Any", "Item", "Gadget", "NPC", "Player"};
     const auto type_name = agent_type >= Any && agent_type <= Player ? types[agent_type - Any] : "Unknown";
-    ImGui::Text("%s [%s]", name, type_name);
+    ImGui::Text("%s [%s]", name[0] ? name : "<unnamed>", type_name);
+    if (group[0]) {
+        ImGui::SameLine();
+        ImGui::TextDisabled("(%s)", group);
+    }
     return changed;
 }
 
-bool AgentRenderer::CustomAgent::DrawSettings(Operation& op)
+bool AgentRenderer::CustomAgent::DrawSettings()
 {
     bool changed = false;
-
-    if (ImGui::TreeNodeEx("##params", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_AllowOverlap)) {
+    const auto title = std::format("Edit Appearance Rule: {}###appearance_rule_{}", name, ui_id);
+    ImGui::SetNextWindowSize(ImVec2(600.f, 700.f), ImGuiCond_FirstUseEver);
+    if (focus_editor) {
+        ImGui::SetNextWindowFocus();
+        ImGui::SetNextWindowCollapsed(false);
+        focus_editor = false;
+    }
+    if (ImGui::Begin(title.c_str(), &edit_open)) {
         ImGui::PushID(static_cast<int>(ui_id));
-
-        changed |= DrawHeader();
 
         if (ImGui::Checkbox("##visible2", &active)) {
             changed = true;
@@ -2062,50 +2090,8 @@ bool AgentRenderer::CustomAgent::DrawSettings(Operation& op)
         }
         ImGui::ShowHelp("Inherit uses the next matching shape or the minimap default.");
 
-        ImGui::Spacing();
-
-        // === Move and delete buttons ===
-        const float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
-        const float width = (ImGui::CalcItemWidth() - spacing * 2) / 3;
-        if (ImGui::Button("Move Up", ImVec2(width, 0))) {
-            op = Operation::MoveUp;
-        }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Move the color up in the list");
-        }
-        ImGui::SameLine(0, spacing);
-        if (ImGui::Button("Move Down", ImVec2(width, 0))) {
-            op = Operation::MoveDown;
-        }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Move the color down in the list");
-        }
-        ImGui::SameLine(0, spacing);
-        if (ImGui::Button("Delete", ImVec2(width, 0))) {
-            ImGui::OpenPopup("Delete Rule?");
-        }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Delete the appearance rule");
-        }
-
-        if (ImGui::BeginPopupModal("Delete Rule?", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-            ImGui::Text("Are you sure?\nThis operation cannot be undone\n\n");
-            if (ImGui::Button("OK", ImVec2(120, 0))) {
-                op = Operation::Delete;
-                ImGui::CloseCurrentPopup();
-            }
-            ImGui::SameLine();
-            if (ImGui::Button("Cancel", ImVec2(120, 0))) {
-                ImGui::CloseCurrentPopup();
-            }
-            ImGui::EndPopup();
-        }
-
-        ImGui::TreePop();
         ImGui::PopID();
     }
-    else {
-        changed |= DrawHeader();
-    }
+    ImGui::End();
     return changed;
 }
