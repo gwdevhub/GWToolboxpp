@@ -45,6 +45,7 @@
 #include <Modules/ToolboxTheme.h>
 #include <Modules/TransmoModule.h>
 #include <Modules/Updater.h>
+#include <Windows/AgentAppearanceWindow.h>
 #include <Windows/SettingsWindow.h>
 
 #include <Widgets/Minimap/Minimap.h>
@@ -1268,8 +1269,9 @@ void GWToolbox::UpdateInitialising(float)
     ToggleModule(InventoryManager::Instance());
     ToggleModule(HallOfMonumentsModule::Instance());
     ToggleModule(SettingsWindow::Instance());
+    ToggleModule(AgentAppearanceWindow::Instance());
 
-    ToolboxSettings::LoadModules(ini); // initialize all other modules as specified by the user
+    ToolboxSettings::LoadModules(ini);
 
     gwtoolbox_state = GWToolboxState::DrawInitialising;
 }

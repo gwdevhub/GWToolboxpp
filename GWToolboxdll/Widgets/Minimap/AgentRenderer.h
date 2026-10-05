@@ -44,6 +44,7 @@ public:
     void Render(IDirect3DDevice9* device) override;
 
     void DrawSettings();
+    void DrawRuleEditors();
     void RegisterSettings(ToolboxModule* module);
     void RegisterMinimapSettings(ToolboxModule* module);
     void LoadCustomAgents(SettingsDoc& doc, ToolboxIni* legacy);
@@ -100,11 +101,28 @@ private:
         static unsigned int cur_ui_id;
 
     public:
-        enum class Operation {
-            None,
-            MoveUp,
-            MoveDown,
-            Delete
+        struct AgentTypeOption {
+            const char* label;
+            AgentType type;
+            PlayerRelation relation;
+            GadgetState gadget;
+        };
+
+        inline static constexpr AgentTypeOption agent_type_options[] = {
+            {"Any", Any, AnyRelation, AnyGadget},
+            {"Item", Item, AnyRelation, AnyGadget},
+            {"Gadget", Gadget, AnyRelation, AnyGadget},
+            {"Gadget (Locked chest, closed)", Gadget, AnyRelation, ClosedChest},
+            {"Gadget (Locked chest, opened)", Gadget, AnyRelation, OpenedChest},
+            {"Gadget (Other)", Gadget, AnyRelation, OtherGadget},
+            {"NPC", NPC, AnyRelation, AnyGadget},
+            {"Player", Player, AnyRelation, AnyGadget},
+            {"Player (Self)", Player, Self, AnyGadget},
+            {"Player (Other player)", Player, Other, AnyGadget},
+            {"Player (Friend)", Player, Friend, AnyGadget},
+            {"Player (Guild member)", Player, Guild, AnyGadget},
+            {"Player (My party)", Player, MyParty, AnyGadget},
+            {"Player (In a party)", Player, InParty, AnyGadget}
         };
 
         struct Settings {
@@ -118,13 +136,14 @@ private:
             int allegiance = -1;
             int dead_state = EitherDeadState;
             int quest_state = EitherQuestState;
+            uint32_t dead_states = UINT32_MAX;
+            uint32_t quest_states = UINT32_MAX;
             Colors::SettingColor color = 0;
             Colors::SettingColor color_text = 0;
             int shape = Shape_None;
             float size = 0.0f;
             int agent_type = 0;
             DWORD identifier = 0;
-            bool identifier_active = false;
             std::string match_name;
             int target_state = EitherTarget;
             int player_relation = AnyRelation;
@@ -132,6 +151,7 @@ private:
             int gadget_state = AnyGadget;
             int profession = 0;
             int boss_state = 0;
+            uint32_t boss_states = UINT32_MAX;
             Colors::SettingColor border_color = 0;
         };
 
@@ -149,13 +169,15 @@ private:
         CustomAgent(DWORD model_id, Color _color, const char* _name);
 
         bool DrawHeader();
-        bool DrawSettings(Operation& op);
+        bool DrawSettings();
+        [[nodiscard]] const char* AgentTypeName() const;
         [[nodiscard]] Settings ToSettings() const;
         void ApplyLegacyFlags(const LegacyFlags& flags);
 
-        // utility
-        const unsigned int ui_id = 0; // to ensure UI consistency
-        size_t index = 0;             // index in the array. Used for faster sorting.
+        const unsigned int ui_id = 0;
+        size_t index = 0;
+        bool edit_open = false;
+        bool focus_editor = false;
 
         // define the agent
         bool active = true;
@@ -166,8 +188,8 @@ private:
         CombatState combat_state = CombatState::EitherCombat;
         WeaponState weapon_state = WeaponState::EitherWeapon;
         int allegiance = -1;
-        DeadState dead_state = DeadState::EitherDeadState;
-        QuestState quest_state = QuestState::EitherQuestState;
+        uint32_t dead_states = 0;
+        uint32_t quest_states = 0;
 
         // attributes to change
         Color color = 0;
@@ -176,14 +198,13 @@ private:
         float size = 0.0f;
         AgentType agent_type = NPC;
         DWORD identifier = 0;
-        bool identifier_active = false;
         char match_name[128]{};
         TargetState target_state = EitherTarget;
         PlayerRelation player_relation = AnyRelation;
         bool outpost_only = false;
         GadgetState gadget_state = AnyGadget;
         GW::Constants::Profession profession = GW::Constants::Profession::None;
-        int boss_state = 0;
+        uint32_t boss_states = 0;
         Color border_color = 0;
     };
 

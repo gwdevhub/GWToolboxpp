@@ -42,6 +42,11 @@ constexpr auto AGENTCOLOR_JSONFILENAME = L"AgentColors.json";
 
 namespace {
 
+    uint32_t StateMaskFromLegacy(const int state)
+    {
+        return state >= 0 && state < 2 ? 1u << state : 0;
+    }
+
     GW::HookEntry ChatCmd_HookEntry;
     GW::Constants::Profession GetAgentProfession(const GW::AgentLiving* agent)
     {
@@ -253,20 +258,18 @@ void AgentRenderer::LoadCustomAgents(SettingsDoc& doc, ToolboxIni* legacy)
         }
         if (rule->allegiance >= 0) {
             rule->agent_type = NPC;
-            if (was_seeded) rule->dead_state = Alive;
+            if (was_seeded) rule->dead_states = 1u << Alive;
             append(rule);
             return;
         }
         const auto old_rule = rule->ToSettings();
         rule->agent_type = NPC;
         rule->identifier = rule->modelId;
-        rule->identifier_active = true;
         rule->modelId = 0;
         append(rule);
         auto* gadget_rule = new CustomAgent(old_rule);
         gadget_rule->agent_type = Gadget;
         gadget_rule->identifier = gadget_rule->modelId;
-        gadget_rule->identifier_active = true;
         gadget_rule->modelId = 0;
         append(gadget_rule);
     };
@@ -358,7 +361,7 @@ void AgentRenderer::SeedAppearanceDefaults(const SettingsDoc& doc, const Toolbox
         auto* rule = new CustomAgent(0, color, label);
         rule->agent_type = agent_type;
         rule->allegiance = allegiance;
-        rule->dead_state = dead;
+        rule->dead_states = StateMaskFromLegacy(dead);
         rule->size = size;
         rule->shape = shape;
         std::snprintf(rule->group, sizeof(rule->group), "Defaults");
@@ -371,7 +374,7 @@ void AgentRenderer::SeedAppearanceDefaults(const SettingsDoc& doc, const Toolbox
     target->border_color = color_target;
     add("Marked Target", Any, color_marked_target, size_marked_target, default_shape)->target_state = Marked;
     auto* boss = add("Boss", NPC, 0, size_boss, Shape_None);
-    boss->boss_state = 1;
+    boss->boss_states = 1u;
     add("Hostile (dead)", NPC, color_hostile_dead, size_hostile, Shape_None, static_cast<int>(GW::Constants::Allegiance::Enemy), Dead);
     using GW::Constants::Profession;
     constexpr std::array<std::pair<Profession, const char*>, 10> professions = {{
@@ -383,13 +386,13 @@ void AgentRenderer::SeedAppearanceDefaults(const SettingsDoc& doc, const Toolbox
     for (const auto& [profession, label] : professions) {
         auto* rule = add(label, NPC, profession_colors[static_cast<size_t>(profession)], 0.f, Shape_None, static_cast<int>(GW::Constants::Allegiance::Enemy), Alive);
         rule->profession = profession;
-        rule->boss_state = only_color_bosses ? 1 : 0;
+        rule->boss_states = only_color_bosses ? 1u : 0;
         rule->active = enemies_colors_by_profession;
     }
     add("Hostile", NPC, color_hostile, size_hostile, Shape_None, static_cast<int>(GW::Constants::Allegiance::Enemy), Alive);
     for (const auto allegiance : {GW::Constants::Allegiance::Ally_NonAttackable, GW::Constants::Allegiance::Npc_Minipet, GW::Constants::Allegiance::Spirit_Pet, GW::Constants::Allegiance::Minion}) {
         add("Ally (dead)", NPC, color_ally_dead, size_ally, Shape_None, static_cast<int>(allegiance), Dead);
-        add("Ally (quest giver)", NPC, color_ally_npc_quest, size_ally_npc_quest, Shape_None, static_cast<int>(allegiance), Alive)->quest_state = QuestGiver;
+        add("Ally (quest giver)", NPC, color_ally_npc_quest, size_ally_npc_quest, Shape_None, static_cast<int>(allegiance), Alive)->quest_states = 1u << QuestGiver;
     }
     add("Item", Item, color_item, size_item, Quad);
     add("Locked chest (closed)", Gadget, color_locked_chest, size_locked_chest, Quad)->gadget_state = ClosedChest;
@@ -472,9 +475,9 @@ void AgentRenderer::SeedDefaultCustomAgents()
         auto* ca = new CustomAgent(0, *row.color, row.label);
         ca->allegiance = static_cast<int>(row.allegiance);
         ca->agent_type = NPC;
-        ca->quest_state = row.quest_state;
+        ca->quest_states = StateMaskFromLegacy(row.quest_state);
         ca->size = *row.size;
-        ca->dead_state = Alive;
+        ca->dead_states = 1u << Alive;
         ca->shape = Shape_None;
         std::snprintf(ca->group, sizeof(ca->group), "Defaults");
         ca->index = custom_agents.size();
@@ -636,7 +639,10 @@ void AgentRenderer::DrawSettings()
 #ifdef _DEBUG
     ImGui::Checkbox("Show props on minimap", &show_props_on_minimap);
 #endif
-    if (ImGui::TreeNodeEx("Agent Colors", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+    if (!ImGui::BeginTabBar("AgentAppearanceTabs")) {
+        return;
+    }
+    if (ImGui::BeginTabItem("Colors")) {
         ImGui::SmallConfirmButton("Restore Defaults", "Reset effect colours and fallback colours?\nAppearance rules are not changed.", [&](bool result, void*) {
             if (result) {
                 LoadDefaultColors();
@@ -681,10 +687,10 @@ void AgentRenderer::DrawSettings()
             }
         }
 
-        ImGui::TreePop();
+        ImGui::EndTabItem();
     }
 
-    if (ImGui::TreeNodeEx("Agent Sizes", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+    if (ImGui::BeginTabItem("Sizes")) {
         ImGui::SmallConfirmButton("Restore Defaults", "Reset fallback sizes and border thickness?\nAppearance rules are not changed.",
             [&](const bool result, void*) {
                 if (result) {
@@ -707,10 +713,12 @@ void AgentRenderer::DrawSettings()
         ImGui::Combo("Default Shape", reinterpret_cast<int*>(&default_shape), items.data(), items.size());
         ImGui::ShowHelp("The default shape of agents.");
 
-        ImGui::TreePop();
+        ImGui::SliderFloat("Agent Border thickness", &agent_border_thickness, 0.f, 100.f, "%.0f");
+        ImGui::SliderFloat("Target Border thickness", &target_border_thickness, 0.f, 100.f, "%.0f");
+        ImGui::EndTabItem();
     }
 
-    if (ImGui::TreeNodeEx("Agent Appearance", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+    if (ImGui::BeginTabItem("Appearance")) {
         static char group_filter[64] = "";
         ImGui::InputTextWithHint("Filter", "Filter by name or group...", group_filter, sizeof(group_filter));
         ImGui::ShowHelp("Only affects what's shown here. Rules are evaluated top to bottom, independently for each enabled colour, size and shape.");
@@ -728,66 +736,72 @@ void AgentRenderer::DrawSettings()
         };
 
         bool changed = false;
+        CustomAgent* move_rule = nullptr;
+        int move_offset = 0;
         ImGui::BeginChild("##custom_agents_scroll", ImVec2(0.f, 400.f), true);
-        for (unsigned i = 0; i < custom_agents.size(); ++i) {
-            CustomAgent* custom = custom_agents[i];
-            if (!custom) {
-                continue;
-            }
-            if (!matches_filter(custom)) {
-                continue;
-            }
+        if (ImGui::BeginTable("AppearanceRules", 2, ImGuiTableFlags_SizingStretchProp)) {
+            const auto button_size = ImGui::GetFrameHeight();
+            const auto spacing = ImGui::GetStyle().ItemSpacing.x;
+            ImGui::TableSetupColumn("Rule", ImGuiTableColumnFlags_WidthStretch);
+            ImGui::TableSetupColumn("Actions", ImGuiTableColumnFlags_WidthFixed, button_size * 4.f + spacing * 3.f);
+            for (unsigned i = 0; i < custom_agents.size(); ++i) {
+                auto* custom = custom_agents[i];
+                if (!custom || !matches_filter(custom)) {
+                    continue;
+                }
 
-            ImGui::PushID(static_cast<int>(custom->ui_id));
-
-            auto op = CustomAgent::Operation::None;
-            if (custom->DrawSettings(op)) {
-                changed = true;
+                ImGui::PushID(static_cast<int>(custom->ui_id));
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                changed |= custom->DrawHeader();
+                ImGui::TableNextColumn();
+                if (ImGui::ButtonWithHint(ICON_FA_EDIT, "Edit appearance rule", ImVec2(button_size, button_size))) {
+                    custom->edit_open = custom->focus_editor = true;
+                }
+                ImGui::SameLine();
+                ImGui::BeginDisabled(i == 0);
+                if (ImGui::ButtonWithHint(ICON_FA_ARROW_UP, "Move rule up", ImVec2(button_size, button_size))) {
+                    move_rule = custom;
+                    move_offset = -1;
+                }
+                ImGui::EndDisabled();
+                ImGui::SameLine();
+                ImGui::BeginDisabled(i + 1 == custom_agents.size());
+                if (ImGui::ButtonWithHint(ICON_FA_ARROW_DOWN, "Move rule down", ImVec2(button_size, button_size))) {
+                    move_rule = custom;
+                    move_offset = 1;
+                }
+                ImGui::EndDisabled();
+                ImGui::SameLine();
+                if (ImGui::ButtonWithHint(ICON_FA_TRASH, "Delete appearance rule", ImVec2(button_size, button_size))) {
+                    const auto message = std::format("Delete appearance rule '{}'?\nThis cannot be undone.", custom->name);
+                    ImGui::ConfirmDialog(message.c_str(), [rule_id = custom->ui_id](const bool confirmed, void*) {
+                        if (!confirmed) return;
+                        auto& renderer = AgentRenderer::Instance();
+                        auto& rules = renderer.custom_agents;
+                        const auto it = std::ranges::find_if(rules, [rule_id](const CustomAgent* rule) { return rule && rule->ui_id == rule_id; });
+                        if (it == rules.end()) return;
+                        delete *it;
+                        rules.erase(it);
+                        for (size_t j = 0; j < rules.size(); ++j) {
+                            rules[j]->index = j;
+                        }
+                        renderer.RebuildRuleMatchers();
+                    });
+                }
+                ImGui::PopID();
             }
-
-            ImGui::PopID();
-
-            switch (op) {
-                case CustomAgent::Operation::None:
-                    break;
-                case CustomAgent::Operation::MoveUp:
-                    if (i > 0) {
-                        std::swap(custom_agents[i], custom_agents[i - 1]);
-                    }
-                    break;
-                case CustomAgent::Operation::MoveDown:
-                    if (i < custom_agents.size() - 1) {
-                        std::swap(custom_agents[i], custom_agents[i + 1]);
-                        // render the moved one and increase i
-                        ++i;
-                        ImGui::PushID(static_cast<int>(custom_agents[i]->ui_id));
-                        auto op2 = CustomAgent::Operation::None;
-                        custom_agents[i]->DrawSettings(op2);
-                        ImGui::PopID();
-                    }
-                    break;
-                case CustomAgent::Operation::Delete:
-                    custom_agents.erase(custom_agents.begin() + static_cast<int>(i));
-                    delete custom;
-                    --i;
-                    break;
-                default:
-                    break;
-            }
-
-            switch (op) {
-                case CustomAgent::Operation::MoveUp:
-                case CustomAgent::Operation::MoveDown:
-                case CustomAgent::Operation::Delete:
-                    for (size_t j = 0; j < custom_agents.size(); ++j) {
-                        custom_agents[j]->index = j;
-                    }
-                    changed = true;
-                default:
-                    break;
-            }
+            ImGui::EndTable();
         }
         ImGui::EndChild();
+        if (move_rule) {
+            const auto from = move_rule->index;
+            const auto to = move_offset < 0 ? from - 1 : from + 1;
+            std::swap(custom_agents[from], custom_agents[to]);
+            custom_agents[from]->index = from;
+            custom_agents[to]->index = to;
+            changed = true;
+        }
         if (changed) {
             RebuildRuleMatchers();
         }
@@ -795,9 +809,24 @@ void AgentRenderer::DrawSettings()
             custom_agents.push_back(new CustomAgent(0, 0, "<name>"));
             custom_agents.back()->index = custom_agents.size() - 1;
             custom_agents.back()->active = false;
+            custom_agents.back()->edit_open = custom_agents.back()->focus_editor = true;
             rules_changed = true;
         }
-        ImGui::TreePop();
+        ImGui::EndTabItem();
+    }
+    ImGui::EndTabBar();
+}
+
+void AgentRenderer::DrawRuleEditors()
+{
+    bool changed = false;
+    for (auto* rule : custom_agents) {
+        if (rule && rule->edit_open) {
+            changed |= rule->DrawSettings();
+        }
+    }
+    if (changed) {
+        RebuildRuleMatchers();
     }
 }
 
@@ -1023,11 +1052,11 @@ void AgentRenderer::RefreshMatches(const GW::Agent* agent)
         if (!rule->active || rule->mapId && rule->mapId != static_cast<DWORD>(GW::Map::GetMapID())) continue;
         if (rule->outpost_only && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) continue;
         if (rule->agent_type != Any && rule->agent_type != agent_type) continue;
-        if (rule->agent_type != Any && rule->identifier_active && rule->identifier != identifier) continue;
+        if (rule->agent_type != Any && rule->identifier != 0 && rule->identifier != identifier) continue;
         if (rule->allegiance >= 0 && (!living || rule->allegiance != static_cast<int>(living->allegiance))) continue;
         if (rule->target_state == Targeted && !targeted || rule->target_state == NotTargeted && targeted || rule->target_state == Marked && !marked) continue;
         if (rule->profession != GW::Constants::Profession::None && rule->profession != profession) continue;
-        if (rule->boss_state == 1 && !(flags & 128u) || rule->boss_state == 2 && (flags & 128u)) continue;
+        if (rule->boss_states && (!living || !(rule->boss_states & ((flags & 128u) ? 1u : 2u)))) continue;
         if (rule->gadget_state != AnyGadget && (agent_type != Gadget ||
             rule->gadget_state == ClosedChest && !(flags & 32u) || rule->gadget_state == OpenedChest && !(flags & 64u) ||
             rule->gadget_state == OtherGadget && (flags & (32u | 64u)))) continue;
@@ -1035,8 +1064,8 @@ void AgentRenderer::RefreshMatches(const GW::Agent* agent)
             rule->player_relation == Self && !(relations & 1u) || rule->player_relation == Other && (relations & 1u) ||
             rule->player_relation == Friend && !(relations & 2u) || rule->player_relation == Guild && !(relations & 4u) ||
             rule->player_relation == MyParty && !(relations & 8u) || rule->player_relation == InParty && !(relations & 16u))) continue;
-        if (rule->dead_state == Dead && (!living || !living->GetIsDead()) || rule->dead_state == Alive && (!living || living->GetIsDead())) continue;
-        if (rule->quest_state == QuestGiver && (!living || !living->GetHasQuest()) || rule->quest_state == NotQuestGiver && (!living || living->GetHasQuest())) continue;
+        if (rule->dead_states && (!living || !(rule->dead_states & (1u << (living->GetIsDead() ? Dead : Alive))))) continue;
+        if (rule->quest_states && (!living || !(rule->quest_states & (1u << (living->GetHasQuest() ? QuestGiver : NotQuestGiver))))) continue;
         if (rule->combat_state == InCombat && (!living || !living->GetInCombatStance()) || rule->combat_state == NotInCombat && (!living || living->GetInCombatStance())) continue;
         if (rule->weapon_state == HasWeapon && (!living || living->weapon_type == 0 || living->weapon_type == 512) ||
             rule->weapon_state == NoWeapon && (!living || living->weapon_type != 0 && living->weapon_type != 512)) continue;
@@ -1754,11 +1783,11 @@ AgentRenderer::CustomAgent::CustomAgent(const ToolboxIni* ini, const char* secti
     combat_state = static_cast<CombatState>(ini->GetLongValue(section, VAR_NAME(combat_state), static_cast<long>(combat_state)));
     weapon_state = static_cast<WeaponState>(ini->GetLongValue(section, VAR_NAME(weapon_state), static_cast<long>(weapon_state)));
     allegiance = static_cast<int>(ini->GetLongValue(section, VAR_NAME(allegiance), allegiance));
-    dead_state = static_cast<DeadState>(ini->GetLongValue(section, VAR_NAME(dead_state), static_cast<long>(dead_state)));
-    quest_state = static_cast<QuestState>(ini->GetLongValue(section, VAR_NAME(quest_state), static_cast<long>(quest_state)));
+    dead_states = StateMaskFromLegacy(static_cast<int>(ini->GetLongValue(section, "dead_state", EitherDeadState)));
+    quest_states = StateMaskFromLegacy(static_cast<int>(ini->GetLongValue(section, "quest_state", EitherQuestState)));
     agent_type = static_cast<AgentType>(ini->GetLongValue(section, VAR_NAME(agent_type), 0));
     identifier = static_cast<DWORD>(ini->GetLongValue(section, VAR_NAME(identifier), identifier));
-    identifier_active = ini->GetBoolValue(section, VAR_NAME(identifier_active), identifier != 0);
+    if (!ini->GetBoolValue(section, "identifier_active", identifier != 0)) identifier = 0;
     std::snprintf(match_name, sizeof(match_name), "%s", ini->GetValue(section, VAR_NAME(match_name), ""));
     target_state = static_cast<TargetState>(ini->GetLongValue(section, VAR_NAME(target_state), target_state));
     player_relation = static_cast<PlayerRelation>(ini->GetLongValue(section, VAR_NAME(player_relation), player_relation));
@@ -1766,7 +1795,7 @@ AgentRenderer::CustomAgent::CustomAgent(const ToolboxIni* ini, const char* secti
     border_color = Colors::Load(ini, section, VAR_NAME(border_color), 0xFFFFFF00);
     gadget_state = static_cast<GadgetState>(ini->GetLongValue(section, VAR_NAME(gadget_state), gadget_state));
     profession = static_cast<GW::Constants::Profession>(ini->GetLongValue(section, VAR_NAME(profession), static_cast<long>(profession)));
-    boss_state = static_cast<int>(ini->GetLongValue(section, VAR_NAME(boss_state), boss_state));
+    boss_states = StateMaskFromLegacy(static_cast<int>(ini->GetLongValue(section, "boss_state", 0)) - 1);
 
     color = Colors::Load(ini, section, VAR_NAME(color), 0xFFF00000);
     color_text = Colors::Load(ini, section, VAR_NAME(color_text), 0xFFF00000);
@@ -1796,11 +1825,10 @@ AgentRenderer::CustomAgent::CustomAgent(const Settings& settings)
     combat_state = static_cast<CombatState>(settings.combat_state);
     weapon_state = static_cast<WeaponState>(settings.weapon_state);
     allegiance = settings.allegiance;
-    dead_state = static_cast<DeadState>(settings.dead_state);
-    quest_state = static_cast<QuestState>(settings.quest_state);
+    dead_states = settings.dead_states == UINT32_MAX ? StateMaskFromLegacy(settings.dead_state) : settings.dead_states & 3u;
+    quest_states = settings.quest_states == UINT32_MAX ? StateMaskFromLegacy(settings.quest_state) : settings.quest_states & 3u;
     agent_type = static_cast<AgentType>(settings.agent_type);
     identifier = settings.identifier;
-    identifier_active = settings.identifier_active || identifier != 0;
     std::snprintf(match_name, sizeof(match_name), "%s", settings.match_name.c_str());
     target_state = static_cast<TargetState>(settings.target_state);
     player_relation = static_cast<PlayerRelation>(settings.player_relation);
@@ -1808,7 +1836,7 @@ AgentRenderer::CustomAgent::CustomAgent(const Settings& settings)
     border_color = settings.border_color;
     gadget_state = static_cast<GadgetState>(settings.gadget_state);
     profession = static_cast<GW::Constants::Profession>(settings.profession);
-    boss_state = settings.boss_state;
+    boss_states = settings.boss_states == UINT32_MAX ? StateMaskFromLegacy(settings.boss_state - 1) : settings.boss_states & 3u;
 
     color = settings.color;
     color_text = settings.color_text;
@@ -1848,11 +1876,12 @@ AgentRenderer::CustomAgent::Settings AgentRenderer::CustomAgent::ToSettings() co
     settings.combat_state = combat_state;
     settings.weapon_state = weapon_state;
     settings.allegiance = allegiance;
-    settings.dead_state = dead_state;
-    settings.quest_state = quest_state;
+    settings.dead_state = dead_states == 1u ? Dead : dead_states == 2u ? Alive : EitherDeadState;
+    settings.quest_state = quest_states == 1u ? QuestGiver : quest_states == 2u ? NotQuestGiver : EitherQuestState;
+    settings.dead_states = dead_states;
+    settings.quest_states = quest_states;
     settings.agent_type = agent_type;
-    settings.identifier = identifier_active ? identifier : 0;
-    settings.identifier_active = identifier_active;
+    settings.identifier = identifier;
     settings.match_name = match_name;
     settings.target_state = target_state;
     settings.player_relation = player_relation;
@@ -1860,7 +1889,8 @@ AgentRenderer::CustomAgent::Settings AgentRenderer::CustomAgent::ToSettings() co
     settings.border_color = border_color;
     settings.gadget_state = gadget_state;
     settings.profession = static_cast<int>(profession);
-    settings.boss_state = boss_state;
+    settings.boss_state = boss_states == 1u ? 1 : boss_states == 2u ? 2 : 0;
+    settings.boss_states = boss_states;
 
     settings.color = color;
     settings.color_text = color_text;
@@ -1870,9 +1900,19 @@ AgentRenderer::CustomAgent::Settings AgentRenderer::CustomAgent::ToSettings() co
     return settings;
 }
 
+const char* AgentRenderer::CustomAgent::AgentTypeName() const
+{
+    for (const auto& option : agent_type_options) {
+        if (option.type == agent_type && (agent_type != Player || option.relation == player_relation)
+            && (agent_type != Gadget || option.gadget == gadget_state)) {
+            return option.label;
+        }
+    }
+    return "Unknown";
+}
+
 bool AgentRenderer::CustomAgent::DrawHeader()
 {
-    ImGui::SameLine(0, 18);
     bool changed = ImGui::Checkbox("##visible", &active);
     const ImGuiStyle& style = ImGui::GetStyle();
     const float button_width = ImGui::GetFrameHeight() + style.ItemInnerSpacing.x;
@@ -1897,20 +1937,26 @@ bool AgentRenderer::CustomAgent::DrawHeader()
         ImGui::SameLine();
     }
     ImGui::SetCursorPosX(cursor_pos += button_width);
-    static const char* types[] = {"Any", "Item", "Gadget", "NPC", "Player"};
-    const auto type_name = agent_type >= Any && agent_type <= Player ? types[agent_type - Any] : "Unknown";
-    ImGui::Text("%s [%s]", name, type_name);
+    ImGui::Text("%s [%s]", name[0] ? name : "<unnamed>", AgentTypeName());
+    if (group[0]) {
+        ImGui::SameLine();
+        ImGui::TextDisabled("(%s)", group);
+    }
     return changed;
 }
 
-bool AgentRenderer::CustomAgent::DrawSettings(Operation& op)
+bool AgentRenderer::CustomAgent::DrawSettings()
 {
     bool changed = false;
-
-    if (ImGui::TreeNodeEx("##params", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_AllowOverlap)) {
+    const auto title = std::format("Edit Appearance Rule: {}###appearance_rule_{}", name, ui_id);
+    ImGui::SetNextWindowSize(ImVec2(600.f, 700.f), ImGuiCond_FirstUseEver);
+    if (focus_editor) {
+        ImGui::SetNextWindowFocus();
+        ImGui::SetNextWindowCollapsed(false);
+        focus_editor = false;
+    }
+    if (ImGui::Begin(title.c_str(), &edit_open)) {
         ImGui::PushID(static_cast<int>(ui_id));
-
-        changed |= DrawHeader();
 
         if (ImGui::Checkbox("##visible2", &active)) {
             changed = true;
@@ -1930,34 +1976,39 @@ bool AgentRenderer::CustomAgent::DrawSettings(Operation& op)
         }
         ImGui::ShowHelp("An optional tag to filter this list by, e.g. 'Farming' or 'Bosses'. Purely organisational.");
         ImGui::SetCursorPosX(x);
-        static const char* agent_types[] = {"Any", "Item", "Gadget", "NPC", "Player"};
-        auto type_selection = static_cast<int>(agent_type) - Any;
-        if (ImGui::Combo("Agent type", &type_selection, agent_types, _countof(agent_types))) {
-            agent_type = static_cast<AgentType>(type_selection + Any);
-            changed = true;
-            allegiance = -1;
-            modelId = 0;
-            identifier = 0;
-            identifier_active = false;
-            if (agent_type != NPC) { profession = GW::Constants::Profession::None; boss_state = 0; }
-            if (agent_type != Gadget) gadget_state = AnyGadget;
-            if (agent_type != Player) player_relation = AnyRelation;
-            if (agent_type == Item || agent_type == Gadget) {
-                dead_state = EitherDeadState;
-                quest_state = EitherQuestState;
-                combat_state = EitherCombat;
-                weapon_state = EitherWeapon;
+        if (ImGui::BeginCombo("Agent type", AgentTypeName())) {
+            for (const auto& option : agent_type_options) {
+                const auto selected = option.type == agent_type && (agent_type != Player || option.relation == player_relation)
+                    && (agent_type != Gadget || option.gadget == gadget_state);
+                if (ImGui::Selectable(option.label, selected)) {
+                    if (agent_type != option.type) {
+                        agent_type = option.type;
+                        allegiance = -1;
+                        modelId = 0;
+                        identifier = 0;
+                        if (agent_type != NPC) { profession = GW::Constants::Profession::None; boss_states = 0; }
+                        if (agent_type == Item || agent_type == Gadget) {
+                            dead_states = 0;
+                            quest_states = 0;
+                            combat_state = EitherCombat;
+                            weapon_state = EitherWeapon;
+                        }
+                    }
+                    player_relation = option.relation;
+                    gadget_state = option.gadget;
+                    changed = true;
+                }
+                if (selected) {
+                    ImGui::SetItemDefaultFocus();
+                }
             }
+            ImGui::EndCombo();
         }
         ImGui::SetCursorPosX(x);
         ImGui::BeginDisabled(agent_type == Any);
-        if (ImGui::Checkbox("Match identifier", &identifier_active)) changed = true;
-        ImGui::EndDisabled();
-        ImGui::SetCursorPosX(x);
-        ImGui::BeginDisabled(agent_type == Any || !identifier_active);
         if (ImGui::InputInt("Identifier", reinterpret_cast<int*>(&identifier))) changed = true;
         ImGui::EndDisabled();
-        ImGui::ShowHelp("Item model ID, gadget ID or NPC model ID, according to the chosen type. If unchecked, matches any identifier; checked also allows an exact ID of 0.");
+        ImGui::ShowHelp("Item model ID, gadget ID or NPC model ID, according to the chosen type. Leave 0 to match any identifier.");
         ImGui::SetCursorPosX(x);
         if (ImGui::InputText("Match name", match_name, sizeof(match_name))) changed = true;
         ImGui::ShowHelp("Case-insensitive substring, or /pattern/flags for a regular expression, as in Loot Beacons.");
@@ -1969,16 +2020,6 @@ bool AgentRenderer::CustomAgent::DrawSettings(Operation& op)
         static const char* target_states[] = {"Either", "Targeted", "Not targeted", "Marked (/marktarget)"};
         if (ImGui::Combo("Target state", reinterpret_cast<int*>(&target_state), target_states, _countof(target_states))) changed = true;
         ImGui::SetCursorPosX(x);
-        static const char* player_relations[] = {"Any player", "Self", "Other player", "Friend", "Guild member", "My party", "In a party"};
-        ImGui::BeginDisabled(agent_type != Player);
-        if (ImGui::Combo("Player relation", reinterpret_cast<int*>(&player_relation), player_relations, _countof(player_relations))) changed = true;
-        ImGui::EndDisabled();
-        ImGui::SetCursorPosX(x);
-        static const char* gadget_states[] = {"Any gadget", "Locked chest (closed)", "Locked chest (opened)", "Other gadget"};
-        ImGui::BeginDisabled(agent_type != Gadget);
-        if (ImGui::Combo("Gadget state", reinterpret_cast<int*>(&gadget_state), gadget_states, _countof(gadget_states))) changed = true;
-        ImGui::EndDisabled();
-        ImGui::SetCursorPosX(x);
         static const char* professions[] = {"Any", "Warrior", "Ranger", "Monk", "Necromancer", "Mesmer", "Elementalist", "Assassin", "Ritualist", "Paragon", "Dervish"};
         ImGui::BeginDisabled(agent_type != NPC);
         auto profession_selection = static_cast<int>(profession);
@@ -1986,9 +2027,10 @@ bool AgentRenderer::CustomAgent::DrawSettings(Operation& op)
             profession = static_cast<GW::Constants::Profession>(profession_selection);
             changed = true;
         }
-        static const char* boss_states[] = {"Either", "Boss", "Not boss"};
-        if (ImGui::Combo("Boss state", &boss_state, boss_states, _countof(boss_states))) changed = true;
+        static constexpr const char* boss_state_items[] = {"Boss", "Not boss"};
+        changed |= ImGui::MultiSelectCombo("Boss state", &boss_states, boss_state_items);
         ImGui::EndDisabled();
+        ImGui::ShowHelp("No states selected disables this filter. Otherwise, only selected states match.");
         ImGui::SetCursorPosX(x);
         if (ImGui::Checkbox("Outposts only", &outpost_only)) changed = true;
         ImGui::SetCursorPosX(x);
@@ -2002,15 +2044,13 @@ bool AgentRenderer::CustomAgent::DrawSettings(Operation& op)
         ImGui::ShowHelp("Optional allegiance filter for NPCs and players.");
         if (agent_type == NPC || agent_type == Player || agent_type == Any) {
             ImGui::SetCursorPosX(x);
-            static const char* dead_state_items[] = {"Dead", "Alive", "Either"};
-            if (ImGui::Combo("Dead state", (int*)&dead_state, dead_state_items, 3)) {
-                changed = true;
-            }
+            static constexpr const char* dead_state_items[] = {"Dead", "Alive"};
+            changed |= ImGui::MultiSelectCombo("Dead state", &dead_states, dead_state_items);
+            ImGui::ShowHelp("No states selected disables this filter. Otherwise, only selected states match.");
             ImGui::SetCursorPosX(x);
-            static const char* quest_state_items[] = {"Quest giver", "Not quest giver", "Either"};
-            if (ImGui::Combo("Quest state", (int*)&quest_state, quest_state_items, 3)) {
-                changed = true;
-            }
+            static constexpr const char* quest_state_items[] = {"Quest giver", "Not quest giver"};
+            changed |= ImGui::MultiSelectCombo("Quest state", &quest_states, quest_state_items);
+            ImGui::ShowHelp("No states selected disables this filter. Otherwise, only selected states match.");
         }
         ImGui::SetCursorPosX(x);
         if (ImGui::InputInt("Map ID", (int*)&mapId)) {
@@ -2057,50 +2097,8 @@ bool AgentRenderer::CustomAgent::DrawSettings(Operation& op)
         }
         ImGui::ShowHelp("Inherit uses the next matching shape or the minimap default.");
 
-        ImGui::Spacing();
-
-        // === Move and delete buttons ===
-        const float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
-        const float width = (ImGui::CalcItemWidth() - spacing * 2) / 3;
-        if (ImGui::Button("Move Up", ImVec2(width, 0))) {
-            op = Operation::MoveUp;
-        }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Move the color up in the list");
-        }
-        ImGui::SameLine(0, spacing);
-        if (ImGui::Button("Move Down", ImVec2(width, 0))) {
-            op = Operation::MoveDown;
-        }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Move the color down in the list");
-        }
-        ImGui::SameLine(0, spacing);
-        if (ImGui::Button("Delete", ImVec2(width, 0))) {
-            ImGui::OpenPopup("Delete Rule?");
-        }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Delete the appearance rule");
-        }
-
-        if (ImGui::BeginPopupModal("Delete Rule?", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-            ImGui::Text("Are you sure?\nThis operation cannot be undone\n\n");
-            if (ImGui::Button("OK", ImVec2(120, 0))) {
-                op = Operation::Delete;
-                ImGui::CloseCurrentPopup();
-            }
-            ImGui::SameLine();
-            if (ImGui::Button("Cancel", ImVec2(120, 0))) {
-                ImGui::CloseCurrentPopup();
-            }
-            ImGui::EndPopup();
-        }
-
-        ImGui::TreePop();
         ImGui::PopID();
     }
-    else {
-        changed |= DrawHeader();
-    }
+    ImGui::End();
     return changed;
 }

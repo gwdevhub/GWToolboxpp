@@ -42,6 +42,7 @@
 #include <Modules/QuestModule.h>
 #include <Modules/Resources.h>
 #include <Utils/TextUtils.h>
+#include <Windows/AgentAppearanceWindow.h>
 #include <Windows/SettingsWindow.h>
 #include "Minimap.h"
 #include <Utils/FontLoader.h>
@@ -1081,6 +1082,9 @@ void Minimap::DrawSettingsInternal()
     static float a = scale;
     if (ImGui::DragFloat("Scale", &a, 0.01f, 0.1f, 10.f)) {
         scale = a;
+    }
+    if (ImGui::Button("Agent Appearance")) {
+        AgentAppearanceWindow::Instance().Show();
     }
     ImGui::Text("You can set the color alpha to 0 to disable any minimap feature.");
     if (SettingsWindow::SubSectionHeader(SettingsName(), "Ranges")) {
