@@ -201,7 +201,7 @@ namespace {
 
     uint32_t pending_skill_id = 0;
     bool running_awaiting_movement = false;
-    bool running_load_paused = false;
+    bool town_paused = false;
     // Mission ready-check up; game time not count.
     bool in_mission_queue = false;
     // Manual pause freeze real time too: track apart.
@@ -960,7 +960,7 @@ void SplitsWindow::ResetRunFlags()
     run_complete = false;
     run_failed = false;
     running_awaiting_movement = false;
-    running_load_paused = false;
+    town_paused = false;
     pending_skill_id = 0;
     in_mission_queue = false;
     manually_paused = false;
@@ -1021,7 +1021,7 @@ void SplitsWindow::StartRun()
         return;
     }
 
-    if (running_load_paused || running_awaiting_movement) {
+    if (town_paused || running_awaiting_movement) {
         // Mid-run (auto-paused or awaiting move): not fresh start, don't wipe progress.
         return;
     }
@@ -1137,17 +1137,20 @@ void SplitsWindow::Update(float delta)
 
     if (is_explorable) RefreshMobNameCache();
 
-    if (is_running) {
-        if (!is_explorable && run_clock.IsRunning() && !running_load_paused) {
+    // Running and SC pause in towns and resume on first movement back in an explorable; the fail settings decide whether leaving ends the run.
+    const bool pauses_in_town = is_running || active_profile_idx == kProfileSC;
+    if (pauses_in_town) {
+        if (!is_explorable && run_clock.IsRunning() && !town_paused) {
             run_clock.Pause();
             SetLiveSplitPaused(true);
-            running_load_paused = true;
+            town_paused = true;
         }
-        // Arm continuously, like GWChrono, so no re-zone needed.
-        if (is_explorable && !run_clock.IsRunning() && !run_complete && !run_failed) running_awaiting_movement = true;
+        // Arm continuously, like GWChrono, so no re-zone needed. SC only resumes; it never starts a run on movement.
+        // Not during a manual pause: the next step would otherwise BeginRun and restart the run.
+        if (is_explorable && !run_clock.IsRunning() && !run_complete && !run_failed && !manually_paused && (is_running || town_paused)) running_awaiting_movement = true;
     }
 
-    if (is_running && !run_complete && !run_failed) {
+    if (pauses_in_town && !run_complete && !run_failed) {
         if (running_awaiting_movement && is_explorable) {
             const uint32_t skill = pending_skill_id;
             pending_skill_id = 0;
@@ -1159,10 +1162,10 @@ void SplitsWindow::Update(float delta)
 
             if (triggered) {
                 running_awaiting_movement = false;
-                if (running_load_paused) {
+                if (town_paused) {
                     run_clock.Start();
                     SetLiveSplitPaused(false);
-                    running_load_paused = false;
+                    town_paused = false;
                 }
                 else {
                     BeginRun();
@@ -1200,7 +1203,7 @@ void SplitsWindow::ApplyTimerPolicy(const bool just_entered_map)
     if (party_defeated && ActiveProfile().stop_on_party_defeated && run_clock.IsRunning()) FailRun();
 
     // Always drained so flag not go stale when setting off.
-    if (engine.ConsumeIncompleteRezone() && ActiveProfile().auto_fail_on_rezone && run_clock.IsRunning()) FailRun();
+    if (engine.ConsumeIncompleteRezone() && ActiveProfile().auto_fail_on_rezone && (run_clock.IsRunning() || run_clock.RealTime() > 0.0)) FailRun();
 
     const bool is_running = ActiveProfile().sequential_route;
 
@@ -1211,7 +1214,7 @@ void SplitsWindow::ApplyTimerPolicy(const bool just_entered_map)
 
     // Start on first sign of attempt, not completion. Separate from GoalEngine on purpose.
     // New trigger with start->done gap need rule here too.
-    if (!is_running && !run_clock.IsRunning() && !run_complete && !run_failed && !manually_paused) {
+    if (!is_running && !run_clock.IsRunning() && !run_complete && !run_failed && !manually_paused && !town_paused) {
         bool should_start = false;
         // Elite checkpoints have no map_id: use header's.
         GW::Constants::MapID owning_header_map = GW::Constants::MapID::None;
