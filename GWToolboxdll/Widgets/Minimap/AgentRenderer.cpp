@@ -725,8 +725,8 @@ void AgentRenderer::DrawSettings()
         if (ImGui::Button("Add", ImVec2(add_width, 0.f))) {
             auto* rule = new CustomAgent(0, 0, "");
             rule->active = false;
-            rule->edit_open = rule->focus_editor = true;
             custom_agents.insert(custom_agents.begin(), rule);
+            EditRule(rule);
             for (size_t i = 0; i < custom_agents.size(); ++i) {
                 custom_agents[i]->index = i;
             }
@@ -766,7 +766,7 @@ void AgentRenderer::DrawSettings()
                 changed |= custom->DrawHeader();
                 ImGui::TableNextColumn();
                 if (ImGui::ButtonWithHint(ICON_FA_EDIT, "Edit appearance rule", ImVec2(button_size, button_size))) {
-                    custom->edit_open = custom->focus_editor = true;
+                    EditRule(custom);
                 }
                 ImGui::SameLine();
                 ImGui::BeginDisabled(i == 0);
@@ -820,7 +820,14 @@ void AgentRenderer::DrawSettings()
     ImGui::EndTabBar();
 }
 
-void AgentRenderer::DrawRuleEditors()
+void AgentRenderer::EditRule(CustomAgent* rule)
+{
+    for (auto* custom : custom_agents) {
+        custom->edit_open = custom->focus_editor = custom == rule;
+    }
+}
+
+void AgentRenderer::DrawRuleEditor()
 {
     bool changed = false;
     for (auto* rule : custom_agents) {
@@ -2000,7 +2007,7 @@ bool AgentRenderer::CustomAgent::DrawHeader()
 bool AgentRenderer::CustomAgent::DrawSettings()
 {
     bool changed = false;
-    const auto title = std::format("Edit Appearance Rule: {}###appearance_rule_{}", Label(), ui_id);
+    const auto title = std::format("Edit Appearance Rule: {}###appearance_rule_editor", Label());
     ImGui::SetNextWindowSizeConstraints(ImVec2(600.f, 0.f), ImVec2(FLT_MAX, FLT_MAX));
     if (focus_editor) {
         ImGui::SetNextWindowFocus();

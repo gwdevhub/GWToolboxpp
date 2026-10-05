@@ -44,7 +44,7 @@ public:
     void Render(IDirect3DDevice9* device) override;
 
     void DrawSettings();
-    void DrawRuleEditors();
+    void DrawRuleEditor();
     void RegisterSettings(ToolboxModule* module);
     void RegisterMinimapSettings(ToolboxModule* module);
     void LoadCustomAgents(SettingsDoc& doc, ToolboxIni* legacy);
@@ -210,6 +210,8 @@ private:
         uint32_t boss_states = 0;
         Color border_color = 0;
     };
+
+    void EditRule(CustomAgent* rule);
 
     struct Shape_Vertex : GW::Vec2f {
         Shape_Vertex(const float x, const float y, const Color_Modifier mod)
