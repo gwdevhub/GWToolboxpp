@@ -1,6 +1,8 @@
 #pragma once
 
 #include <array>
+#include <optional>
+#include <vector>
 
 #include <GWCA/Utilities/Hook.h>
 
@@ -60,6 +62,8 @@ public:
 
     Color GetProfessionColor(GW::Constants::Profession profession) const;
 
+    enum Shape_e { Shape_None = -1, Tear, Circle, Quad, BigCircle, Star };
+
     bool show_hidden_npcs = false;
     bool show_quest_npcs_on_minimap = false;
     bool show_props_on_minimap = false;
@@ -76,8 +80,6 @@ private:
     static AgentRenderer* instance;
 
     static constexpr size_t shape_size = 5;
-
-    enum Shape_e { Shape_None = -1, Tear, Circle, Quad, BigCircle, Star };
 
     enum Color_Modifier {
         None,
@@ -98,6 +100,7 @@ private:
     enum PlayerRelation { AnyRelation, Self, Other, Friend, Guild, MyParty, InParty };
     enum GadgetState { AnyGadget, ClosedChest, OpenedChest, OtherGadget };
 
+public:
     class CustomAgent {
         static unsigned int cur_ui_id;
 
@@ -154,6 +157,9 @@ private:
             int boss_state = 0;
             uint32_t boss_states = UINT32_MAX;
             Colors::SettingColor border_color = 0;
+            std::optional<bool> override_color;
+            std::optional<bool> override_text_color;
+            std::optional<bool> override_border_color;
         };
 
         struct LegacyFlags {
@@ -182,21 +188,22 @@ private:
         bool edit_open = false;
         bool focus_editor = false;
 
-        // define the agent
         bool active = true;
         char name[128]{};
         char group[64]{};
         DWORD modelId = 0;
-        DWORD mapId = 0; // 0 for 'any map'
+        DWORD mapId = 0;
         CombatState combat_state = CombatState::EitherCombat;
         WeaponState weapon_state = WeaponState::EitherWeapon;
         int allegiance = -1;
         uint32_t dead_states = 0;
         uint32_t quest_states = 0;
 
-        // attributes to change
         Color color = 0;
         Color color_text = 0;
+        bool override_color = false;
+        bool override_text_color = false;
+        bool override_border_color = false;
         Shape_e shape = Shape_None;
         float size = 0.0f;
         AgentType agent_type = NPC;
@@ -210,6 +217,12 @@ private:
         uint32_t boss_states = 0;
         Color border_color = 0;
     };
+
+    using AppearanceRule = CustomAgent;
+
+private:
+    friend void GetAgentAppearanceRules(std::vector<AppearanceRule*>& out);
+    friend bool GetAgentAppearance(const GW::Agent* agent, Shape_e* shape_out, Color* color_out, Color* border_color_out, float* border_thickness_out, Color* text_color_out);
 
     void EditRule(CustomAgent* rule);
 
@@ -349,3 +362,10 @@ private:
     GW::HookEntry UIMsg_Entry;
     static void OnUIMessage(GW::HookStatus* status, GW::UI::UIMessage msgid, void* wParam, void*);
 };
+
+using AppearanceRule = AgentRenderer::AppearanceRule;
+
+void GetAgentAppearanceRules(std::vector<AppearanceRule*>& out);
+
+bool GetAgentAppearance(const GW::Agent* agent, AgentRenderer::Shape_e* shape_out = nullptr, Color* color_out = nullptr,
+    Color* border_color_out = nullptr, float* border_thickness_out = nullptr, Color* text_color_out = nullptr);
