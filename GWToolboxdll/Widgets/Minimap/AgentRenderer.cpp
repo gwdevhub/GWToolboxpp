@@ -715,8 +715,23 @@ void AgentRenderer::DrawSettings()
 
     if (ImGui::BeginTabItem("Appearance")) {
         static char group_filter[64] = "";
-        ImGui::InputTextWithHint("Filter", "Filter by label or group...", group_filter, sizeof(group_filter));
-        ImGui::ShowHelp("Only affects what's shown here. Rules are evaluated top to bottom, independently for each enabled colour, size and shape.");
+        const auto add_width = ImGui::CalcTextSize("Add").x + ImGui::GetStyle().FramePadding.x * 2.f;
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - add_width - ImGui::GetStyle().ItemSpacing.x);
+        ImGui::InputTextWithHint("##filter", "Filter by label or group...", group_filter, sizeof(group_filter));
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("Only affects what's shown here. Rules are evaluated top to bottom, independently for each enabled colour, size and shape.");
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Add", ImVec2(add_width, 0.f))) {
+            auto* rule = new CustomAgent(0, 0, "");
+            rule->active = false;
+            rule->edit_open = rule->focus_editor = true;
+            custom_agents.insert(custom_agents.begin(), rule);
+            for (size_t i = 0; i < custom_agents.size(); ++i) {
+                custom_agents[i]->index = i;
+            }
+            RebuildRuleMatchers();
+        }
 
         const auto matches_filter = [](const CustomAgent* ca) {
             if (!group_filter[0]) {
@@ -799,13 +814,6 @@ void AgentRenderer::DrawSettings()
         }
         if (changed) {
             RebuildRuleMatchers();
-        }
-        if (ImGui::Button("Add Appearance Rule")) {
-            custom_agents.push_back(new CustomAgent(0, 0, ""));
-            custom_agents.back()->index = custom_agents.size() - 1;
-            custom_agents.back()->active = false;
-            custom_agents.back()->edit_open = custom_agents.back()->focus_editor = true;
-            rules_changed = true;
         }
         ImGui::EndTabItem();
     }
