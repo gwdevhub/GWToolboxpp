@@ -209,6 +209,48 @@ void GetAgentAppearanceRules(std::vector<AppearanceRule*>& out)
     out.assign(rules.begin(), rules.end());
 }
 
+bool GetAgentAppearance(const GW::Agent* agent, AgentRenderer::Shape_e* shape_out, Color* color_out,
+    Color* border_color_out, float* border_thickness_out, Color* text_color_out)
+{
+    if (!agent || !AgentRenderer::instance || (!shape_out && !color_out && !border_color_out && !border_thickness_out && !text_color_out)) {
+        return false;
+    }
+    auto& renderer = AgentRenderer::Instance();
+    if (shape_out) *shape_out = renderer.GetShape(agent);
+    if (color_out) *color_out = renderer.GetColor(agent);
+    if (border_color_out) *border_color_out = renderer.color_target;
+    if (border_thickness_out) *border_thickness_out = renderer.target_border_thickness;
+
+    if (!shape_out && !color_out && !border_color_out && !text_color_out) return false;
+    const auto* matches = renderer.GetCustomAgentsToDraw(agent);
+    if (!matches) return false;
+    bool overridden = false;
+    for (const auto* rule : *matches) {
+        if (shape_out && rule->shape != AgentRenderer::Shape_None) {
+            *shape_out = rule->shape;
+            shape_out = nullptr;
+            overridden = true;
+        }
+        if (color_out && rule->override_color) {
+            *color_out = renderer.GetColor(agent, rule);
+            color_out = nullptr;
+            overridden = true;
+        }
+        if (border_color_out && rule->override_border_color) {
+            *border_color_out = rule->border_color;
+            border_color_out = nullptr;
+            overridden = true;
+        }
+        if (text_color_out && rule->override_text_color) {
+            *text_color_out = rule->color_text;
+            text_color_out = nullptr;
+            overridden = true;
+        }
+        if (!shape_out && !color_out && !border_color_out && !text_color_out) break;
+    }
+    return overridden;
+}
+
 void AgentRenderer::RegisterSettings(ToolboxModule* module)
 {
     const std::pair<const char*, Color*> colors[] = {
@@ -1148,14 +1190,7 @@ void AgentRenderer::RefreshMatches(const GW::Agent* agent)
 
 bool AgentRenderer::ApplyNameTagColor(const GW::Agent* agent, Color& color)
 {
-    const auto matches = GetCustomAgentsToDraw(agent);
-    if (!matches) return false;
-    for (const auto* rule : *matches) {
-        if (!rule->override_text_color) continue;
-        color = rule->color_text;
-        return true;
-    }
-    return false;
+    return GetAgentAppearance(agent, nullptr, nullptr, nullptr, nullptr, &color);
 }
 
 void AgentRenderer::InvalidateAppearance(const uint32_t agent_id)
@@ -1382,27 +1417,22 @@ void AgentRenderer::Render(IDirect3DDevice9* device)
 
 void AgentRenderer::Enqueue(const GW::Agent* agent, const CustomAgent* ca)
 {
-    auto color = GetColor(agent);
+    auto color = Color{0};
     auto size = GetSize(agent);
-    auto shape = GetShape(agent);
+    auto shape = Shape_None;
     if (ca) {
+        GetAgentAppearance(agent, &shape, &color);
         const auto matches = GetCustomAgentsToDraw(agent);
-        bool found_color = false, found_size = false, found_shape = false;
         if (matches) for (const auto* rule : *matches) {
-            if (!found_color && rule->override_color) {
-                color = GetColor(agent, rule);
-                found_color = true;
-            }
-            if (!found_size && rule->size > 0.f) {
+            if (rule->size > 0.f) {
                 size = rule->size;
-                found_size = true;
+                break;
             }
-            if (!found_shape && rule->shape != Shape_None) {
-                shape = rule->shape;
-                found_shape = true;
-            }
-            if (found_color && found_size && found_shape) break;
         }
+    }
+    else {
+        color = GetColor(agent);
+        shape = GetShape(agent);
     }
     return Enqueue(shape, agent, size, color);
 }
@@ -1756,14 +1786,9 @@ void AgentRenderer::Enqueue(const Shape_e shape, const GW::Agent* agent, const f
         }
         if (is_target) {
             auto border_color = color_target;
-            if (const auto matches = GetCustomAgentsToDraw(agent)) {
-                for (const auto* rule : *matches) {
-                    if (!rule->override_border_color) continue;
-                    border_color = rule->border_color;
-                    break;
-                }
-            }
-            Enqueue(shape, pos, size + target_border_thickness, border_color);
+            auto border_thickness = target_border_thickness;
+            GetAgentAppearance(agent, nullptr, nullptr, &border_color, &border_thickness);
+            Enqueue(shape, pos, size + border_thickness, border_color);
             target_drawn = true;
         }
     }

@@ -62,6 +62,8 @@ public:
 
     Color GetProfessionColor(GW::Constants::Profession profession) const;
 
+    enum Shape_e { Shape_None = -1, Tear, Circle, Quad, BigCircle, Star };
+
     bool show_hidden_npcs = false;
     bool show_quest_npcs_on_minimap = false;
     bool show_props_on_minimap = false;
@@ -78,8 +80,6 @@ private:
     static AgentRenderer* instance;
 
     static constexpr size_t shape_size = 5;
-
-    enum Shape_e { Shape_None = -1, Tear, Circle, Quad, BigCircle, Star };
 
     enum Color_Modifier {
         None,
@@ -222,6 +222,7 @@ public:
 
 private:
     friend void GetAgentAppearanceRules(std::vector<AppearanceRule*>& out);
+    friend bool GetAgentAppearance(const GW::Agent* agent, Shape_e* shape_out, Color* color_out, Color* border_color_out, float* border_thickness_out, Color* text_color_out);
 
     void EditRule(CustomAgent* rule);
 
@@ -365,3 +366,6 @@ private:
 using AppearanceRule = AgentRenderer::AppearanceRule;
 
 void GetAgentAppearanceRules(std::vector<AppearanceRule*>& out);
+
+bool GetAgentAppearance(const GW::Agent* agent, AgentRenderer::Shape_e* shape_out = nullptr, Color* color_out = nullptr,
+    Color* border_color_out = nullptr, float* border_thickness_out = nullptr, Color* text_color_out = nullptr);
