@@ -715,7 +715,7 @@ void AgentRenderer::DrawSettings()
 
     if (ImGui::BeginTabItem("Appearance")) {
         static char group_filter[64] = "";
-        ImGui::InputTextWithHint("Filter", "Filter by name or group...", group_filter, sizeof(group_filter));
+        ImGui::InputTextWithHint("Filter", "Filter by label or group...", group_filter, sizeof(group_filter));
         ImGui::ShowHelp("Only affects what's shown here. Rules are evaluated top to bottom, independently for each enabled colour, size and shape.");
 
         const auto matches_filter = [](const CustomAgent* ca) {
@@ -727,7 +727,7 @@ void AgentRenderer::DrawSettings()
                 return s;
             };
             const auto needle = to_lower(group_filter);
-            return to_lower(ca->name).find(needle) != std::string::npos || to_lower(ca->group).find(needle) != std::string::npos;
+            return to_lower(ca->Label()).find(needle) != std::string::npos || to_lower(ca->group).find(needle) != std::string::npos;
         };
 
         bool changed = false;
@@ -769,7 +769,7 @@ void AgentRenderer::DrawSettings()
                 ImGui::EndDisabled();
                 ImGui::SameLine();
                 if (ImGui::ButtonWithHint(ICON_FA_TRASH, "Delete appearance rule", ImVec2(button_size, button_size))) {
-                    const auto message = std::format("Delete appearance rule '{}'?\nThis cannot be undone.", custom->name);
+                    const auto message = std::format("Delete appearance rule '{}'?\nThis cannot be undone.", custom->Label());
                     ImGui::ConfirmDialog(message.c_str(), [rule_id = custom->ui_id](const bool confirmed, void*) {
                         if (!confirmed) return;
                         auto& renderer = AgentRenderer::Instance();
@@ -801,7 +801,7 @@ void AgentRenderer::DrawSettings()
             RebuildRuleMatchers();
         }
         if (ImGui::Button("Add Appearance Rule")) {
-            custom_agents.push_back(new CustomAgent(0, 0, "<name>"));
+            custom_agents.push_back(new CustomAgent(0, 0, ""));
             custom_agents.back()->index = custom_agents.size() - 1;
             custom_agents.back()->active = false;
             custom_agents.back()->edit_open = custom_agents.back()->focus_editor = true;
@@ -1906,6 +1906,49 @@ const char* AgentRenderer::CustomAgent::AgentTypeName() const
     return "Unknown";
 }
 
+std::string AgentRenderer::CustomAgent::DefaultLabel() const
+{
+    std::string label = AgentTypeName();
+    if (agent_type != Any && identifier) {
+        label += std::format(" #{}", identifier);
+    }
+    std::string_view target_suffix;
+    switch (target_state) {
+        case Targeted:
+            target_suffix = " [Target]";
+            break;
+        case NotTargeted:
+            target_suffix = " [Not target]";
+            break;
+        case Marked:
+            target_suffix = " [Marked]";
+            break;
+        default:
+            break;
+    }
+    const auto fixed_length = label.size() + target_suffix.size() + 3;
+    const auto match_limit = fixed_length < 64 ? std::min(size_t{24}, 64 - fixed_length) : 0;
+    if (match_name[0] && match_limit >= 3) {
+        std::string match = match_name;
+        if (match.size() > match_limit) {
+            auto end = match_limit - 3;
+            while (end > 0 && (static_cast<unsigned char>(match[end]) & 0xc0u) == 0x80u) {
+                --end;
+            }
+            match.resize(end);
+            match += "...";
+        }
+        label += std::format(" \"{}\"", match);
+    }
+    label += target_suffix;
+    return label;
+}
+
+std::string AgentRenderer::CustomAgent::Label() const
+{
+    return name[0] ? std::string(name) : DefaultLabel();
+}
+
 bool AgentRenderer::CustomAgent::DrawHeader()
 {
     bool changed = ImGui::Checkbox("##visible", &active);
@@ -1932,7 +1975,13 @@ bool AgentRenderer::CustomAgent::DrawHeader()
         ImGui::SameLine();
     }
     ImGui::SetCursorPosX(cursor_pos += button_width);
-    ImGui::Text("%s [%s]", name[0] ? name : "<unnamed>", AgentTypeName());
+    const auto label = Label();
+    if (name[0]) {
+        ImGui::Text("%s [%s]", label.c_str(), AgentTypeName());
+    }
+    else {
+        ImGui::TextUnformatted(label.c_str());
+    }
     if (group[0]) {
         ImGui::SameLine();
         ImGui::TextDisabled("(%s)", group);
@@ -1943,7 +1992,7 @@ bool AgentRenderer::CustomAgent::DrawHeader()
 bool AgentRenderer::CustomAgent::DrawSettings()
 {
     bool changed = false;
-    const auto title = std::format("Edit Appearance Rule: {}###appearance_rule_{}", name, ui_id);
+    const auto title = std::format("Edit Appearance Rule: {}###appearance_rule_{}", Label(), ui_id);
     ImGui::SetNextWindowSizeConstraints(ImVec2(600.f, 0.f), ImVec2(FLT_MAX, FLT_MAX));
     if (focus_editor) {
         ImGui::SetNextWindowFocus();
@@ -1961,10 +2010,11 @@ bool AgentRenderer::CustomAgent::DrawSettings()
         }
         ImGui::SameLine();
         const float x = ImGui::GetCursorPosX();
-        if (ImGui::InputText("Name", name, 128)) {
+        const auto default_label = DefaultLabel();
+        if (ImGui::InputTextWithHint("Label", default_label.c_str(), name, sizeof(name))) {
             changed = true;
         }
-        ImGui::ShowHelp("A name to help you remember what this is. Optional.");
+        ImGui::ShowHelp("An optional label for this rule. Leave empty to use a short label based on agent type, identifier, match name and target state.");
         ImGui::SetCursorPosX(x);
         if (ImGui::InputText("Group", group, sizeof(group))) {
             changed = true;

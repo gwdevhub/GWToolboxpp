@@ -172,6 +172,8 @@ private:
         bool DrawHeader();
         bool DrawSettings();
         [[nodiscard]] const char* AgentTypeName() const;
+        [[nodiscard]] std::string DefaultLabel() const;
+        [[nodiscard]] std::string Label() const;
         [[nodiscard]] Settings ToSettings() const;
         void ApplyLegacyFlags(const LegacyFlags& flags);
 
