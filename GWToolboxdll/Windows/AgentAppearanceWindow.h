@@ -154,6 +154,7 @@ public:
             std::optional<bool> override_color;
             std::optional<bool> override_text_color;
             std::optional<bool> override_border_color;
+            bool stop_processing_rules = false;
         };
 
         struct LegacyFlags {
@@ -198,6 +199,7 @@ public:
         bool override_color = false;
         bool override_text_color = false;
         bool override_border_color = false;
+        bool stop_processing_rules = false;
         Shape_e shape = Shape_None;
         float size = 0.0f;
         AgentType agent_type = NPC;
@@ -223,6 +225,7 @@ public:
     static float GetSize(const GW::Agent* agent);
     static bool IsMarked(uint32_t agent_id);
     static void ResetAppearanceCache();
+    static void RebuildRuleMatchers();
 
 private:
     static void EditRule(CustomAgent* rule);
@@ -245,7 +248,37 @@ private:
 
 
     static void RefreshMatches(const GW::Agent* agent);
+    static void EnsureRuleMatchers();
     static void OnNameDecoded(void* context, const wchar_t* decoded);
+    enum RuleCheck : uint32_t {
+        CheckIdentifier = 1u,
+        CheckProfession = 2u,
+        CheckGadget = 4u,
+        CheckSelf = 8u,
+        CheckFriend = 16u,
+        CheckGuild = 32u,
+        CheckMyParty = 64u,
+        CheckAnyParty = 128u,
+        CheckName = 256u
+    };
+    struct CompiledRule {
+        const AppearanceRule* rule = nullptr;
+        uint32_t required_flags = 0;
+        uint32_t rejected_flags = 0;
+        uint32_t required_relations = 0;
+        uint32_t rejected_relations = 0;
+        uint32_t identifier = 0;
+        const TextUtils::SearchPattern<wchar_t>* name_pattern = nullptr;
+    };
+    struct RuleBucket {
+        std::vector<CompiledRule> rules;
+        uint32_t checks = 0;
+    };
+    static std::array<RuleBucket, 6> rule_buckets;
+    inline static std::array<const AppearanceRule*, 11> profession_rules{};
+    inline static uint32_t matcher_map_id = UINT32_MAX;
+    inline static uint32_t matcher_instance_type = UINT32_MAX;
+    inline static bool matcher_context_valid = false;
     struct MatchCache {
         const GW::Agent* agent = nullptr;
         uint32_t generation = 0;
@@ -264,7 +297,6 @@ private:
     inline static std::unordered_map<uint32_t, MatchCache> match_cache;
     inline static std::unordered_map<uint32_t, std::pair<uint32_t, uint32_t>> pending_names;
     inline static uint32_t next_name_token = 0;
-    inline static bool rules_changed = true;
 
 
     inline static Color color_agent_modifier = 0x001E1E1E;
@@ -301,14 +333,12 @@ private:
 
     inline static std::vector<CustomAgent*> custom_agents{};
     inline static std::unordered_map<const CustomAgent*, TextUtils::SearchPattern<wchar_t>> compiled_name_patterns;
-    inline static bool check_friends = false;
-    inline static bool check_guild = false;
-    inline static bool check_party = false;
-    static void RebuildRuleMatchers();
     static void SeedDefaultCustomAgents();
     static void SeedAppearanceDefaults(const SettingsDoc& doc, const ToolboxIni* legacy);
+    static void SeedSpiritDefaults(const SettingsDoc& doc);
     inline static bool custom_agent_defaults_seeded = false;
     inline static bool appearance_defaults_seeded = false;
+    inline static bool spirit_defaults_seeded = false;
 
     inline static float size_default = 100.f;
     inline static float size_player = 100.f;
