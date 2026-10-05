@@ -13,66 +13,66 @@ namespace SCPresets {
     using MapID = GW::Constants::MapID;
 
     // clang-format off
-const EliteCheckpoint kFow[11] = {
-    { .name = "ToC",            .type = T::ObjectiveDone, .param1 = 309, .start_on_objective_started = true },
-    { .name = "Wailing Lord",   .type = T::ObjectiveDone, .param1 = 310, .start_on_objective_started = true },
-    { .name = "Griffons",       .type = T::ObjectiveDone, .param1 = 311, .start_on_objective_started = true },
-    { .name = "Defend",         .type = T::ObjectiveDone, .param1 = 312, .start_on_objective_started = true },
-    { .name = "Forge",          .type = T::ObjectiveDone, .param1 = 313, .start_on_objective_started = true },
-    { .name = "Menzies",        .type = T::ObjectiveDone, .param1 = 314, .start_on_objective_started = true },
-    { .name = "Restore",        .type = T::ObjectiveDone, .param1 = 315, .start_on_objective_started = true },
-    { .name = "Khobay",         .type = T::ObjectiveDone, .param1 = 316, .start_on_objective_started = true },
-    { .name = "ToS",            .type = T::ObjectiveDone, .param1 = 317, .start_on_objective_started = true },
-    { .name = "Burning Forest", .type = T::ObjectiveDone, .param1 = 318, .start_on_objective_started = true },
-    { .name = "The Hunt",       .type = T::ObjectiveDone, .param1 = 319, .start_on_objective_started = true },
-};
+    const EliteCheckpoint kFow[11] = {
+        { .name = "ToC",            .type = T::ObjectiveDone, .param1 = 309, .start_on_objective_started = true },
+        { .name = "Wailing Lord",   .type = T::ObjectiveDone, .param1 = 310, .start_on_objective_started = true },
+        { .name = "Griffons",       .type = T::ObjectiveDone, .param1 = 311, .start_on_objective_started = true },
+        { .name = "Defend",         .type = T::ObjectiveDone, .param1 = 312, .start_on_objective_started = true },
+        { .name = "Forge",          .type = T::ObjectiveDone, .param1 = 313, .start_on_objective_started = true },
+        { .name = "Menzies",        .type = T::ObjectiveDone, .param1 = 314, .start_on_objective_started = true },
+        { .name = "Restore",        .type = T::ObjectiveDone, .param1 = 315, .start_on_objective_started = true },
+        { .name = "Khobay",         .type = T::ObjectiveDone, .param1 = 316, .start_on_objective_started = true },
+        { .name = "ToS",            .type = T::ObjectiveDone, .param1 = 317, .start_on_objective_started = true },
+        { .name = "Burning Forest", .type = T::ObjectiveDone, .param1 = 318, .start_on_objective_started = true },
+        { .name = "The Hunt",       .type = T::ObjectiveDone, .param1 = 319, .start_on_objective_started = true },
+    };
 
-const EliteCheckpoint kUw[11] = {
-    { .name = "Chamber", .type = T::ObjectiveDone, .param1 = 146, .start_on_objective_started = true },
-    { .name = "Restore", .type = T::ObjectiveDone, .param1 = 147, .start_on_objective_started = true },
-    { .name = "Escort",  .type = T::ObjectiveDone, .param1 = 148, .start_on_objective_started = true },
-    { .name = "UWG",     .type = T::ObjectiveDone, .param1 = 149, .start_on_objective_started = true },
-    { .name = "Vale",    .type = T::ObjectiveDone, .param1 = 150, .start_on_objective_started = true },
-    { .name = "Waste",   .type = T::ObjectiveDone, .param1 = 151, .start_on_objective_started = true },
-    { .name = "Pits",    .type = T::ObjectiveDone, .param1 = 152, .start_on_objective_started = true },
-    { .name = "Planes",  .type = T::ObjectiveDone, .param1 = 153, .start_on_objective_started = true },
-    { .name = "Mnts",    .type = T::ObjectiveDone, .param1 = 154, .start_on_objective_started = true },
-    { .name = "Pools",   .type = T::ObjectiveDone, .param1 = 155, .start_on_objective_started = true },
-    { .name = "Dhuum",   .type = T::ObjectiveDone, .param1 = 157 },
-};
+    const EliteCheckpoint kUw[11] = {
+        { .name = "Chamber", .type = T::ObjectiveDone, .param1 = 146, .start_on_objective_started = true },
+        { .name = "Restore", .type = T::ObjectiveDone, .param1 = 147, .start_on_objective_started = true },
+        { .name = "Escort",  .type = T::ObjectiveDone, .param1 = 148, .start_on_objective_started = true },
+        { .name = "UWG",     .type = T::ObjectiveDone, .param1 = 149, .start_on_objective_started = true },
+        { .name = "Vale",    .type = T::ObjectiveDone, .param1 = 150, .start_on_objective_started = true },
+        { .name = "Waste",   .type = T::ObjectiveDone, .param1 = 151, .start_on_objective_started = true },
+        { .name = "Pits",    .type = T::ObjectiveDone, .param1 = 152, .start_on_objective_started = true },
+        { .name = "Planes",  .type = T::ObjectiveDone, .param1 = 153, .start_on_objective_started = true },
+        { .name = "Mnts",    .type = T::ObjectiveDone, .param1 = 154, .start_on_objective_started = true },
+        { .name = "Pools",   .type = T::ObjectiveDone, .param1 = 155, .start_on_objective_started = true },
+        { .name = "Dhuum",   .type = T::ObjectiveDone, .param1 = 157 },
+    };
 
-const EliteCheckpoint kUrgoz[11] = {
-    { .name = "Zone 1 | Weakness",       .type = T::DoorOpen, .param1 = 45420, .starts_on_area_entry = true },
-    { .name = "Zone 2 | Life Drain",     .type = T::DoorOpen, .param1 = 11692 },
-    { .name = "Zone 3 | Levers",         .type = T::DoorOpen, .param1 = 54552 },
-    { .name = "Zone 4 | Bridge Wolves",  .type = T::DoorOpen, .param1 = 1760  },
-    { .name = "Zone 5 | More Wolves",    .type = T::DoorOpen, .param1 = 40330 },
-    { .name = "Zone 6 | Energy Drain",   .type = T::DoorOpen, .param1 = 60114 },
-    { .name = "Zone 7 | Exhaustion",     .type = T::DoorOpen, .param1 = 37191 },
-    { .name = "Zone 8 | Pillars",        .type = T::DoorOpen, .param1 = 35500 },
-    { .name = "Zone 9 | Blood Drinkers", .type = T::DoorOpen, .param1 = 34278 },
-    { .name = "Zone 10 | Bridge",        .type = T::DoorOpen, .param1 = 15529,
-      .extra_param1_a = 45631, .extra_param1_b = 53071 },
-    { .name = "Zone 11 | Urgoz",         .type = T::ServerMessage,
-      .pattern = L"\x6C9C\x0\x0\x0\x0\x2810", .extra_pattern_a = L"\x6C9C\x0\x0\x0\x0\x1488" },
-};
+    const EliteCheckpoint kUrgoz[11] = {
+        { .name = "Zone 1 | Weakness",       .type = T::DoorOpen, .param1 = 45420, .starts_on_area_entry = true },
+        { .name = "Zone 2 | Life Drain",     .type = T::DoorOpen, .param1 = 11692 },
+        { .name = "Zone 3 | Levers",         .type = T::DoorOpen, .param1 = 54552 },
+        { .name = "Zone 4 | Bridge Wolves",  .type = T::DoorOpen, .param1 = 1760  },
+        { .name = "Zone 5 | More Wolves",    .type = T::DoorOpen, .param1 = 40330 },
+        { .name = "Zone 6 | Energy Drain",   .type = T::DoorOpen, .param1 = 60114 },
+        { .name = "Zone 7 | Exhaustion",     .type = T::DoorOpen, .param1 = 37191 },
+        { .name = "Zone 8 | Pillars",        .type = T::DoorOpen, .param1 = 35500 },
+        { .name = "Zone 9 | Blood Drinkers", .type = T::DoorOpen, .param1 = 34278 },
+        { .name = "Zone 10 | Bridge",        .type = T::DoorOpen, .param1 = 15529,
+          .extra_param1_a = 45631, .extra_param1_b = 53071 },
+        { .name = "Zone 11 | Urgoz",         .type = T::ServerMessage,
+          .pattern = L"\x6C9C\x0\x0\x0\x0\x2810", .extra_pattern_a = L"\x6C9C\x0\x0\x0\x0\x1488" },
+    };
 
-const EliteCheckpoint kDeep[13] = {
-    { .name = "Room 1 | Soothing",          .type = T::DoorOpen, .param1 = 12669, .extra_param1_a = 11692, .starts_on_area_entry = true },
-    { .name = "Room 2 | Death",             .type = T::DoorOpen, .param1 = 54552, .extra_param1_a = 1760,  .starts_on_area_entry = true },
-    { .name = "Room 3 | Surrender",         .type = T::DoorOpen, .param1 = 45425, .extra_param1_a = 48290, .starts_on_area_entry = true },
-    { .name = "Room 4 | Exposure",          .type = T::DoorOpen, .param1 = 40330, .extra_param1_a = 60114, .starts_on_area_entry = true },
-    { .name = "Room 5 | Pain",              .type = T::DoorOpen, .param1 = 29594 },
-    { .name = "Room 6 | Lethargy",          .type = T::DoorOpen, .param1 = 49742 },
-    { .name = "Room 7 | Depletion",         .type = T::DoorOpen, .param1 = 55680 },
-    { .name = "Room 8-9 | Failure/Shadows", .type = T::DisplayDialogue, .pattern = L"\x5339\xA7BA\xC67B\x5D81" },
-    { .name = "Room 10 | Scorpion",         .type = T::DoorOpen, .param1 = 28961 },
-    { .name = "Room 11 | Fear",             .type = T::DisplayDialogue, .pattern = L"\x533A\xED06\x815D\x5FFB" },
-    { .name = "Room 12 | Depletion",        .type = T::DisplayDialogue, .pattern = L"\x533B\xCAA6\xFDA9\x3277" },
-    { .name = "Room 13-14 | Decay/Torment", .type = T::DisplayDialogue, .pattern = L"\x533D\x9EB1\x8BEE\x2637" },
-    { .name = "Room 15 | Kanaxai",          .type = T::ServerMessage,
-      .pattern = L"\x6D4D\x0\x0\x0\x0\x2810", .extra_pattern_a = L"\x6D4D\x0\x0\x0\x0\x1488" },
-};
+    const EliteCheckpoint kDeep[13] = {
+        { .name = "Room 1 | Soothing",          .type = T::DoorOpen, .param1 = 12669, .extra_param1_a = 11692, .starts_on_area_entry = true },
+        { .name = "Room 2 | Death",             .type = T::DoorOpen, .param1 = 54552, .extra_param1_a = 1760,  .starts_on_area_entry = true },
+        { .name = "Room 3 | Surrender",         .type = T::DoorOpen, .param1 = 45425, .extra_param1_a = 48290, .starts_on_area_entry = true },
+        { .name = "Room 4 | Exposure",          .type = T::DoorOpen, .param1 = 40330, .extra_param1_a = 60114, .starts_on_area_entry = true },
+        { .name = "Room 5 | Pain",              .type = T::DoorOpen, .param1 = 29594 },
+        { .name = "Room 6 | Lethargy",          .type = T::DoorOpen, .param1 = 49742 },
+        { .name = "Room 7 | Depletion",         .type = T::DoorOpen, .param1 = 55680 },
+        { .name = "Room 8-9 | Failure/Shadows", .type = T::DisplayDialogue, .pattern = L"\x5339\xA7BA\xC67B\x5D81" },
+        { .name = "Room 10 | Scorpion",         .type = T::DoorOpen, .param1 = 28961 },
+        { .name = "Room 11 | Fear",             .type = T::DisplayDialogue, .pattern = L"\x533A\xED06\x815D\x5FFB" },
+        { .name = "Room 12 | Depletion",        .type = T::DisplayDialogue, .pattern = L"\x533B\xCAA6\xFDA9\x3277" },
+        { .name = "Room 13-14 | Decay/Torment", .type = T::DisplayDialogue, .pattern = L"\x533D\x9EB1\x8BEE\x2637" },
+        { .name = "Room 15 | Kanaxai",          .type = T::ServerMessage,
+          .pattern = L"\x6D4D\x0\x0\x0\x0\x2810", .extra_pattern_a = L"\x6D4D\x0\x0\x0\x0\x1488" },
+    };
     // clang-format on
 
     const EliteArea kEliteAreas[4] = {
@@ -83,26 +83,26 @@ const EliteCheckpoint kDeep[13] = {
     };
 
     // clang-format off
-static const MapID kOozePitLevels[]        = { MapID::Ooze_Pit };
-static const MapID kFronisLevels[]         = { MapID::Fronis_Irontoes_Lair_mission };
-static const MapID kSnowmenLevels[]        = { MapID::Secret_Lair_of_the_Snowmen };
-static const MapID kSepulchreLevels[]      = { MapID::Sepulchre_of_Dragrimmar_Level_1, MapID::Sepulchre_of_Dragrimmar_Level_2 };
-static const MapID kBogrootLevels[]        = { MapID::Bogroot_Growths_Level_1, MapID::Bogroot_Growths_Level_2 };
-static const MapID kArachniLevels[]        = { MapID::Arachnis_Haunt_Level_1, MapID::Arachnis_Haunt_Level_2 };
-static const MapID kCatacombsLevels[]      = { MapID::Catacombs_of_Kathandrax_Level_1, MapID::Catacombs_of_Kathandrax_Level_2, MapID::Catacombs_of_Kathandrax_Level_3 };
-static const MapID kRragarsLevels[]        = { MapID::Rragars_Menagerie_Level_1, MapID::Rragars_Menagerie_Level_2, MapID::Rragars_Menagerie_Level_3 };
-static const MapID kCathedralLevels[]      = { MapID::Cathedral_of_Flames_Level_1, MapID::Cathedral_of_Flames_Level_2, MapID::Cathedral_of_Flames_Level_3 };
-static const MapID kDarkrimeLevels[]       = { MapID::Darkrime_Delves_Level_1, MapID::Darkrime_Delves_Level_2, MapID::Darkrime_Delves_Level_3 };
-static const MapID kRavensPointLevels[]    = { MapID::Ravens_Point_Level_1, MapID::Ravens_Point_Level_2, MapID::Ravens_Point_Level_3 };
-static const MapID kVloxenLevels[]         = { MapID::Vloxen_Excavations_Level_1, MapID::Vloxen_Excavations_Level_2, MapID::Vloxen_Excavations_Level_3 };
-static const MapID kBloodstoneLevels[]     = { MapID::Bloodstone_Caves_Level_1, MapID::Bloodstone_Caves_Level_2, MapID::Bloodstone_Caves_Level_3 };
-static const MapID kShardsOfOrrLevels[]    = { MapID::Shards_of_Orr_Level_1, MapID::Shards_of_Orr_Level_2, MapID::Shards_of_Orr_Level_3 };
-static const MapID kOolasLabLevels[]       = { MapID::Oolas_Lab_Level_1, MapID::Oolas_Lab_Level_2, MapID::Oolas_Lab_Level_3 };
-static const MapID kHeartShiverLevels[]    = { MapID::Heart_of_the_Shiverpeaks_Level_1, MapID::Heart_of_the_Shiverpeaks_Level_2, MapID::Heart_of_the_Shiverpeaks_Level_3 };
-static const MapID kForsakenLevels[]       = { MapID::Forsaken_Tunnels_Level1, MapID::Forsaken_Tunnels_Level2, MapID::Forsaken_Tunnels_Level3 };
-static const MapID kForsakenPreLevels[]    = { MapID::Forsaken_Tunnels_Presearing_Level1, MapID::Forsaken_Tunnels_Presearing_Level2, MapID::Forsaken_Tunnels_Presearing_Level3 };
-static const MapID kFrostmawsLevels[]      = { MapID::Frostmaws_Burrows_Level_1, MapID::Frostmaws_Burrows_Level_2, MapID::Frostmaws_Burrows_Level_3, MapID::Frostmaws_Burrows_Level_4, MapID::Frostmaws_Burrows_Level_5 };
-static const MapID kSlaversExileLevels[]   = { MapID::Slavers_Exile_Level_5 };
+    static const MapID kOozePitLevels[]        = { MapID::Ooze_Pit };
+    static const MapID kFronisLevels[]         = { MapID::Fronis_Irontoes_Lair_mission };
+    static const MapID kSnowmenLevels[]        = { MapID::Secret_Lair_of_the_Snowmen };
+    static const MapID kSepulchreLevels[]      = { MapID::Sepulchre_of_Dragrimmar_Level_1, MapID::Sepulchre_of_Dragrimmar_Level_2 };
+    static const MapID kBogrootLevels[]        = { MapID::Bogroot_Growths_Level_1, MapID::Bogroot_Growths_Level_2 };
+    static const MapID kArachniLevels[]        = { MapID::Arachnis_Haunt_Level_1, MapID::Arachnis_Haunt_Level_2 };
+    static const MapID kCatacombsLevels[]      = { MapID::Catacombs_of_Kathandrax_Level_1, MapID::Catacombs_of_Kathandrax_Level_2, MapID::Catacombs_of_Kathandrax_Level_3 };
+    static const MapID kRragarsLevels[]        = { MapID::Rragars_Menagerie_Level_1, MapID::Rragars_Menagerie_Level_2, MapID::Rragars_Menagerie_Level_3 };
+    static const MapID kCathedralLevels[]      = { MapID::Cathedral_of_Flames_Level_1, MapID::Cathedral_of_Flames_Level_2, MapID::Cathedral_of_Flames_Level_3 };
+    static const MapID kDarkrimeLevels[]       = { MapID::Darkrime_Delves_Level_1, MapID::Darkrime_Delves_Level_2, MapID::Darkrime_Delves_Level_3 };
+    static const MapID kRavensPointLevels[]    = { MapID::Ravens_Point_Level_1, MapID::Ravens_Point_Level_2, MapID::Ravens_Point_Level_3 };
+    static const MapID kVloxenLevels[]         = { MapID::Vloxen_Excavations_Level_1, MapID::Vloxen_Excavations_Level_2, MapID::Vloxen_Excavations_Level_3 };
+    static const MapID kBloodstoneLevels[]     = { MapID::Bloodstone_Caves_Level_1, MapID::Bloodstone_Caves_Level_2, MapID::Bloodstone_Caves_Level_3 };
+    static const MapID kShardsOfOrrLevels[]    = { MapID::Shards_of_Orr_Level_1, MapID::Shards_of_Orr_Level_2, MapID::Shards_of_Orr_Level_3 };
+    static const MapID kOolasLabLevels[]       = { MapID::Oolas_Lab_Level_1, MapID::Oolas_Lab_Level_2, MapID::Oolas_Lab_Level_3 };
+    static const MapID kHeartShiverLevels[]    = { MapID::Heart_of_the_Shiverpeaks_Level_1, MapID::Heart_of_the_Shiverpeaks_Level_2, MapID::Heart_of_the_Shiverpeaks_Level_3 };
+    static const MapID kForsakenLevels[]       = { MapID::Forsaken_Tunnels_Level1, MapID::Forsaken_Tunnels_Level2, MapID::Forsaken_Tunnels_Level3 };
+    static const MapID kForsakenPreLevels[]    = { MapID::Forsaken_Tunnels_Presearing_Level1, MapID::Forsaken_Tunnels_Presearing_Level2, MapID::Forsaken_Tunnels_Presearing_Level3 };
+    static const MapID kFrostmawsLevels[]      = { MapID::Frostmaws_Burrows_Level_1, MapID::Frostmaws_Burrows_Level_2, MapID::Frostmaws_Burrows_Level_3, MapID::Frostmaws_Burrows_Level_4, MapID::Frostmaws_Burrows_Level_5 };
+    static const MapID kSlaversExileLevels[]   = { MapID::Slavers_Exile_Level_5 };
     // clang-format on
 
     const Dungeon kDungeons[20] = {
