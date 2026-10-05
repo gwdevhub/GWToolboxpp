@@ -1401,7 +1401,7 @@ void GameSettings::Initialize()
 {
     ToolboxModule::Initialize();
     SettingsRegistry::Register(this, settings);
-    AgentRenderer::Instance().RegisterSettings(this);
+    AgentRenderer::RegisterSettings(this);
     SettingsRegistry::Describe(this, "automatically_flag_pet_to_fight_called_target", "Automatically lock heroes and pets onto your called target");
     SettingsRegistry::Describe(this, "combine_overhead_numbers", "Combine floating numbers above character", combine_overhead_numbers_help);
 
@@ -1623,12 +1623,11 @@ void GameSettings::MessageOnPartyChange()
 
 void GameSettings::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    auto& renderer = AgentRenderer::Instance();
-    renderer.ResetAppearanceSettings();
-    renderer.LoadLegacyAppearanceDefaults(doc, legacy);
+    AgentRenderer::ResetAppearanceSettings();
+    AgentRenderer::LoadLegacyAppearanceDefaults(doc, legacy);
     ToolboxModule::LoadSettings(doc, legacy);
     doc.GetStruct(Name(), settings);
-    renderer.LoadCustomAgents(doc, legacy);
+    AgentRenderer::LoadCustomAgents(doc, legacy);
 
     for (const auto& [key, chan] : channel_color_settings)
         LoadChannelColor(doc, legacy, Name(), key, chan);
@@ -1701,7 +1700,7 @@ void GameSettings::Terminate()
     GW::UI::RemoveUIMessageCallback(&OnPostUIMessage_HookEntry);
     GW::UI::RemoveUIMessageCallback(&OnPreUIMessage_HookEntry);
     GW::UI::RemoveUIMessageCallback(&OnAgentNameTag_Entry);
-    AgentRenderer::Instance().ReleaseAppearanceHooks();
+    AgentRenderer::ReleaseAppearanceHooks();
 
     if (SkillList_UICallback_Func) GW::Hook::RemoveHook(SkillList_UICallback_Func);
     if (SetFrameSkillDescription_Func) GW::Hook::RemoveHook(SetFrameSkillDescription_Func);
@@ -1714,7 +1713,7 @@ void GameSettings::SaveSettings(SettingsDoc& doc)
 {
     ToolboxModule::SaveSettings(doc);
     doc.SetStruct(Name(), settings);
-    AgentRenderer::Instance().SaveCustomAgents(doc);
+    AgentRenderer::SaveCustomAgents(doc);
     constexpr const char* migrated_colors[] = {
         "override_name_tag_colors", "nametag_color_npc", "nametag_color_player_self", "nametag_color_player_other",
         "nametag_color_player_in_party", "nametag_color_player_in_my_party", "nametag_color_friends",
@@ -2430,6 +2429,6 @@ void GameSettings::OnAgentNameTag(GW::HookStatus*, const GW::UI::UIMessage msgid
         tag->extra_info_enc = you_have_n_lockpicks;
     }
     if (const auto agent = GW::Agents::GetAgentByID(tag->agent_id)) {
-        AgentRenderer::Instance().ApplyNameTagColor(agent, tag->text_color);
+        AgentRenderer::ApplyNameTagColor(agent, tag->text_color);
     }
 }
