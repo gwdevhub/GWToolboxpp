@@ -2004,30 +2004,32 @@ std::string AgentRenderer::CustomAgent::Label() const
 
 bool AgentRenderer::CustomAgent::DrawHeader()
 {
-    bool changed = ImGui::Checkbox("##visible", &active);
-    const ImGuiStyle& style = ImGui::GetStyle();
-    const float button_width = ImGui::GetFrameHeight() + style.ItemInnerSpacing.x;
-    ImGui::SameLine();
-    float cursor_pos = ImGui::GetCursorPosX();
-    if (Colors::IsVisible(color)) {
-        changed |= ImGui::ColorButtonPicker("##color", &color);
-        if (ImGui::IsItemHovered()) {
-            const ImVec4 col = ImGui::ColorConvertU32ToFloat4(color);
-            ImGui::ColorTooltip("Minimap Color##color_tooltip", &col.x, 0);
-        }
-
+    const auto changed = ImGui::Checkbox("##visible", &active);
+    const auto draw_swatch = [this](const char* id, const Color fill, const Color border, const char* hint) {
         ImGui::SameLine();
-    }
-    ImGui::SetCursorPosX(cursor_pos += button_width);
+        const auto size = ImGui::GetTextLineHeight();
+        ImGui::SetCursorPosY(ImGui::GetCursorPosY() + ImGui::GetStyle().FramePadding.y);
+        if (ImGui::InvisibleButton(id, ImVec2(size, size))) {
+            AgentRenderer::Instance().EditRule(this);
+        }
+        const auto min = ImGui::GetItemRectMin();
+        const auto max = ImGui::GetItemRectMax();
+        auto* draw_list = ImGui::GetWindowDrawList();
+        draw_list->AddRectFilled(min, max, ImGui::GetColorU32(ImGuiCol_FrameBg));
+        draw_list->AddRectFilled(min, max, ImGui::GetColorU32(fill));
+        const auto thickness = Colors::IsVisible(border) ? std::max(1.f, size * 0.1f) : 1.f;
+        const auto inset = thickness * 0.5f;
+        const auto outline = Colors::IsVisible(border) ? ImGui::GetColorU32(border) : ImGui::GetColorU32(ImGuiCol_Border);
+        draw_list->AddRect(ImVec2(min.x + inset, min.y + inset), ImVec2(max.x - inset, max.y - inset), outline, 0.f, ImDrawFlags_None, thickness);
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("%s\nClick to edit appearance rule.", hint);
+        }
+    };
+    draw_swatch("##color", color, border_color, "Minimap marker colour and target border colour");
     if (Colors::IsVisible(color_text)) {
-        changed |= ImGui::ColorButtonPicker("##color_text", &color_text);
-        if (ImGui::IsItemHovered()) {
-            const ImVec4 col = ImGui::ColorConvertU32ToFloat4(color_text);
-            ImGui::ColorTooltip("Name Tag Color##color_tooltip", &col.x, 0);
-        }
-        ImGui::SameLine();
+        draw_swatch("##color_text", color_text, 0, "Name tag colour");
     }
-    ImGui::SetCursorPosX(cursor_pos += button_width);
+    ImGui::SameLine();
     const auto label = Label();
     if (name[0]) {
         ImGui::Text("%s [%s]", label.c_str(), AgentTypeName());
