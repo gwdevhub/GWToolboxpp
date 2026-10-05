@@ -336,7 +336,7 @@ void AgentAppearanceWindow::RegisterSettings(ToolboxModule* module)
     SettingsRegistry::RegisterField(module, "default_shape", reinterpret_cast<int*>(&default_shape));
     if (!hooks_added) {
         hooks_added = true;
-        RegisterUIMessageCallback(&UIMsg_Entry, GW::UI::UIMessage::kMapLoaded, OnUIMessage);
+        GW::UI::RegisterUIMessageCallback(&UIMsg_Entry, GW::UI::UIMessage::kMapLoaded, OnUIMessage);
         GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::AgentAdd>(&OnAgentAdded_HookEntry, OnAgentAdded);
         GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"marktarget", CmdMarkTarget);
         GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"clearmarktarget", CmdClearMarkTarget);
