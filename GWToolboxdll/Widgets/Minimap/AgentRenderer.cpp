@@ -104,13 +104,11 @@ void AgentRenderer::Render(IDirect3DDevice9* device)
         if (AgentAppearanceWindow::show_props_on_minimap) {
             const auto& props = GW::GetMapContext()->props->propArray;
             for (size_t i = 0; i < props.size(); ++i) {
-                const auto size = AgentAppearanceWindow::size_item / AgentAppearanceWindow::fallback_size_base * AgentAppearanceWindow::GetBaseSize();
-                Enqueue(Quad, props[i], size, AgentAppearanceWindow::color_signpost);
+                Enqueue(AgentAppearanceWindow::default_shape, props[i], AgentAppearanceWindow::GetBaseSize(), AgentAppearanceWindow::color_default);
             }
         }
         auto* agents = GW::Agents::GetAgentArray();
         if (!agents) return;
-        AgentAppearanceWindow::RefreshRelevantPolys();
 
         const auto* player = GW::Agents::GetControlledCharacter();
         const auto* target = GW::Agents::GetTarget();
@@ -203,13 +201,10 @@ void AgentRenderer::Enqueue(const Shape_e shape, const GW::Agent* agent, const f
     if (shape != BigCircle) {
         const auto is_target = AgentAppearanceWindow::auto_target_id == agent->agent_id || GW::Agents::GetTargetId() == agent->agent_id;
         if (is_target && target_drawn) return;
-        if (AgentAppearanceWindow::agent_border_thickness != 0.f && agent->GetIsLivingType()) {
-            Enqueue(shape, pos, size + AgentAppearanceWindow::agent_border_thickness, Colors::ARGB(static_cast<int>(alpha * 0.8), 0, 0, 0));
-        }
-        if (is_target) {
+        if (border_thickness > 0.f) {
             Enqueue(shape, pos, size + border_thickness, border_color);
-            target_drawn = true;
         }
+        if (is_target) target_drawn = true;
     }
     Enqueue(shape, pos, size, color, AgentAppearanceWindow::color_agent_modifier);
 }

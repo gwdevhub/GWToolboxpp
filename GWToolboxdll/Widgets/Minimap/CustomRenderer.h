@@ -13,7 +13,6 @@ using Color = uint32_t;
 class ToolboxModule;
 
 class CustomRenderer : public D3DVertexBuffer {
-    friend class AgentAppearanceWindow;
     friend class GameWorldRenderer;
 
     enum class Shape {
@@ -45,7 +44,6 @@ class CustomRenderer : public D3DVertexBuffer {
             bool visible = true;
             bool draw_on_terrain = false;
             Colors::SettingColor color = 0x00FFFFFF;
-            Colors::SettingColor color_sub = 0x00FFFFFF;
         };
 
         struct Point {
@@ -57,7 +55,6 @@ class CustomRenderer : public D3DVertexBuffer {
             std::string name = "polygon";
             std::vector<Point> points{};
             Colors::SettingColor color = 0xA0FFFFFF;
-            Colors::SettingColor color_sub = 0x00FFFFFF;
             uint32_t map = 0;
             bool visible = true;
             bool draw_on_terrain = false;
@@ -89,7 +86,6 @@ class CustomRenderer : public D3DVertexBuffer {
         bool draw_on_terrain = false;
         char name[128]{};
         Color color{0x00FFFFFF};
-        Color color_sub{0x00FFFFFF};
 
         void Invalidate();
         void Terminate();
@@ -122,7 +118,6 @@ struct CustomPolygon final : D3DVertexBuffer {
         bool filled = false;
         char name[128]{};
         Color color{0xA0FFFFFF};
-        Color color_sub{0x00FFFFFF};
         constexpr static auto max_points = 1800;
         constexpr static auto max_points_filled = 21;
         void Render(IDirect3DDevice9* device) override;
