@@ -1,5 +1,7 @@
 #include "stdafx.h"
 
+#include <unordered_set>
+
 #include <GWCA/Context/GuildContext.h>
 
 #include <GWCA/Constants/AgentIDs.h>
@@ -202,7 +204,7 @@ void AgentAppearanceWindow::Draw(IDirect3DDevice9*)
 {
     if (visible) {
         ImGui::SetNextWindowSize(ImVec2(650.f, 650.f), ImGuiCond_FirstUseEver);
-        ImGui::SetNextWindowSizeConstraints(ImVec2(650.f, 350.f), ImVec2(FLT_MAX, FLT_MAX));
+        ImGui::SetNextWindowSizeConstraints(ImVec2(650.f, 450.f), ImVec2(FLT_MAX, FLT_MAX));
         if (pending_focus) {
             ImGui::SetNextWindowFocus();
             ImGui::SetNextWindowCollapsed(false);
@@ -237,16 +239,20 @@ void AgentAppearanceWindow::GetAgentAppearanceRules(std::vector<AppearanceRule*>
 }
 
 bool AgentAppearanceWindow::GetAgentAppearance(const GW::Agent* agent, Shape_e* shape_out, Color* color_out,
-    Color* border_color_out, float* border_thickness_out, Color* text_color_out, float* size_out)
+    Color* border_color_out, float* border_thickness_out, Color* text_color_out, float* size_out,
+    std::vector<const AppearanceRule*>* matched_rules_out)
 {
-    if (!agent || (!shape_out && !color_out && !border_color_out && !border_thickness_out && !text_color_out && !size_out)) {
+    if (matched_rules_out) matched_rules_out->clear();
+    if (!agent || (!shape_out && !color_out && !border_color_out && !border_thickness_out && !text_color_out && !size_out && !matched_rules_out)) {
         return false;
     }
     const auto requested_color_out = color_out;
     if (border_thickness_out) *border_thickness_out = target_border_thickness;
 
-    if (!shape_out && !color_out && !border_color_out && !text_color_out && !size_out) return false;
+    if (!shape_out && !color_out && !border_color_out && !text_color_out && !size_out && !matched_rules_out) return false;
     const auto* matches = GetAppearanceRules(agent);
+    if (matched_rules_out && matches) matched_rules_out->assign(matches->begin(), matches->end());
+    if (!shape_out && !color_out && !border_color_out && !text_color_out && !size_out) return false;
     bool overridden = false;
     if (matches) for (const auto* rule : *matches) {
         if (shape_out && rule->shape != Shape_None) {
@@ -853,10 +859,33 @@ void AgentAppearanceWindow::DrawSettings()
 
     std::vector<AppearanceRule*> rules;
     GetAgentAppearanceRules(rules);
+    const auto* target = GW::Agents::GetTarget();
+    if (!target && auto_target_id) target = GW::Agents::GetAgentByID(auto_target_id);
+    auto target_shape = Shape_None;
+    auto target_color = Color{0};
+    auto target_border_color = Color{0};
+    auto target_text_color = Color{0};
+    auto target_border_thickness = 0.f;
+    auto target_size = 0.f;
+    std::vector<const AppearanceRule*> target_rules;
+    std::unordered_set<unsigned int> matching_rule_ids;
+    size_t applied_rules = 0;
+    uint32_t resolved_properties = 0;
+    if (target) {
+        GetAgentAppearance(target, &target_shape, &target_color, &target_border_color, &target_border_thickness,
+            &target_text_color, &target_size, &target_rules);
+        for (const auto* rule : target_rules) {
+            matching_rule_ids.insert(rule->ui_id);
+            const auto properties = (rule->shape != Shape_None ? 1u : 0u) | (rule->override_color ? 2u : 0u)
+                | (rule->override_border_color ? 4u : 0u) | (rule->override_text_color ? 8u : 0u) | (rule->scale > 0.f ? 16u : 0u);
+            if ((properties & ~resolved_properties) || rule->stop_processing_rules) ++applied_rules;
+            resolved_properties |= properties;
+        }
+    }
     bool changed = false;
     AppearanceRule* move_rule = nullptr;
     int move_offset = 0;
-    const auto footer_height = ImGui::GetTextLineHeight() + ImGui::GetStyle().ItemSpacing.y;
+    const auto footer_height = ImGui::GetTextLineHeightWithSpacing() * (target ? 6.f : 2.f) + ImGui::GetStyle().ItemSpacing.y + 1.f;
     ImGui::BeginChild("##custom_agents_scroll", ImVec2(0.f, -footer_height), true);
     if (ImGui::BeginTable("AppearanceRules", 2, ImGuiTableFlags_SizingStretchProp)) {
         const auto button_size = ImGui::GetFrameHeight();
@@ -868,6 +897,9 @@ void AgentAppearanceWindow::DrawSettings()
             if (!custom || !matches_filter(custom)) continue;
             ImGui::PushID(static_cast<int>(custom->ui_id));
             ImGui::TableNextRow();
+            if (matching_rule_ids.contains(custom->ui_id)) {
+                ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, ImGui::GetColorU32(ImGuiCol_Header));
+            }
             ImGui::TableNextColumn();
             changed |= custom->DrawHeader();
             ImGui::TableNextColumn();
@@ -933,6 +965,38 @@ void AgentAppearanceWindow::DrawSettings()
         custom_agents_loaded = true;
         group_filter[0] = '\0';
     });
+    ImGui::Separator();
+    if (!target) {
+        ImGui::TextDisabled("No current target.");
+        return;
+    }
+    ImGui::Text("Target #%u: %zu matching rules, %zu applied", target->agent_id, target_rules.size(), applied_rules);
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("Highlighted rows match this target. Applied rules supply the first override for a property or stop further matching.");
+    }
+    static constexpr const char* shape_names[] = {"Tear", "Circle", "Square", "Big Circle", "Star"};
+    const auto shape_name = target_shape >= Tear && target_shape <= Star ? shape_names[target_shape] : "None";
+    ImGui::Text("Size: %.1f (%.2fx)    Shape: %s", target_size, target_size / GetBaseSize(), shape_name);
+    const auto draw_color_readout = [](const char* label, const Color color) {
+        ImGui::PushID(label);
+        const auto rgba = ImGui::ColorConvertU32ToFloat4(color);
+        const auto size = ImGui::GetTextLineHeight();
+        ImGui::ColorButton("##preview", rgba, ImGuiColorEditFlags_NoTooltip | ImGuiColorEditFlags_NoDragDrop, ImVec2(size, size));
+        ImGui::SameLine();
+        ImGui::Text("%s: 0x%08X (%.0f%% alpha)", label, color, rgba.w * 100.f);
+        ImGui::PopID();
+    };
+    draw_color_readout("Marker", target_color);
+    if (target_shape == BigCircle || !Colors::IsVisible(target_color)) {
+        ImGui::TextDisabled("Border: none (%s)", target_shape == BigCircle ? "Big Circle" : "transparent marker");
+    }
+    else {
+        draw_color_readout("Target border", target_border_color);
+        ImGui::SameLine();
+        ImGui::Text("Width: %.1f, inner: %.1f", target_border_thickness, target->GetIsLivingType() ? agent_border_thickness : 0.f);
+    }
+    if (resolved_properties & 8u) draw_color_readout("Name tag", target_text_color);
+    else ImGui::TextDisabled("Name tag: game default");
 }
 
 void AgentAppearanceWindow::EditRule(CustomAgent* rule)
@@ -1802,8 +1866,8 @@ bool AgentAppearanceWindow::CustomAgent::DrawHeader()
         const auto min = ImGui::GetItemRectMin();
         const auto max = ImGui::GetItemRectMax();
         auto* draw_list = ImGui::GetWindowDrawList();
-        draw_list->AddRectFilled(min, max, ImGui::GetColorU32(ImGuiCol_FrameBg));
-        draw_list->AddRectFilled(min, max, ImGui::GetColorU32(fill));
+        ImGui::RenderColorRectWithAlphaCheckerboard(draw_list, min, max, ImGui::GetColorU32(fill),
+            std::max(2.f, size * 0.25f), ImVec2(0.f, 0.f));
         const auto thickness = Colors::IsVisible(border) ? std::max(1.f, size * 0.1f) : 1.f;
         const auto inset = thickness * 0.5f;
         const auto outline = Colors::IsVisible(border) ? ImGui::GetColorU32(border) : ImGui::GetColorU32(ImGuiCol_Border);
