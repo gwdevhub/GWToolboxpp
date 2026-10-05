@@ -101,6 +101,30 @@ private:
         static unsigned int cur_ui_id;
 
     public:
+        struct AgentTypeOption {
+            const char* label;
+            AgentType type;
+            PlayerRelation relation;
+            GadgetState gadget;
+        };
+
+        inline static constexpr AgentTypeOption agent_type_options[] = {
+            {"Any", Any, AnyRelation, AnyGadget},
+            {"Item", Item, AnyRelation, AnyGadget},
+            {"Gadget", Gadget, AnyRelation, AnyGadget},
+            {"Gadget (Locked chest, closed)", Gadget, AnyRelation, ClosedChest},
+            {"Gadget (Locked chest, opened)", Gadget, AnyRelation, OpenedChest},
+            {"Gadget (Other)", Gadget, AnyRelation, OtherGadget},
+            {"NPC", NPC, AnyRelation, AnyGadget},
+            {"Player", Player, AnyRelation, AnyGadget},
+            {"Player (Self)", Player, Self, AnyGadget},
+            {"Player (Other player)", Player, Other, AnyGadget},
+            {"Player (Friend)", Player, Friend, AnyGadget},
+            {"Player (Guild member)", Player, Guild, AnyGadget},
+            {"Player (My party)", Player, MyParty, AnyGadget},
+            {"Player (In a party)", Player, InParty, AnyGadget}
+        };
+
         struct Settings {
             bool active = true;
             std::string name;
@@ -143,6 +167,7 @@ private:
 
         bool DrawHeader();
         bool DrawSettings();
+        [[nodiscard]] const char* AgentTypeName() const;
         [[nodiscard]] Settings ToSettings() const;
         void ApplyLegacyFlags(const LegacyFlags& flags);
 

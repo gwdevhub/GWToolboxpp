@@ -1892,6 +1892,17 @@ AgentRenderer::CustomAgent::Settings AgentRenderer::CustomAgent::ToSettings() co
     return settings;
 }
 
+const char* AgentRenderer::CustomAgent::AgentTypeName() const
+{
+    for (const auto& option : agent_type_options) {
+        if (option.type == agent_type && (agent_type != Player || option.relation == player_relation)
+            && (agent_type != Gadget || option.gadget == gadget_state)) {
+            return option.label;
+        }
+    }
+    return "Unknown";
+}
+
 bool AgentRenderer::CustomAgent::DrawHeader()
 {
     bool changed = ImGui::Checkbox("##visible", &active);
@@ -1918,9 +1929,7 @@ bool AgentRenderer::CustomAgent::DrawHeader()
         ImGui::SameLine();
     }
     ImGui::SetCursorPosX(cursor_pos += button_width);
-    static const char* types[] = {"Any", "Item", "Gadget", "NPC", "Player"};
-    const auto type_name = agent_type >= Any && agent_type <= Player ? types[agent_type - Any] : "Unknown";
-    ImGui::Text("%s [%s]", name[0] ? name : "<unnamed>", type_name);
+    ImGui::Text("%s [%s]", name[0] ? name : "<unnamed>", AgentTypeName());
     if (group[0]) {
         ImGui::SameLine();
         ImGui::TextDisabled("(%s)", group);
@@ -1959,23 +1968,33 @@ bool AgentRenderer::CustomAgent::DrawSettings()
         }
         ImGui::ShowHelp("An optional tag to filter this list by, e.g. 'Farming' or 'Bosses'. Purely organisational.");
         ImGui::SetCursorPosX(x);
-        static const char* agent_types[] = {"Any", "Item", "Gadget", "NPC", "Player"};
-        auto type_selection = static_cast<int>(agent_type) - Any;
-        if (ImGui::Combo("Agent type", &type_selection, agent_types, _countof(agent_types))) {
-            agent_type = static_cast<AgentType>(type_selection + Any);
-            changed = true;
-            allegiance = -1;
-            modelId = 0;
-            identifier = 0;
-            if (agent_type != NPC) { profession = GW::Constants::Profession::None; boss_state = 0; }
-            if (agent_type != Gadget) gadget_state = AnyGadget;
-            if (agent_type != Player) player_relation = AnyRelation;
-            if (agent_type == Item || agent_type == Gadget) {
-                dead_state = EitherDeadState;
-                quest_state = EitherQuestState;
-                combat_state = EitherCombat;
-                weapon_state = EitherWeapon;
+        if (ImGui::BeginCombo("Agent type", AgentTypeName())) {
+            for (const auto& option : agent_type_options) {
+                const auto selected = option.type == agent_type && (agent_type != Player || option.relation == player_relation)
+                    && (agent_type != Gadget || option.gadget == gadget_state);
+                if (ImGui::Selectable(option.label, selected)) {
+                    if (agent_type != option.type) {
+                        agent_type = option.type;
+                        allegiance = -1;
+                        modelId = 0;
+                        identifier = 0;
+                        if (agent_type != NPC) { profession = GW::Constants::Profession::None; boss_state = 0; }
+                        if (agent_type == Item || agent_type == Gadget) {
+                            dead_state = EitherDeadState;
+                            quest_state = EitherQuestState;
+                            combat_state = EitherCombat;
+                            weapon_state = EitherWeapon;
+                        }
+                    }
+                    player_relation = option.relation;
+                    gadget_state = option.gadget;
+                    changed = true;
+                }
+                if (selected) {
+                    ImGui::SetItemDefaultFocus();
+                }
             }
+            ImGui::EndCombo();
         }
         ImGui::SetCursorPosX(x);
         ImGui::BeginDisabled(agent_type == Any);
@@ -1992,16 +2011,6 @@ bool AgentRenderer::CustomAgent::DrawSettings()
         ImGui::SetCursorPosX(x);
         static const char* target_states[] = {"Either", "Targeted", "Not targeted", "Marked (/marktarget)"};
         if (ImGui::Combo("Target state", reinterpret_cast<int*>(&target_state), target_states, _countof(target_states))) changed = true;
-        ImGui::SetCursorPosX(x);
-        static const char* player_relations[] = {"Any player", "Self", "Other player", "Friend", "Guild member", "My party", "In a party"};
-        ImGui::BeginDisabled(agent_type != Player);
-        if (ImGui::Combo("Player relation", reinterpret_cast<int*>(&player_relation), player_relations, _countof(player_relations))) changed = true;
-        ImGui::EndDisabled();
-        ImGui::SetCursorPosX(x);
-        static const char* gadget_states[] = {"Any gadget", "Locked chest (closed)", "Locked chest (opened)", "Other gadget"};
-        ImGui::BeginDisabled(agent_type != Gadget);
-        if (ImGui::Combo("Gadget state", reinterpret_cast<int*>(&gadget_state), gadget_states, _countof(gadget_states))) changed = true;
-        ImGui::EndDisabled();
         ImGui::SetCursorPosX(x);
         static const char* professions[] = {"Any", "Warrior", "Ranger", "Monk", "Necromancer", "Mesmer", "Elementalist", "Assassin", "Ritualist", "Paragon", "Dervish"};
         ImGui::BeginDisabled(agent_type != NPC);
