@@ -42,6 +42,11 @@ constexpr auto AGENTCOLOR_JSONFILENAME = L"AgentColors.json";
 
 namespace {
 
+    uint32_t StateMaskFromLegacy(const int state)
+    {
+        return state >= 0 && state < 2 ? 1u << state : 0;
+    }
+
     GW::HookEntry ChatCmd_HookEntry;
     GW::Constants::Profession GetAgentProfession(const GW::AgentLiving* agent)
     {
@@ -253,7 +258,7 @@ void AgentRenderer::LoadCustomAgents(SettingsDoc& doc, ToolboxIni* legacy)
         }
         if (rule->allegiance >= 0) {
             rule->agent_type = NPC;
-            if (was_seeded) rule->dead_state = Alive;
+            if (was_seeded) rule->dead_states = 1u << Alive;
             append(rule);
             return;
         }
@@ -356,7 +361,7 @@ void AgentRenderer::SeedAppearanceDefaults(const SettingsDoc& doc, const Toolbox
         auto* rule = new CustomAgent(0, color, label);
         rule->agent_type = agent_type;
         rule->allegiance = allegiance;
-        rule->dead_state = dead;
+        rule->dead_states = StateMaskFromLegacy(dead);
         rule->size = size;
         rule->shape = shape;
         std::snprintf(rule->group, sizeof(rule->group), "Defaults");
@@ -369,7 +374,7 @@ void AgentRenderer::SeedAppearanceDefaults(const SettingsDoc& doc, const Toolbox
     target->border_color = color_target;
     add("Marked Target", Any, color_marked_target, size_marked_target, default_shape)->target_state = Marked;
     auto* boss = add("Boss", NPC, 0, size_boss, Shape_None);
-    boss->boss_state = 1;
+    boss->boss_states = 1u;
     add("Hostile (dead)", NPC, color_hostile_dead, size_hostile, Shape_None, static_cast<int>(GW::Constants::Allegiance::Enemy), Dead);
     using GW::Constants::Profession;
     constexpr std::array<std::pair<Profession, const char*>, 10> professions = {{
@@ -381,13 +386,13 @@ void AgentRenderer::SeedAppearanceDefaults(const SettingsDoc& doc, const Toolbox
     for (const auto& [profession, label] : professions) {
         auto* rule = add(label, NPC, profession_colors[static_cast<size_t>(profession)], 0.f, Shape_None, static_cast<int>(GW::Constants::Allegiance::Enemy), Alive);
         rule->profession = profession;
-        rule->boss_state = only_color_bosses ? 1 : 0;
+        rule->boss_states = only_color_bosses ? 1u : 0;
         rule->active = enemies_colors_by_profession;
     }
     add("Hostile", NPC, color_hostile, size_hostile, Shape_None, static_cast<int>(GW::Constants::Allegiance::Enemy), Alive);
     for (const auto allegiance : {GW::Constants::Allegiance::Ally_NonAttackable, GW::Constants::Allegiance::Npc_Minipet, GW::Constants::Allegiance::Spirit_Pet, GW::Constants::Allegiance::Minion}) {
         add("Ally (dead)", NPC, color_ally_dead, size_ally, Shape_None, static_cast<int>(allegiance), Dead);
-        add("Ally (quest giver)", NPC, color_ally_npc_quest, size_ally_npc_quest, Shape_None, static_cast<int>(allegiance), Alive)->quest_state = QuestGiver;
+        add("Ally (quest giver)", NPC, color_ally_npc_quest, size_ally_npc_quest, Shape_None, static_cast<int>(allegiance), Alive)->quest_states = 1u << QuestGiver;
     }
     add("Item", Item, color_item, size_item, Quad);
     add("Locked chest (closed)", Gadget, color_locked_chest, size_locked_chest, Quad)->gadget_state = ClosedChest;
@@ -470,9 +475,9 @@ void AgentRenderer::SeedDefaultCustomAgents()
         auto* ca = new CustomAgent(0, *row.color, row.label);
         ca->allegiance = static_cast<int>(row.allegiance);
         ca->agent_type = NPC;
-        ca->quest_state = row.quest_state;
+        ca->quest_states = StateMaskFromLegacy(row.quest_state);
         ca->size = *row.size;
-        ca->dead_state = Alive;
+        ca->dead_states = 1u << Alive;
         ca->shape = Shape_None;
         std::snprintf(ca->group, sizeof(ca->group), "Defaults");
         ca->index = custom_agents.size();
@@ -1051,7 +1056,7 @@ void AgentRenderer::RefreshMatches(const GW::Agent* agent)
         if (rule->allegiance >= 0 && (!living || rule->allegiance != static_cast<int>(living->allegiance))) continue;
         if (rule->target_state == Targeted && !targeted || rule->target_state == NotTargeted && targeted || rule->target_state == Marked && !marked) continue;
         if (rule->profession != GW::Constants::Profession::None && rule->profession != profession) continue;
-        if (rule->boss_state == 1 && !(flags & 128u) || rule->boss_state == 2 && (flags & 128u)) continue;
+        if (rule->boss_states && (!living || !(rule->boss_states & ((flags & 128u) ? 1u : 2u)))) continue;
         if (rule->gadget_state != AnyGadget && (agent_type != Gadget ||
             rule->gadget_state == ClosedChest && !(flags & 32u) || rule->gadget_state == OpenedChest && !(flags & 64u) ||
             rule->gadget_state == OtherGadget && (flags & (32u | 64u)))) continue;
@@ -1059,8 +1064,8 @@ void AgentRenderer::RefreshMatches(const GW::Agent* agent)
             rule->player_relation == Self && !(relations & 1u) || rule->player_relation == Other && (relations & 1u) ||
             rule->player_relation == Friend && !(relations & 2u) || rule->player_relation == Guild && !(relations & 4u) ||
             rule->player_relation == MyParty && !(relations & 8u) || rule->player_relation == InParty && !(relations & 16u))) continue;
-        if (rule->dead_state == Dead && (!living || !living->GetIsDead()) || rule->dead_state == Alive && (!living || living->GetIsDead())) continue;
-        if (rule->quest_state == QuestGiver && (!living || !living->GetHasQuest()) || rule->quest_state == NotQuestGiver && (!living || living->GetHasQuest())) continue;
+        if (rule->dead_states && (!living || !(rule->dead_states & (1u << (living->GetIsDead() ? Dead : Alive))))) continue;
+        if (rule->quest_states && (!living || !(rule->quest_states & (1u << (living->GetHasQuest() ? QuestGiver : NotQuestGiver))))) continue;
         if (rule->combat_state == InCombat && (!living || !living->GetInCombatStance()) || rule->combat_state == NotInCombat && (!living || living->GetInCombatStance())) continue;
         if (rule->weapon_state == HasWeapon && (!living || living->weapon_type == 0 || living->weapon_type == 512) ||
             rule->weapon_state == NoWeapon && (!living || living->weapon_type != 0 && living->weapon_type != 512)) continue;
@@ -1778,8 +1783,8 @@ AgentRenderer::CustomAgent::CustomAgent(const ToolboxIni* ini, const char* secti
     combat_state = static_cast<CombatState>(ini->GetLongValue(section, VAR_NAME(combat_state), static_cast<long>(combat_state)));
     weapon_state = static_cast<WeaponState>(ini->GetLongValue(section, VAR_NAME(weapon_state), static_cast<long>(weapon_state)));
     allegiance = static_cast<int>(ini->GetLongValue(section, VAR_NAME(allegiance), allegiance));
-    dead_state = static_cast<DeadState>(ini->GetLongValue(section, VAR_NAME(dead_state), static_cast<long>(dead_state)));
-    quest_state = static_cast<QuestState>(ini->GetLongValue(section, VAR_NAME(quest_state), static_cast<long>(quest_state)));
+    dead_states = StateMaskFromLegacy(static_cast<int>(ini->GetLongValue(section, "dead_state", EitherDeadState)));
+    quest_states = StateMaskFromLegacy(static_cast<int>(ini->GetLongValue(section, "quest_state", EitherQuestState)));
     agent_type = static_cast<AgentType>(ini->GetLongValue(section, VAR_NAME(agent_type), 0));
     identifier = static_cast<DWORD>(ini->GetLongValue(section, VAR_NAME(identifier), identifier));
     if (!ini->GetBoolValue(section, "identifier_active", identifier != 0)) identifier = 0;
@@ -1790,7 +1795,7 @@ AgentRenderer::CustomAgent::CustomAgent(const ToolboxIni* ini, const char* secti
     border_color = Colors::Load(ini, section, VAR_NAME(border_color), 0xFFFFFF00);
     gadget_state = static_cast<GadgetState>(ini->GetLongValue(section, VAR_NAME(gadget_state), gadget_state));
     profession = static_cast<GW::Constants::Profession>(ini->GetLongValue(section, VAR_NAME(profession), static_cast<long>(profession)));
-    boss_state = static_cast<int>(ini->GetLongValue(section, VAR_NAME(boss_state), boss_state));
+    boss_states = StateMaskFromLegacy(static_cast<int>(ini->GetLongValue(section, "boss_state", 0)) - 1);
 
     color = Colors::Load(ini, section, VAR_NAME(color), 0xFFF00000);
     color_text = Colors::Load(ini, section, VAR_NAME(color_text), 0xFFF00000);
@@ -1820,8 +1825,8 @@ AgentRenderer::CustomAgent::CustomAgent(const Settings& settings)
     combat_state = static_cast<CombatState>(settings.combat_state);
     weapon_state = static_cast<WeaponState>(settings.weapon_state);
     allegiance = settings.allegiance;
-    dead_state = static_cast<DeadState>(settings.dead_state);
-    quest_state = static_cast<QuestState>(settings.quest_state);
+    dead_states = settings.dead_states == UINT32_MAX ? StateMaskFromLegacy(settings.dead_state) : settings.dead_states & 3u;
+    quest_states = settings.quest_states == UINT32_MAX ? StateMaskFromLegacy(settings.quest_state) : settings.quest_states & 3u;
     agent_type = static_cast<AgentType>(settings.agent_type);
     identifier = settings.identifier;
     std::snprintf(match_name, sizeof(match_name), "%s", settings.match_name.c_str());
@@ -1831,7 +1836,7 @@ AgentRenderer::CustomAgent::CustomAgent(const Settings& settings)
     border_color = settings.border_color;
     gadget_state = static_cast<GadgetState>(settings.gadget_state);
     profession = static_cast<GW::Constants::Profession>(settings.profession);
-    boss_state = settings.boss_state;
+    boss_states = settings.boss_states == UINT32_MAX ? StateMaskFromLegacy(settings.boss_state - 1) : settings.boss_states & 3u;
 
     color = settings.color;
     color_text = settings.color_text;
@@ -1871,8 +1876,10 @@ AgentRenderer::CustomAgent::Settings AgentRenderer::CustomAgent::ToSettings() co
     settings.combat_state = combat_state;
     settings.weapon_state = weapon_state;
     settings.allegiance = allegiance;
-    settings.dead_state = dead_state;
-    settings.quest_state = quest_state;
+    settings.dead_state = dead_states == 1u ? Dead : dead_states == 2u ? Alive : EitherDeadState;
+    settings.quest_state = quest_states == 1u ? QuestGiver : quest_states == 2u ? NotQuestGiver : EitherQuestState;
+    settings.dead_states = dead_states;
+    settings.quest_states = quest_states;
     settings.agent_type = agent_type;
     settings.identifier = identifier;
     settings.match_name = match_name;
@@ -1882,7 +1889,8 @@ AgentRenderer::CustomAgent::Settings AgentRenderer::CustomAgent::ToSettings() co
     settings.border_color = border_color;
     settings.gadget_state = gadget_state;
     settings.profession = static_cast<int>(profession);
-    settings.boss_state = boss_state;
+    settings.boss_state = boss_states == 1u ? 1 : boss_states == 2u ? 2 : 0;
+    settings.boss_states = boss_states;
 
     settings.color = color;
     settings.color_text = color_text;
@@ -1978,10 +1986,10 @@ bool AgentRenderer::CustomAgent::DrawSettings()
                         allegiance = -1;
                         modelId = 0;
                         identifier = 0;
-                        if (agent_type != NPC) { profession = GW::Constants::Profession::None; boss_state = 0; }
+                        if (agent_type != NPC) { profession = GW::Constants::Profession::None; boss_states = 0; }
                         if (agent_type == Item || agent_type == Gadget) {
-                            dead_state = EitherDeadState;
-                            quest_state = EitherQuestState;
+                            dead_states = 0;
+                            quest_states = 0;
                             combat_state = EitherCombat;
                             weapon_state = EitherWeapon;
                         }
@@ -2019,9 +2027,10 @@ bool AgentRenderer::CustomAgent::DrawSettings()
             profession = static_cast<GW::Constants::Profession>(profession_selection);
             changed = true;
         }
-        static const char* boss_states[] = {"Either", "Boss", "Not boss"};
-        if (ImGui::Combo("Boss state", &boss_state, boss_states, _countof(boss_states))) changed = true;
+        static constexpr const char* boss_state_items[] = {"Boss", "Not boss"};
+        changed |= ImGui::MultiSelectCombo("Boss state", &boss_states, boss_state_items);
         ImGui::EndDisabled();
+        ImGui::ShowHelp("No states selected disables this filter. Otherwise, only selected states match.");
         ImGui::SetCursorPosX(x);
         if (ImGui::Checkbox("Outposts only", &outpost_only)) changed = true;
         ImGui::SetCursorPosX(x);
@@ -2035,15 +2044,13 @@ bool AgentRenderer::CustomAgent::DrawSettings()
         ImGui::ShowHelp("Optional allegiance filter for NPCs and players.");
         if (agent_type == NPC || agent_type == Player || agent_type == Any) {
             ImGui::SetCursorPosX(x);
-            static const char* dead_state_items[] = {"Dead", "Alive", "Either"};
-            if (ImGui::Combo("Dead state", (int*)&dead_state, dead_state_items, 3)) {
-                changed = true;
-            }
+            static constexpr const char* dead_state_items[] = {"Dead", "Alive"};
+            changed |= ImGui::MultiSelectCombo("Dead state", &dead_states, dead_state_items);
+            ImGui::ShowHelp("No states selected disables this filter. Otherwise, only selected states match.");
             ImGui::SetCursorPosX(x);
-            static const char* quest_state_items[] = {"Quest giver", "Not quest giver", "Either"};
-            if (ImGui::Combo("Quest state", (int*)&quest_state, quest_state_items, 3)) {
-                changed = true;
-            }
+            static constexpr const char* quest_state_items[] = {"Quest giver", "Not quest giver"};
+            changed |= ImGui::MultiSelectCombo("Quest state", &quest_states, quest_state_items);
+            ImGui::ShowHelp("No states selected disables this filter. Otherwise, only selected states match.");
         }
         ImGui::SetCursorPosX(x);
         if (ImGui::InputInt("Map ID", (int*)&mapId)) {

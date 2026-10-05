@@ -136,6 +136,8 @@ private:
             int allegiance = -1;
             int dead_state = EitherDeadState;
             int quest_state = EitherQuestState;
+            uint32_t dead_states = UINT32_MAX;
+            uint32_t quest_states = UINT32_MAX;
             Colors::SettingColor color = 0;
             Colors::SettingColor color_text = 0;
             int shape = Shape_None;
@@ -149,6 +151,7 @@ private:
             int gadget_state = AnyGadget;
             int profession = 0;
             int boss_state = 0;
+            uint32_t boss_states = UINT32_MAX;
             Colors::SettingColor border_color = 0;
         };
 
@@ -185,8 +188,8 @@ private:
         CombatState combat_state = CombatState::EitherCombat;
         WeaponState weapon_state = WeaponState::EitherWeapon;
         int allegiance = -1;
-        DeadState dead_state = DeadState::EitherDeadState;
-        QuestState quest_state = QuestState::EitherQuestState;
+        uint32_t dead_states = 0;
+        uint32_t quest_states = 0;
 
         // attributes to change
         Color color = 0;
@@ -201,7 +204,7 @@ private:
         bool outpost_only = false;
         GadgetState gadget_state = AnyGadget;
         GW::Constants::Profession profession = GW::Constants::Profession::None;
-        int boss_state = 0;
+        uint32_t boss_states = 0;
         Color border_color = 0;
     };
 
