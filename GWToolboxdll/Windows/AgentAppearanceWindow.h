@@ -220,7 +220,8 @@ public:
     static void GetAgentAppearanceRules(std::vector<AppearanceRule*>& out);
     static const std::vector<const AppearanceRule*>* GetAppearanceRules(const GW::Agent* agent);
     static bool GetAgentAppearance(const GW::Agent* agent, Shape_e* shape_out = nullptr, Color* color_out = nullptr,
-        Color* border_color_out = nullptr, float* border_thickness_out = nullptr, Color* text_color_out = nullptr, float* size_out = nullptr);
+        Color* border_color_out = nullptr, float* border_thickness_out = nullptr, Color* text_color_out = nullptr, float* size_out = nullptr,
+        std::vector<const AppearanceRule*>* matched_rules_out = nullptr);
     static Shape_e GetShape(const GW::Agent* agent);
     static Color GetColor(const GW::Agent* agent);
     static float GetSize(const GW::Agent* agent);
