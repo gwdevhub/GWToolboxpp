@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include <Widgets/Minimap/AgentRenderer.h>
+#include <Windows/AgentAppearanceWindow.h>
 
 #include <GWCA/Packets/StoC.h>
 
@@ -1299,7 +1299,7 @@ void FriendListWindow::SaveSettings(SettingsDoc& doc)
 {
     ToolboxWindow::SaveSettings(doc);
     doc.SetStruct(Name(), settings);
-    if (AgentRenderer::AppearanceRulesLoaded()) {
+    if (AgentAppearanceWindow::AppearanceRulesLoaded()) {
         doc.EraseKey(Name(), "friend_name_tag_enabled");
         doc.EraseKey(Name(), "friend_name_tag_color");
     }
