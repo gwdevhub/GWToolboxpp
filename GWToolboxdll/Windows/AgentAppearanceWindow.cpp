@@ -22,10 +22,7 @@ void AgentAppearanceWindow::Draw(IDirect3DDevice9*)
         pending_focus = false;
     }
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
-        auto& renderer = AgentRenderer::Instance();
-        renderer.DrawSettings();
-        ImGui::SliderFloat("Agent Border thickness", &renderer.agent_border_thickness, 0.f, 100.f, "%.0f");
-        ImGui::SliderFloat("Target Border thickness", &renderer.target_border_thickness, 0.f, 100.f, "%.0f");
+        AgentRenderer::Instance().DrawSettings();
     }
     ImGui::End();
 }

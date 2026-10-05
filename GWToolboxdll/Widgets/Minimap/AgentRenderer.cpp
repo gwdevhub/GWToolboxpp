@@ -636,7 +636,10 @@ void AgentRenderer::DrawSettings()
 #ifdef _DEBUG
     ImGui::Checkbox("Show props on minimap", &show_props_on_minimap);
 #endif
-    if (ImGui::TreeNodeEx("Agent Colors", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+    if (!ImGui::BeginTabBar("AgentAppearanceTabs")) {
+        return;
+    }
+    if (ImGui::BeginTabItem("Colors")) {
         ImGui::SmallConfirmButton("Restore Defaults", "Reset effect colours and fallback colours?\nAppearance rules are not changed.", [&](bool result, void*) {
             if (result) {
                 LoadDefaultColors();
@@ -681,10 +684,10 @@ void AgentRenderer::DrawSettings()
             }
         }
 
-        ImGui::TreePop();
+        ImGui::EndTabItem();
     }
 
-    if (ImGui::TreeNodeEx("Agent Sizes", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+    if (ImGui::BeginTabItem("Sizes")) {
         ImGui::SmallConfirmButton("Restore Defaults", "Reset fallback sizes and border thickness?\nAppearance rules are not changed.",
             [&](const bool result, void*) {
                 if (result) {
@@ -707,10 +710,12 @@ void AgentRenderer::DrawSettings()
         ImGui::Combo("Default Shape", reinterpret_cast<int*>(&default_shape), items.data(), items.size());
         ImGui::ShowHelp("The default shape of agents.");
 
-        ImGui::TreePop();
+        ImGui::SliderFloat("Agent Border thickness", &agent_border_thickness, 0.f, 100.f, "%.0f");
+        ImGui::SliderFloat("Target Border thickness", &target_border_thickness, 0.f, 100.f, "%.0f");
+        ImGui::EndTabItem();
     }
 
-    if (ImGui::TreeNodeEx("Agent Appearance", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+    if (ImGui::BeginTabItem("Appearance")) {
         static char group_filter[64] = "";
         ImGui::InputTextWithHint("Filter", "Filter by name or group...", group_filter, sizeof(group_filter));
         ImGui::ShowHelp("Only affects what's shown here. Rules are evaluated top to bottom, independently for each enabled colour, size and shape.");
@@ -758,7 +763,6 @@ void AgentRenderer::DrawSettings()
                 case CustomAgent::Operation::MoveDown:
                     if (i < custom_agents.size() - 1) {
                         std::swap(custom_agents[i], custom_agents[i + 1]);
-                        // render the moved one and increase i
                         ++i;
                         ImGui::PushID(static_cast<int>(custom_agents[i]->ui_id));
                         auto op2 = CustomAgent::Operation::None;
@@ -797,8 +801,9 @@ void AgentRenderer::DrawSettings()
             custom_agents.back()->active = false;
             rules_changed = true;
         }
-        ImGui::TreePop();
+        ImGui::EndTabItem();
     }
+    ImGui::EndTabBar();
 }
 
 void AgentRenderer::Terminate()
