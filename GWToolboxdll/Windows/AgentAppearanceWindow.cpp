@@ -269,8 +269,8 @@ bool AgentAppearanceWindow::GetAgentAppearance(const GW::Agent* agent, Shape_e* 
             text_color_out = nullptr;
             overridden = true;
         }
-        if (size_out && rule->size_scale > 0.f) {
-            *size_out = GetBaseSize() * rule->size_scale;
+        if (size_out && rule->scale > 0.f) {
+            *size_out = GetBaseSize() * rule->scale;
             size_out = nullptr;
             overridden = true;
         }
@@ -509,7 +509,7 @@ void AgentAppearanceWindow::SeedSpiritDefaults(const SettingsDoc& doc)
         rule->identifier = entry.identifier;
         rule->dead_states = 1u << Alive;
         rule->shape = BigCircle;
-        rule->size_scale = SizeScaleFromAbsolute(GW::Constants::Range::SpiritExtended);
+        rule->scale = ScaleFromAbsolute(GW::Constants::Range::SpiritExtended);
         rule->stop_processing_rules = true;
         std::snprintf(rule->group, sizeof(rule->group), "Defaults");
         spirits.push_back(rule);
@@ -528,7 +528,7 @@ void AgentAppearanceWindow::SeedAppearanceDefaults(const SettingsDoc& doc, const
         rule->agent_type = agent_type;
         rule->allegiance = allegiance;
         rule->dead_states = StateMaskFromLegacy(dead);
-        rule->size_scale = SizeScaleFromAbsolute(size);
+        rule->scale = ScaleFromAbsolute(size);
         rule->shape = shape;
         std::snprintf(rule->group, sizeof(rule->group), "Defaults");
         rule->index = custom_agents.size();
@@ -639,7 +639,7 @@ void AgentAppearanceWindow::SeedDefaultCustomAgents()
         ca->allegiance = static_cast<int>(row.allegiance);
         ca->agent_type = NPC;
         ca->quest_states = StateMaskFromLegacy(row.quest_state);
-        ca->size_scale = SizeScaleFromAbsolute(*row.size);
+        ca->scale = ScaleFromAbsolute(*row.size);
         ca->dead_states = 1u << Alive;
         ca->shape = Shape_None;
         std::snprintf(ca->group, sizeof(ca->group), "Defaults");
@@ -814,7 +814,7 @@ void AgentAppearanceWindow::DrawSettings()
     if (ImGui::DragFloat("Default Size", &size_default, 1.f, 1.f, 0.f, "%.0f")) {
         size_default = std::isfinite(size_default) ? std::max(1.f, size_default) : 100.f;
     }
-    ImGui::ShowHelp("Base minimap marker size. Each rule's size scale multiplies this value.");
+    ImGui::ShowHelp("Base minimap marker size. Each rule's scale multiplies this value.");
     static std::array items = {"Tear", "Circle", "Square", "Big Circle"};
     ImGui::Combo("Default Shape", reinterpret_cast<int*>(&default_shape), items.data(), items.size());
     ImGui::ShowHelp("The default shape of agents.");
@@ -1271,7 +1271,7 @@ float AgentAppearanceWindow::GetBaseSize()
     return std::isfinite(size_default) && size_default > 0.f ? size_default : 100.f;
 }
 
-float AgentAppearanceWindow::SizeScaleFromAbsolute(const float size)
+float AgentAppearanceWindow::ScaleFromAbsolute(const float size)
 {
     const auto scale = size / GetBaseSize();
     return std::isfinite(scale) && scale > 0.f ? scale : 0.f;
@@ -1588,10 +1588,10 @@ AgentAppearanceWindow::CustomAgent::CustomAgent(const ToolboxIni* ini, const cha
     if (s >= 1 && s <= 4) {
         shape = static_cast<Shape_e>(s - 1);
     }
-    size_scale = ini->KeyExists(section, "size_scale")
-        ? static_cast<float>(ini->GetDoubleValue(section, "size_scale", 0.f))
-        : SizeScaleFromAbsolute(static_cast<float>(ini->GetDoubleValue(section, "size", 0.f)));
-    if (!std::isfinite(size_scale) || size_scale < 0.f) size_scale = 0.f;
+    scale = ini->KeyExists(section, "scale")
+        ? static_cast<float>(ini->GetDoubleValue(section, "scale", 0.f))
+        : ScaleFromAbsolute(static_cast<float>(ini->GetDoubleValue(section, "size", 0.f)));
+    if (!std::isfinite(scale) || scale < 0.f) scale = 0.f;
 
     LegacyFlags flags;
     flags.color_active = ini->GetBoolValue(section, "color_active", flags.color_active);
@@ -1635,8 +1635,8 @@ AgentAppearanceWindow::CustomAgent::CustomAgent(const Settings& settings)
     if (settings.shape >= Shape_None && settings.shape <= BigCircle) {
         shape = static_cast<Shape_e>(settings.shape);
     }
-    size_scale = settings.size_scale.value_or(SizeScaleFromAbsolute(settings.size));
-    if (!std::isfinite(size_scale) || size_scale < 0.f) size_scale = 0.f;
+    scale = settings.scale.value_or(ScaleFromAbsolute(settings.size));
+    if (!std::isfinite(scale) || scale < 0.f) scale = 0.f;
 }
 
 void AgentAppearanceWindow::CustomAgent::ApplyLegacyFlags(const LegacyFlags& flags)
@@ -1644,7 +1644,7 @@ void AgentAppearanceWindow::CustomAgent::ApplyLegacyFlags(const LegacyFlags& fla
     override_color = flags.color_active && Colors::IsVisible(color);
     override_text_color = flags.color_text_active && Colors::IsVisible(color_text);
     override_border_color = flags.border_color_active && Colors::IsVisible(border_color);
-    if (!flags.size_active) size_scale = 0.f;
+    if (!flags.size_active) scale = 0.f;
     if (!flags.shape_active) shape = Shape_None;
     else if (shape == Shape_None) shape = Tear;
 }
@@ -1693,8 +1693,8 @@ AgentAppearanceWindow::CustomAgent::Settings AgentAppearanceWindow::CustomAgent:
     settings.override_text_color = override_text_color;
     settings.override_border_color = override_border_color;
     settings.shape = shape;
-    settings.size_scale = size_scale;
-    settings.size = GetBaseSize() * size_scale;
+    settings.scale = scale;
+    settings.size = GetBaseSize() * scale;
 
     return settings;
 }
@@ -1976,8 +1976,8 @@ bool AgentAppearanceWindow::CustomAgent::DrawSettings()
         draw_color_override("Target border color", override_border_color, border_color, "Override border colour for this rule");
         draw_color_override("Text color", override_text_color, color_text, "Override name tag colour for this rule");
 
-        if (ImGui::DragFloat("Size scale", &size_scale, 0.01f, 0.0f, 0.0f, "%.2fx")) {
-            if (!std::isfinite(size_scale) || size_scale < 0.f) size_scale = 0.f;
+        if (ImGui::DragFloat("Scale", &scale, 0.01f, 0.0f, 0.0f, "%.2fx")) {
+            if (!std::isfinite(scale) || scale < 0.f) scale = 0.f;
             changed = true;
         }
         ImGui::ShowHelp("Multiplier of Default Size: 1.0 is the default, 0.8 is 80%, and 1.1 is 110%. Zero inherits the next matching size.");

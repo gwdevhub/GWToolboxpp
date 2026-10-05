@@ -140,7 +140,7 @@ public:
             Colors::SettingColor color_text = 0;
             int shape = Shape_None;
             float size = 0.0f;
-            std::optional<float> size_scale;
+            std::optional<float> scale;
             int agent_type = 0;
             DWORD identifier = 0;
             std::string match_name;
@@ -202,7 +202,7 @@ public:
         bool override_border_color = false;
         bool stop_processing_rules = false;
         Shape_e shape = Shape_None;
-        float size_scale = 0.0f;
+        float scale = 0.0f;
         AgentType agent_type = NPC;
         DWORD identifier = 0;
         char match_name[128]{};
@@ -235,7 +235,7 @@ private:
     static float GetDefaultSize(const GW::Agent* agent);
     static float GetLegacyDefaultSize(const GW::Agent* agent);
     static float GetBaseSize();
-    static float SizeScaleFromAbsolute(float size);
+    static float ScaleFromAbsolute(float size);
     static std::array<float*, 14> GetFallbackSizeFields();
     static Shape_e GetDefaultShape(const GW::Agent* agent);
 
