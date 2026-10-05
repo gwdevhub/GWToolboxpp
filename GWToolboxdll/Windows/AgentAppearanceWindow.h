@@ -140,6 +140,7 @@ public:
             Colors::SettingColor color_text = 0;
             int shape = Shape_None;
             float size = 0.0f;
+            std::optional<float> size_scale;
             int agent_type = 0;
             DWORD identifier = 0;
             std::string match_name;
@@ -201,7 +202,7 @@ public:
         bool override_border_color = false;
         bool stop_processing_rules = false;
         Shape_e shape = Shape_None;
-        float size = 0.0f;
+        float size_scale = 0.0f;
         AgentType agent_type = NPC;
         DWORD identifier = 0;
         char match_name[128]{};
@@ -232,6 +233,10 @@ private:
 
     static Color GetDefaultColor(const GW::Agent* agent, const CustomAgent* ca = nullptr);
     static float GetDefaultSize(const GW::Agent* agent);
+    static float GetLegacyDefaultSize(const GW::Agent* agent);
+    static float GetBaseSize();
+    static float SizeScaleFromAbsolute(float size);
+    static std::array<float*, 14> GetFallbackSizeFields();
     static Shape_e GetDefaultShape(const GW::Agent* agent);
 
     struct CachedPolygon {
@@ -341,6 +346,7 @@ private:
     inline static bool spirit_defaults_seeded = false;
 
     inline static float size_default = 100.f;
+    inline static float fallback_size_base = 100.f;
     inline static float size_player = 100.f;
     inline static float size_signpost = 50.f;
     inline static float size_locked_chest = 50.f;

@@ -104,7 +104,8 @@ void AgentRenderer::Render(IDirect3DDevice9* device)
         if (AgentAppearanceWindow::show_props_on_minimap) {
             const auto& props = GW::GetMapContext()->props->propArray;
             for (size_t i = 0; i < props.size(); ++i) {
-                Enqueue(Quad, props[i], AgentAppearanceWindow::size_item, AgentAppearanceWindow::color_signpost);
+                const auto size = AgentAppearanceWindow::size_item / AgentAppearanceWindow::fallback_size_base * AgentAppearanceWindow::GetBaseSize();
+                Enqueue(Quad, props[i], size, AgentAppearanceWindow::color_signpost);
             }
         }
         auto* agents = GW::Agents::GetAgentArray();
