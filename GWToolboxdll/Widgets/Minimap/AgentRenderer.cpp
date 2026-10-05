@@ -1944,13 +1944,13 @@ bool AgentRenderer::CustomAgent::DrawSettings()
 {
     bool changed = false;
     const auto title = std::format("Edit Appearance Rule: {}###appearance_rule_{}", name, ui_id);
-    ImGui::SetNextWindowSize(ImVec2(600.f, 700.f), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSizeConstraints(ImVec2(600.f, 0.f), ImVec2(FLT_MAX, FLT_MAX));
     if (focus_editor) {
         ImGui::SetNextWindowFocus();
         ImGui::SetNextWindowCollapsed(false);
         focus_editor = false;
     }
-    if (ImGui::Begin(title.c_str(), &edit_open)) {
+    if (ImGui::Begin(title.c_str(), &edit_open, ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::PushID(static_cast<int>(ui_id));
 
         if (ImGui::Checkbox("##visible2", &active)) {
