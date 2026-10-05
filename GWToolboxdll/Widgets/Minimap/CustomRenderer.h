@@ -13,7 +13,7 @@ using Color = uint32_t;
 class ToolboxModule;
 
 class CustomRenderer : public D3DVertexBuffer {
-    friend class AgentRenderer;
+    friend class AgentAppearanceWindow;
     friend class GameWorldRenderer;
 
     enum class Shape {

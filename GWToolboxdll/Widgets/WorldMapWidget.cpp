@@ -28,7 +28,7 @@
 #include <Widgets/CartographerWidget.h>
 #include <Modules/GwDatModule.h>
 #include <Modules/Resources.h>
-#include <Widgets/Minimap/AgentRenderer.h>
+#include <Windows/AgentAppearanceWindow.h>
 #include <Widgets/Minimap/Minimap.h>
 #include <Widgets/Minimap/GameWorldRenderer.h>
 
@@ -649,7 +649,7 @@ namespace {
 
         const auto profession = static_cast<GW::Constants::Profession>(skill->profession);
         const auto prof_color = (settings.color_elite_icons_by_profession && profession != GW::Constants::Profession::None)
-            ? AgentRenderer::GetProfessionColor(profession)
+            ? AgentAppearanceWindow::GetProfessionColor(profession)
             : 0u;
 
         bool hovered = false;

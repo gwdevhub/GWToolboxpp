@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include <Widgets/Minimap/AgentRenderer.h>
 
 #include <GWCA/Utilities/MemoryPatcher.h>
 #include <GWCA/Utilities/Scanner.h>
@@ -1401,7 +1400,7 @@ void GameSettings::Initialize()
 {
     ToolboxModule::Initialize();
     SettingsRegistry::Register(this, settings);
-    AgentRenderer::RegisterSettings(this);
+    AgentAppearanceWindow::RegisterSettings(this);
     SettingsRegistry::Describe(this, "automatically_flag_pet_to_fight_called_target", "Automatically lock heroes and pets onto your called target");
     SettingsRegistry::Describe(this, "combine_overhead_numbers", "Combine floating numbers above character", combine_overhead_numbers_help);
 
@@ -1623,11 +1622,11 @@ void GameSettings::MessageOnPartyChange()
 
 void GameSettings::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    AgentRenderer::ResetAppearanceSettings();
-    AgentRenderer::LoadLegacyAppearanceDefaults(doc, legacy);
+    AgentAppearanceWindow::ResetAppearanceSettings();
+    AgentAppearanceWindow::LoadLegacyAppearanceDefaults(doc, legacy);
     ToolboxModule::LoadSettings(doc, legacy);
     doc.GetStruct(Name(), settings);
-    AgentRenderer::LoadCustomAgents(doc, legacy);
+    AgentAppearanceWindow::LoadCustomAgents(doc, legacy);
 
     for (const auto& [key, chan] : channel_color_settings)
         LoadChannelColor(doc, legacy, Name(), key, chan);
@@ -1700,7 +1699,7 @@ void GameSettings::Terminate()
     GW::UI::RemoveUIMessageCallback(&OnPostUIMessage_HookEntry);
     GW::UI::RemoveUIMessageCallback(&OnPreUIMessage_HookEntry);
     GW::UI::RemoveUIMessageCallback(&OnAgentNameTag_Entry);
-    AgentRenderer::ReleaseAppearanceHooks();
+    AgentAppearanceWindow::ReleaseAppearanceHooks();
 
     if (SkillList_UICallback_Func) GW::Hook::RemoveHook(SkillList_UICallback_Func);
     if (SetFrameSkillDescription_Func) GW::Hook::RemoveHook(SetFrameSkillDescription_Func);
@@ -1713,13 +1712,13 @@ void GameSettings::SaveSettings(SettingsDoc& doc)
 {
     ToolboxModule::SaveSettings(doc);
     doc.SetStruct(Name(), settings);
-    AgentRenderer::SaveCustomAgents(doc);
+    AgentAppearanceWindow::SaveCustomAgents(doc);
     constexpr const char* migrated_colors[] = {
         "override_name_tag_colors", "nametag_color_npc", "nametag_color_player_self", "nametag_color_player_other",
         "nametag_color_player_in_party", "nametag_color_player_in_my_party", "nametag_color_friends",
         "nametag_color_guild_members", "nametag_color_gadget", "nametag_color_enemy", "nametag_color_item"
     };
-    if (AgentRenderer::AppearanceRulesLoaded()) {
+    if (AgentAppearanceWindow::AppearanceRulesLoaded()) {
         for (const auto key : migrated_colors) doc.EraseKey(Name(), key);
         doc.EraseKey("Friend List", "friend_name_tag_enabled");
         doc.EraseKey("Friend List", "friend_name_tag_color");
@@ -2429,6 +2428,6 @@ void GameSettings::OnAgentNameTag(GW::HookStatus*, const GW::UI::UIMessage msgid
         tag->extra_info_enc = you_have_n_lockpicks;
     }
     if (const auto agent = GW::Agents::GetAgentByID(tag->agent_id)) {
-        AgentRenderer::ApplyNameTagColor(agent, tag->text_color);
+        AgentAppearanceWindow::ApplyNameTagColor(agent, tag->text_color);
     }
 }
