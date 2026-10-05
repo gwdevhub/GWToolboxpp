@@ -812,6 +812,22 @@ void AgentRenderer::DrawSettings()
         if (changed) {
             RebuildRuleMatchers();
         }
+        ImGui::SmallConfirmButton("Restore Defaults", "Replace all appearance rules with defaults?\nColours, sizes and border thickness will also be reset.\nThis cannot be undone.", [this](const bool confirmed, void*) {
+            if (!confirmed) return;
+            match_cache.clear();
+            pending_names.clear();
+            for (const auto* rule : custom_agents) {
+                delete rule;
+            }
+            custom_agents.clear();
+            ResetAppearanceSettings();
+            SeedDefaultCustomAgents();
+            SeedAppearanceDefaults(SettingsDoc{}, nullptr);
+            custom_agent_defaults_seeded = true;
+            appearance_defaults_seeded = true;
+            custom_agents_loaded = true;
+            group_filter[0] = '\0';
+        });
         ImGui::EndTabItem();
     }
     ImGui::EndTabBar();
