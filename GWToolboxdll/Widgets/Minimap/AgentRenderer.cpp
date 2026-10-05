@@ -260,13 +260,11 @@ void AgentRenderer::LoadCustomAgents(SettingsDoc& doc, ToolboxIni* legacy)
         const auto old_rule = rule->ToSettings();
         rule->agent_type = NPC;
         rule->identifier = rule->modelId;
-        rule->identifier_active = true;
         rule->modelId = 0;
         append(rule);
         auto* gadget_rule = new CustomAgent(old_rule);
         gadget_rule->agent_type = Gadget;
         gadget_rule->identifier = gadget_rule->modelId;
-        gadget_rule->identifier_active = true;
         gadget_rule->modelId = 0;
         append(gadget_rule);
     };
@@ -1049,7 +1047,7 @@ void AgentRenderer::RefreshMatches(const GW::Agent* agent)
         if (!rule->active || rule->mapId && rule->mapId != static_cast<DWORD>(GW::Map::GetMapID())) continue;
         if (rule->outpost_only && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) continue;
         if (rule->agent_type != Any && rule->agent_type != agent_type) continue;
-        if (rule->agent_type != Any && rule->identifier_active && rule->identifier != identifier) continue;
+        if (rule->agent_type != Any && rule->identifier != 0 && rule->identifier != identifier) continue;
         if (rule->allegiance >= 0 && (!living || rule->allegiance != static_cast<int>(living->allegiance))) continue;
         if (rule->target_state == Targeted && !targeted || rule->target_state == NotTargeted && targeted || rule->target_state == Marked && !marked) continue;
         if (rule->profession != GW::Constants::Profession::None && rule->profession != profession) continue;
@@ -1784,7 +1782,7 @@ AgentRenderer::CustomAgent::CustomAgent(const ToolboxIni* ini, const char* secti
     quest_state = static_cast<QuestState>(ini->GetLongValue(section, VAR_NAME(quest_state), static_cast<long>(quest_state)));
     agent_type = static_cast<AgentType>(ini->GetLongValue(section, VAR_NAME(agent_type), 0));
     identifier = static_cast<DWORD>(ini->GetLongValue(section, VAR_NAME(identifier), identifier));
-    identifier_active = ini->GetBoolValue(section, VAR_NAME(identifier_active), identifier != 0);
+    if (!ini->GetBoolValue(section, "identifier_active", identifier != 0)) identifier = 0;
     std::snprintf(match_name, sizeof(match_name), "%s", ini->GetValue(section, VAR_NAME(match_name), ""));
     target_state = static_cast<TargetState>(ini->GetLongValue(section, VAR_NAME(target_state), target_state));
     player_relation = static_cast<PlayerRelation>(ini->GetLongValue(section, VAR_NAME(player_relation), player_relation));
@@ -1826,7 +1824,6 @@ AgentRenderer::CustomAgent::CustomAgent(const Settings& settings)
     quest_state = static_cast<QuestState>(settings.quest_state);
     agent_type = static_cast<AgentType>(settings.agent_type);
     identifier = settings.identifier;
-    identifier_active = settings.identifier_active || identifier != 0;
     std::snprintf(match_name, sizeof(match_name), "%s", settings.match_name.c_str());
     target_state = static_cast<TargetState>(settings.target_state);
     player_relation = static_cast<PlayerRelation>(settings.player_relation);
@@ -1877,8 +1874,7 @@ AgentRenderer::CustomAgent::Settings AgentRenderer::CustomAgent::ToSettings() co
     settings.dead_state = dead_state;
     settings.quest_state = quest_state;
     settings.agent_type = agent_type;
-    settings.identifier = identifier_active ? identifier : 0;
-    settings.identifier_active = identifier_active;
+    settings.identifier = identifier;
     settings.match_name = match_name;
     settings.target_state = target_state;
     settings.player_relation = player_relation;
@@ -1971,7 +1967,6 @@ bool AgentRenderer::CustomAgent::DrawSettings()
             allegiance = -1;
             modelId = 0;
             identifier = 0;
-            identifier_active = false;
             if (agent_type != NPC) { profession = GW::Constants::Profession::None; boss_state = 0; }
             if (agent_type != Gadget) gadget_state = AnyGadget;
             if (agent_type != Player) player_relation = AnyRelation;
@@ -1984,13 +1979,9 @@ bool AgentRenderer::CustomAgent::DrawSettings()
         }
         ImGui::SetCursorPosX(x);
         ImGui::BeginDisabled(agent_type == Any);
-        if (ImGui::Checkbox("Match identifier", &identifier_active)) changed = true;
-        ImGui::EndDisabled();
-        ImGui::SetCursorPosX(x);
-        ImGui::BeginDisabled(agent_type == Any || !identifier_active);
         if (ImGui::InputInt("Identifier", reinterpret_cast<int*>(&identifier))) changed = true;
         ImGui::EndDisabled();
-        ImGui::ShowHelp("Item model ID, gadget ID or NPC model ID, according to the chosen type. If unchecked, matches any identifier; checked also allows an exact ID of 0.");
+        ImGui::ShowHelp("Item model ID, gadget ID or NPC model ID, according to the chosen type. Leave 0 to match any identifier.");
         ImGui::SetCursorPosX(x);
         if (ImGui::InputText("Match name", match_name, sizeof(match_name))) changed = true;
         ImGui::ShowHelp("Case-insensitive substring, or /pattern/flags for a regular expression, as in Loot Beacons.");

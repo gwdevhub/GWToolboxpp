@@ -118,7 +118,6 @@ private:
             float size = 0.0f;
             int agent_type = 0;
             DWORD identifier = 0;
-            bool identifier_active = false;
             std::string match_name;
             int target_state = EitherTarget;
             int player_relation = AnyRelation;
@@ -171,7 +170,6 @@ private:
         float size = 0.0f;
         AgentType agent_type = NPC;
         DWORD identifier = 0;
-        bool identifier_active = false;
         char match_name[128]{};
         TargetState target_state = EitherTarget;
         PlayerRelation player_relation = AnyRelation;
