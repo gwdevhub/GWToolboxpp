@@ -1,7 +1,6 @@
 #include "stdafx.h"
 
 #include <GWCA/Context/MapContext.h>
-#include <GWCA/Constants/AgentIDs.h>
 #include <GWCA/Constants/Maps.h>
 #include <GWCA/GameContainers/Array.h>
 #include <GWCA/GameEntities/Agent.h>
@@ -121,30 +120,6 @@ void AgentRenderer::Render(IDirect3DDevice9* device)
             const auto* target_agent = GW::Agents::GetAgentByID(AgentAppearanceWindow::auto_target_id);
             target = target_agent ? target_agent->GetAsAgentLiving() : nullptr;
         }
-        for (auto* agent_ptr : *agents) {
-            const auto* agent = agent_ptr ? agent_ptr->GetAsAgentLiving() : nullptr;
-            if (!agent || agent->GetIsDead()) continue;
-            switch (agent->player_number) {
-                case GW::Constants::ModelID::EoE:
-                    Enqueue(BigCircle, agent, GW::Constants::Range::SpiritExtended, AgentAppearanceWindow::color_eoe);
-                    break;
-                case GW::Constants::ModelID::QZ:
-                    Enqueue(BigCircle, agent, GW::Constants::Range::SpiritExtended, AgentAppearanceWindow::color_qz);
-                    break;
-                case GW::Constants::ModelID::Winnowing:
-                    Enqueue(BigCircle, agent, GW::Constants::Range::SpiritExtended, AgentAppearanceWindow::color_winnowing);
-                    break;
-                case GW::Constants::ModelID::FrozenSoil:
-                    Enqueue(BigCircle, agent, GW::Constants::Range::SpiritExtended, AgentAppearanceWindow::color_frozen_soil);
-                    break;
-                case GW::Constants::ModelID::Symbiosis:
-                    Enqueue(BigCircle, agent, GW::Constants::Range::SpiritExtended, AgentAppearanceWindow::color_symbiosis);
-                    break;
-                default:
-                    break;
-            }
-        }
-
         static std::vector<std::pair<const GW::Agent*, const AppearanceRule*>> custom_agents_to_draw;
         static std::vector<const GW::AgentLiving*> marked_targets_to_draw;
         static std::vector<const GW::AgentLiving*> players_to_draw;
