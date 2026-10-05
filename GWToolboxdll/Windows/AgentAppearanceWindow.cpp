@@ -269,8 +269,8 @@ bool AgentAppearanceWindow::GetAgentAppearance(const GW::Agent* agent, Shape_e* 
             text_color_out = nullptr;
             overridden = true;
         }
-        if (size_out && rule->size > 0.f) {
-            *size_out = rule->size;
+        if (size_out && rule->scale > 0.f) {
+            *size_out = GetBaseSize() * rule->scale;
             size_out = nullptr;
             overridden = true;
         }
@@ -359,6 +359,18 @@ void AgentAppearanceWindow::LoadCustomAgents(SettingsDoc& doc, ToolboxIni* legac
         delete ca;
     }
     custom_agents.clear();
+    size_default = GetBaseSize();
+    fallback_size_base = size_default;
+    if (doc.Has("Game Settings", "fallback_size_scales")) {
+        std::array<float, 14> scales{};
+        if (!doc.Get("Game Settings", "fallback_size_scales", scales)
+            || std::ranges::any_of(scales, [](const float scale) { return !std::isfinite(scale) || scale < 0.f; })) {
+            Log::Error("Failed to parse fallback size scales");
+            return;
+        }
+        const auto fields = GetFallbackSizeFields();
+        for (size_t i = 0; i < fields.size(); ++i) *fields[i] = scales[i] * fallback_size_base;
+    }
     doc.Get("Game Settings", "spirit_defaults_seeded", spirit_defaults_seeded);
 
     const auto append_rule = [](CustomAgent* rule, const bool was_seeded = false) {
@@ -497,7 +509,7 @@ void AgentAppearanceWindow::SeedSpiritDefaults(const SettingsDoc& doc)
         rule->identifier = entry.identifier;
         rule->dead_states = 1u << Alive;
         rule->shape = BigCircle;
-        rule->size = GW::Constants::Range::SpiritExtended;
+        rule->scale = ScaleFromAbsolute(GW::Constants::Range::SpiritExtended);
         rule->stop_processing_rules = true;
         std::snprintf(rule->group, sizeof(rule->group), "Defaults");
         spirits.push_back(rule);
@@ -516,7 +528,7 @@ void AgentAppearanceWindow::SeedAppearanceDefaults(const SettingsDoc& doc, const
         rule->agent_type = agent_type;
         rule->allegiance = allegiance;
         rule->dead_states = StateMaskFromLegacy(dead);
-        rule->size = size;
+        rule->scale = ScaleFromAbsolute(size);
         rule->shape = shape;
         std::snprintf(rule->group, sizeof(rule->group), "Defaults");
         rule->index = custom_agents.size();
@@ -627,7 +639,7 @@ void AgentAppearanceWindow::SeedDefaultCustomAgents()
         ca->allegiance = static_cast<int>(row.allegiance);
         ca->agent_type = NPC;
         ca->quest_states = StateMaskFromLegacy(row.quest_state);
-        ca->size = *row.size;
+        ca->scale = ScaleFromAbsolute(*row.size);
         ca->dead_states = 1u << Alive;
         ca->shape = Shape_None;
         std::snprintf(ca->group, sizeof(ca->group), "Defaults");
@@ -648,7 +660,11 @@ void AgentAppearanceWindow::SaveCustomAgents(SettingsDoc& doc)
             entries.push_back(ca->ToSettings());
         }
         doc.Set("Game Settings", "appearance_rules", entries);
-        doc.Set("Game Settings", "appearance_rules_version", 3);
+        doc.Set("Game Settings", "appearance_rules_version", 4);
+        const auto fields = GetFallbackSizeFields();
+        std::array<float, 14> scales{};
+        for (size_t i = 0; i < fields.size(); ++i) scales[i] = *fields[i] / fallback_size_base;
+        doc.Set("Game Settings", "fallback_size_scales", scales);
         doc.Set("Game Settings", "custom_agent_defaults_seeded", custom_agent_defaults_seeded);
         doc.Set("Game Settings", "appearance_defaults_seeded", appearance_defaults_seeded);
         doc.Set("Game Settings", "spirit_defaults_seeded", spirit_defaults_seeded);
@@ -681,6 +697,7 @@ void AgentAppearanceWindow::SaveCustomAgents(SettingsDoc& doc)
 void AgentAppearanceWindow::LoadDefaultSizes()
 {
     size_default = 100.0f;
+    fallback_size_base = size_default;
     size_player = size_default;
     size_signpost = size_default * .5f;
     size_locked_chest = size_signpost;
@@ -794,170 +811,128 @@ void AgentAppearanceWindow::LoadDefaultColors()
 
 void AgentAppearanceWindow::DrawSettings()
 {
-    if (!ImGui::BeginTabBar("AgentAppearanceTabs")) {
-        return;
+    if (ImGui::DragFloat("Default Size", &size_default, 1.f, 1.f, 0.f, "%.0f")) {
+        size_default = std::isfinite(size_default) ? std::max(1.f, size_default) : 100.f;
     }
-    if (ImGui::BeginTabItem("Sizes")) {
-        ImGui::SmallConfirmButton("Restore Defaults", "Reset fallback sizes and border thickness?\nAppearance rules are not changed.",
-            [&](const bool result, void*) {
-                if (result) {
-                    LoadDefaultSizes();
-                }
-            });
-        {
-            struct SizeEntry { const char* label; float* size; const char* help; };
-            const SizeEntry entries[] = {
-                {"Default Size",       &size_default,       nullptr},
-            };
-            for (const auto& [label, sz, help] : entries) {
-                ImGui::DragFloat(label, sz, 1.0f, 1.0f, 0.0f, "%.0f");
-                if (help) {
-                    ImGui::ShowHelp(help);
-                }
-            }
-        }
-        static std::array items = {"Tear", "Circle", "Square", "Big Circle"};
-        ImGui::Combo("Default Shape", reinterpret_cast<int*>(&default_shape), items.data(), items.size());
-        ImGui::ShowHelp("The default shape of agents.");
-
-        ImGui::SliderFloat("Agent Border thickness", &agent_border_thickness, 0.f, 100.f, "%.0f");
-        ImGui::SliderFloat("Target Border thickness", &target_border_thickness, 0.f, 100.f, "%.0f");
-        ImGui::EndTabItem();
+    ImGui::ShowHelp("Base minimap marker size. Each rule's scale multiplies this value.");
+    static std::array items = {"Tear", "Circle", "Square", "Big Circle"};
+    ImGui::Combo("Default Shape", reinterpret_cast<int*>(&default_shape), items.data(), items.size());
+    ImGui::ShowHelp("The default shape of agents.");
+    ImGui::SliderFloat("Agent Border thickness", &agent_border_thickness, 0.f, 100.f, "%.0f");
+    ImGui::SliderFloat("Target Border thickness", &target_border_thickness, 0.f, 100.f, "%.0f");
+    Colors::DrawSettingHueWheel("Agent modifier", &color_agent_modifier);
+    ImGui::ShowHelp("Controls marker shading: subtracted at the border and added at the centre. Zero gives a solid colour.");
+    Colors::DrawSettingHueWheel("Agent damaged modifier", &color_agent_damaged_modifier);
+    ImGui::ShowHelp("Subtracted from hostile marker colours at 90% HP or below.");
+    ImGui::Separator();
+    static char group_filter[64] = "";
+    const auto add_width = ImGui::CalcTextSize("Add").x + ImGui::GetStyle().FramePadding.x * 2.f;
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - add_width - ImGui::GetStyle().ItemSpacing.x);
+    ImGui::InputTextWithHint("##filter", "Filter by label or group...", group_filter, sizeof(group_filter));
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("Only affects what's shown here. Rules are evaluated top to bottom, independently for each enabled property. A matching 'Stop after this rule' ends the lookup.");
     }
-
-    if (ImGui::BeginTabItem("Appearance")) {
-        Colors::DrawSettingHueWheel("Agent modifier", &color_agent_modifier);
-        ImGui::ShowHelp("Controls marker shading: subtracted at the border and added at the centre. Zero gives a solid colour.");
-        Colors::DrawSettingHueWheel("Agent damaged modifier", &color_agent_damaged_modifier);
-        ImGui::ShowHelp("Subtracted from hostile marker colours at 90% HP or below.");
-        ImGui::Separator();
-        static char group_filter[64] = "";
-        const auto add_width = ImGui::CalcTextSize("Add").x + ImGui::GetStyle().FramePadding.x * 2.f;
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - add_width - ImGui::GetStyle().ItemSpacing.x);
-        ImGui::InputTextWithHint("##filter", "Filter by label or group...", group_filter, sizeof(group_filter));
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Only affects what's shown here. Rules are evaluated top to bottom, independently for each enabled property. A matching 'Stop after this rule' ends the lookup.");
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("Add", ImVec2(add_width, 0.f))) {
-            auto* rule = new CustomAgent(0, 0, "");
-            rule->active = false;
-            custom_agents.insert(custom_agents.begin(), rule);
-            EditRule(rule);
-            for (size_t i = 0; i < custom_agents.size(); ++i) {
-                custom_agents[i]->index = i;
-            }
-            RebuildRuleMatchers();
-        }
-
-        const auto matches_filter = [](const CustomAgent* ca) {
-            if (!group_filter[0]) {
-                return true;
-            }
-            const auto to_lower = [](std::string s) {
-                std::ranges::transform(s, s.begin(), [](const unsigned char c) { return static_cast<char>(std::tolower(c)); });
-                return s;
-            };
-            const auto needle = to_lower(group_filter);
-            return to_lower(ca->Label()).find(needle) != std::string::npos || to_lower(ca->group).find(needle) != std::string::npos;
+    ImGui::SameLine();
+    if (ImGui::Button("Add", ImVec2(add_width, 0.f))) {
+        auto* rule = new CustomAgent(0, 0, "");
+        rule->active = false;
+        custom_agents.insert(custom_agents.begin(), rule);
+        EditRule(rule);
+        for (size_t i = 0; i < custom_agents.size(); ++i) custom_agents[i]->index = i;
+        RebuildRuleMatchers();
+    }
+    const auto matches_filter = [](const CustomAgent* ca) {
+        if (!group_filter[0]) return true;
+        const auto to_lower = [](std::string s) {
+            std::ranges::transform(s, s.begin(), [](const unsigned char c) { return static_cast<char>(std::tolower(c)); });
+            return s;
         };
+        const auto needle = to_lower(group_filter);
+        return to_lower(ca->Label()).find(needle) != std::string::npos || to_lower(ca->group).find(needle) != std::string::npos;
+    };
 
+    std::vector<AppearanceRule*> rules;
+    GetAgentAppearanceRules(rules);
+    bool changed = false;
+    AppearanceRule* move_rule = nullptr;
+    int move_offset = 0;
+    const auto footer_height = ImGui::GetTextLineHeight() + ImGui::GetStyle().ItemSpacing.y;
+    ImGui::BeginChild("##custom_agents_scroll", ImVec2(0.f, -footer_height), true);
+    if (ImGui::BeginTable("AppearanceRules", 2, ImGuiTableFlags_SizingStretchProp)) {
+        const auto button_size = ImGui::GetFrameHeight();
+        const auto spacing = ImGui::GetStyle().ItemSpacing.x;
+        ImGui::TableSetupColumn("Rule", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn("Actions", ImGuiTableColumnFlags_WidthFixed, button_size * 4.f + spacing * 3.f);
+        for (unsigned i = 0; i < rules.size(); ++i) {
+            auto* custom = rules[i];
+            if (!custom || !matches_filter(custom)) continue;
+            ImGui::PushID(static_cast<int>(custom->ui_id));
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            changed |= custom->DrawHeader();
+            ImGui::TableNextColumn();
+            if (ImGui::ButtonWithHint(ICON_FA_EDIT, "Edit appearance rule", ImVec2(button_size, button_size))) EditRule(custom);
+            ImGui::SameLine();
+            ImGui::BeginDisabled(i == 0);
+            if (ImGui::ButtonWithHint(ICON_FA_ARROW_UP, "Move rule up", ImVec2(button_size, button_size))) {
+                move_rule = custom;
+                move_offset = -1;
+            }
+            ImGui::EndDisabled();
+            ImGui::SameLine();
+            ImGui::BeginDisabled(i + 1 == rules.size());
+            if (ImGui::ButtonWithHint(ICON_FA_ARROW_DOWN, "Move rule down", ImVec2(button_size, button_size))) {
+                move_rule = custom;
+                move_offset = 1;
+            }
+            ImGui::EndDisabled();
+            ImGui::SameLine();
+            if (ImGui::ButtonWithHint(ICON_FA_TRASH, "Delete appearance rule", ImVec2(button_size, button_size))) {
+                const auto message = std::format("Delete appearance rule '{}'?\nThis cannot be undone.", custom->Label());
+                ImGui::ConfirmDialog(message.c_str(), [rule_id = custom->ui_id](const bool confirmed, void*) {
+                    if (!confirmed) return;
+                    std::vector<AppearanceRule*> rules;
+                    GetAgentAppearanceRules(rules);
+                    const auto it = std::ranges::find_if(rules, [rule_id](const AppearanceRule* rule) { return rule && rule->ui_id == rule_id; });
+                    if (it == rules.end()) return;
+                    custom_agents.erase(custom_agents.begin() + (*it)->index);
+                    delete *it;
+                    rules.erase(it);
+                    for (size_t j = 0; j < rules.size(); ++j) rules[j]->index = j;
+                    RebuildRuleMatchers();
+                });
+            }
+            ImGui::PopID();
+        }
+        ImGui::EndTable();
+    }
+    ImGui::EndChild();
+    if (move_rule) {
+        const auto from = move_rule->index;
+        const auto to = move_offset < 0 ? from - 1 : from + 1;
+        std::swap(custom_agents[from], custom_agents[to]);
+        custom_agents[from]->index = from;
+        custom_agents[to]->index = to;
+        changed = true;
+    }
+    if (changed) RebuildRuleMatchers();
+    ImGui::SmallConfirmButton("Restore Defaults", "Replace all appearance rules with defaults?\nColours, sizes and border thickness will also be reset.\nThis cannot be undone.", [](const bool confirmed, void*) {
+        if (!confirmed) return;
+        match_cache.clear();
+        pending_names.clear();
         std::vector<AppearanceRule*> rules;
         GetAgentAppearanceRules(rules);
-        bool changed = false;
-        AppearanceRule* move_rule = nullptr;
-        int move_offset = 0;
-        const auto footer_height = ImGui::GetTextLineHeight() + ImGui::GetStyle().ItemSpacing.y;
-        ImGui::BeginChild("##custom_agents_scroll", ImVec2(0.f, -footer_height), true);
-        if (ImGui::BeginTable("AppearanceRules", 2, ImGuiTableFlags_SizingStretchProp)) {
-            const auto button_size = ImGui::GetFrameHeight();
-            const auto spacing = ImGui::GetStyle().ItemSpacing.x;
-            ImGui::TableSetupColumn("Rule", ImGuiTableColumnFlags_WidthStretch);
-            ImGui::TableSetupColumn("Actions", ImGuiTableColumnFlags_WidthFixed, button_size * 4.f + spacing * 3.f);
-            for (unsigned i = 0; i < rules.size(); ++i) {
-                auto* custom = rules[i];
-                if (!custom || !matches_filter(custom)) {
-                    continue;
-                }
-
-                ImGui::PushID(static_cast<int>(custom->ui_id));
-                ImGui::TableNextRow();
-                ImGui::TableNextColumn();
-                changed |= custom->DrawHeader();
-                ImGui::TableNextColumn();
-                if (ImGui::ButtonWithHint(ICON_FA_EDIT, "Edit appearance rule", ImVec2(button_size, button_size))) {
-                    EditRule(custom);
-                }
-                ImGui::SameLine();
-                ImGui::BeginDisabled(i == 0);
-                if (ImGui::ButtonWithHint(ICON_FA_ARROW_UP, "Move rule up", ImVec2(button_size, button_size))) {
-                    move_rule = custom;
-                    move_offset = -1;
-                }
-                ImGui::EndDisabled();
-                ImGui::SameLine();
-                ImGui::BeginDisabled(i + 1 == rules.size());
-                if (ImGui::ButtonWithHint(ICON_FA_ARROW_DOWN, "Move rule down", ImVec2(button_size, button_size))) {
-                    move_rule = custom;
-                    move_offset = 1;
-                }
-                ImGui::EndDisabled();
-                ImGui::SameLine();
-                if (ImGui::ButtonWithHint(ICON_FA_TRASH, "Delete appearance rule", ImVec2(button_size, button_size))) {
-                    const auto message = std::format("Delete appearance rule '{}'?\nThis cannot be undone.", custom->Label());
-                    ImGui::ConfirmDialog(message.c_str(), [rule_id = custom->ui_id](const bool confirmed, void*) {
-                        if (!confirmed) return;
-                        std::vector<AppearanceRule*> rules;
-                        GetAgentAppearanceRules(rules);
-                        const auto it = std::ranges::find_if(rules, [rule_id](const AppearanceRule* rule) { return rule && rule->ui_id == rule_id; });
-                        if (it == rules.end()) return;
-                        custom_agents.erase(custom_agents.begin() + (*it)->index);
-                        delete *it;
-                        rules.erase(it);
-                        for (size_t j = 0; j < rules.size(); ++j) {
-                            rules[j]->index = j;
-                        }
-                        RebuildRuleMatchers();
-                    });
-                }
-                ImGui::PopID();
-            }
-            ImGui::EndTable();
-        }
-        ImGui::EndChild();
-        if (move_rule) {
-            const auto from = move_rule->index;
-            const auto to = move_offset < 0 ? from - 1 : from + 1;
-            std::swap(custom_agents[from], custom_agents[to]);
-            custom_agents[from]->index = from;
-            custom_agents[to]->index = to;
-            changed = true;
-        }
-        if (changed) {
-            RebuildRuleMatchers();
-        }
-        ImGui::SmallConfirmButton("Restore Defaults", "Replace all appearance rules with defaults?\nColours, sizes and border thickness will also be reset.\nThis cannot be undone.", [](const bool confirmed, void*) {
-            if (!confirmed) return;
-            match_cache.clear();
-            pending_names.clear();
-            std::vector<AppearanceRule*> rules;
-            GetAgentAppearanceRules(rules);
-            for (const auto* rule : rules) {
-                delete rule;
-            }
-            custom_agents.clear();
-            ResetAppearanceSettings();
-            SeedDefaultCustomAgents();
-            SeedAppearanceDefaults(SettingsDoc{}, nullptr);
-            SeedSpiritDefaults(SettingsDoc{});
-            custom_agent_defaults_seeded = true;
-            appearance_defaults_seeded = true;
-            custom_agents_loaded = true;
-            group_filter[0] = '\0';
-        });
-        ImGui::EndTabItem();
-    }
-    ImGui::EndTabBar();
+        for (const auto* rule : rules) delete rule;
+        custom_agents.clear();
+        ResetAppearanceSettings();
+        SeedDefaultCustomAgents();
+        SeedAppearanceDefaults(SettingsDoc{}, nullptr);
+        SeedSpiritDefaults(SettingsDoc{});
+        custom_agent_defaults_seeded = true;
+        appearance_defaults_seeded = true;
+        custom_agents_loaded = true;
+        group_filter[0] = '\0';
+    });
 }
 
 void AgentAppearanceWindow::EditRule(CustomAgent* rule)
@@ -1291,7 +1266,29 @@ Color AgentAppearanceWindow::GetDefaultColor(const GW::Agent* agent, const Custo
     return IM_COL32(0, 0, 0, 0);
 }
 
+float AgentAppearanceWindow::GetBaseSize()
+{
+    return std::isfinite(size_default) && size_default > 0.f ? size_default : 100.f;
+}
+
+float AgentAppearanceWindow::ScaleFromAbsolute(const float size)
+{
+    const auto scale = size / GetBaseSize();
+    return std::isfinite(scale) && scale > 0.f ? scale : 0.f;
+}
+
+std::array<float*, 14> AgentAppearanceWindow::GetFallbackSizeFields()
+{
+    return {&size_player, &size_signpost, &size_locked_chest, &size_locked_chest_open, &size_item, &size_boss,
+        &size_minion, &size_marked_target, &size_hostile, &size_neutral, &size_ally, &size_ally_npc, &size_ally_npc_quest, &size_ally_spirit};
+}
+
 float AgentAppearanceWindow::GetDefaultSize(const GW::Agent* agent)
+{
+    return GetLegacyDefaultSize(agent) / fallback_size_base * GetBaseSize();
+}
+
+float AgentAppearanceWindow::GetLegacyDefaultSize(const GW::Agent* agent)
 {
     if (agent->agent_id == GW::Agents::GetObservingId()) {
         return size_player;
@@ -1420,7 +1417,7 @@ float AgentAppearanceWindow::GetDefaultSize(const GW::Agent* agent)
             }
 
         default:
-            return size_default;
+            return fallback_size_base;
     }
 }
 
@@ -1591,7 +1588,10 @@ AgentAppearanceWindow::CustomAgent::CustomAgent(const ToolboxIni* ini, const cha
     if (s >= 1 && s <= 4) {
         shape = static_cast<Shape_e>(s - 1);
     }
-    size = static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(size), size));
+    scale = ini->KeyExists(section, "scale")
+        ? static_cast<float>(ini->GetDoubleValue(section, "scale", 0.f))
+        : ScaleFromAbsolute(static_cast<float>(ini->GetDoubleValue(section, "size", 0.f)));
+    if (!std::isfinite(scale) || scale < 0.f) scale = 0.f;
 
     LegacyFlags flags;
     flags.color_active = ini->GetBoolValue(section, "color_active", flags.color_active);
@@ -1635,7 +1635,8 @@ AgentAppearanceWindow::CustomAgent::CustomAgent(const Settings& settings)
     if (settings.shape >= Shape_None && settings.shape <= BigCircle) {
         shape = static_cast<Shape_e>(settings.shape);
     }
-    size = settings.size;
+    scale = settings.scale.value_or(ScaleFromAbsolute(settings.size));
+    if (!std::isfinite(scale) || scale < 0.f) scale = 0.f;
 }
 
 void AgentAppearanceWindow::CustomAgent::ApplyLegacyFlags(const LegacyFlags& flags)
@@ -1643,7 +1644,7 @@ void AgentAppearanceWindow::CustomAgent::ApplyLegacyFlags(const LegacyFlags& fla
     override_color = flags.color_active && Colors::IsVisible(color);
     override_text_color = flags.color_text_active && Colors::IsVisible(color_text);
     override_border_color = flags.border_color_active && Colors::IsVisible(border_color);
-    if (!flags.size_active) size = 0.f;
+    if (!flags.size_active) scale = 0.f;
     if (!flags.shape_active) shape = Shape_None;
     else if (shape == Shape_None) shape = Tear;
 }
@@ -1692,7 +1693,8 @@ AgentAppearanceWindow::CustomAgent::Settings AgentAppearanceWindow::CustomAgent:
     settings.override_text_color = override_text_color;
     settings.override_border_color = override_border_color;
     settings.shape = shape;
-    settings.size = size;
+    settings.scale = scale;
+    settings.size = GetBaseSize() * scale;
 
     return settings;
 }
@@ -1974,10 +1976,11 @@ bool AgentAppearanceWindow::CustomAgent::DrawSettings()
         draw_color_override("Target border color", override_border_color, border_color, "Override border colour for this rule");
         draw_color_override("Text color", override_text_color, color_text, "Override name tag colour for this rule");
 
-        if (ImGui::DragFloat("Size", &size, 1.0f, 0.0f, shape == BigCircle ? 10000.f : 200.f)) {
+        if (ImGui::DragFloat("Scale", &scale, 0.01f, 0.0f, 0.0f, "%.2fx")) {
+            if (!std::isfinite(scale) || scale < 0.f) scale = 0.f;
             changed = true;
         }
-        ImGui::ShowHelp("Minimap marker size. Zero inherits the next matching size.");
+        ImGui::ShowHelp("Multiplier of Default Size: 1.0 is the default, 0.8 is 80%, and 1.1 is 110%. Zero inherits the next matching size.");
 
         static const char* items[] = {"Inherit", "Tear", "Circle", "Square", "Big Circle"};
         auto shape_selection = static_cast<int>(shape) + 1;
