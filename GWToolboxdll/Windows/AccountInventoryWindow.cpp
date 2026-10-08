@@ -660,8 +660,8 @@ namespace {
         std::string prev_location{};
         for (auto it = ms->i.begin(); it != ms->i.end(); it++) {
             int style_count = 0;
-            bool is_this_account = memeq(&(*it)->account->uuid, &current_account);
-            if (is_this_account) {
+            bool is_current_account = memeq(&(*it)->account->uuid, &current_account);
+            if (!is_current_account) {
                 style_count = 1;
                 ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
             }
@@ -669,7 +669,7 @@ namespace {
             bool reprint = (*it)->character_name != prev_character || account_representing_character != prev_account_representing_character;
             if (reprint) {
                 std::string suffix = "";
-                if (!is_this_account && (*it)->character_name == "(Chest)" && !account_representing_character.empty()) {
+                if (!is_current_account && (*it)->character_name == "(Chest)" && !account_representing_character.empty()) {
                     suffix = " [" + account_representing_character + "]";
                 }
                 ImGui::Text("%s%s: %u", (*it)->character_name.c_str(), suffix.c_str(), char_totals[char_key(*it, account_representing_character)]);
