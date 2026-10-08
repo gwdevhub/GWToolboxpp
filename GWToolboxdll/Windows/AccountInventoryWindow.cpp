@@ -925,11 +925,11 @@ namespace {
             if (!model_ID_filter.empty() && model_ID_filter != std::to_string(r.item->model_id)) continue;
             // Accessing the EncString lazily kicks off decoding for visible items.
             const std::wstring& desc = r.item->description.wstring();
+            if (r.item->description.IsDecoding()) any_decoding = true;
             if (!item_filter_w.empty()) {
                 const auto description_check = item_is_lower ? TextUtils::ToLower(desc) : desc;
                 if (!description_check.contains(item_filter_w)) continue;
             }
-            if (r.item->description.IsDecoding()) any_decoding = true;
 
             auto merge_id = std::to_wstring(r.item->model_id) + desc;
             if (!settings.merge_stacks || !merged_stacks.contains(merge_id)) {
