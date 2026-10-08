@@ -2212,8 +2212,6 @@ void AccountInventoryWindow::Draw(IDirect3DDevice9*)
     if (ImGui::InputText("###item_filter", item_filter_buf, _countof(item_filter_buf))) needs_sorting = true;
     ImGui::SameLine();
     ImGui::Text("Filter   %d/%d Items", filtered_item_count, item_refs.size());
-    ImGui::TableNextRow();
-    ImGui::TableNextColumn();
 
     ImGuiTableSortSpecs* item_sort_specs = ImGui::TableGetSortSpecs();
     const bool specs_dirty = item_sort_specs && item_sort_specs->SpecsDirty;
@@ -2255,6 +2253,8 @@ void AccountInventoryWindow::Draw(IDirect3DDevice9*)
 
         if (settings.detailed_view) {
             const std::string suffix = (ims.i.size() > 1) ? " +" : "";
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
             ImGui::Text("%s%s", i_front->character_name.c_str(), suffix.c_str());
             ImGui::TableNextColumn();
             ImGui::Text("%s%s", i_front->location.c_str(), suffix.c_str());
@@ -2269,7 +2269,6 @@ void AccountInventoryWindow::Draw(IDirect3DDevice9*)
                     OnItemTooltip(ms);
                 });
             }
-            ImGui::TableNextColumn();
         }
         else {
             const auto pos = ImGui::GetCursorPos();
@@ -2316,8 +2315,6 @@ void AccountInventoryWindow::Draw(IDirect3DDevice9*)
         clipper.Begin(item_count, ImGui::GetTextLineHeightWithSpacing());
         while (clipper.Step()) {
             for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++) {
-                ImGui::TableNextRow();
-                ImGui::TableNextColumn();
                 render_item(i);
             }
         }
