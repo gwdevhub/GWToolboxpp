@@ -358,6 +358,10 @@ PconsWindow::PconsWindow()
     pcons.push_back(new PconGeneric("Stalker's Ration", "Stalker", "stalker", L"Stalker's Ration",
                                      ItemID::StalkersRation, {SkillID::Seek_and_Destroy}, 5));
 
+    pcons.push_back(new PconGeneric("Infinite Stalker's Ration", "Infinite Stalker", "infinitestalker", L"Infinite Stalker's Ration",
+                                     ItemID::InfiniteStalkersRation, {SkillID::Seek_and_Destroy}, 1));
+    pcons.back()->consumes_item = false;
+
     pcons.push_back(new PconGeneric("Bird's Eye Compass", "Bird's Eye", "birdseye", L"Bird's Eye Compass",
                                      ItemID::BirdsEyeCompass, {SkillID::Birds_Eye_View}, 5));
 
