@@ -104,7 +104,6 @@ public:
 
     bool* enabled{}; // This is a ptr to the current char's status if applicable.
     bool pcon_quantity_checked = false;
-    bool consumes_item = true;
     bool refilling = false;        // Set when a refill is in progress. Dont touch.
     bool refill_attempted = false; // Set to true when refill thread has run for this map
     int threshold = 0;
@@ -155,8 +154,6 @@ class PconGeneric : public Pcon {
 public:
     struct ModelFileId {
         uint32_t value;
-        uint32_t interaction_mask = 0;
-        uint32_t interaction_value = 0;
     };
 
     PconGeneric(const char* chat,
@@ -179,7 +176,7 @@ public:
                 const int threshold,
                 const char* desc = nullptr)
         : Pcon(chat, abbrev, ini, file, threshold, desc),
-          itemID(0), effectIDs(effects), modelFileId(item)
+          itemID(0), effectIDs(effects)
     {
         model_file_id = item.value;
     }
@@ -193,7 +190,6 @@ protected:
 private:
     const DWORD itemID;
     const std::vector<GW::Constants::SkillID> effectIDs;
-    const ModelFileId modelFileId{};
 };
 
 // Same as generic pcon, but with more restrictions on usage

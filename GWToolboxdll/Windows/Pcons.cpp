@@ -30,6 +30,13 @@
 
 #include "Color.h"
 
+namespace {
+    uint32_t GetRemainingItemUses(const GW::Item* item)
+    {
+        const auto uses = item->GetModifier(0x2458);
+        return uses ? uses->arg2() : 1u;
+    }
+}
 
 float Pcon::size = 46.0f;
 int Pcon::pcons_delay = 5000;
@@ -555,6 +562,7 @@ int Pcon::CheckInventory(bool* used, size_t* used_qty_ptr, const size_t from_bag
 {
     size_t count = 0;
     size_t used_qty = 0;
+    std::vector<const GW::Item*> items_to_use;
     GW::Bag** bags = GW::Items::GetBagArray();
     if (bags == nullptr) {
         return -1;
@@ -562,26 +570,35 @@ int Pcon::CheckInventory(bool* used, size_t* used_qty_ptr, const size_t from_bag
     for (size_t bagIndex = from_bag; bagIndex <= to_bag; ++bagIndex) {
         GW::Bag* bag = bags[bagIndex];
         if (bag == nullptr) {
-            continue; // No bag, skip
+            continue;
         }
         GW::ItemArray& items = bag->items;
         if (!items.valid()) {
-            continue; // No item array, skip
+            continue;
         }
         for (size_t i = 0; i < items.size(); i++) {
             const GW::Item* item = items[i];
             if (item == nullptr) {
-                continue; // No item, skip
+                continue;
             }
             const size_t qtyea = PointsPerUse(item);
             if (qtyea < 1) {
-                continue; // This is not the pcon you're looking for...
+                continue;
             }
-            if (used != nullptr && !*used && GW::Items::UseItem(item)) {
-                *used = true;
-                used_qty = consumes_item ? qtyea : 0;
+            if (used != nullptr && !*used) {
+                items_to_use.push_back(item);
             }
             count += qtyea * GW::Items::GetUses(item);
+        }
+    }
+    if (model_file_id) {
+        std::ranges::stable_sort(items_to_use, std::less{}, GetRemainingItemUses);
+    }
+    for (const auto item : items_to_use) {
+        if (GW::Items::UseItem(item)) {
+            *used = true;
+            used_qty = GetRemainingItemUses(item) == 0xff ? 0 : PointsPerUse(item);
+            break;
         }
     }
     if (used_qty_ptr) {
@@ -667,8 +684,7 @@ void Pcon::LoadSettings(const ToolboxIni* inifile, const char* section)
 size_t PconGeneric::PointsPerUse(const GW::Item* item) const
 {
     if (model_file_id) {
-        return item->model_file_id == model_file_id
-            && (item->interaction & modelFileId.interaction_mask) == modelFileId.interaction_value ? 1u : 0u;
+        return item->model_file_id == model_file_id ? 1u : 0u;
     }
     if (item->model_id == static_cast<DWORD>(itemID)) {
         return 1;

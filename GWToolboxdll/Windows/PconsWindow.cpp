@@ -28,9 +28,8 @@ using namespace GW::Constants;
 bool Pcon::map_has_effects_array = false;
 
 namespace {
-    constexpr uint32_t unique_item_interaction = 0x10;
-    constexpr PconGeneric::ModelFileId infinite_stalkers_ration_model_file_id{0x5EFED, unique_item_interaction, unique_item_interaction};
-    constexpr PconGeneric::ModelFileId infinite_birds_eye_compass_model_file_id{0x2595C, unique_item_interaction, unique_item_interaction};
+    constexpr PconGeneric::ModelFileId stalkers_ration_model_file_id{0x5EFED};
+    constexpr PconGeneric::ModelFileId birds_eye_compass_model_file_id{0x2595C};
 
     GW::HookEntry ChatCmd_HookEntry;
 
@@ -360,18 +359,10 @@ PconsWindow::PconsWindow()
                                      ItemID::PahnaiSalad, {SkillID::Pahnai_Salad_item_effect}, 10));
 
     pcons.push_back(new PconGeneric("Stalker's Ration", "Stalker", "stalker", L"Stalker's Ration",
-                                     ItemID::StalkersRation, {SkillID::Seek_and_Destroy}, 5));
-
-    pcons.push_back(new PconGeneric("Infinite Stalker's Ration", "Infinite Stalker", "infinitestalker", L"Infinite Stalker's Ration",
-                                     infinite_stalkers_ration_model_file_id, {SkillID::Seek_and_Destroy}, 1));
-    pcons.back()->consumes_item = false;
+                                     stalkers_ration_model_file_id, {SkillID::Seek_and_Destroy}, 5));
 
     pcons.push_back(new PconGeneric("Bird's Eye Compass", "Bird's Eye", "birdseye", L"Bird's Eye Compass",
-                                     ItemID::BirdsEyeCompass, {SkillID::Birds_Eye_View}, 5));
-
-    pcons.push_back(new PconGeneric("Infinite Bird's Eye Compass", "Infinite Bird's Eye", "infinitebirdseye", L"Infinite Bird's Eye Compass",
-                                     infinite_birds_eye_compass_model_file_id, {SkillID::Birds_Eye_View}, 1));
-    pcons.back()->consumes_item = false;
+                                     birds_eye_compass_model_file_id, {SkillID::Birds_Eye_View}, 5));
 
     pcons.push_back(new PconScroll("XP scroll", "XP scroll", "scroll", L"Scroll of Hunter's Insight",
                                    20));
