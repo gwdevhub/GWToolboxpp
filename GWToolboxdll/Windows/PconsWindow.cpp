@@ -355,6 +355,12 @@ PconsWindow::PconsWindow()
     pcons.push_back(new PconGeneric("Pahnai Salad", "Salad", "salad", L"Pahnai Salad",
                                      ItemID::PahnaiSalad, {SkillID::Pahnai_Salad_item_effect}, 10));
 
+    pcons.push_back(new PconGeneric("Stalker's Ration", "Stalker", "stalker", L"Stalker's Ration",
+                                     ItemID::StalkersRation, {SkillID::Seek_and_Destroy}, 5));
+
+    pcons.push_back(new PconGeneric("Bird's Eye Compass", "Bird's Eye", "birdseye", L"Bird's Eye Compass",
+                                     ItemID::BirdsEyeCompass, {SkillID::Birds_Eye_View}, 5));
+
     pcons.push_back(new PconScroll("XP scroll", "XP scroll", "scroll", L"Scroll of Hunter's Insight",
                                    20));
 

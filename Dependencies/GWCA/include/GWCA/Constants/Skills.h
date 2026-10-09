@@ -3033,7 +3033,9 @@ namespace GW {
             Vow_of_Revolution,
             Heroic_Refrain,
             Reforged_Mode=0xD6A,
-            Dhuums_Covenant_Broken
+            Dhuums_Covenant_Broken,
+            Seek_and_Destroy = 3438,
+            Birds_Eye_View = 3439
 		};
 
         enum class SkillType {

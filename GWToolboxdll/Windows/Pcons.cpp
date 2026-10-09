@@ -714,7 +714,7 @@ void PconGeneric::RecordExpectedEffects()
 bool PconGeneric::CanUseByEffect() const
 {
     if (!GW::Agents::GetControlledCharacter()) {
-        return false; // player doesn't exist?
+        return false;
     }
     if (std::ranges::any_of(effectIDs, [this](const auto skill_id) { return IsEffectTriggerPending(skill_id); })) {
         return false;
@@ -727,7 +727,7 @@ bool PconGeneric::CanUseByEffect() const
 
     return std::ranges::any_of(effectIDs, [effects](const auto skill_id) {
         return std::ranges::none_of(*effects, [skill_id](const auto& effect) {
-            return effect.skill_id == skill_id && effect.GetTimeRemaining() >= 1000;
+            return effect.skill_id == skill_id && (effect.duration == 0.f || effect.GetTimeRemaining() >= 1000);
         });
     });
 }
