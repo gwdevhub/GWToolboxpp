@@ -361,6 +361,10 @@ PconsWindow::PconsWindow()
     pcons.push_back(new PconGeneric("Bird's Eye Compass", "Bird's Eye", "birdseye", L"Bird's Eye Compass",
                                      ItemID::BirdsEyeCompass, {SkillID::Birds_Eye_View}, 5));
 
+    pcons.push_back(new PconGeneric("Infinite Bird's Eye Compass", "Infinite Bird's Eye", "infinitebirdseye", L"Infinite Bird's Eye Compass",
+                                     ItemID::InfiniteBirdsEyeCompass, {SkillID::Birds_Eye_View}, 1));
+    pcons.back()->consumes_item = false;
+
     pcons.push_back(new PconScroll("XP scroll", "XP scroll", "scroll", L"Scroll of Hunter's Insight",
                                    20));
 

@@ -579,7 +579,7 @@ int Pcon::CheckInventory(bool* used, size_t* used_qty_ptr, const size_t from_bag
             }
             if (used != nullptr && !*used && GW::Items::UseItem(item)) {
                 *used = true;
-                used_qty = qtyea;
+                used_qty = consumes_item ? qtyea : 0;
             }
             count += qtyea * GW::Items::GetUses(item);
         }

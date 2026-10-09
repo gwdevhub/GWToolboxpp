@@ -104,6 +104,7 @@ public:
 
     bool* enabled{}; // This is a ptr to the current char's status if applicable.
     bool pcon_quantity_checked = false;
+    bool consumes_item = true;
     bool refilling = false;        // Set when a refill is in progress. Dont touch.
     bool refill_attempted = false; // Set to true when refill thread has run for this map
     int threshold = 0;

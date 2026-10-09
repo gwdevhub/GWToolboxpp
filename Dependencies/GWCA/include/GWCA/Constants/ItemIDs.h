@@ -203,6 +203,7 @@ namespace GW {
 			constexpr int ConsEmpoweringFeast = 38618;
 			constexpr int StalkersRation = 38613;
 			constexpr int BirdsEyeCompass = 38614;
+			constexpr int InfiniteBirdsEyeCompass = 38616;
 		}
 	}
 }
