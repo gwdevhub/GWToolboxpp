@@ -1,5 +1,7 @@
 #pragma once
 
+#include <optional>
+
 #include <ToolboxUIElement.h>
 
 struct GWToolboxRelease {
@@ -7,6 +9,8 @@ struct GWToolboxRelease {
     std::string version;
     std::string download_url;
     uintmax_t size = 0;
+    uintmax_t asset_size = 0;
+    std::optional<std::string> digest;
     bool prerelease = false;
 };
 
@@ -22,7 +26,6 @@ public:
     }
 
     [[nodiscard]] const char* Name() const override { return "Updater"; }
-    // DrawSettingInternal() called via ToolboxSettings; don't draw it again, and point settings search there
     [[nodiscard]] const char* SettingsName() const override { return "Toolbox Settings"; }
     bool HasSettings() override { return false; }
 
@@ -30,7 +33,6 @@ public:
         Stable,
         Beta
     };
-    // 0=none, 1=check and warn, 2=check and ask, 3=check and do
     enum class Mode : int {
         DontCheckForUpdates,
         CheckAndWarn,
@@ -50,9 +52,10 @@ public:
     }
 
     static void CheckForUpdate(bool forced = false);
+    static bool CheckBeforeInitialize(HMODULE module);
     static bool IsLatestVersion();
 
-    static const GWToolboxRelease* GetCurrentVersionInfo(GWToolboxRelease* out);
+    static const GWToolboxRelease* GetCurrentVersionInfo(GWToolboxRelease* out, HMODULE module = nullptr);
 
     void Initialize() override;
     void Draw(IDirect3DDevice9* device) override;

@@ -1,15 +1,18 @@
 #include "stdafx.h"
 
+#include <atomic>
 #include <Defines.h>
 #include <GWToolbox.h>
 #include <Logger.h>
 #include <Modules/CrashHandler.h>
+#include <Modules/Updater.h>
 #include <MinHook.h>
 
 namespace {
     HMODULE dllmodule;
-    volatile bool thread_running = false;
-    volatile bool is_detaching = false;
+    std::atomic_bool thread_running = false;
+    std::atomic_bool is_detaching = false;
+    std::atomic_bool terminate_requested = false;
 
     typedef UINT(WINAPI* GetUserDefaultLCID_t)();
     GetUserDefaultLCID_t GetUserDefaultLCID_Func = nullptr, GetUserDefaultLCID_Ret = nullptr;
@@ -28,12 +31,17 @@ namespace {
         MH_EnableHook(GetUserDefaultLCID_Func);
     }
 
-    // Do all your startup things here instead.
     DWORD WINAPI MainLoopThread() noexcept
     {
-        ASSERT(!thread_running);
-        thread_running = true;
-        GWToolbox::MainLoop(dllmodule);
+        __try {
+            if (Updater::CheckBeforeInitialize(dllmodule) && !terminate_requested) {
+                HookForInitialize();
+                GWToolbox::Initialize(dllmodule);
+                if (terminate_requested) GWToolbox::SignalTerminate();
+                GWToolbox::MainLoop(dllmodule);
+            }
+        } __except (EXCEPT_EXPRESSION_ENTRY) {
+        }
         if(GetUserDefaultLCID_Func) MH_DisableHook(GetUserDefaultLCID_Func);
         thread_running = false;
         if (!is_detaching) {
@@ -43,6 +51,7 @@ namespace {
     }
 
     void StartMainLoop() {
+        thread_running = true;
         const HANDLE hThread = CreateThread(
             nullptr,
             0,
@@ -54,32 +63,33 @@ namespace {
         if (hThread != nullptr) {
             CloseHandle(hThread);
         }
+        else {
+            thread_running = false;
+        }
     }
 
 }
 
-// Exported functions
 extern "C" __declspec(dllexport) const char* GWToolboxVersion = GWTOOLBOXDLL_VERSION;
 
 extern "C" __declspec(dllexport) void __cdecl Terminate()
 {
+    HMODULE module = nullptr;
+    if (!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, reinterpret_cast<LPCWSTR>(dllmodule), &module)) return;
+    terminate_requested = true;
     if (thread_running) {
-        // Tell tb to close, then wait for the thread to finish.
         GWToolbox::SignalTerminate();
     }
-    // Wait up to 5000 ms for toolbox to clean up after itself; after that, bomb out
     constexpr uint32_t timeout = 5000 / 16;
     for (auto i = 0u; i < timeout && thread_running; i++) {
         Sleep(16);
     }
-    Sleep(16);
     if (!is_detaching) {
-        FreeLibraryAndExitThread(dllmodule, EXIT_SUCCESS);
+        FreeLibraryAndExitThread(module, EXIT_SUCCESS);
     }
 }
 
 
-// DLL entry point, dont do things in this thread unless you know what you are doing.
 BOOL WINAPI DllMain(_In_ const HMODULE hDllHandle, _In_ const DWORD reason, _In_opt_ const LPVOID)
 {
     DisableThreadLibraryCalls(hDllHandle);
@@ -87,9 +97,6 @@ BOOL WINAPI DllMain(_In_ const HMODULE hDllHandle, _In_ const DWORD reason, _In_
         case DLL_PROCESS_ATTACH: {
             dllmodule = hDllHandle;
             __try {
-                // Add a hook for if GW isn't loaded yet...
-                HookForInitialize();
-                // ...but also call GWToolbox::Initialize inside the main loop too!
                 StartMainLoop();
             } __except (EXCEPT_EXPRESSION_ENTRY) {
                 return FALSE;
@@ -98,7 +105,7 @@ BOOL WINAPI DllMain(_In_ const HMODULE hDllHandle, _In_ const DWORD reason, _In_
         break;
         case DLL_PROCESS_DETACH: {
             is_detaching = true;
-            Terminate();
+            terminate_requested = true;
         }
         break;
         default:
