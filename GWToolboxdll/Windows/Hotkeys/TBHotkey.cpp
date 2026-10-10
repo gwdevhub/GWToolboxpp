@@ -133,7 +133,9 @@ TBHotkey::TBHotkey(const ToolboxIni* ini, const char* section) : ui_id(++cur_ui_
 
         std::string ini_str = ini->GetValue(section, VAR_NAME(map_ids), "");
         GuiUtils::IniToArray(ini_str, map_ids);
-        if (map_ids.empty()) {
+        ini_str = ini->GetValue(section, VAR_NAME(map_ids_exclude), "");
+        GuiUtils::IniToArray(ini_str, map_ids_exclude);
+        if (map_ids.empty() && map_ids_exclude.empty()) {
             // Legacy
             const int map_id = ini->GetLongValue(section, "map_id", 0);
             if (map_id > 0) {
@@ -232,6 +234,7 @@ bool TBHotkey::IsValid(const char* _player_name, const GW::Constants::InstanceTy
            && (instance_type == -1 || static_cast<GW::Constants::InstanceType>(instance_type) == _instance_type)
            && (prof_ids[static_cast<size_t>(_profession)] || !HasProfession())
            && (map_ids.empty() || std::ranges::contains(map_ids, std::to_underlying(_map_id)))
+           && !std::ranges::contains(map_ids_exclude, std::to_underlying(_map_id))
            && (player_names.empty() || std::ranges::contains(player_names, _player_name));
 }
 
@@ -291,6 +294,11 @@ void TBHotkey::Save(ToolboxIni* ini, const char* section) const
     if (map_ids.size()) {
         GuiUtils::ArrayToIni(map_ids.data(), map_ids.size(), &out);
         ini->SetValue(section, VAR_NAME(map_ids), out.c_str());
+    }
+
+    if (map_ids_exclude.size()) {
+        GuiUtils::ArrayToIni(map_ids_exclude.data(), map_ids_exclude.size(), &out);
+        ini->SetValue(section, VAR_NAME(map_ids_exclude), out.c_str());
     }
 
     if (in_range_of_npc_id) {
@@ -610,10 +618,11 @@ bool TBHotkey::DrawSettings()
         return res;
     };
 
-    const auto map_ids_header = std::format("Map IDs ({})###map_ids", map_ids.size());
+    const auto map_ids_header = std::format("Map IDs ({})###map_ids", map_ids.size() + map_ids_exclude.size());
     if (collapsing_header_col(map_ids_header.c_str())) {
         ImGui::Indent();
 
+        ImGui::PushID("Include Maps");
         ImGui::TextDisabled("Only trigger in selected maps:");
         const float map_id_w = 200.f * scale;
         for (auto it = map_ids.begin(); !hotkey_changed && it != map_ids.end(); it++) {
@@ -640,6 +649,35 @@ bool TBHotkey::DrawSettings()
                 }
             }
         }
+        ImGui::PopID();
+        
+        ImGui::Spacing();
+        ImGui::PushID("Exclude Maps");
+        ImGui::TextDisabled("Dont trigger in selected maps:");
+        for (auto it = map_ids_exclude.begin(); !hotkey_changed && it != map_ids_exclude.end(); it++) {
+            ImGui::PushID(*it);
+            ImGui::Text("%d: %s", *it, Resources::GetMapName((GW::Constants::MapID)*it)->string().c_str());
+            ImGui::SameLine(indent_offset + map_id_w);
+            if (ImGui::Button("X")) {
+                map_ids_exclude.erase(it);
+                hotkey_changed = true;
+                ImGui::PopID();
+                break;
+            }
+            ImGui::PopID();
+        }
+        char exclude_map_id_buf[4] = {};
+        bool add_exclude_map_id = ImGui::InputTextWithHint("##add_exclude_map_id", "Exclude Map ID", exclude_map_id_buf, _countof(exclude_map_id_buf), ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_EnterReturnsTrue);
+        if (add_exclude_map_id) {
+            uint32_t map_id_out;
+            if (*exclude_map_id_buf && TextUtils::ParseUInt(exclude_map_id_buf, &map_id_out)) {
+                if (!std::ranges::contains(map_ids_exclude, map_id_out)) {
+                    map_ids_exclude.push_back(map_id_out);
+                    hotkey_changed = true;
+                }
+            }
+        }
+        ImGui::PopID();
         ImGui::Unindent();
     }
     const auto professions_header = std::format("Professions ({})###professions", std::count(&prof_ids[0], &prof_ids[_countof(prof_ids) - 1], true));
