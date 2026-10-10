@@ -346,7 +346,7 @@ void CustomRenderer::DrawLineSettings()
         }
         ImGui::SameLine(0.0f, spacing);
 
-        markers_changed |= ImGui::InputInt("##map", (int*)&line.map, 0);
+        markers_changed |= ImGui::MapPicker("##map", &line.map);
         if (ImGui::IsItemHovered()) {
             SetTooltipMapID(line.map);
         }
@@ -479,7 +479,7 @@ void CustomRenderer::DrawMarkerSettings()
         }
         ImGui::SameLine(0.0f, spacing);
 
-        marker_changed |= ImGui::InputInt("##map", reinterpret_cast<int*>(&marker.map), 0);
+        marker_changed |= ImGui::MapPicker("##map", &marker.map);
         if (ImGui::IsItemHovered()) {
             SetTooltipMapID(marker.map);
         }
@@ -638,7 +638,7 @@ void CustomRenderer::DrawPolygonSettings()
         }
         ImGui::SameLine(0.0f, spacing);
 
-        polygon_changed |= ImGui::InputInt("##map", reinterpret_cast<int*>(&polygon.map), 0);
+        polygon_changed |= ImGui::MapPicker("##map", &polygon.map);
         if (ImGui::IsItemHovered()) {
             SetTooltipMapID(polygon.map);
         }

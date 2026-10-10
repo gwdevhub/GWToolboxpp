@@ -615,13 +615,13 @@ namespace {
         ImGui::Text("Add new:");
         ImGui::InputText("Name", new_npc_alias, 128);
         ImGui::InputInt("Model ID", &new_npc_model_id);
-        ImGui::InputInt("Map ID (0 = Any)", &new_npc_map_id);
+        ImGui::MapPicker("Map", &new_npc_map_id);
         submitted |= ImGui::Button("Add");
         if (submitted) {
             if (new_npc_model_id < 1) {
                 return Log::Error("Invalid model id");
             }
-            if (new_npc_map_id < 0 || new_npc_map_id > static_cast<int>(GW::Constants::MapID::Count)) {
+            if (new_npc_map_id < 0 || new_npc_map_id >= static_cast<int>(GW::Constants::MapID::Count)) {
                 return Log::Error("Invalid map id");
             }
             const std::string alias_str(new_npc_alias);
@@ -730,14 +730,10 @@ namespace {
         const bool is_editing = (edit_sorting_index >= 0);
         ImGui::Text(is_editing ? "Edit Party Sorting:" : "Add New Party Sorting:");
 
-        ImGui::Text("Map ID (0 = Any):");
+        ImGui::Text("Map:");
         ImGui::SameLine(200.0f * fontScale);
-        ImGui::SetNextItemWidth(100.0f * fontScale);
-        ImGui::InputInt("##map_id", &edit_map_id);
-        if (edit_map_id) {
-            ImGui::SameLine();
-            ImGui::TextDisabled(Resources::GetMapName((GW::Constants::MapID)edit_map_id)->string().c_str());
-        }
+        ImGui::SetNextItemWidth(300.0f * fontScale);
+        ImGui::MapPicker("##map_id", &edit_map_id);
         ImGui::Text("Party Size (0 = Any):");
         ImGui::SameLine(200.0f * fontScale);
         ImGui::SetNextItemWidth(100.0f * fontScale);

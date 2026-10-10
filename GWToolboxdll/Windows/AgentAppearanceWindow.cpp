@@ -1686,10 +1686,12 @@ bool AgentAppearanceWindow::CustomAgent::DrawSettings()
             ImGui::ShowHelp("No states selected disables this filter. Otherwise, only selected states match.");
         }
         ImGui::SetCursorPosX(x);
-        if (ImGui::InputInt("Map ID", (int*)&mapId)) {
+        auto selected_map = static_cast<uint32_t>(mapId);
+        if (ImGui::MapPicker("Map", &selected_map)) {
+            mapId = selected_map;
             changed = true;
         }
-        ImGui::ShowHelp("The map where it will be applied. Optional. Leave 0 for any map");
+        ImGui::ShowHelp("The map where it will be applied. Optional. Select Any map to disable this filter.");
         ImGui::SetCursorPosX(x);
         static const char* combat_state_items[] = {"In combat", "Not in combat", "Either"};
         if (ImGui::Combo("Combat", (int*)&combat_state, combat_state_items, 3)) {
