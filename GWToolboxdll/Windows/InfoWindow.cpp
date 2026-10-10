@@ -1161,7 +1161,7 @@ void InfoWindow::Draw(IDirect3DDevice9*)
         }
         if (settings.show_map && ImGui::CollapsingHeader("Lookup Map")) {
             static int map_id = 0;
-            ImGui::InputInt("Map ID", &map_id, 1, 1);
+            ImGui::MapPicker("Map", &map_id, {.none_label = nullptr});
             const auto current = GW::Map::GetMapInfo(static_cast<GW::Constants::MapID>(map_id));
             if (current) DrawMapInfo(static_cast<GW::Constants::MapID>(map_id));
         }

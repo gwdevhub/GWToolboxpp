@@ -269,22 +269,17 @@ namespace {
     }
 
     // ==== Helpers ====
-    GW::Constants::MapID IndexToOutpostID(const int index)
+    ImGui::MapPickerOptions TravelMapPickerOptions(const char* preview_label = "Select map...")
     {
-        if (visible_searchable_areas && static_cast<size_t>(index) < visible_searchable_areas->size()) {
-            return (*visible_searchable_areas)[index]->map_id;
-        }
-        return GW::Constants::MapID::Great_Temple_of_Balthazar_outpost;
-    }
-
-    int OutpostIDToIndex(GW::Constants::MapID map_id)
-    {
-        if (!visible_searchable_areas) return -1;
-        for (size_t i = 0, size = visible_searchable_areas->size(); i < size; i++) {
-            if ((*visible_searchable_areas)[i]->map_id == map_id)
-                return i;
-        }
-        return -1;
+        return {
+            .none_label = nullptr,
+            .filter = [](const GW::Constants::MapID map_id) {
+                return visible_searchable_areas && std::ranges::any_of(*visible_searchable_areas, [map_id](const SearchableArea* area) {
+                    return area->map_id == map_id;
+                });
+            },
+            .preview_label = preview_label
+        };
     }
 
     bool ParseOutpost(const std::wstring& s, GW::Constants::MapID& outpost, GW::Constants::District& district, const uint32_t&)
@@ -549,16 +544,6 @@ namespace {
         return Resources::GetMapName(map_id)->string().c_str();
     }
 
-    bool outpost_name_array_getter(void* /* _data */, int idx, const char** out_text)
-    {
-        if (!visible_searchable_areas || idx < 0 || static_cast<size_t>(idx) >= visible_searchable_areas->size()) {
-            return false;
-        }
-
-        *out_text = GetMapName((*visible_searchable_areas)[idx]->map_id);
-        return true;
-    }
-
     void BuildSearchableAreas(std::vector<SearchableArea*>& vec, const std::function<bool(GW::Constants::MapID, const GW::AreaInfo*)>& cmp)
     {
         for (const auto ptr : vec) {
@@ -682,11 +667,9 @@ void TravelWindow::Draw(IDirect3DDevice9*)
         }
         else {
             ImGui::PushItemWidth(-1.0f);
-            static int travelto_index = -1;
-            if (ImGui::MyCombo("###travelto", "Travel To...", &travelto_index, outpost_name_array_getter, nullptr, visible_searchable_areas ? visible_searchable_areas->size() : 0)) {
-                const auto map_id = IndexToOutpostID(travelto_index);
+            auto map_id = GW::Constants::MapID::None;
+            if (ImGui::MapPicker("###travelto", &map_id, TravelMapPickerOptions("Travel To..."))) {
                 Travel(map_id, district, district_number);
-                travelto_index = -1;
             }
 
             static int district_index = 0;
@@ -1088,11 +1071,7 @@ void TravelWindow::DrawSettingsInternal()
 
                 ImGui::TableSetColumnIndex(0);
                 ImGui::SetNextItemWidth(-1);
-                auto map_idx = OutpostIDToIndex(dest.map_id);
-                if (ImGui::MyCombo("##destmap", "Select map...", &map_idx, outpost_name_array_getter, nullptr,
-                    visible_searchable_areas ? static_cast<int>(visible_searchable_areas->size()) : 0)) {
-                    dest.map_id = IndexToOutpostID(map_idx);
-                }
+                ImGui::MapPicker("##destmap", &dest.map_id, TravelMapPickerOptions());
 
                 ImGui::TableSetColumnIndex(1);
                 ImGui::SetNextItemWidth(-1);
@@ -1164,11 +1143,7 @@ void TravelWindow::DrawSettingsInternal()
 
             ImGui::TableSetColumnIndex(1);
             ImGui::SetNextItemWidth(-1);
-            auto map_idx = OutpostIDToIndex(entry.map_id);
-            if (ImGui::MyCombo("##map", "Select map...", &map_idx, outpost_name_array_getter, nullptr, visible_searchable_areas ? static_cast<int>(visible_searchable_areas->size()) : 0)) {
-                entry.map_id = IndexToOutpostID(map_idx);
-                aliases_changed = true;
-            }
+            aliases_changed |= ImGui::MapPicker("##map", &entry.map_id, TravelMapPickerOptions());
 
             ImGui::TableSetColumnIndex(2);
             ImGui::SetNextItemWidth(-1);

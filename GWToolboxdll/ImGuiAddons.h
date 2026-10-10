@@ -2,6 +2,8 @@
 
 #include <span>
 
+namespace GW::Constants { enum class MapID : uint32_t; }
+
 namespace ABI::Windows::UI { struct Color; }
 using Color = ImU32;
 
@@ -65,6 +67,17 @@ namespace ImGui {
                            bool (*items_getter)(void* data, int idx, const char** out_text), void* data, int items_count);
 
     IMGUI_API bool MultiSelectCombo(const char* label, uint32_t* selected, std::span<const char* const> items);
+
+    struct MapPickerOptions {
+        const char* none_label = "Any map";
+        std::function<bool(GW::Constants::MapID)> filter;
+        const char* preview_label = nullptr;
+    };
+
+    IMGUI_API bool MapPicker(const char* label, GW::Constants::MapID* selected, const MapPickerOptions& options = {});
+    IMGUI_API bool MapPicker(const char* label, uint32_t* selected, const MapPickerOptions& options = {});
+    IMGUI_API bool MapPicker(const char* label, int* selected, const MapPickerOptions& options = {});
+    IMGUI_API bool MapPicker(const char* label, std::vector<uint32_t>* selected, const MapPickerOptions& options = {});
 
     // Show a popup on-screen with a message and yes/no buttons. Returns true if an option has been chosen, with *result as true/false for yes/no
     IMGUI_API void ConfirmDialog(const char* message, ImGui::ImGuiConfirmDialogCallback callback, void* wparam = nullptr);

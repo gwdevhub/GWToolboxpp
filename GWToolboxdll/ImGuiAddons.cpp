@@ -3,10 +3,109 @@
 
 #include <ImGuiAddons.h>
 #include <string>
+#include <cfloat>
 #include <Keys.h>
+#include <GWCA/Constants/Maps.h>
+#include <GWCA/GameEntities/Map.h>
+#include <GWCA/Managers/MapMgr.h>
+#include <Modules/Resources.h>
+#include <Utils/EncString.h>
 
 namespace {
-    // Renders text rotated clockwise by angle_rad around center on draw list dl.
+    std::string MapPickerLabel(const uint32_t map_id)
+    {
+        const auto id = static_cast<GW::Constants::MapID>(map_id);
+        const auto* area = map_id && map_id < static_cast<uint32_t>(GW::Constants::MapID::Count) ? GW::Map::GetMapInfo(id) : nullptr;
+        const auto name = area && area->name_id ? Resources::GetMapName(id)->string() : std::string();
+        return name.empty() ? std::format("Map {}", map_id) : std::format("{} ({})", name, map_id);
+    }
+
+    bool DrawMapPicker(const char* label, std::vector<uint32_t>& selected, const bool multi_select, const ImGui::MapPickerOptions& options)
+    {
+        std::string preview;
+        if (selected.empty() || (!multi_select && selected.front() == 0))
+            preview = multi_select ? "None" : options.preview_label ? options.preview_label : options.none_label ? options.none_label : "Select map...";
+        else
+            preview = selected.size() == 1 ? MapPickerLabel(selected.front()) : std::format("{} maps selected", selected.size());
+        ImGui::SetNextWindowSizeConstraints(ImVec2(300.f * ImGui::FontScale(), 0), ImVec2(FLT_MAX, FLT_MAX));
+        if (!ImGui::BeginCombo(label, preview.c_str(), ImGuiComboFlags_HeightLarge))
+            return false;
+
+        static ImGuiTextFilter search;
+        const auto appearing = ImGui::IsWindowAppearing();
+        if (appearing) {
+            search.Clear();
+            ImGui::SetKeyboardFocusHere();
+        }
+        ImGui::SetNextItemWidth(-1.f);
+        const auto search_changed = ImGui::InputTextWithHint("##search", "Search name or ID", search.InputBuf, IM_ARRAYSIZE(search.InputBuf));
+        search.Build();
+        ImGui::Separator();
+
+        auto changed = false;
+        if (multi_select && ImGui::Button("Clear selection") && !selected.empty()) {
+            selected.clear();
+            changed = true;
+        }
+
+        std::vector<std::pair<uint32_t, std::string>> maps;
+        for (auto i = 1u; i < static_cast<uint32_t>(GW::Constants::MapID::Count); ++i) {
+            const auto map_id = static_cast<GW::Constants::MapID>(i);
+            if (options.filter && !options.filter(map_id))
+                continue;
+            maps.emplace_back(i, MapPickerLabel(i));
+        }
+        for (const auto map_id : selected) {
+            if ((map_id || multi_select) && (multi_select || !options.filter)
+                && std::ranges::none_of(maps, [map_id](const auto& map) { return map.first == map_id; }))
+                maps.emplace_back(map_id, MapPickerLabel(map_id));
+        }
+        std::ranges::sort(maps, [](const auto& lhs, const auto& rhs) {
+            return lhs.second == rhs.second ? lhs.first < rhs.first : lhs.second < rhs.second;
+        });
+
+        if (ImGui::BeginChild("##maps", ImVec2(0, ImGui::GetTextLineHeightWithSpacing() * 12))) {
+            if (appearing || search_changed)
+                ImGui::SetScrollY(0);
+            auto matches = 0;
+            if (!multi_select && options.none_label) {
+                const auto none_label = std::format("{} (0)", options.none_label);
+                if (search.PassFilter(none_label.c_str())) {
+                    ++matches;
+                    if (ImGui::Selectable(none_label.c_str(), selected.empty() || selected.front() == 0, ImGuiSelectableFlags_NoAutoClosePopups)) {
+                        changed = !selected.empty() && selected.front() != 0;
+                        selected.assign(1, 0);
+                        ImGui::CloseCurrentPopup();
+                    }
+                }
+            }
+            for (const auto& [map_id, map_label] : maps) {
+                if (!search.PassFilter(map_label.c_str()))
+                    continue;
+                ++matches;
+                const auto is_selected = std::ranges::contains(selected, map_id);
+                ImGui::PushID(static_cast<int>(map_id));
+                if (ImGui::Selectable(map_label.c_str(), is_selected, ImGuiSelectableFlags_NoAutoClosePopups)) {
+                    if (!multi_select) {
+                        selected.assign(1, map_id);
+                        ImGui::CloseCurrentPopup();
+                    }
+                    else if (is_selected)
+                        std::erase(selected, map_id);
+                    else
+                        selected.push_back(map_id);
+                    changed |= multi_select || !is_selected;
+                }
+                ImGui::PopID();
+            }
+            if (!matches)
+                ImGui::TextDisabled("No matching maps");
+        }
+        ImGui::EndChild();
+        ImGui::EndCombo();
+        return changed;
+    }
+
     void RenderTextRotated(ImDrawList* dl, ImVec2 center, ImU32 col, const char* text, float angle_rad)
     {
         if (!text || !*text)
@@ -102,6 +201,38 @@ namespace ImGui {
             EndCombo();
         }
         return changed;
+    }
+
+    bool MapPicker(const char* label, uint32_t* selected, const MapPickerOptions& options)
+    {
+        std::vector<uint32_t> maps{*selected};
+        if (!DrawMapPicker(label, maps, false, options))
+            return false;
+        *selected = maps.front();
+        return true;
+    }
+
+    bool MapPicker(const char* label, GW::Constants::MapID* selected, const MapPickerOptions& options)
+    {
+        auto map_id = static_cast<uint32_t>(*selected);
+        if (!MapPicker(label, &map_id, options))
+            return false;
+        *selected = static_cast<GW::Constants::MapID>(map_id);
+        return true;
+    }
+
+    bool MapPicker(const char* label, int* selected, const MapPickerOptions& options)
+    {
+        auto map_id = static_cast<uint32_t>(*selected);
+        if (!MapPicker(label, &map_id, options))
+            return false;
+        *selected = static_cast<int>(map_id);
+        return true;
+    }
+
+    bool MapPicker(const char* label, std::vector<uint32_t>* selected, const MapPickerOptions& options)
+    {
+        return DrawMapPicker(label, *selected, true, options);
     }
 
     void SetTooltip(std::function<void()> tooltip_callback)

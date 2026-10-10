@@ -313,8 +313,8 @@ bool HealthWidget::Threshold::DrawSettings(Operation& op)
         ImGui::ShowHelp("The Agent to which this threshold will be applied. Optional. Leave 0 for any agent");
         changed |= ImGui::InputInt("Skill ID", &skillId);
         ImGui::ShowHelp("Only apply if this skill is on your bar. Optional. Leave 0 for any skills");
-        changed |= ImGui::InputInt("Map ID", &mapId);
-        ImGui::ShowHelp("The map where it will be applied. Optional. Leave 0 for any map");
+        changed |= ImGui::MapPicker("Map", &mapId);
+        ImGui::ShowHelp("The map where it will be applied. Optional. Select Any map to disable this filter.");
         changed |= ImGui::InputInt("Percentage", &value);
         ImGui::ShowHelp("Percentage below which this color should be used");
         changed |= Colors::DrawSettingHueWheel("Color", &color, 0);
