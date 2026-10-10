@@ -120,6 +120,7 @@ public:
     std::string ini;
 
 protected:
+    uint32_t model_file_id = 0;
     std::string desc;
     // Cycles through character's inventory to find a matching (incomplete) stack, or an empty pane.
     static bool FindVacantStackOrSlotInInventory(const GW::Item* likeItem, GW::Item* result);
@@ -151,6 +152,10 @@ private:
 
 class PconGeneric : public Pcon {
 public:
+    struct ModelFileId {
+        uint32_t value;
+    };
+
     PconGeneric(const char* chat,
                 const char* abbrev,
                 const char* ini,
@@ -162,6 +167,19 @@ public:
           itemID(item), effectIDs(effects) { }
 
     PconGeneric(const PconGeneric&) = delete;
+
+    PconGeneric(const char* chat,
+                const char* abbrev,
+                const char* ini,
+                const wchar_t* file,
+                const ModelFileId item, const std::initializer_list<GW::Constants::SkillID> effects,
+                const int threshold,
+                const char* desc = nullptr)
+        : Pcon(chat, abbrev, ini, file, threshold, desc),
+          itemID(0), effectIDs(effects)
+    {
+        model_file_id = item.value;
+    }
 
 protected:
     [[nodiscard]] bool CanUseByEffect() const override;

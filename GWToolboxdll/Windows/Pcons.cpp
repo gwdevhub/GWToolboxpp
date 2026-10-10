@@ -118,7 +118,7 @@ wchar_t* Pcon::SetPlayerName()
 IDirect3DTexture9** Pcon::GetTexture()
 {
     if (!texture) {
-        texture = Resources::GetItemImage(filename);
+        texture = model_file_id ? Resources::GetItemImage(model_file_id, 0, 0, false) : Resources::GetItemImage(filename);
     }
     return texture;
 }
@@ -555,6 +555,7 @@ int Pcon::CheckInventory(bool* used, size_t* used_qty_ptr, const size_t from_bag
 {
     size_t count = 0;
     size_t used_qty = 0;
+    std::vector<const GW::Item*> items_to_use;
     GW::Bag** bags = GW::Items::GetBagArray();
     if (bags == nullptr) {
         return -1;
@@ -562,26 +563,38 @@ int Pcon::CheckInventory(bool* used, size_t* used_qty_ptr, const size_t from_bag
     for (size_t bagIndex = from_bag; bagIndex <= to_bag; ++bagIndex) {
         GW::Bag* bag = bags[bagIndex];
         if (bag == nullptr) {
-            continue; // No bag, skip
+            continue;
         }
         GW::ItemArray& items = bag->items;
         if (!items.valid()) {
-            continue; // No item array, skip
+            continue;
         }
         for (size_t i = 0; i < items.size(); i++) {
             const GW::Item* item = items[i];
             if (item == nullptr) {
-                continue; // No item, skip
+                continue;
             }
             const size_t qtyea = PointsPerUse(item);
             if (qtyea < 1) {
-                continue; // This is not the pcon you're looking for...
+                continue;
             }
-            if (used != nullptr && !*used && GW::Items::UseItem(item)) {
-                *used = true;
-                used_qty = qtyea;
+            if (used != nullptr && !*used) {
+                items_to_use.push_back(item);
             }
             count += qtyea * GW::Items::GetUses(item);
+        }
+    }
+    const auto remaining_uses = [](const GW::Item* item) {
+        return item->quantity ? GW::Items::GetUses(item) / item->quantity : 0u;
+    };
+    if (model_file_id) {
+        std::ranges::stable_sort(items_to_use, std::less{}, remaining_uses);
+    }
+    for (const auto item : items_to_use) {
+        if (GW::Items::UseItem(item)) {
+            *used = true;
+            used_qty = remaining_uses(item) == 0xff ? 0 : PointsPerUse(item);
+            break;
         }
     }
     if (used_qty_ptr) {
@@ -666,6 +679,9 @@ void Pcon::LoadSettings(const ToolboxIni* inifile, const char* section)
 // ================================================
 size_t PconGeneric::PointsPerUse(const GW::Item* item) const
 {
+    if (model_file_id) {
+        return item->model_file_id == model_file_id ? 1u : 0u;
+    }
     if (item->model_id == static_cast<DWORD>(itemID)) {
         return 1;
     }
@@ -714,7 +730,7 @@ void PconGeneric::RecordExpectedEffects()
 bool PconGeneric::CanUseByEffect() const
 {
     if (!GW::Agents::GetControlledCharacter()) {
-        return false; // player doesn't exist?
+        return false;
     }
     if (std::ranges::any_of(effectIDs, [this](const auto skill_id) { return IsEffectTriggerPending(skill_id); })) {
         return false;
@@ -727,7 +743,7 @@ bool PconGeneric::CanUseByEffect() const
 
     return std::ranges::any_of(effectIDs, [effects](const auto skill_id) {
         return std::ranges::none_of(*effects, [skill_id](const auto& effect) {
-            return effect.skill_id == skill_id && effect.GetTimeRemaining() >= 1000;
+            return effect.skill_id == skill_id && (effect.duration == 0.f || effect.GetTimeRemaining() >= 1000);
         });
     });
 }

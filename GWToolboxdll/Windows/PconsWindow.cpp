@@ -28,6 +28,9 @@ using namespace GW::Constants;
 bool Pcon::map_has_effects_array = false;
 
 namespace {
+    constexpr PconGeneric::ModelFileId stalkers_ration_model_file_id{0x5EFED};
+    constexpr PconGeneric::ModelFileId birds_eye_compass_model_file_id{0x2595C};
+
     GW::HookEntry ChatCmd_HookEntry;
 
     PconAlcohol* pcon_alcohol = nullptr;
@@ -354,6 +357,12 @@ PconsWindow::PconsWindow()
 
     pcons.push_back(new PconGeneric("Pahnai Salad", "Salad", "salad", L"Pahnai Salad",
                                      ItemID::PahnaiSalad, {SkillID::Pahnai_Salad_item_effect}, 10));
+
+    pcons.push_back(new PconGeneric("Stalker's Ration", "Stalker", "stalker", L"Stalker's Ration",
+                                     stalkers_ration_model_file_id, {SkillID::Seek_and_Destroy}, 5));
+
+    pcons.push_back(new PconGeneric("Bird's Eye Compass", "Bird's Eye", "birdseye", L"Bird's Eye Compass",
+                                     birds_eye_compass_model_file_id, {SkillID::Birds_Eye_View}, 5));
 
     pcons.push_back(new PconScroll("XP scroll", "XP scroll", "scroll", L"Scroll of Hunter's Insight",
                                    20));
