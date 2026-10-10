@@ -21,9 +21,7 @@
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/PlayerMgr.h>
-#include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/UIMgr.h>
-#include <GWCA/Packets/StoC.h>
 
 #include <Defines.h>
 #include <Utils/GuiUtils.h>
@@ -172,13 +170,10 @@ namespace {
         RemoveMarkedTarget();
     }
 
-    GW::HookEntry OnAgentAdded_HookEntry;
-
     bool hooks_added = false;
 
-    void OnAgentAdded(GW::HookStatus*, const GW::Packet::StoC::AgentAdd* packet)
+    void OnAgentAdded(const uint32_t agent_id)
     {
-        const auto agent_id = packet->agent_id;
         AgentAppearanceWindow::InvalidateAppearance(agent_id);
         const auto marked_target = GetMarkedTarget(agent_id);
         if (!marked_target) {
@@ -346,7 +341,8 @@ void AgentAppearanceWindow::RegisterSettings(ToolboxModule* module)
     if (!hooks_added) {
         hooks_added = true;
         GW::UI::RegisterUIMessageCallback(&UIMsg_Entry, GW::UI::UIMessage::kMapLoaded, OnUIMessage);
-        GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::AgentAdd>(&OnAgentAdded_HookEntry, OnAgentAdded);
+        // Gw.exe sends kAgentUpdate (wparam = agent_id) from its agent "created" event handler, i.e. when an agent is added
+        GW::UI::RegisterUIMessageCallback(&UIMsg_Entry, GW::UI::UIMessage::kAgentUpdate, OnUIMessage);
         GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"marktarget", CmdMarkTarget);
         GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"clearmarktarget", CmdClearMarkTarget);
     }
@@ -1014,7 +1010,6 @@ void AgentAppearanceWindow::DrawRuleEditor()
 void AgentAppearanceWindow::ReleaseAppearanceHooks()
 {
     GW::UI::RemoveUIMessageCallback(&UIMsg_Entry);
-    GW::StoC::RemoveCallback<GW::Packet::StoC::AgentAdd>(&OnAgentAdded_HookEntry);
     hooks_added = false;
     ResetAppearanceCache();
     std::vector<AppearanceRule*> rules;
@@ -1038,11 +1033,14 @@ Color AgentAppearanceWindow::GetProfessionColor(const GW::Constants::Profession 
     return profession_rules[index] ? profession_rules[index]->color : color_default;
 }
 
-void AgentAppearanceWindow::OnUIMessage(GW::HookStatus*, const GW::UI::UIMessage msgid, void*, void*)
+void AgentAppearanceWindow::OnUIMessage(GW::HookStatus*, const GW::UI::UIMessage msgid, void* wParam, void*)
 {
     switch (msgid) {
         case GW::UI::UIMessage::kMapLoaded:
             ResetAppearanceCache();
+            break;
+        case GW::UI::UIMessage::kAgentUpdate:
+            OnAgentAdded(static_cast<uint32_t>(reinterpret_cast<uintptr_t>(wParam)));
             break;
     }
 }
