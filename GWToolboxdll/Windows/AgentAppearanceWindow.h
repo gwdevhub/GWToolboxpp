@@ -13,7 +13,6 @@
 #include <ToolboxWindow.h>
 #include <Color.h>
 #include <Utils/TextUtils.h>
-#include <Widgets/Minimap/CustomRenderer.h>
 
 
 namespace GW {
@@ -73,10 +72,7 @@ public:
     enum Shape_e { Shape_None = -1, Tear, Circle, Quad, BigCircle, Star };
 
     inline static bool show_hidden_npcs = false;
-    inline static bool show_quest_npcs_on_minimap = false;
     inline static bool show_props_on_minimap = false;
-    inline static bool enemies_colors_by_profession = true;
-    inline static bool only_color_bosses = true;
     inline static float agent_border_thickness = 0.f;
     inline static float target_border_thickness = 50.f;
 
@@ -232,25 +228,11 @@ public:
 private:
     static void EditRule(CustomAgent* rule);
 
-    static Color GetDefaultColor(const GW::Agent* agent, const CustomAgent* ca = nullptr);
-    static float GetDefaultSize(const GW::Agent* agent);
-    static float GetLegacyDefaultSize(const GW::Agent* agent);
     static float GetBaseSize();
     static float ScaleFromAbsolute(float size);
-    static std::array<float*, 14> GetFallbackSizeFields();
-    static Shape_e GetDefaultShape(const GW::Agent* agent);
-
-    struct CachedPolygon {
-        const CustomRenderer::CustomPolygon* polygon = nullptr;
-        float min_x = 0.f, min_y = 0.f, max_x = 0.f, max_y = 0.f;
-    };
-    struct CachedMarker {
-        const CustomRenderer::CustomMarker* marker = nullptr;
-        float radius_squared = 0.f;
-    };
-    static void RefreshRelevantPolys();
-    inline static std::vector<CachedPolygon> relevant_polygons;
-    inline static std::vector<CachedMarker> relevant_markers;
+    static Color LegacyRuleColor(const char* key, Color preset);
+    static float LegacyRuleScale(const char* key, float preset);
+    static Shape_e LegacyRuleShape(const char* key, Shape_e preset);
 
 
     static void RefreshMatches(const GW::Agent* agent);
@@ -307,35 +289,19 @@ private:
 
     inline static Color color_agent_modifier = 0x001E1E1E;
     inline static Color color_agent_damaged_modifier = 0x00505050;
-    inline static Color color_eoe = 0x3200FF00;
-    inline static Color color_qz = 0x320000FF;
-    inline static Color color_winnowing = 0x3200FFFF;
-    inline static Color color_frozen_soil = 0x00FEFFFF;
-    inline static Color color_symbiosis = 0x00FF00FF;
-    inline static Color color_target = 0xFFFFFF00;
-    inline static Color color_player = 0xFFFF8000;
-    inline static Color color_player_dead = 0x64FF8000;
-    inline static Color color_signpost = 0xFF0000C8;
-    inline static Color color_locked_chest = 0xFF0000C8;
-    inline static Color color_locked_chest_open = 0xFF0000C8;
-    inline static Color color_item = 0xFF0000F0;
-    inline static Color color_hostile = 0xFFF00000;
-    inline static Color color_hostile_dead = 0xFF320000;
-    inline static Color color_neutral = 0xFF0000DC;
-    inline static Color color_ally = 0xFF00B300;
-    inline static Color color_ally_npc = 0xFF99FF99;
-    inline static Color color_ally_npc_quest = 0xFF99FF99;
-    inline static Color color_ally_spirit = 0xFF608000;
-    inline static Color color_ally_minion = 0xFF008060;
-    inline static Color color_ally_dead = 0x64006400;
-    inline static Color color_marked_target = 0xFFFFFC00;
+    inline static Color color_default = 0xFFFFFFFF;
+    inline static std::unordered_map<std::string, Color> legacy_rule_colors;
+    inline static std::unordered_map<std::string, float> legacy_rule_sizes;
+    inline static std::unordered_map<std::string, float> legacy_rule_scales;
+    inline static std::unordered_map<std::string, Shape_e> legacy_rule_shapes;
+    inline static bool legacy_enemy_profession_colors = true;
+    inline static bool legacy_boss_colors_only = true;
 
     static constexpr std::array<Color, 11> DefaultProfessionColors()
     {
         return {0xFF666666, 0xFFEEAA33, 0xFF55AA00, 0xFF4444BB, 0xFF00AA55, 0xFF8800AA,
                 0xFFBB3333, 0xFFAA0088, 0xFF00AAAA, 0xFF996600, 0xFF7777CC};
     }
-    inline static std::array<Color, 11> profession_colors = DefaultProfessionColors();
 
     inline static std::vector<CustomAgent*> custom_agents{};
     inline static std::unordered_map<const CustomAgent*, TextUtils::SearchPattern<wchar_t>> compiled_name_patterns;
@@ -347,24 +313,7 @@ private:
     inline static bool spirit_defaults_seeded = false;
 
     inline static float size_default = 100.f;
-    inline static float fallback_size_base = 100.f;
-    inline static float size_player = 100.f;
-    inline static float size_signpost = 50.f;
-    inline static float size_locked_chest = 50.f;
-    inline static float size_locked_chest_open = 50.f;
-    inline static float size_item = 25.f;
-    inline static float size_boss = 125.f;
-    inline static float size_minion = 50.f;
-    inline static float size_marked_target = 100.f;
-    inline static float size_hostile = 100.f;
-    inline static float size_neutral = 100.f;
-    inline static float size_ally = 100.f;
-    inline static float size_ally_npc = 100.f;
-    inline static float size_ally_npc_quest = 100.f;
-    inline static float size_ally_spirit = 100.f;
     inline static Shape_e default_shape = Tear;
-    inline static Shape_e shape_player = Tear;
-    inline static Shape_e shape_players = Tear;
 
     inline static bool custom_agents_loaded = false;
 

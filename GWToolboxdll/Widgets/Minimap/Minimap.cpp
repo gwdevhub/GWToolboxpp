@@ -529,7 +529,7 @@ namespace {
     {
         GW::Hook::EnterHook();
         uint32_t result = 0;
-        if (!hide_compass_agents) {
+        if (!hide_compass_agents && !(snap_to_compass && Minimap::IsActive())) {
             result = DrawCompassAgentsByType_Ret(ecx, edx, param_1, param_2, flags);
         }
         GW::Hook::LeaveHook();
@@ -1136,8 +1136,6 @@ void Minimap::DrawSettingsInternal()
     ImGui::StartSpacedElements(300.f);
     ImGui::NextSpacedElement();
     ImGui::CheckboxWithHelp("Show hidden NPCs", &AgentAppearanceWindow::show_hidden_npcs, "Show NPCs that aren't usually visible on the minimap\ne.g. minipets, invisible NPCs");
-    ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Show symbol for quest NPCs", &AgentAppearanceWindow::show_quest_npcs_on_minimap, "Show a star for NPCs that have quest progress available");
 
 
     ImGui::Text("Allow mouse click-through in:");
