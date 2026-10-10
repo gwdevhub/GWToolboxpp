@@ -622,6 +622,7 @@ bool TBHotkey::DrawSettings()
     if (collapsing_header_col(map_ids_header.c_str())) {
         ImGui::Indent();
 
+        ImGui::PushID("Include Maps");
         ImGui::TextDisabled("Only trigger in selected maps:");
         const float map_id_w = 200.f * scale;
         for (auto it = map_ids.begin(); !hotkey_changed && it != map_ids.end(); it++) {
@@ -648,8 +649,10 @@ bool TBHotkey::DrawSettings()
                 }
             }
         }
-        ImGui::Unindent();
+        ImGui::PopID();
+        
         ImGui::Spacing();
+        ImGui::PushID("Exclude Maps");
         ImGui::TextDisabled("Dont trigger in selected maps:");
         for (auto it = map_ids_exclude.begin(); !hotkey_changed && it != map_ids_exclude.end(); it++) {
             ImGui::PushID(*it);
@@ -674,7 +677,7 @@ bool TBHotkey::DrawSettings()
                 }
             }
         }
-
+        ImGui::PopID();
         ImGui::Unindent();
     }
     const auto professions_header = std::format("Professions ({})###professions", std::count(&prof_ids[0], &prof_ids[_countof(prof_ids) - 1], true));
