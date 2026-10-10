@@ -63,7 +63,7 @@ void StringDecoderWindow::Draw(IDirect3DDevice9*)
         }
         Decode();
     }
-    ImGui::MapPicker("Map", &map_id, {.none_label = nullptr});
+    ImGui::MapPicker("Map", &map_id, {.none_label = nullptr, .include_unavailable_maps = true});
     if (ImGui::Button("Decode Map Name")) {
         const GW::AreaInfo* map = GW::Map::GetMapInfo(static_cast<GW::Constants::MapID>(map_id));
         if (map) {

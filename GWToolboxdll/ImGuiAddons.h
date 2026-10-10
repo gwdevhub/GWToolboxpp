@@ -72,6 +72,7 @@ namespace ImGui {
         const char* none_label = "Any map";
         std::function<bool(GW::Constants::MapID)> filter;
         const char* preview_label = nullptr;
+        bool include_unavailable_maps = false;
     };
 
     IMGUI_API bool MapPicker(const char* label, GW::Constants::MapID* selected, const MapPickerOptions& options = {});
