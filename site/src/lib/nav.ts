@@ -38,6 +38,7 @@ export const navGroups: NavGroup[] = [
       { slug: 'trade', label: 'Trade' },
       { slug: 'market_browser', label: 'Market Browser' },
       { slug: 'completion', label: 'Completion' },
+      { slug: 'splits', label: 'Splits' },
       { slug: 'armory_window', label: 'Armory' },
       { slug: 'duping_window', label: 'Duping' },
       { slug: 'account_inventory', label: 'Account Inventory' },

@@ -188,6 +188,12 @@ All daily commands accept an optional `tomorrow` argument (e.g. `/zm tomorrow`) 
 
 - `/resettimer` or `/timerreset`: Reset the [Instance Timer](/docs/widgets/#timer) widget back to zero.
 
+## Splits
+
+- `/splits start`: Start the [Splits](/docs/splits/) run, or pause and unpause it once it's running.
+- `/splits split`: Complete the next Manual goal in the Splits list.
+- `/splits reset`: Reset the Splits run.
+
 ## Aliases
 
 You can define personal aliases for any command by editing the **Chat Command Aliases** section of `GWToolbox.ini`, or via the alias panel in the [Chat](/docs/chat/) settings. Toolbox ships with three defaults:
