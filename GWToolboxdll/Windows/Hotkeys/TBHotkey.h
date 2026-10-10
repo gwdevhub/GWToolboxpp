@@ -58,6 +58,7 @@ public:
     bool trigger_in_controller_mode = true; // Trigger this hotkey in controller mode
 
     std::vector<uint32_t> map_ids{};
+    std::vector<uint32_t> map_ids_exclude{};
     std::vector<std::string> player_names{};
     bool prof_ids[11]{};
     int instance_type = -1;
