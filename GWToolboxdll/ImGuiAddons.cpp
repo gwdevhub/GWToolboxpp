@@ -10,6 +10,7 @@
 #include <GWCA/Managers/MapMgr.h>
 #include <Modules/Resources.h>
 #include <Utils/EncString.h>
+#include <Utils/ToolboxUtils.h>
 
 namespace {
     std::string MapPickerLabel(const uint32_t map_id)
@@ -51,14 +52,19 @@ namespace {
         std::vector<std::pair<uint32_t, std::string>> maps;
         for (auto i = 1u; i < static_cast<uint32_t>(GW::Constants::MapID::Count); ++i) {
             const auto map_id = static_cast<GW::Constants::MapID>(i);
+            const auto* area = GW::Map::GetMapInfo(map_id);
+            if (!options.include_unavailable_maps && (!area || !area->name_id || GW::Map::IsExcludedMapInfo(area)
+                || area->type == GW::RegionType::Unknown || area->type == GW::RegionType::DevRegion))
+                continue;
             if (options.filter && !options.filter(map_id))
                 continue;
             maps.emplace_back(i, MapPickerLabel(i));
         }
-        for (const auto map_id : selected) {
-            if ((map_id || multi_select) && (multi_select || !options.filter)
-                && std::ranges::none_of(maps, [map_id](const auto& map) { return map.first == map_id; }))
-                maps.emplace_back(map_id, MapPickerLabel(map_id));
+        if (multi_select) {
+            for (const auto map_id : selected) {
+                if (std::ranges::none_of(maps, [map_id](const auto& map) { return map.first == map_id; }))
+                    maps.emplace_back(map_id, std::format("{} (unavailable)", MapPickerLabel(map_id)));
+            }
         }
         std::ranges::sort(maps, [](const auto& lhs, const auto& rhs) {
             return lhs.second == rhs.second ? lhs.first < rhs.first : lhs.second < rhs.second;

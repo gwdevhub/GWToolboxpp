@@ -125,6 +125,7 @@ public:
             std::string group;
             DWORD modelId = 0;
             DWORD mapId = 0;
+            std::optional<std::vector<uint32_t>> map_ids;
             int combat_state = EitherCombat;
             int weapon_state = EitherWeapon;
             int allegiance = -1;
@@ -184,7 +185,7 @@ public:
         char name[128]{};
         char group[64]{};
         DWORD modelId = 0;
-        DWORD mapId = 0;
+        std::vector<uint32_t> map_ids;
         CombatState combat_state = CombatState::EitherCombat;
         WeaponState weapon_state = WeaponState::EitherWeapon;
         int allegiance = -1;
