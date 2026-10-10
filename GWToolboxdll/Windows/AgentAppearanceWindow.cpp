@@ -23,6 +23,7 @@
 #include <GWCA/Managers/PlayerMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/UIMgr.h>
+#include <GWCA/Packets/StoC.h>
 
 #include <Defines.h>
 #include <Utils/GuiUtils.h>
