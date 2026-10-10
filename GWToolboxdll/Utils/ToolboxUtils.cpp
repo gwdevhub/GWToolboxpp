@@ -50,6 +50,7 @@ namespace {
 
     constexpr uint32_t bogus_area_info_flags = 0x5000000; // e.g. "wrong" Augury Rock is map 119, no NPCs.
     constexpr uint32_t debug_area_info_flag = 0x80000000;
+    constexpr uint32_t placeholder_map_name_id = 0x3;
 
     bool IsInfused(const GW::Item* item)
     {
@@ -91,7 +92,8 @@ namespace GW {
 
         bool IsExcludedMapInfo(const GW::AreaInfo* map_info)
         {
-            return map_info && ((map_info->flags & bogus_area_info_flags) == bogus_area_info_flags || (map_info->flags & debug_area_info_flag) != 0);
+            return map_info && (map_info->name_id == placeholder_map_name_id
+                || (map_info->flags & bogus_area_info_flags) == bogus_area_info_flags || (map_info->flags & debug_area_info_flag) != 0);
         }
 
         bool GetMapWorldMapBounds(GW::AreaInfo* map, ImRect* out)

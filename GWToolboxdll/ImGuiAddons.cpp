@@ -58,8 +58,6 @@ namespace {
                 continue;
             if (options.filter && !options.filter(map_id))
                 continue;
-            if (!options.include_unavailable_maps && Resources::GetMapName(map_id)->string() == "...")
-                continue;
             maps.emplace_back(i, MapPickerLabel(i));
         }
         if (multi_select) {
