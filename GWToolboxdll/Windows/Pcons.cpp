@@ -30,13 +30,6 @@
 
 #include "Color.h"
 
-namespace {
-    uint32_t GetRemainingItemUses(const GW::Item* item)
-    {
-        const auto uses = item->GetModifier(0x2458);
-        return uses ? uses->arg2() : 1u;
-    }
-}
 
 float Pcon::size = 46.0f;
 int Pcon::pcons_delay = 5000;
@@ -591,13 +584,16 @@ int Pcon::CheckInventory(bool* used, size_t* used_qty_ptr, const size_t from_bag
             count += qtyea * GW::Items::GetUses(item);
         }
     }
+    const auto remaining_uses = [](const GW::Item* item) {
+        return item->quantity ? GW::Items::GetUses(item) / item->quantity : 0u;
+    };
     if (model_file_id) {
-        std::ranges::stable_sort(items_to_use, std::less{}, GetRemainingItemUses);
+        std::ranges::stable_sort(items_to_use, std::less{}, remaining_uses);
     }
     for (const auto item : items_to_use) {
         if (GW::Items::UseItem(item)) {
             *used = true;
-            used_qty = GetRemainingItemUses(item) == 0xff ? 0 : PointsPerUse(item);
+            used_qty = remaining_uses(item) == 0xff ? 0 : PointsPerUse(item);
             break;
         }
     }
