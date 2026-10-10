@@ -674,7 +674,7 @@ void AgentAppearanceWindow::SaveCustomAgents(SettingsDoc& doc)
             entries.push_back(ca->ToSettings());
         }
         doc.Set("Game Settings", "appearance_rules", entries);
-        doc.Set("Game Settings", "appearance_rules_version", 4);
+        doc.Set("Game Settings", "appearance_rules_version", 5);
         doc.EraseKey("Game Settings", "fallback_size_scales");
         doc.Set("Game Settings", "custom_agent_defaults_seeded", custom_agent_defaults_seeded);
         doc.Set("Game Settings", "appearance_defaults_seeded", appearance_defaults_seeded);
@@ -1233,7 +1233,7 @@ void AgentAppearanceWindow::RebuildRuleMatchers()
         if (ca->match_name[0]) compiled_name_patterns.emplace(ca, TextUtils::StringToWString(ca->match_name));
     }
     for (const auto* ca : rules) {
-        if (!ca->active || (ca->mapId && ca->mapId != map_id)
+        if (!ca->active || (!ca->map_ids.empty() && !std::ranges::contains(ca->map_ids, map_id))
             || (ca->outpost_only && instance_type != static_cast<uint32_t>(GW::Constants::InstanceType::Outpost))) continue;
 
         CompiledRule entry;
@@ -1309,7 +1309,8 @@ AgentAppearanceWindow::CustomAgent::CustomAgent(const ToolboxIni* ini, const cha
     std::snprintf(name, sizeof(name), "%s", ini->GetValue(section, VAR_NAME(name), ""));
     std::snprintf(group, sizeof(group), "%s", ini->GetValue(section, VAR_NAME(group), ""));
     modelId = static_cast<DWORD>(ini->GetLongValue(section, VAR_NAME(modelId), static_cast<long>(modelId)));
-    mapId = static_cast<DWORD>(ini->GetLongValue(section, VAR_NAME(mapId), static_cast<long>(mapId)));
+    const auto legacy_map_id = static_cast<uint32_t>(ini->GetLongValue(section, "mapId", 0));
+    if (legacy_map_id) map_ids.push_back(legacy_map_id);
     combat_state = static_cast<CombatState>(ini->GetLongValue(section, VAR_NAME(combat_state), static_cast<long>(combat_state)));
     weapon_state = static_cast<WeaponState>(ini->GetLongValue(section, VAR_NAME(weapon_state), static_cast<long>(weapon_state)));
     allegiance = static_cast<int>(ini->GetLongValue(section, VAR_NAME(allegiance), allegiance));
@@ -1355,7 +1356,11 @@ AgentAppearanceWindow::CustomAgent::CustomAgent(const Settings& settings)
     std::snprintf(name, sizeof(name), "%s", settings.name.c_str());
     std::snprintf(group, sizeof(group), "%s", settings.group.c_str());
     modelId = settings.modelId;
-    mapId = settings.mapId;
+    if (settings.map_ids) map_ids = *settings.map_ids;
+    else if (settings.mapId) map_ids.push_back(static_cast<uint32_t>(settings.mapId));
+    std::erase(map_ids, 0u);
+    std::ranges::sort(map_ids);
+    map_ids.erase(std::unique(map_ids.begin(), map_ids.end()), map_ids.end());
     combat_state = static_cast<CombatState>(settings.combat_state);
     weapon_state = static_cast<WeaponState>(settings.weapon_state);
     allegiance = settings.allegiance;
@@ -1412,7 +1417,7 @@ AgentAppearanceWindow::CustomAgent::Settings AgentAppearanceWindow::CustomAgent:
     settings.name = name;
     settings.group = group;
     settings.modelId = modelId;
-    settings.mapId = mapId;
+    settings.map_ids = map_ids;
     settings.combat_state = combat_state;
     settings.weapon_state = weapon_state;
     settings.allegiance = allegiance;
@@ -1686,12 +1691,8 @@ bool AgentAppearanceWindow::CustomAgent::DrawSettings()
             ImGui::ShowHelp("No states selected disables this filter. Otherwise, only selected states match.");
         }
         ImGui::SetCursorPosX(x);
-        auto selected_map = static_cast<uint32_t>(mapId);
-        if (ImGui::MapPicker("Map", &selected_map)) {
-            mapId = selected_map;
-            changed = true;
-        }
-        ImGui::ShowHelp("The map where it will be applied. Optional. Select Any map to disable this filter.");
+        changed |= ImGui::MapPicker("Maps", &map_ids);
+        ImGui::ShowHelp("Apply this rule in any of the selected maps. An empty selection applies it in every map.");
         ImGui::SetCursorPosX(x);
         static const char* combat_state_items[] = {"In combat", "Not in combat", "Either"};
         if (ImGui::Combo("Combat", (int*)&combat_state, combat_state_items, 3)) {
