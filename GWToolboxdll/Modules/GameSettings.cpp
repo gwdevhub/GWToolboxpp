@@ -129,6 +129,37 @@ namespace {
 
     GameSettings::Settings settings;
 
+    using SetShaderConstant_pt = void(__cdecl*)(uint32_t, uint32_t, const float*);
+    SetShaderConstant_pt SetShaderConstant_Func = nullptr, SetShaderConstant_Ret = nullptr;
+    using AppendFallbackBloom_pt = void(__cdecl*)(void*);
+    AppendFallbackBloom_pt AppendFallbackBloom_Func = nullptr, AppendFallbackBloom_Ret = nullptr;
+    struct BloomShaderParameters {
+        uint32_t amount;
+        uint32_t inverse_dimensions;
+    };
+    const BloomShaderParameters* bloom_shader_parameters = nullptr;
+    bool bloom_hooks_available = false;
+
+    void OnSetShaderConstant(uint32_t renderer, uint32_t parameter, const float* value)
+    {
+        GW::Hook::EnterHook();
+        constexpr float no_bloom[4] = {};
+        if (settings.block_bloom && bloom_shader_parameters && bloom_shader_parameters->inverse_dimensions && parameter == bloom_shader_parameters->amount) {
+            value = no_bloom;
+        }
+        SetShaderConstant_Ret(renderer, parameter, value);
+        GW::Hook::LeaveHook();
+    }
+
+    void OnAppendFallbackBloom(void* render_items)
+    {
+        GW::Hook::EnterHook();
+        if (!settings.block_bloom) {
+            AppendFallbackBloom_Ret(render_items);
+        }
+        GW::Hook::LeaveHook();
+    }
+
     bool targeting_nearest_item = false;
 
     std::unique_ptr<EncString> pending_wiki_search_term;
@@ -1403,6 +1434,36 @@ void GameSettings::Initialize()
     AgentAppearanceWindow::RegisterSettings(this);
     SettingsRegistry::Describe(this, "automatically_flag_pet_to_fight_called_target", "Automatically lock heroes and pets onto your called target");
     SettingsRegistry::Describe(this, "combine_overhead_numbers", "Combine floating numbers above character", combine_overhead_numbers_help);
+    SettingsRegistry::Describe(this, "block_bloom", "Block bloom", "Removes legacy and HD bloom while retaining other post-processing effects.");
+
+    const auto post_process_renderer = GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("PostProcManager.cpp", "!s_bloomAddSmooth", 0, 0), 0x600);
+    if (post_process_renderer) {
+        const auto composite_call = GW::Scanner::FindInRange("\xe8\x00\x00\x00\x00\x83\xc4\x10\x8b\x7d\xf8\xf6\xc3\x20", "x????xxxxxxxxx", 0, post_process_renderer, post_process_renderer + 0x600);
+        const auto fallback_call = GW::Scanner::FindInRange("\x83\x7d\xec\x00\x75\x00\x56\xe8\x00\x00\x00\x00\x83\xc4\x04", "xxxxx?xx????xxx", 7, post_process_renderer, post_process_renderer + 0x600);
+        const auto composite = composite_call ? GW::Scanner::FunctionFromNearCall(composite_call) : 0;
+        if (composite && fallback_call) {
+            const auto upload = GW::Scanner::FindInRange("\xd9\x45\x14\x8d\x45\xf0\xdc\x0d\x00\x00\x00\x00\x50\xff\x35\x00\x00\x00\x00\x6a\x00\xdc\x05", "xxxxxxxx????xxx????xxxx", 0, composite, composite + 0x300);
+            const auto upload_call = upload ? GW::Scanner::FindInRange("\xd9\x5d\xf0\xe8", "xxxx", 3, upload, upload + 0x40) : 0;
+            if (upload_call) {
+                const auto parameter_address = *reinterpret_cast<const uintptr_t*>(upload + 15);
+                if (GW::Scanner::IsValidPtr(parameter_address) && GW::Scanner::IsValidPtr(parameter_address + sizeof(BloomShaderParameters) - 1)) {
+                    bloom_shader_parameters = reinterpret_cast<const BloomShaderParameters*>(parameter_address);
+                    SetShaderConstant_Func = reinterpret_cast<SetShaderConstant_pt>(GW::Scanner::FunctionFromNearCall(upload_call));
+                    AppendFallbackBloom_Func = reinterpret_cast<AppendFallbackBloom_pt>(GW::Scanner::FunctionFromNearCall(fallback_call));
+                }
+            }
+        }
+    }
+    if (SetShaderConstant_Func && AppendFallbackBloom_Func) {
+        GW::Hook::CreateHook(&SetShaderConstant_Func, OnSetShaderConstant, &SetShaderConstant_Ret);
+        GW::Hook::CreateHook(&AppendFallbackBloom_Func, OnAppendFallbackBloom, &AppendFallbackBloom_Ret);
+        bloom_hooks_available = SetShaderConstant_Ret && AppendFallbackBloom_Ret;
+        if (bloom_hooks_available) {
+            GW::Hook::EnableHooks(SetShaderConstant_Func);
+            GW::Hook::EnableHooks(AppendFallbackBloom_Func);
+        }
+    }
+    Log::Log("[GameSettings] bloom hooks = %s, shader constant = %p, fallback = %p\n", bloom_hooks_available ? "available" : "unavailable", SetShaderConstant_Func, AppendFallbackBloom_Func);
 
     OnSkillTomeWindow_UIMessage_Func = (GW::UI::UIInteractionCallback)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("GmSkTome.cpp", "selection.skillId", 0, 0), 0xfff);
     DEBUG_ASSERT(OnSkillTomeWindow_UIMessage_Func);
@@ -1704,6 +1765,10 @@ void GameSettings::Terminate()
     if (SkillList_UICallback_Func) GW::Hook::RemoveHook(SkillList_UICallback_Func);
     if (SetFrameSkillDescription_Func) GW::Hook::RemoveHook(SetFrameSkillDescription_Func);
     if (OnSkillTomeWindow_UIMessage_Func) GW::Hook::RemoveHook(OnSkillTomeWindow_UIMessage_Func);
+    if (SetShaderConstant_Func) GW::Hook::RemoveHook(SetShaderConstant_Func);
+    if (AppendFallbackBloom_Func) GW::Hook::RemoveHook(AppendFallbackBloom_Func);
+    bloom_hooks_available = false;
+    bloom_shader_parameters = nullptr;
 
     GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
 }
@@ -1882,6 +1947,13 @@ void GameSettings::DrawSettingsInternal()
     ImGui::Checkbox("Skip character name input when donating faction", &settings.skip_entering_name_for_faction_donate);
 
     ImGui::CheckboxWithHelp("Stop screen shake from skills or effects", &settings.stop_screen_shake, "e.g. Aftershock, Earth shaker, Avalanche effect");
+
+    ImGui::BeginDisabled(!bloom_hooks_available);
+    ImGui::CheckboxWithHelp("Block bloom", &settings.block_bloom, "Removes legacy and HD bloom while retaining desaturation, distortion, warp, blur and hue effects.\nDoes not change Guild Wars graphics preferences.");
+    ImGui::EndDisabled();
+    if (!bloom_hooks_available) {
+        ImGui::TextDisabled("Bloom interception is unavailable for this client.");
+    }
 
     ImGui::NewLine();
     ImGui::Text("Block floating numbers above character on:");
