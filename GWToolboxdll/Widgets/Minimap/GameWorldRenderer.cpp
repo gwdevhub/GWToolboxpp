@@ -146,6 +146,12 @@ namespace {
     // Full mesh (not draped) for the 2D top-down M-key world map. WorldMapWidget redraws these flat each frame.
     std::vector<GameWorldRenderer::BatchedLine> navmesh_worldmap_lines;
     GW::Constants::MapID navmesh_worldmap_map = GW::Constants::MapID::None;
+    bool navmesh_clear_requested = false;
+
+    void ApplyPendingNavmeshClear()
+    {
+        if (navmesh_clear_requested) GameWorldRenderer::ClearNavmeshLines();
+    }
 
     // Drape a per-frame, wall-clock-bounded slice into `staging`; LIVE `verts` keep drawing until complete, then swap (double-buffer) so a rebuild never blanks the overlay.
     void StepNavmeshBatchBuild()
@@ -491,6 +497,7 @@ void GameWorldRenderer::UpdateCompositorRegistration()
 // Invoked either by the compositor (under the UI) or by Render() (on top), never both in one frame.
 void GameWorldRenderer::DrawInWorld(IDirect3DDevice9* device)
 {
+    ApplyPendingNavmeshClear();
     if (GW::UI::GetIsWorldMapShowing()) {
         return;
     }
@@ -643,8 +650,7 @@ void GameWorldRenderer::TriggerSyncAllMarkers()
 
 void GameWorldRenderer::SetNavmeshLines(GW::Constants::MapID map_id, std::vector<BatchedLine> lines)
 {
-    // Render-thread only (called from PathfindingWindow::Draw, same thread as DrawInWorld) — no lock needed.
-    // Start a NEW build into staging; the live `verts` keep drawing until it completes, so the swap is seamless.
+    ApplyPendingNavmeshClear();
     auto& b = navmesh_batch;
     b.pending_map = map_id;
     b.lines = std::move(lines);
@@ -661,8 +667,7 @@ void GameWorldRenderer::SetNavmeshSampleSpacing(float gw)
 
 void GameWorldRenderer::RedrapeNavmesh()
 {
-    // Re-drape the current edge set (e.g. after the sample-spacing slider changed) without re-culling: restart the
-    // incremental build from the existing source lines. No-op if nothing is loaded.
+    ApplyPendingNavmeshClear();
     auto& b = navmesh_batch;
     if (b.lines.empty()) return;
     b.pending_map = b.map_id;
@@ -674,12 +679,14 @@ void GameWorldRenderer::RedrapeNavmesh()
 
 void GameWorldRenderer::SetNavmeshWorldMapLines(GW::Constants::MapID map_id, std::vector<BatchedLine> lines)
 {
+    ApplyPendingNavmeshClear();
     navmesh_worldmap_lines = std::move(lines);
     navmesh_worldmap_map = map_id;
 }
 
 void GameWorldRenderer::ClearNavmeshLines()
 {
+    navmesh_clear_requested = false;
     navmesh_batch.lines.clear();
     navmesh_batch.staging.clear();
     navmesh_batch.verts.clear();
@@ -690,6 +697,11 @@ void GameWorldRenderer::ClearNavmeshLines()
     navmesh_batch.vb_dirty = true;
     navmesh_worldmap_lines.clear();
     navmesh_worldmap_map = GW::Constants::MapID::None;
+}
+
+void GameWorldRenderer::RequestClearNavmeshLines()
+{
+    navmesh_clear_requested = true;
 }
 
 const std::vector<GameWorldRenderer::BatchedLine>& GameWorldRenderer::GetNavmeshWorldMapLines() { return navmesh_worldmap_lines; }
