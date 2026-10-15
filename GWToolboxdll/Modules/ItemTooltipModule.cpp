@@ -96,30 +96,6 @@ namespace {
         return std::format(L"{}\x2{}\x2{}", EncodedLiteral(col_str), str, EncodedColorEndTag);
     }
 
-    // -------------------------------------------------------------------------
-    // Account inventory section
-    // -------------------------------------------------------------------------
-    void AppendAccountInventoryInfo(const uint32_t item_id, std::wstring& description)
-    {
-        const auto item_inventory = AccountInventoryWindow::GetItemInventoryData(item_id);
-        if (!item_inventory.total) return;
-        const auto original_description = description;
-        if (item_inventory.total == 1) {
-            if (!description.empty()) description += L"\x2";
-            description += EncodedNewParagraph + L"\x2" + EncodedColouredString(EncodedLiteral(std::format(L"Account quantity: {}", item_inventory.total)), settings.price_color);
-            if (!GW::UI::IsValidEncStr(description.c_str())) description = original_description;
-            return;
-        }
-        auto section = EncodedNewParagraph + L"\x2" + EncodedColouredString(EncodedLiteral(std::format(L"Account quantity: {} (Storage: {})", item_inventory.total, item_inventory.storage)), settings.price_color);
-        for (const auto& [character, quantity] : item_inventory.characters) {
-            section += EncodedNewLine;
-            section += EncodedColouredString(EncodedLiteral(std::format(L"  - {}: {}", TextUtils::StringToWString(character), quantity)), Colors::Grey());
-        }
-        if (!description.empty()) description += L"\x2";
-        description += section;
-        if (!GW::UI::IsValidEncStr(description.c_str())) description = original_description;
-    }
-
     std::wstring EncodedCurrencyString(uint32_t price, bool abbreviated, uint32_t high_threshold, Color high_threshold_color)
     {
         std::wstring currency_string;
@@ -305,6 +281,30 @@ namespace {
             if (!description.empty()) description += L"\x2";
             description += EncodedNewParagraph + L"\x2" + EncodedColouredString(prices_out, settings.price_color);
         }
+    }
+
+    // -------------------------------------------------------------------------
+    // Account inventory section
+    // -------------------------------------------------------------------------
+    void AppendAccountInventoryInfo(const uint32_t item_id, std::wstring& description)
+    {
+        const auto item_inventory = AccountInventoryWindow::GetItemInventoryData(item_id);
+        if (!item_inventory.total) return;
+        const auto original_description = description;
+        if (item_inventory.total == 1) {
+            if (!description.empty()) description += L"\x2";
+            description += EncodedNewParagraph + L"\x2" + EncodedColouredString(EncodedLiteral(std::format(L"Account quantity: {}", item_inventory.total)), settings.price_color);
+            if (!GW::UI::IsValidEncStr(description.c_str())) description = original_description;
+            return;
+        }
+        auto section = EncodedNewParagraph + L"\x2" + EncodedColouredString(EncodedLiteral(std::format(L"Account quantity: {} (Storage: {})", item_inventory.total, item_inventory.storage)), settings.price_color);
+        for (const auto& [character, quantity] : item_inventory.characters) {
+            section += EncodedNewLine;
+            section += EncodedColouredString(EncodedLiteral(std::format(L"  - {}: {}", TextUtils::StringToWString(character), quantity)), Colors::Grey());
+        }
+        if (!description.empty()) description += L"\x2";
+        description += section;
+        if (!GW::UI::IsValidEncStr(description.c_str())) description = original_description;
     }
 
     void UpdateItemTooltip()
