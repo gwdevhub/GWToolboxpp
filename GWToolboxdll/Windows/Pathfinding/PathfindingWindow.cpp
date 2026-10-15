@@ -2323,11 +2323,6 @@ namespace {
         {GW::Constants::MapID::Domain_of_Anguish, 0x3452b}, // outpost = shared torment gate room; explorable = 0x3584f
     };
 
-    bool IsDualInstanceMap(GW::Constants::MapID map_id)
-    {
-        return std::ranges::any_of(outpost_file_id_overrides, [map_id](const auto& e) { return e.first == map_id; });
-    }
-
     uint32_t GetMapFileId(GW::Constants::MapID map_id)
     {
         if (map_id == GW::Map::GetMapID() && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
@@ -2422,11 +2417,8 @@ namespace {
                     }
                 }
 
-                if (IsDualInstanceMap(packet->map_id)) {
-                    ++map_load_generation;
-                    GameWorldRenderer::ClearNavmeshLines();
-                    GameWorldRenderer::SetNavmeshWorldMapLines(GW::Constants::MapID::None, {});
-                }
+                ++map_load_generation;
+                GameWorldRenderer::RequestClearNavmeshLines();
 
                 // Clear all lines on map change to avoid stale renders
                 ClearBoundsLines();
@@ -2503,8 +2495,10 @@ static void UpdateNavmeshOverlay()
     auto* nav = mp->GetNavMeshForDebug();
     if (!nav || !nav->IsReady()) {
         static Pathing::MilePath* build_requested = nullptr;
-        if (build_requested != mp && !mp->build_failed()) {
+        static uint32_t build_requested_generation = 0;
+        if ((build_requested != mp || build_requested_generation != map_load_generation) && !mp->build_failed()) {
             build_requested = mp;
+            build_requested_generation = map_load_generation;
             Resources::EnqueueWorkerTask([mp] { mp->EnsureFullBuild(); });
         }
         return;

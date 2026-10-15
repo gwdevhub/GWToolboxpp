@@ -115,6 +115,7 @@ public:
     // Full mesh for the 2D top-down M-key world map: not draped, redrawn flat by WorldMapWidget (game coords -> map).
     static void SetNavmeshWorldMapLines(GW::Constants::MapID map_id, std::vector<BatchedLine> lines);
     static void ClearNavmeshLines();
+    static void RequestClearNavmeshLines();
     static const std::vector<BatchedLine>& GetNavmeshWorldMapLines();
     static GW::Constants::MapID GetNavmeshWorldMapMapId();
     // Max in-world render distance (game units) — the shared "Maximum render distance" for terrain overlays.
