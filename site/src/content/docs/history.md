@@ -7,6 +7,9 @@ section: meta
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
+## Version 8.35
+* [New] Item Tooltip: added an optional "Show account inventory in item tooltip" setting to show matching item quantities recorded by Account Inventory, including storage totals and per-character quantities. Disabled by default.
+
 ## Version 8.34
 * [Fix] Loot Beacons now detect drops already on the ground when Toolbox starts or a map finishes loading. Custom rarity-filtered beacons also render as soon as an item matches, without waiting for its name to decode.
 * [Fix] Objective Timer: collapsed past runs are visible again in the run history window.
