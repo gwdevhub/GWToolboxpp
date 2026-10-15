@@ -1,6 +1,5 @@
 #include "stdafx.h"
 
-#include <atomic>
 #include <unordered_map>
 
 #include <GWCA/Context/MapContext.h>
@@ -147,25 +146,11 @@ namespace {
     // Full mesh (not draped) for the 2D top-down M-key world map. WorldMapWidget redraws these flat each frame.
     std::vector<GameWorldRenderer::BatchedLine> navmesh_worldmap_lines;
     GW::Constants::MapID navmesh_worldmap_map = GW::Constants::MapID::None;
-    std::atomic<bool> navmesh_clear_requested = false;
-
-    void ClearNavmeshLinesNow()
-    {
-        navmesh_batch.lines.clear();
-        navmesh_batch.staging.clear();
-        navmesh_batch.verts.clear();
-        navmesh_batch.build_cursor = 0;
-        navmesh_batch.building = false;
-        navmesh_batch.map_id = GW::Constants::MapID::None;
-        navmesh_batch.pending_map = GW::Constants::MapID::None;
-        navmesh_batch.vb_dirty = true;
-        navmesh_worldmap_lines.clear();
-        navmesh_worldmap_map = GW::Constants::MapID::None;
-    }
+    bool navmesh_clear_requested = false;
 
     void ApplyPendingNavmeshClear()
     {
-        if (navmesh_clear_requested.exchange(false)) ClearNavmeshLinesNow();
+        if (navmesh_clear_requested) GameWorldRenderer::ClearNavmeshLines();
     }
 
     // Drape a per-frame, wall-clock-bounded slice into `staging`; LIVE `verts` keep drawing until complete, then swap (double-buffer) so a rebuild never blanks the overlay.
@@ -666,8 +651,6 @@ void GameWorldRenderer::TriggerSyncAllMarkers()
 void GameWorldRenderer::SetNavmeshLines(GW::Constants::MapID map_id, std::vector<BatchedLine> lines)
 {
     ApplyPendingNavmeshClear();
-    // Render-thread only (called from PathfindingWindow::Draw, same thread as DrawInWorld) — no lock needed.
-    // Start a NEW build into staging; the live `verts` keep drawing until it completes, so the swap is seamless.
     auto& b = navmesh_batch;
     b.pending_map = map_id;
     b.lines = std::move(lines);
@@ -685,8 +668,6 @@ void GameWorldRenderer::SetNavmeshSampleSpacing(float gw)
 void GameWorldRenderer::RedrapeNavmesh()
 {
     ApplyPendingNavmeshClear();
-    // Re-drape the current edge set (e.g. after the sample-spacing slider changed) without re-culling: restart the
-    // incremental build from the existing source lines. No-op if nothing is loaded.
     auto& b = navmesh_batch;
     if (b.lines.empty()) return;
     b.pending_map = b.map_id;
@@ -706,7 +687,16 @@ void GameWorldRenderer::SetNavmeshWorldMapLines(GW::Constants::MapID map_id, std
 void GameWorldRenderer::ClearNavmeshLines()
 {
     navmesh_clear_requested = false;
-    ClearNavmeshLinesNow();
+    navmesh_batch.lines.clear();
+    navmesh_batch.staging.clear();
+    navmesh_batch.verts.clear();
+    navmesh_batch.build_cursor = 0;
+    navmesh_batch.building = false;
+    navmesh_batch.map_id = GW::Constants::MapID::None;
+    navmesh_batch.pending_map = GW::Constants::MapID::None;
+    navmesh_batch.vb_dirty = true;
+    navmesh_worldmap_lines.clear();
+    navmesh_worldmap_map = GW::Constants::MapID::None;
 }
 
 void GameWorldRenderer::RequestClearNavmeshLines()
