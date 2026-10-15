@@ -47,7 +47,7 @@ public:
 
     void HandleHeroBag(GW::Constants::HeroID hero_id);
     void GatherAllInventories();
-    static ItemInventoryData GetItemInventoryData(uint32_t item_id);
+    static void GetItemInventoryData(uint32_t item_id, ItemInventoryData& item_inventory);
 
     // handle inventory generation during map load
     void PreMapLoad();

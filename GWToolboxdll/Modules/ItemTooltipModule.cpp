@@ -63,8 +63,7 @@ namespace ItemTooltipSettings {
 
 namespace {
     ItemTooltipSettings::Settings settings;
-
-
+    AccountInventoryWindow::ItemInventoryData item_inventory;
 
     const wchar_t* material_name_from_slot(GW::Constants::MaterialSlot material_id)
     {
@@ -283,12 +282,9 @@ namespace {
         }
     }
 
-    // -------------------------------------------------------------------------
-    // Account inventory section
-    // -------------------------------------------------------------------------
     void AppendAccountInventoryInfo(const uint32_t item_id, std::wstring& description)
     {
-        const auto item_inventory = AccountInventoryWindow::GetItemInventoryData(item_id);
+        AccountInventoryWindow::GetItemInventoryData(item_id, item_inventory);
         if (!item_inventory.total) return;
         const auto original_description = description;
         if (item_inventory.total == 1) {

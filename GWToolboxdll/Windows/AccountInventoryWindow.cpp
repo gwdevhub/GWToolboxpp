@@ -1543,11 +1543,13 @@ namespace {
 
 } // namespace
 
-AccountInventoryWindow::ItemInventoryData AccountInventoryWindow::GetItemInventoryData(uint32_t item_id)
+void AccountInventoryWindow::GetItemInventoryData(uint32_t item_id, ItemInventoryData& item_inventory)
 {
-    ItemInventoryData item_inventory;
+    item_inventory.total = 0;
+    item_inventory.storage = 0;
+    item_inventory.characters.clear();
     const auto hovered_item = GW::Items::GetItemById(item_id);
-    if (!hovered_item) return item_inventory;
+    if (!hovered_item) return;
 
     const auto description = GetItemEncDescription(hovered_item);
     std::map<std::string, uint32_t> character_quantities;
@@ -1585,7 +1587,6 @@ AccountInventoryWindow::ItemInventoryData AccountInventoryWindow::GetItemInvento
             item_inventory.characters.emplace_back(character, quantity);
         }
     }
-    return item_inventory;
 }
 
 void AccountInventoryWindow::Initialize()
