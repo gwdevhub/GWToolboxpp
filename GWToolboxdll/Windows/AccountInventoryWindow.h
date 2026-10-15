@@ -30,6 +30,7 @@ public:
     };
 
     struct ItemInventoryData {
+        uint32_t item_id = 0;
         uint32_t total = 0;
         uint32_t storage = 0;
         std::vector<std::pair<std::string, uint32_t>> characters;

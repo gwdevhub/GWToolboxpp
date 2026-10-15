@@ -1545,6 +1545,8 @@ namespace {
 
 void AccountInventoryWindow::GetItemInventoryData(uint32_t item_id, ItemInventoryData& item_inventory)
 {
+    if (item_inventory.item_id == item_id) return;
+    item_inventory.item_id = item_id;
     item_inventory.total = 0;
     item_inventory.storage = 0;
     item_inventory.characters.clear();
