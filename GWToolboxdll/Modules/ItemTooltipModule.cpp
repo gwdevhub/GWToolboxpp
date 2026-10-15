@@ -18,6 +18,7 @@
 #include <Modules/ItemDescriptionHandler.h>
 #include <Modules/ItemTooltipModule.h>
 #include <Modules/PriceCheckerModule.h>
+#include <Windows/AccountInventoryWindow.h>
 #include <Windows/DailyQuestsWindow.h>
 
 #include <Utils/GuiUtils.h>
@@ -52,6 +53,7 @@ namespace ItemTooltipSettings {
         bool show_nicholas_info = true;
         Colors::SettingColor nicholas_color = nicholas_color_default;
         bool show_trader_prices = true;
+        bool show_account_inventory = false;
         Colors::SettingColor price_color = price_color_default;
         uint32_t high_price_threshold = 1000;
         bool disable_item_descriptions_in_outpost = false;
@@ -92,6 +94,30 @@ namespace {
     {
         const auto col_str = std::format(L"<c={}>", col);
         return std::format(L"{}\x2{}\x2{}", EncodedLiteral(col_str), str, EncodedColorEndTag);
+    }
+
+    // -------------------------------------------------------------------------
+    // Account inventory section
+    // -------------------------------------------------------------------------
+    void AppendAccountInventoryInfo(const uint32_t item_id, std::wstring& description)
+    {
+        const auto item_inventory = AccountInventoryWindow::GetItemInventoryData(item_id);
+        if (!item_inventory.total) return;
+        const auto original_description = description;
+        if (item_inventory.total == 1) {
+            if (!description.empty()) description += L"\x2";
+            description += EncodedNewParagraph + L"\x2" + EncodedColouredString(EncodedLiteral(std::format(L"Account quantity: {}", item_inventory.total)), settings.price_color);
+            if (!GW::UI::IsValidEncStr(description.c_str())) description = original_description;
+            return;
+        }
+        auto section = EncodedNewParagraph + L"\x2" + EncodedColouredString(EncodedLiteral(std::format(L"Account quantity: {} (Storage: {})", item_inventory.total, item_inventory.storage)), settings.price_color);
+        for (const auto& [character, quantity] : item_inventory.characters) {
+            section += EncodedNewLine;
+            section += EncodedColouredString(EncodedLiteral(std::format(L"  - {}: {}", TextUtils::StringToWString(character), quantity)), Colors::Grey());
+        }
+        if (!description.empty()) description += L"\x2";
+        description += section;
+        if (!GW::UI::IsValidEncStr(description.c_str())) description = original_description;
     }
 
     std::wstring EncodedCurrencyString(uint32_t price, bool abbreviated, uint32_t high_threshold, Color high_threshold_color)
@@ -361,6 +387,7 @@ namespace {
         if (settings.show_salvage_info) AppendSalvageInfo(item_id, tmp_item_description);
         if (settings.show_trader_prices) AppendPriceInfo(item_id, tmp_item_description);
         if (settings.show_nicholas_info) AppendNicholasInfo(item_id, tmp_item_description);
+        if (settings.show_account_inventory) AppendAccountInventoryInfo(item_id, tmp_item_description);
 
         if (!tmp_item_description.empty()) {
             if (GW::UI::IsValidEncStr(tmp_item_description.data())) {
@@ -405,6 +432,7 @@ namespace {
                 if (settings.show_salvage_info) AppendSalvageInfo(item_id, tmp_item_name_tag);
                 if (settings.show_trader_prices) AppendPriceInfo(item_id, tmp_item_name_tag);
                 if (settings.show_nicholas_info) AppendNicholasInfo(item_id, tmp_item_name_tag);
+                if (settings.show_account_inventory) AppendAccountInventoryInfo(item_id, tmp_item_name_tag);
                 if (cached == name_tag_sections_cache.end())
                     cached = name_tag_sections_cache.emplace(item_id, NameTagSections{}).first;
                 cached->second.built_time = current_time;
@@ -562,6 +590,7 @@ void ItemTooltipModule::DrawSettingsInternal()
     }
     ImGui::SliderInt("High price threshold", (int*)&settings.high_price_threshold, 100, 50000);
     ImGui::ShowHelp("Prices above this threshold will be highlighted in gold");
+    ImGui::CheckboxWithHelp("Show account inventory in item tooltip", &settings.show_account_inventory, "Show account quantity, storage quantity, and the characters holding this item");
     ImGui::NewLine();
 }
 
