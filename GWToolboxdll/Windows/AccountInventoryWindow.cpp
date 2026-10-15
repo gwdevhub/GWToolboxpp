@@ -1543,7 +1543,53 @@ namespace {
 
 } // namespace
 
+void AccountInventoryWindow::GetItemInventoryData(uint32_t item_id, ItemInventoryData& item_inventory)
+{
+    if (item_inventory.item_id == item_id) return;
+    item_inventory.item_id = item_id;
+    item_inventory.total = 0;
+    item_inventory.storage = 0;
+    item_inventory.characters.clear();
+    const auto hovered_item = GW::Items::GetItemById(item_id);
+    if (!hovered_item) return;
 
+    const auto description = GetItemEncDescription(hovered_item);
+    std::map<std::string, uint32_t> character_quantities;
+    auto matches = [&](const Item& inventory_item) {
+        return inventory_item.model_id == hovered_item->model_id && inventory_item.description.encoded() == description;
+    };
+    for (const auto& [account_key, account] : accounts) {
+        for (const auto& [bag_id, bag] : account.chest) {
+            for (const auto& [slot, inventory_item] : bag.items) {
+                if (!matches(inventory_item)) continue;
+                item_inventory.total += inventory_item.quantity;
+                item_inventory.storage += inventory_item.quantity;
+            }
+        }
+        for (const auto& [character_name, character] : account.characters) {
+            for (const auto& [bag_id, bag] : character.bags) {
+                if (bag_id == GW::Constants::Bag::Equipped_Items) continue;
+                for (const auto& [slot, inventory_item] : bag.items) {
+                    if (inventory_item.equipped || !matches(inventory_item)) continue;
+                    item_inventory.total += inventory_item.quantity;
+                    character_quantities[character_name] += inventory_item.quantity;
+                }
+            }
+            for (const auto& [hero_id, hero] : character.heroes) {
+                for (const auto& [slot, inventory_item] : hero.bag.items) {
+                    if (IsHeroArmor(hero_id, slot) || !matches(inventory_item)) continue;
+                    item_inventory.total += inventory_item.quantity;
+                    character_quantities[character_name] += inventory_item.quantity;
+                }
+            }
+        }
+    }
+    if (item_inventory.total > 1) {
+        for (const auto& [character, quantity] : character_quantities) {
+            item_inventory.characters.emplace_back(character, quantity);
+        }
+    }
+}
 
 void AccountInventoryWindow::Initialize()
 {

@@ -2,6 +2,9 @@
 
 #include <GWCA/Constants/Constants.h>
 #include <ToolboxWindow.h>
+#include <string>
+#include <utility>
+#include <vector>
 
 class AccountInventoryWindow : public ToolboxWindow {
     AccountInventoryWindow() { show_menubutton = can_show_in_main_window; }
@@ -26,6 +29,13 @@ public:
         bool hide_unclaimed_items = false;
     };
 
+    struct ItemInventoryData {
+        uint32_t item_id = 0;
+        uint32_t total = 0;
+        uint32_t storage = 0;
+        std::vector<std::pair<std::string, uint32_t>> characters;
+    };
+
     void Initialize() override;
     void Terminate() override;
     void Update(float delta) override;
@@ -38,6 +48,7 @@ public:
 
     void HandleHeroBag(GW::Constants::HeroID hero_id);
     void GatherAllInventories();
+    static void GetItemInventoryData(uint32_t item_id, ItemInventoryData& item_inventory);
 
     // handle inventory generation during map load
     void PreMapLoad();
