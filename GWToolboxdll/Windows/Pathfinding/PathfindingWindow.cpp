@@ -2471,7 +2471,7 @@ static void UpdateNavmeshOverlay()
         if (was_on) {
             GameWorldRenderer::ClearNavmeshLines();
             DeferRemoveLines(navmesh_edge_lines);
-            cached_edges.clear();
+            decltype(cached_edges){}.swap(cached_edges);
             built_map = GW::Constants::MapID::None;
             was_on = false;
         }
