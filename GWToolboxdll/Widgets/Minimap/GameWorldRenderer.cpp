@@ -123,7 +123,6 @@ namespace {
     constexpr auto ALTITUDE_UNKNOWN = TerrainDrape::kNoAltitude;
 
     // ===== Batched navmesh-overlay line buffer =====
-    // One line-list buffer for the navmesh overlay's tens of thousands of edges (per-line CustomLines were O(N^2) per map-load and re-draped on every move): drape it incrementally on the game thread, draw in a single call, render-thread only (no mutex).
     struct NavmeshBatch {
         GW::Constants::MapID map_id = GW::Constants::MapID::None;     // map the LIVE verts belong to
         GW::Constants::MapID pending_map = GW::Constants::MapID::None; // map `lines`/`staging` are being built for
@@ -138,8 +137,6 @@ namespace {
     };
     NavmeshBatch navmesh_batch;
     float navmesh_sample_spacing = 5.f; // gw between surface samples when draping overlay edges (user-tunable)
-    // Hard ceiling on draped vertices: a long edge at the minimum 1.f spacing can demand far more samples than the
-    // process has memory for. Stop growing before that happens rather than let the allocator fail mid-build.
     constexpr size_t kMaxNavmeshBatchVerts = 4'000'000;
     bool navmesh_batch_capped_warned = false;
 
@@ -153,51 +150,54 @@ namespace {
         if (navmesh_clear_requested) GameWorldRenderer::ClearNavmeshLines();
     }
 
-    // Drape a per-frame, wall-clock-bounded slice into `staging`; LIVE `verts` keep drawing until complete, then swap (double-buffer) so a rebuild never blanks the overlay.
     void StepNavmeshBatchBuild()
     {
         auto& b = navmesh_batch;
         if (!b.building) return;
         const GW::PathingMapArray* pm = GW::Map::GetPathingMap();
         const uint32_t num_planes = pm ? static_cast<uint32_t>(pm->size()) : 0;
-        if (!num_planes) return; // pathing map not ready yet; retry next frame
+        if (!num_planes) return;
+        const auto budget_timer = TIMER_INIT();
+        const auto spacing = std::max(1.f, navmesh_sample_spacing);
+        for (; b.build_cursor < b.lines.size(); ++b.build_cursor) {
+            if (TIMER_DIFF(budget_timer) >= 2) break;
+            if (b.staging.size() >= kMaxNavmeshBatchVerts) break;
+            const auto& ln = b.lines[b.build_cursor];
+            const float dx = ln.b.x - ln.a.x, dy = ln.b.y - ln.a.y;
+            const auto length = std::hypot(dx, dy);
+            if (!std::isfinite(length)) continue;
+            const auto steps = static_cast<int>(std::clamp(length / spacing, 1.f, 1'000'000.f));
+            const auto samples = std::min(steps, static_cast<int>((kMaxNavmeshBatchVerts - b.staging.size()) / 2));
+            const auto needed = b.staging.size() + 2 * static_cast<size_t>(samples);
+            if (needed > b.staging.capacity()) {
+                b.staging.reserve(std::min(kMaxNavmeshBatchVerts, std::max(needed, b.staging.capacity() + b.staging.capacity() / 2)));
+            }
+            const auto plane = ln.a.zplane;
+            auto surfaceZ = [&](float x, float y, float fallback) -> float {
+                const float a = TerrainDrape::QueryAltAt(x, y, plane);
+                if (a != 0.f) return a;
+                const float c = TerrainDrape::ClosestZ(x, y, num_planes, fallback);
+                return c == ALTITUDE_UNKNOWN ? fallback : c;
+            };
+            float prev = surfaceZ(ln.a.x, ln.a.y, 0.f);
+            float px = ln.a.x, py = ln.a.y, pz = prev;
+            for (int s = 1; s <= samples; ++s) {
+                const float t = static_cast<float>(s) / static_cast<float>(steps);
+                const float x = ln.a.x + dx * t, y = ln.a.y + dy * t;
+                const float z = surfaceZ(x, y, prev);
+                b.staging.push_back({px, py, pz, ln.color});
+                b.staging.push_back({x, y, z, ln.color});
+                px = x; py = y; pz = z; prev = z;
+            }
+        }
         if (b.staging.size() >= kMaxNavmeshBatchVerts) {
             if (!navmesh_batch_capped_warned) {
                 navmesh_batch_capped_warned = true;
                 Log::Error("GameWorldRenderer: navmesh overlay hit the %zu-vertex cap; raise the sample spacing to see the rest of the mesh.", kMaxNavmeshBatchVerts);
             }
-            b.build_cursor = b.lines.size(); // treat as complete so the partial batch still swaps in and draws
-        }
-        const auto budget_timer = TIMER_INIT();
-        const float spacing = std::max(1.f, navmesh_sample_spacing); // user-tunable: smaller = closer to the floor, more verts
-        for (; b.build_cursor < b.lines.size(); ++b.build_cursor) {
-            if (TIMER_DIFF(budget_timer) >= 2) break; // budget spent; resume next frame
-            if (b.staging.size() >= kMaxNavmeshBatchVerts) break; // cap hit mid-line; picked up by the check above next call
-            const auto& ln = b.lines[b.build_cursor];
-            const float dx = ln.b.x - ln.a.x, dy = ln.b.y - ln.a.y;
-            const int steps = std::min(1'000'000, std::max(1, static_cast<int>(std::sqrt(dx * dx + dy * dy) / spacing)));
-            // Drape each sample on the edge's OWN plane (an edge lies on a single trapezoid, so that plane's heightfield
-            // IS its surface): unlike a globally-closest query, an edge under a bridge stays on the ground.
-            const uint32_t plane = ln.a.zplane; // == ln.b.zplane: both verts come from the same trapezoid
-            auto surfaceZ = [&](float x, float y, float fallback) -> float {
-                const float a = TerrainDrape::QueryAltAt(x, y, plane);
-                if (a != 0.f) return a;                                      // edge's plane has floor here (the common case)
-                const float c = TerrainDrape::ClosestZ(x, y, num_planes, fallback); // only at an edge lip with no plane surface
-                return c == ALTITUDE_UNKNOWN ? fallback : c;
-            };
-            float prev = surfaceZ(ln.a.x, ln.a.y, 0.f);
-            float px = ln.a.x, py = ln.a.y, pz = prev;
-            for (int s = 1; s <= steps; ++s) {
-                const float t = static_cast<float>(s) / static_cast<float>(steps);
-                const float x = ln.a.x + dx * t, y = ln.a.y + dy * t;
-                const float z = surfaceZ(x, y, prev);
-                b.staging.push_back({px, py, pz, ln.color}); // LINELIST: each consecutive pair is one sub-segment
-                b.staging.push_back({x, y, z, ln.color});
-                px = x; py = y; pz = z; prev = z;
-            }
+            b.build_cursor = b.lines.size();
         }
         if (b.build_cursor >= b.lines.size()) {
-            // Staging complete: swap it in as the live, drawn set (atomic — no blank frame).
             b.verts.swap(b.staging);
             b.staging.clear();
             b.map_id = b.pending_map;
@@ -206,7 +206,6 @@ namespace {
         }
     }
 
-    // (Re)create and upload the batch VB when it grew or its contents changed.
     bool EnsureNavmeshBatchVb(IDirect3DDevice9* device)
     {
         auto& b = navmesh_batch;
@@ -214,7 +213,7 @@ namespace {
         if (need < 2) return false;
         if (!b.vb || b.vb_cap < need) {
             if (b.vb) { b.vb->Release(); b.vb = nullptr; }
-            const size_t cap = need + need / 2; // headroom so the growing build doesn't reallocate every frame
+            const auto cap = std::min(kMaxNavmeshBatchVerts, need + need / 2);
             if (device->CreateVertexBuffer(static_cast<UINT>(cap * sizeof(D3DVertex)), D3DUSAGE_WRITEONLY, D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &b.vb, nullptr) != D3D_OK) {
                 b.vb_cap = 0;
                 return false;
@@ -224,7 +223,6 @@ namespace {
         }
         if (b.vb_dirty) {
             void* mem = nullptr;
-            // flags=0, not D3DLOCK_DISCARD: DISCARD needs D3DUSAGE_DYNAMIC but this is MANAGED (like RiverModule's VB), and the batch is rebuilt rarely (once per map).
             if (b.vb->Lock(0, static_cast<UINT>(need * sizeof(D3DVertex)), &mem, 0) != D3D_OK || !mem) return false;
             memcpy(mem, b.verts.data(), need * sizeof(D3DVertex));
             b.vb->Unlock();
@@ -687,15 +685,9 @@ void GameWorldRenderer::SetNavmeshWorldMapLines(GW::Constants::MapID map_id, std
 void GameWorldRenderer::ClearNavmeshLines()
 {
     navmesh_clear_requested = false;
-    navmesh_batch.lines.clear();
-    navmesh_batch.staging.clear();
-    navmesh_batch.verts.clear();
-    navmesh_batch.build_cursor = 0;
-    navmesh_batch.building = false;
-    navmesh_batch.map_id = GW::Constants::MapID::None;
-    navmesh_batch.pending_map = GW::Constants::MapID::None;
-    navmesh_batch.vb_dirty = true;
-    navmesh_worldmap_lines.clear();
+    if (navmesh_batch.vb) navmesh_batch.vb->Release();
+    navmesh_batch = {};
+    decltype(navmesh_worldmap_lines){}.swap(navmesh_worldmap_lines);
     navmesh_worldmap_map = GW::Constants::MapID::None;
 }
 
@@ -716,12 +708,7 @@ void GameWorldRenderer::Terminate()
         compositor_token = 0;
     }
     renderables.clear();
-    if (navmesh_batch.vb) {
-        navmesh_batch.vb->Release();
-        navmesh_batch.vb = nullptr;
-    }
-    navmesh_batch.lines.clear();
-    navmesh_batch.verts.clear();
+    ClearNavmeshLines();
     ToolboxModule::Terminate();
 }
 
