@@ -288,12 +288,15 @@ namespace {
         if (!item_inventory.total) return;
         const auto original_description = description;
         if (item_inventory.total == 1) {
-            if (!description.empty()) description += L"\x2";
-            description += EncodedNewParagraph + L"\x2" + EncodedColouredString(EncodedLiteral(std::format(L"Account quantity: {}", item_inventory.total)), settings.price_color);
+            if (!description.empty()) {
+                description += L"\x2" + EncodedNewParagraph + L"\x2";
+            }
+            description += EncodedColouredString(EncodedLiteral(std::format(L"Account quantity: {}", item_inventory.total)), settings.price_color);
             if (!GW::UI::IsValidEncStr(description.c_str())) description = original_description;
             return;
         }
-        auto section = EncodedNewParagraph + L"\x2" + EncodedColouredString(EncodedLiteral(std::format(L"Account quantity: {} (Storage: {})", item_inventory.total, item_inventory.storage)), settings.price_color);
+        auto section = description.empty() ? std::wstring{} : EncodedNewParagraph + L"\x2";
+        section += EncodedColouredString(EncodedLiteral(std::format(L"Account quantity: {} (Storage: {})", item_inventory.total, item_inventory.storage)), settings.price_color);
         for (const auto& [character, quantity] : item_inventory.characters) {
             section += EncodedNewLine;
             section += EncodedColouredString(EncodedLiteral(std::format(L"  - {}: {}", TextUtils::StringToWString(character), quantity)), Colors::Grey());
