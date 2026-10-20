@@ -1,0 +1,71 @@
+# The Linux cross-toolchain for GWToolboxdll (x86 Windows target): clang-cl, lld-link, the xwin
+# MSVC/Windows SDK, vkd3d-compiler and vcpkg. build.sh rebuilds it only when this file or
+# setup-toolchain.sh changes, because Docker caches each layer by its inputs.
+FROM ubuntu:24.04
+
+# autoconf/automake/libtool/bison/flex/libjson-perl/libvulkan-dev are all here for vkd3d,
+# which builds from source (see setup-toolchain.sh). Its configure hard-requires Vulkan even
+# though only libvkd3d-shader is wanted and nothing here renders with Vulkan.
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        ca-certificates \
+        curl \
+        gnupg \
+        git \
+        ninja-build \
+        pkg-config \
+        python3 \
+        tar \
+        xz-utils \
+        zip \
+        unzip \
+        build-essential \
+        autoconf \
+        automake \
+        libtool \
+        bison \
+        flex \
+        libjson-perl \
+        libvulkan-dev \
+    && apt-get clean -y \
+    && rm -rf /var/lib/apt/lists/*
+
+# NOT Ubuntu's clang: 24.04 ships 18, and the MSVC STL that xwin fetches refuses it outright
+# ("error STL1000: Unexpected compiler version, expected Clang 19.0.0 or newer"). Take a pinned
+# build from LLVM's own apt repo instead. Ubuntu also never ships a clang-cl binary - it is the
+# same executable as clang, selected by argv[0] - so symlink it, along with the llvm-* tools.
+ARG LLVM_VERSION=21
+RUN curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key -o /etc/apt/trusted.gpg.d/llvm.asc \
+    && echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-${LLVM_VERSION} main" > /etc/apt/sources.list.d/llvm.list \
+    && apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        clang-${LLVM_VERSION} lld-${LLVM_VERSION} llvm-${LLVM_VERSION} \
+    && ln -sf "/usr/lib/llvm-${LLVM_VERSION}/bin/clang" /usr/bin/clang-cl \
+    && for tool in clang lld-link llvm-rc llvm-lib llvm-mt llvm-ar; do \
+           ln -sf "/usr/lib/llvm-${LLVM_VERSION}/bin/${tool}" "/usr/bin/${tool}"; \
+       done \
+    && apt-get clean -y \
+    && rm -rf /var/lib/apt/lists/*
+
+# The repo's CMakeLists.txt requires >= 3.29; Ubuntu 24.04's apt cmake is 3.28.
+ARG CMAKE_VERSION=4.3.3
+RUN curl -fsSL "https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-linux-x86_64.tar.gz" \
+        | tar -xz -C /opt \
+    && ln -s "/opt/cmake-${CMAKE_VERSION}-linux-x86_64/bin/cmake" /usr/local/bin/cmake \
+    && ln -s "/opt/cmake-${CMAKE_VERSION}-linux-x86_64/bin/ctest" /usr/local/bin/ctest \
+    && ln -s "/opt/cmake-${CMAKE_VERSION}-linux-x86_64/bin/cpack" /usr/local/bin/cpack
+
+# vcpkg still builds its own host tools with the native g++ (build-essential above); the
+# x86-windows target build uses clang via the preset's chainloaded toolchain.
+RUN git clone https://github.com/microsoft/vcpkg.git /opt/vcpkg \
+    && /opt/vcpkg/bootstrap-vcpkg.sh -disableMetrics
+ENV VCPKG_ROOT=/opt/vcpkg
+ENV PATH="${VCPKG_ROOT}:${PATH}"
+
+# Bake the SDK and vkd3d into the image so builds don't fetch ~800MB each time. The header-casing
+# pass in setup-toolchain.sh needs the sources, so the build stage runs it again.
+ENV TOOLCHAIN_ROOT=/opt/xwin-toolchain
+COPY scripts/xwin/setup-toolchain.sh /opt/xwin/setup-toolchain.sh
+RUN chmod +x /opt/xwin/setup-toolchain.sh && /opt/xwin/setup-toolchain.sh
+
+ENV XWIN_SDK=/opt/xwin-toolchain/xwin-sdk
+ENV VKD3D_COMPILER=/opt/xwin-toolchain/vkd3d-1.19/vkd3d-compiler

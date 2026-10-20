@@ -1,0 +1,27 @@
+# Only what the build reads, so the Docker context stays around 12MB rather than the whole checkout.
+# imgui is fetched by CMake, and site/, docs/ and most of resources/ aren't built.
+**
+!CMakeLists.txt
+!CMakePresets.json
+!vcpkg.json
+!vcpkg-configuration.json
+!cmake/**
+!Core/**
+!GWToolbox/**
+!GWToolboxdll/**
+!RestClient/**
+!bake_pathing/**
+!plugins/**
+!vcpkg-overlays/**
+!scripts/xwin/**
+!tools/*.py
+!tools/bake_cartography/**
+!resources/gwtoolbox.ico
+!Dependencies/easywsclient/**
+!Dependencies/GWCA/**
+!Dependencies/imgui_test_engine_hooks/**
+!Dependencies/nativefiledialog/**
+!Dependencies/steamworks_sdk/**
+!Dependencies/wintoast/**
+Dependencies/GWCA/wasm
+**/*.aps
