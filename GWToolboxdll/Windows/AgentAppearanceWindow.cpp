@@ -808,7 +808,7 @@ void AgentAppearanceWindow::DrawSettings()
     ImGui::Combo("Default Shape", reinterpret_cast<int*>(&default_shape), items.data(), items.size());
     ImGui::ShowHelp("The default shape of agents.");
     Colors::DrawSettingHueWheel("Default Color", &color_default);
-    ImGui::ShowHelp("Used for marker, border and name tag colours when no matching rule overrides them.");
+    ImGui::ShowHelp("Used for marker and border colours when no matching rule overrides them.");
     ImGui::SliderFloat("Agent Border thickness", &agent_border_thickness, 0.f, 100.f, "%.0f");
     ImGui::SliderFloat("Target Border thickness", &target_border_thickness, 0.f, 100.f, "%.0f");
     Colors::DrawSettingHueWheel("Agent modifier", &color_agent_modifier);
@@ -1166,7 +1166,11 @@ void AgentAppearanceWindow::RefreshMatches(const GW::Agent* agent)
 
 bool AgentAppearanceWindow::ApplyNameTagColor(const GW::Agent* agent, Color& color)
 {
-    return GetAgentAppearance(agent, nullptr, nullptr, nullptr, nullptr, &color);
+    // Only overwrite the game's colour when a rule sets one; GetAgentAppearance fills unmatched outputs with color_default.
+    Color matched = color;
+    if (!GetAgentAppearance(agent, nullptr, nullptr, nullptr, nullptr, &matched)) return false;
+    color = matched;
+    return true;
 }
 
 void AgentAppearanceWindow::InvalidateAppearance(const uint32_t agent_id)
