@@ -1,5 +1,7 @@
 #include "stdafx.h"
 
+#include <atomic>
+
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/UIMgr.h>
@@ -7,9 +9,11 @@
 #include <Defines.h>
 #include <Logger.h>
 #include <Color.h>
+#include <GWToolbox.h>
 
 #include <Modules/TwitchModule.h>
 #include <ImGuiAddons.h>
+#include <Utils/SettingsDoc.h>
 #include <Utils/TextUtils.h>
 
 #include <Modules/Resources.h>
@@ -24,6 +28,7 @@ namespace twitch_api {
 
     struct TokenResponse {
         std::string access_token;
+        std::string refresh_token;
         std::string error;
     };
 }
@@ -33,8 +38,7 @@ namespace {
 
     TwitchModule::Settings settings;
 
-    // IRC details
-    int irc_port = 443; // Not 6667, just in case router blocks it.
+    int irc_port = 443;
     const char* client_id = "8vlivyypw5qmaxtknh44t98h9uun6l";
 
     bool pending_connect = false;
@@ -48,44 +52,87 @@ namespace {
     GW::HookEntry SendChatCallback_Entry;
     GW::HookEntry StartWhisperCallback_Entry;
 
-    bool fetch_oauth_token = false;
-    bool cancel_fetch_oauth_token = false;
+    std::atomic<bool> fetch_oauth_token = false;
+    std::atomic<bool> cancel_fetch_oauth_token = false;
+    std::atomic<bool> pending_token_refresh = false;
+    std::atomic<bool> token_refresh_attempted = false;
+
+    void StoreOauthToken(twitch_api::TokenResponse token)
+    {
+        settings.irc_password = std::move(token.access_token);
+        settings.refresh_token = std::move(token.refresh_token);
+        const auto doc = GWToolbox::GetSettingsDoc();
+        doc->SetStruct(TwitchModule::Instance().Name(), settings);
+        if (!doc->SaveFolder()) {
+            Log::Error("Failed to save Twitch authorization to settings.");
+        }
+        Log::Info("Twitch Oauth token updated successfully");
+    }
+
+    void RefreshOauthToken()
+    {
+        if (fetch_oauth_token || cancel_fetch_oauth_token || !settings.twitch_enabled) return;
+        if (settings.refresh_token.empty()) {
+            Log::Error("Twitch authorization expired. Get a new Oauth token in settings to enable automatic renewal.");
+            return;
+        }
+        fetch_oauth_token = true;
+        const auto request = std::format("client_id={}&grant_type=refresh_token&refresh_token={}",
+            TextUtils::UrlEncode(client_id), TextUtils::UrlEncode(settings.refresh_token));
+        Resources::Post("https://id.twitch.tv/oauth2/token", request,
+            [password = settings.irc_password, refresh_token = settings.refresh_token](const bool success, const std::string& response, void*) {
+                fetch_oauth_token = false;
+                if (settings.irc_password != password || settings.refresh_token != refresh_token) return;
+                twitch_api::TokenResponse token{};
+                if (!success || glz::read<json_opts>(token, response) || token.access_token.empty() || token.refresh_token.empty()) {
+                    Log::Error("Failed to refresh Twitch authorization. Retry connecting, or get a new Oauth token in settings if authorization has expired or been revoked.");
+                    return;
+                }
+                StoreOauthToken(std::move(token));
+                pending_connect = settings.twitch_enabled && !cancel_fetch_oauth_token;
+            });
+    }
+
     void GetOauthToken() {
-        if (fetch_oauth_token) return;
+        if (fetch_oauth_token || cancel_fetch_oauth_token) return;
         fetch_oauth_token = true;
         Resources::EnqueueWorkerTask([] {
             const auto scopes = "chat:edit chat:read";
-            const auto url = "https://id.twitch.tv/oauth2/device"; // No parameters in URL
-            std::string request_body = std::format("client_id={}&scope={}", client_id, scopes);
+            const auto url = "https://id.twitch.tv/oauth2/device";
+            const auto request_body = std::format("client_id={}&scopes={}", TextUtils::UrlEncode(client_id), TextUtils::UrlEncode(scopes));
             std::string response;
-            if (!Resources::Post(url, request_body, response)) { // Set correct content type
-                return Log::Warning(response.c_str()), fetch_oauth_token = false;
+            if (!Resources::Post(url, request_body, response)) {
+                Log::Warning(response.c_str());
+                fetch_oauth_token = false;
+                return;
             }
 
             twitch_api::DeviceAuthResponse auth{};
             if (auto ec = glz::read<json_opts>(auth, response); ec) {
-                return Log::Warning("Failed to parse Twitch auth response"), fetch_oauth_token = false;
+                Log::Warning("Failed to parse Twitch auth response");
+                fetch_oauth_token = false;
+                return;
             }
             if (auth.verification_uri.empty() || auth.device_code.empty() || auth.interval <= 0) {
-                return Log::Warning("Invalid or missing response fields for Twitch auth"), fetch_oauth_token = false;
+                Log::Warning("Invalid or missing response fields for Twitch auth");
+                fetch_oauth_token = false;
+                return;
             }
 
             ShellExecuteA(nullptr, "open", auth.verification_uri.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
 
-            std::string access_token;
+            twitch_api::TokenResponse authorized_token{};
 
-            // Poll Twitch for token
             const auto token_url = "https://id.twitch.tv/oauth2/token";
             auto start_time = TIMER_INIT();
             int interval = auth.interval;
 
-            while (access_token.empty() && !cancel_fetch_oauth_token) {
+            while (authorized_token.access_token.empty() && !cancel_fetch_oauth_token) {
                 if (TIMER_DIFF(start_time) > 30000) {
                     break;
                 }
-                std::this_thread::sleep_for(std::chrono::seconds(interval)); // Wait for polling interval
+                std::this_thread::sleep_for(std::chrono::seconds(interval));
 
-                // Manually format as form-urlencoded data
                 std::string request_data = std::format("client_id={}&scopes={}&device_code={}&grant_type=urn:ietf:params:oauth:grant-type:device_code",
                         TextUtils::UrlEncode(client_id),
                         TextUtils::UrlEncode(scopes),
@@ -101,7 +148,7 @@ namespace {
                     continue;
                 }
                 if (!token.access_token.empty()) {
-                    access_token = std::move(token.access_token);
+                    authorized_token = std::move(token);
                     break;
                 }
                 if (!token.error.empty()) {
@@ -109,18 +156,22 @@ namespace {
                         continue;
                     }
                     if (token.error == "slow_down") {
-                        interval += 5; // Increase wait time
+                        interval += 5;
                         continue;
                     }
                     Log::Warning(token.error.c_str());
                     break;
                 }
             }
-            if (!access_token.empty()) {
-                settings.irc_password = std::move(access_token);
-                Log::Info("Oauth token updated successfully");
-            }
-            return fetch_oauth_token = false;
+            Resources::EnqueueMainTask([token = std::move(authorized_token)]() mutable {
+                if (!token.access_token.empty()) {
+                    StoreOauthToken(std::move(token));
+                    token_refresh_attempted = false;
+                    pending_disconnect = true;
+                    pending_connect = settings.twitch_enabled && !cancel_fetch_oauth_token;
+                }
+                fetch_oauth_token = false;
+            });
         });
     }
 
@@ -137,11 +188,9 @@ namespace {
             message_ws[message_len++] = '*';
         }
         for (size_t i = is_emote ? 8 : 0; i < original_len; i++) {
-            // Break on the end of the message
             if (message[i] == '\x1' || !message[i]) {
                 break;
             }
-            // Double escape backsashes
             if (message[i] == '\\') {
                 message_ws[message_len++] = message[i];
             }
@@ -159,17 +208,15 @@ namespace {
             return;
         }
         GW::GameThread::Enqueue([message_ws, sender_ws] {
-            // NOTE: Messages are sent to the GWCA_1 channel - unused atm as far as i can see
             GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GWCA1, message_ws, sender_ws.c_str());
             delete[] message_ws;
         });
     }
 
-    // ReSharper disable once CppParameterMayBeConstPtrOrRef
     int OnJoin(const char* params, irc_reply_data* hostd, void*)
     {
         if (!params[0] || !settings.show_messages) {
-            return 0; // Empty msg
+            return 0;
         }
         wchar_t buf[600];
         if (strcmp(hostd->nick, settings.irc_username.c_str()) == 0) {
@@ -189,11 +236,10 @@ namespace {
         return 0;
     }
 
-    // ReSharper disable once CppParameterMayBeConstPtrOrRef
     int OnLeave(const char* params, irc_reply_data* hostd, void*)
     {
         if (!params[0] || !settings.show_messages || !settings.notify_on_user_leave) {
-            return 0; // Empty msg
+            return 0;
         }
 
         wchar_t buf[600];
@@ -202,13 +248,12 @@ namespace {
         return 0;
     }
 
-    // ReSharper disable once CppParameterMayBeConstPtrOrRef
     int OnConnected(const char* params, irc_reply_data*, void* wparam)
     {
         const auto conn = static_cast<IRC*>(wparam);
+        token_refresh_attempted = false;
         settings.irc_username = params;
         settings.irc_username.erase(settings.irc_username.find_first_of(' '));
-        // Channel == username. This could be changed to connect to other Twitch channels/IRC channels.
         if (settings.irc_channel.empty()) {
             settings.irc_channel = settings.irc_username;
         }
@@ -220,11 +265,10 @@ namespace {
         return 0;
     }
 
-    // ReSharper disable once CppParameterMayBeConstPtrOrRef
     int OnMessage(const char* params, irc_reply_data* hostd, void*)
     {
         if (!params[0] || !settings.show_messages) {
-            return 0; // Empty msg
+            return 0;
         }
         const std::wstring message_ws = TextUtils::StringToWString(&params[1]);
         WriteChat(message_ws.c_str(), hostd->nick);
@@ -232,16 +276,21 @@ namespace {
         return 0;
     }
 
-    // ReSharper disable once CppParameterMayBeConstPtrOrRef
     int OnNotice(const char* params, irc_reply_data*, void* conn)
     {
         Log::Log("NOTICE: %s\n", params);
+        if (*params == ':') ++params;
         if (strcmp(params, "Login authentication failed") == 0) {
-            Log::Error("Twitch Failed to connect - Invalid Oauth token");
             static_cast<IRC*>(conn)->disconnect();
+            if (!token_refresh_attempted.exchange(true)) {
+                pending_token_refresh = true;
+            }
+            else {
+                Log::Error("Twitch rejected the renewed Oauth token. Get a new Oauth token in settings.");
+            }
             return 0;
         }
-        if (params[1] && strcmp(&params[1], "Invalid NICK") == 0) {
+        if (strcmp(params, "Invalid NICK") == 0) {
             Log::Error("Twitch Failed to connect - Invalid Username");
             static_cast<IRC*>(conn)->disconnect();
             return 0;
@@ -256,7 +305,6 @@ namespace {
             return;
         }
         hooked = true;
-        // When starting a whisper to "<irc_nickname> @ <irc_channel>", rewrite recipient to be "<irc_channel>"
         RegisterUIMessageCallback(&StartWhisperCallback_Entry, GW::UI::UIMessage::kStartWhisper, [](GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*) {
             wchar_t* name = *(wchar_t**)wparam;
             if (!(name && *name)) {
@@ -278,7 +326,7 @@ namespace {
             std::string message = TextUtils::WStringToString(msg);
             const size_t sender_idx = message.find(',');
             if (sender_idx == std::string::npos) {
-                return; // Invalid sender
+                return;
             }
             const std::string to = message.substr(1, sender_idx - 1);
             if (to != settings.irc_alias) {
@@ -303,6 +351,9 @@ namespace {
 void TwitchModule::Initialize()
 {
     ToolboxModule::Initialize();
+    cancel_fetch_oauth_token = false;
+    pending_token_refresh = false;
+    token_refresh_attempted = false;
     SettingsRegistry::Register(this, settings);
 
     irc_conn.hook_irc_command("376", &OnConnected);
@@ -356,7 +407,7 @@ bool TwitchModule::Connect()
         printf("Invalid server name!\n");
         return false;
     }
-    if (settings.irc_password == "oauth:<your_token_here>") {
+    if (cancel_fetch_oauth_token || fetch_oauth_token || settings.irc_password.empty() || settings.irc_password == "oauth:<your_token_here>") {
         return false;
     }
     std::ranges::transform(
@@ -364,8 +415,6 @@ bool TwitchModule::Connect()
         [](const char c) -> char {
             return static_cast<char>(tolower(c));
         });
-    /*std::transform(irc_username.begin(), irc_username.end(), irc_username.begin(),
-        [](unsigned char c) { return std::tolower(c); });*/
     std::ranges::transform(
         settings.irc_channel, settings.irc_channel.begin(),
         [](const char c) -> char {
@@ -391,7 +440,10 @@ void TwitchModule::Update(const float)
     connected = irc_conn.is_connected();
     if (pending_disconnect) {
         Disconnect();
-        pending_connect = pending_disconnect = false;
+        pending_disconnect = false;
+    }
+    if (pending_token_refresh.exchange(false)) {
+        RefreshOauthToken();
     }
     if (pending_connect) {
         Connect();
@@ -407,6 +459,8 @@ void TwitchModule::DrawSettingsInternal()
     ImGui::PushID("twitch_settings");
     if (ImGui::Checkbox("Enable Twitch integration", &settings.twitch_enabled)) {
         Disconnect();
+        token_refresh_attempted = false;
+        pending_connect = settings.twitch_enabled;
     }
     ImGui::ShowHelp("Allows GWToolbox to send & receive messages with Twitch using the in-game chat window.");
     if (settings.twitch_enabled) {
@@ -417,6 +471,7 @@ void TwitchModule::DrawSettingsInternal()
                 pending_disconnect = true;
             }
             else {
+                token_refresh_attempted = false;
                 pending_connect = true;
             }
         }
@@ -437,7 +492,10 @@ void TwitchModule::DrawSettingsInternal()
 
         const float width = ImGui::GetContentRegionAvail().x / 2;
         ImGui::PushItemWidth(width);
-        ImGui::InputText("Twitch Oauth Token", settings.irc_password, 255, show_irc_password ? 0 : ImGuiInputTextFlags_Password);
+        if (ImGui::InputText("Twitch Oauth Token", settings.irc_password, 255, show_irc_password ? 0 : ImGuiInputTextFlags_Password)) {
+            settings.refresh_token.clear();
+            token_refresh_attempted = false;
+        }
         ImGui::PopItemWidth();
         ImGui::ShowHelp("Used to connect to Twitch.\ne.g. oauth:3fplxiscsq1550zdkf8z2kh1jk7mqs");
         ImGui::SameLine();

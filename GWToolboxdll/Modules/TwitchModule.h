@@ -26,6 +26,7 @@ public:
         std::string irc_server = "irc.chat.twitch.tv";
         std::string irc_username;
         std::string irc_password = "oauth:<your_token_here>";
+        std::string refresh_token;
         std::string irc_channel;
         bool twitch_enabled = true;
         bool show_messages = true;
