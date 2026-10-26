@@ -71,6 +71,22 @@ public:
 
     enum Shape_e { Shape_None = -1, Tear, Circle, Quad, BigCircle, Star };
 
+    static constexpr size_t LayerCount = 5;
+
+    struct MarkerAppearance {
+        Shape_e shape = Shape_None;
+        Color color = 0;
+        Color border_color = 0;
+        float border_thickness = 0.f;
+        float size = 0.f;
+    };
+
+    struct AgentAppearance {
+        std::array<MarkerAppearance, LayerCount> layers{};
+        uint8_t active_layers = 0;
+        std::optional<Color> name_tag_color;
+    };
+
     inline static bool show_hidden_npcs = false;
     inline static bool show_props_on_minimap = false;
     inline static float agent_border_thickness = 0.f;
@@ -153,6 +169,7 @@ public:
             std::optional<bool> override_text_color;
             std::optional<bool> override_border_color;
             bool stop_processing_rules = false;
+            int layer = 0;
         };
 
         struct LegacyFlags {
@@ -198,6 +215,7 @@ public:
         bool override_text_color = false;
         bool override_border_color = false;
         bool stop_processing_rules = false;
+        int layer = 0;
         Shape_e shape = Shape_None;
         float scale = 0.0f;
         AgentType agent_type = NPC;
@@ -216,9 +234,7 @@ public:
 
     static void GetAgentAppearanceRules(std::vector<AppearanceRule*>& out);
     static const std::vector<const AppearanceRule*>* GetAppearanceRules(const GW::Agent* agent);
-    static bool GetAgentAppearance(const GW::Agent* agent, Shape_e* shape_out = nullptr, Color* color_out = nullptr,
-        Color* border_color_out = nullptr, float* border_thickness_out = nullptr, Color* text_color_out = nullptr, float* size_out = nullptr,
-        std::vector<const AppearanceRule*>* matched_rules_out = nullptr);
+    static void GetAgentAppearance(const GW::Agent* agent, AgentAppearance& appearance);
     static Shape_e GetShape(const GW::Agent* agent);
     static Color GetColor(const GW::Agent* agent);
     static float GetSize(const GW::Agent* agent);
