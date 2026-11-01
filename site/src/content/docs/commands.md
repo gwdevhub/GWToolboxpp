@@ -30,6 +30,7 @@ GWToolbox++ adds a wide variety of chat commands that you trigger by typing them
 ## General
 
 - `/age2`: Print the current instance time to chat.
+- `/version`: Print the Guild Wars build, GWToolbox++ version (including any beta suffix), and operating system to your local Global chat for a support screenshot. On Wine, also includes the Wine version and host OS when available.
 - `/afk [message]`: Set your status to **Away**. Optionally pass an AFK auto-reply message.
 - `/chest` or `/xunlai`: Open the Xunlai Chest in any outpost.
 - `/dialog <id>`: Send a dialog ID to the NPC you're currently talking to (e.g. `/dialog 0x184`). Use `/dialog take` to take the first available quest/reward from the current NPC.

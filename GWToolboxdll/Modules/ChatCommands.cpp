@@ -37,6 +37,7 @@
 #include <GWCA/Utilities/Hooker.h>
 #include <GWCA/Utilities/Scanner.h>
 
+#include <Defines.h>
 #include <GWToolbox.h>
 #include <Logger.h>
 #include <Utils/GuiUtils.h>
@@ -1518,6 +1519,49 @@ namespace {
         GW::Hook::EnableHooks(OnChatInteraction_Callback_Func);
     }
 
+    void CHAT_CMD_FUNC(CmdVersion)
+    {
+        GW::Chat::WriteChatF(GW::Chat::CHANNEL_GLOBAL, L"Guild Wars build: %u", GW::MemoryMgr::GetGWVersion());
+        const auto toolbox_version = TextUtils::StringToWString(GWTOOLBOXDLL_VERSION GWTOOLBOXDLL_VERSION_BETA);
+        GW::Chat::WriteChatF(GW::Chat::CHANNEL_GLOBAL, L"GWToolbox++ version: %ls", toolbox_version.c_str());
+
+        auto operating_system = std::wstring(L"Windows (version unavailable)");
+        const auto ntdll = GetModuleHandleW(L"ntdll.dll");
+        if (ntdll) {
+            using RtlGetVersionFunc = LONG(WINAPI*)(OSVERSIONINFOEXW*);
+            const auto get_version = reinterpret_cast<RtlGetVersionFunc>(GetProcAddress(ntdll, "RtlGetVersion"));
+            auto version = OSVERSIONINFOEXW{};
+            version.dwOSVersionInfoSize = sizeof(version);
+            if (get_version && get_version(&version) == 0) {
+                auto name = std::wstring(L"Windows");
+                if (version.dwMajorVersion == 10 && version.dwMinorVersion == 0 && version.wProductType == VER_NT_WORKSTATION) {
+                    name = version.dwBuildNumber >= 22000 ? L"Windows 11" : L"Windows 10";
+                }
+                operating_system = std::format(L"{} ({}.{} build {})", name, version.dwMajorVersion, version.dwMinorVersion, version.dwBuildNumber);
+            }
+
+            using WineGetVersionFunc = const char*(__cdecl*)();
+            const auto get_wine_version = reinterpret_cast<WineGetVersionFunc>(GetProcAddress(ntdll, "wine_get_version"));
+            if (get_wine_version) {
+                const auto wine_version = get_wine_version();
+                if (wine_version) {
+                    operating_system = std::format(L"Wine {} ({})", TextUtils::StringToWString(wine_version), operating_system);
+                }
+                using WineGetHostVersionFunc = void(__cdecl*)(const char**, const char**);
+                const auto get_host_version = reinterpret_cast<WineGetHostVersionFunc>(GetProcAddress(ntdll, "wine_get_host_version"));
+                if (get_host_version) {
+                    const char* host_system = nullptr;
+                    const char* host_release = nullptr;
+                    get_host_version(&host_system, &host_release);
+                    if (host_system && host_release) {
+                        operating_system = std::format(L"{} {} - {}", TextUtils::StringToWString(host_system), TextUtils::StringToWString(host_release), operating_system);
+                    }
+                }
+            }
+        }
+        GW::Chat::WriteChatF(GW::Chat::CHANNEL_GLOBAL, L"Operating system: %ls", operating_system.c_str());
+    }
+
     void DrawChatCommandsHelp()
     {
         if (!ImGui::TreeNodeEx("Chat Commands", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
@@ -1670,6 +1714,8 @@ namespace {
         ImGui::Text("'/travel [zv|zb|zm]' travel to nearest unlocked outpost to daily quest.");
         ImGui::Bullet();
         ImGui::Text(useskill_syntax);
+        ImGui::Bullet();
+        ImGui::TextUnformatted("'/version' prints the Guild Wars build, Toolbox version and operating system to local Global chat for support screenshots.");
         ImGui::Bullet();
         ImGui::Text("'/volume [master|music|background|effects|dialog|ui] <amount (0-100)>' set in-game volume.");
         ImGui::Bullet();
@@ -1976,13 +2022,13 @@ void ChatCommands::Initialize()
     ToolboxModule::Initialize();
     SettingsRegistry::Register(this, settings);
 
-    // TODO: Move all of these callbacks into pvt namespace
     chat_commands = {
         {L"addhenchman", CmdAddHenchman},
         {L"button", CmdButtonPress},
         {L"chat", CmdChatTab},
         {L"enter", CmdEnterMission},
         {L"age2", CmdAge2},
+        {L"version", CmdVersion},
         {L"dialog", CmdDialog},
         {L"show", CmdShow},
         {L"hide", CmdHide},
