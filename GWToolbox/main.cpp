@@ -5,6 +5,7 @@
 #include <Defender.h>
 #include <Path.h>
 #include <RestClient.h>
+#include <SystemInfo.h>
 
 #include "Inject.h"
 #include "Install.h"
@@ -50,32 +51,6 @@ static bool RestartAsAdminForInjection(const uint32_t target_pid)
     wchar_t args[64];
     swprintf(args, 64, L"/pid %u", target_pid);
     return RestartAsAdmin(args);
-}
-
-// Wine (and its forks: Proton, CrossOver, Lutris, ...) exports these from ntdll; absent on a real Windows host.
-// Returns false on Windows; otherwise fills `out` with the Wine version, host kernel and launcher environment.
-static bool GetWineDiagnostics(std::wstring& out)
-{
-    const HMODULE ntdll = GetModuleHandleW(L"ntdll.dll");
-    if (!ntdll) return false;
-    const auto get_version = reinterpret_cast<const char*(__cdecl*)()>(GetProcAddress(ntdll, "wine_get_version"));
-    if (!get_version) return false;
-
-    const auto get_host = reinterpret_cast<void(__cdecl*)(const char**, const char**)>(GetProcAddress(ntdll, "wine_get_host_version"));
-    const char* sysname = nullptr;
-    const char* release = nullptr;
-    if (get_host) get_host(&sysname, &release);
-
-    wchar_t buf[256];
-    swprintf(buf, _countof(buf), L"Wine %S on %S %S", get_version(), sysname ? sysname : "unknown", release ? release : "");
-    out = buf;
-
-    // Steam/Proton and Lutris sandbox the wine prefix in ways known to break injection (see the Linux guide).
-    if (GetEnvironmentVariableW(L"STEAM_COMPAT_DATA_PATH", nullptr, 0) || GetEnvironmentVariableW(L"SteamAppId", nullptr, 0))
-        out += L"; launched via Steam/Proton (sandboxed prefix - known to break injection)";
-    else if (GetEnvironmentVariableW(L"LUTRIS_GAME_UUID", nullptr, 0) || GetEnvironmentVariableW(L"LUTRIS_PGA_DB", nullptr, 0))
-        out += L"; launched via Lutris (sandboxed prefix - known to break injection)";
-    return true;
 }
 
 // IsWow64Process2's native-machine field reveals the real host CPU even for our 32-bit process; ARM64 there means Gw.exe is running under x86 emulation. Loaded dynamically (Windows 10 1511+ only). Returns false on a native x86/x64 host.

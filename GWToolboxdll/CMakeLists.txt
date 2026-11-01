@@ -292,6 +292,7 @@ find_package(recastnavigation CONFIG REQUIRED)
 
 target_link_libraries(GWToolboxdll PRIVATE
     # cmake targets:
+    Core
     RestClient
     imgui
     Microsoft::DirectXTex
