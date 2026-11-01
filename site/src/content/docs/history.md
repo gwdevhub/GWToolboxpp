@@ -8,6 +8,7 @@ Previous releases are available on Github as dll files. There is no support for 
 the latest version, go to the [Home Page](./) instead.
 
 ## Version 8.35
+* [New] Added `/version` to share the Guild Wars build, Toolbox version and operating system in public All chat for support screenshots. Includes Wine version and host OS details when available.
 * [New] Item Tooltip: added an optional "Show account inventory in item tooltip" setting to show matching item quantities recorded by Account Inventory, including storage totals and per-character quantities. Disabled by default.
 
 ## Version 8.34
