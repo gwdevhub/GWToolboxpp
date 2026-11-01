@@ -1523,12 +1523,10 @@ namespace {
     void CHAT_CMD_FUNC(CmdVersion)
     {
         const auto toolbox_version = TextUtils::StringToWString(GWTOOLBOXDLL_VERSION GWTOOLBOXDLL_VERSION_BETA);
-
         const auto operating_system = GetOperatingSystemDescription();
-        const auto setup = std::format(L"Guild Wars build: {} | GWToolbox++: {} | OS: {}", GW::MemoryMgr::GetGWVersion(), toolbox_version, operating_system);
-        for (size_t offset = 0; offset < setup.size(); offset += 120) {
-            GW::Chat::SendChat('!', setup.substr(offset, 120).c_str());
-        }
+        GW::Chat::WriteChatF(GW::Chat::CHANNEL_GLOBAL, L"Guild Wars build: %u", GW::MemoryMgr::GetGWVersion());
+        GW::Chat::WriteChatF(GW::Chat::CHANNEL_GLOBAL, L"GWToolbox++ version: %ls", toolbox_version.c_str());
+        GW::Chat::WriteChatF(GW::Chat::CHANNEL_GLOBAL, L"Operating system: %ls", operating_system.c_str());
     }
 
     void DrawChatCommandsHelp()
@@ -1684,7 +1682,7 @@ namespace {
         ImGui::Bullet();
         ImGui::Text(useskill_syntax);
         ImGui::Bullet();
-        ImGui::TextUnformatted("'/version' sends the Guild Wars build, Toolbox version and operating system to All chat for support screenshots.");
+        ImGui::TextUnformatted("'/version' writes the Guild Wars build, Toolbox version and operating system to Global chat for support screenshots.");
         ImGui::Bullet();
         ImGui::Text("'/volume [master|music|background|effects|dialog|ui] <amount (0-100)>' set in-game volume.");
         ImGui::Bullet();
