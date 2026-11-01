@@ -1524,9 +1524,8 @@ namespace {
     {
         const auto toolbox_version = TextUtils::StringToWString(GWTOOLBOXDLL_VERSION GWTOOLBOXDLL_VERSION_BETA);
         const auto operating_system = GetOperatingSystemDescription();
-        GW::Chat::WriteChatF(GW::Chat::CHANNEL_GLOBAL, L"Guild Wars build: %u", GW::MemoryMgr::GetGWVersion());
-        GW::Chat::WriteChatF(GW::Chat::CHANNEL_GLOBAL, L"GWToolbox++ version: %ls", toolbox_version.c_str());
-        GW::Chat::WriteChatF(GW::Chat::CHANNEL_GLOBAL, L"Operating system: %ls", operating_system.c_str());
+        GW::Chat::WriteChatF(GW::Chat::CHANNEL_GLOBAL, L"Guild Wars build: %u\nGWToolbox++ version: %ls\nOperating system: %ls",
+                            GW::MemoryMgr::GetGWVersion(), toolbox_version.c_str(), operating_system.c_str());
     }
 
     void DrawChatCommandsHelp()
