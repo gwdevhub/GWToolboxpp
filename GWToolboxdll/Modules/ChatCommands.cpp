@@ -1522,11 +1522,10 @@ namespace {
 
     void CHAT_CMD_FUNC(CmdVersion)
     {
-        const auto toolbox_version = TextUtils::StringToWString(GWTOOLBOXDLL_VERSION GWTOOLBOXDLL_VERSION_BETA);
-        const auto operating_system = GetOperatingSystemDescription();
-        const auto processor = GetProcessorDescription();
-        GW::Chat::WriteChatF(GW::Chat::CHANNEL_GLOBAL, L"Guild Wars build: %u\nGWToolbox++ version: %ls\nOperating system: %ls\nProcessor: %ls",
-                            GW::MemoryMgr::GetGWVersion(), toolbox_version.c_str(), operating_system.c_str(), processor.c_str());
+        static const auto setup = std::format(L"Guild Wars build: {}\nGWToolbox++ version: {}\nOperating system: {}\nProcessor: {}",
+                                             GW::MemoryMgr::GetGWVersion(), TextUtils::StringToWString(GWTOOLBOXDLL_VERSION GWTOOLBOXDLL_VERSION_BETA),
+                                             GetOperatingSystemDescription(), GetProcessorDescription());
+        GW::Chat::WriteChat(GW::Chat::CHANNEL_GLOBAL, setup.c_str());
     }
 
     void DrawChatCommandsHelp()

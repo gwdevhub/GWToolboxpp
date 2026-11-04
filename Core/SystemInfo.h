@@ -3,6 +3,6 @@
 #include <string>
 
 bool GetWineDiagnostics(std::wstring& out, bool include_launcher_environment = true);
-std::wstring GetOperatingSystemDescription();
+const std::wstring& GetOperatingSystemDescription();
 bool GetEmulationDiagnostics(std::wstring& out);
-std::wstring GetProcessorDescription();
+const std::wstring& GetProcessorDescription();
