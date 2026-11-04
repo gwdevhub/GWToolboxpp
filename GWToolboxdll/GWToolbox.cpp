@@ -311,8 +311,8 @@ namespace {
     void TerminateExistingGWCADll(HMODULE existing_gwca)
     {
         typedef void(__cdecl * GWFnVoid)();
-        const auto disable_hooks = GetModuleFunctionW<GWFnVoid>(existing_gwca, "?DisableHooks@GW@@YAXXZ");
-        const auto terminate = GetModuleFunctionW<GWFnVoid>(existing_gwca, "?Terminate@GW@@YAXXZ");
+        const auto disable_hooks = reinterpret_cast<GWFnVoid>(GetModuleFunctionW(existing_gwca, "?DisableHooks@GW@@YAXXZ"));
+        const auto terminate = reinterpret_cast<GWFnVoid>(GetModuleFunctionW(existing_gwca, "?Terminate@GW@@YAXXZ"));
         if (disable_hooks) {
             Log::Log("[LoadGWCADll] Calling DisableHooks on old gwca.dll");
             __try {

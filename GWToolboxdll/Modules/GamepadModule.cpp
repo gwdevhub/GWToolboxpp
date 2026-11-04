@@ -42,7 +42,7 @@ namespace {
         static clock_t last_attempt = 0;
         if (last_attempt && TIMER_DIFF(last_attempt) < 1000) return;
         last_attempt = TIMER_INIT();
-        XInputGetState_Func = GetModuleFunctionW<XInputGetState_pt>(L"xinput1_4.dll", "XInputGetState");
+        XInputGetState_Func = reinterpret_cast<XInputGetState_pt>(GetModuleFunctionW(L"xinput1_4.dll", "XInputGetState"));
         if (XInputGetState_Func) {
             GW::Hook::CreateHook((void**)&XInputGetState_Func, OnXInputGetState, (void**)&XInputGetState_Ret);
             GW::Hook::EnableHooks(XInputGetState_Func);

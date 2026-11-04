@@ -460,7 +460,7 @@ namespace {
 
     std::vector<uint8_t> QueryProcessHandles()
     {
-        const auto NtQuerySystemInformation = GetModuleFunctionW<NtQuerySystemInformation_t>(L"ntdll.dll", "NtQuerySystemInformation");
+        const auto NtQuerySystemInformation = reinterpret_cast<NtQuerySystemInformation_t>(GetModuleFunctionW(L"ntdll.dll", "NtQuerySystemInformation"));
         if (!NtQuerySystemInformation)
             return {};
 

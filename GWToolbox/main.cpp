@@ -152,7 +152,7 @@ static bool InjectWasmModIntoSession(const WasmSession& session, std::wstring& e
 static void EnableDpiAwareness()
 {
     using SetProcessDpiAwarenessContextFn = BOOL(WINAPI*)(DPI_AWARENESS_CONTEXT);
-    const auto pSetProcessDpiAwarenessContext = GetModuleFunctionW<SetProcessDpiAwarenessContextFn>(L"user32.dll", "SetProcessDpiAwarenessContext");
+    const auto pSetProcessDpiAwarenessContext = reinterpret_cast<SetProcessDpiAwarenessContextFn>(GetModuleFunctionW(L"user32.dll", "SetProcessDpiAwarenessContext"));
     if (pSetProcessDpiAwarenessContext && pSetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2)) {
         return;
     }

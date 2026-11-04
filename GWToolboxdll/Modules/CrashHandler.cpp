@@ -304,7 +304,7 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const ch
     SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX | SEM_NOOPENFILEERRORBOX);
 
     using SetProcessUserModeExceptionPolicy_t = BOOL(WINAPI *)(DWORD dwFlags);
-    const auto SetProcessUserModeExceptionPolicy = GetModuleFunctionW<SetProcessUserModeExceptionPolicy_t>(L"kernel32.dll", "SetProcessUserModeExceptionPolicy");
+    const auto SetProcessUserModeExceptionPolicy = reinterpret_cast<SetProcessUserModeExceptionPolicy_t>(GetModuleFunctionW(L"kernel32.dll", "SetProcessUserModeExceptionPolicy"));
     if (SetProcessUserModeExceptionPolicy) {
         SetProcessUserModeExceptionPolicy(0x1);
     }
@@ -506,8 +506,8 @@ void CrashHandler::Initialize()
     using SetProcessUserModeExceptionPolicy_t = BOOL(WINAPI *)(DWORD dwFlags);
     using GetProcessUserModeExceptionPolicy_t = BOOL(WINAPI *)(LPDWORD lpFlags);
 
-    const auto SetProcessUserModeExceptionPolicy = GetModuleFunctionW<SetProcessUserModeExceptionPolicy_t>(L"kernel32.dll", "SetProcessUserModeExceptionPolicy");
-    const auto GetProcessUserModeExceptionPolicy = GetModuleFunctionW<GetProcessUserModeExceptionPolicy_t>(L"kernel32.dll", "GetProcessUserModeExceptionPolicy");
+    const auto SetProcessUserModeExceptionPolicy = reinterpret_cast<SetProcessUserModeExceptionPolicy_t>(GetModuleFunctionW(L"kernel32.dll", "SetProcessUserModeExceptionPolicy"));
+    const auto GetProcessUserModeExceptionPolicy = reinterpret_cast<GetProcessUserModeExceptionPolicy_t>(GetModuleFunctionW(L"kernel32.dll", "GetProcessUserModeExceptionPolicy"));
     if (SetProcessUserModeExceptionPolicy && GetProcessUserModeExceptionPolicy) {
         DWORD dwFlags;
         if (GetProcessUserModeExceptionPolicy(&dwFlags)) {

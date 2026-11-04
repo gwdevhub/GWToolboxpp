@@ -121,10 +121,10 @@ namespace {
 
     bool ResolveTextureClientFunctions()
     {
-        pfnAddFile = GetModuleFunctionW<tGModAddFile>(gmodDll, "AddFile");
-        pfnRemoveFile = GetModuleFunctionW<tGModRemoveFile>(gmodDll, "RemoveFile");
-        pfnGetFiles = GetModuleFunctionW<tGModGetFiles>(gmodDll, "GetFiles");
-        pfnSetDevice = GetModuleFunctionW<tGModSetDevice>(gmodDll, "SetDevice");
+        pfnAddFile = reinterpret_cast<tGModAddFile>(GetModuleFunctionW(gmodDll, "AddFile"));
+        pfnRemoveFile = reinterpret_cast<tGModRemoveFile>(GetModuleFunctionW(gmodDll, "RemoveFile"));
+        pfnGetFiles = reinterpret_cast<tGModGetFiles>(GetModuleFunctionW(gmodDll, "GetFiles"));
+        pfnSetDevice = reinterpret_cast<tGModSetDevice>(GetModuleFunctionW(gmodDll, "SetDevice"));
         // GetFiles is required: we reconcile against the load order it reports, so a build lacking it can't be driven.
         if (!pfnAddFile || !pfnRemoveFile || !pfnGetFiles || !pfnSetDevice) {
             statusMessage = "Error: gMod.dll is missing AddFile/RemoveFile/GetFiles/SetDevice exports. "

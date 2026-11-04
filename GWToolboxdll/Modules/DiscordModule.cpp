@@ -414,7 +414,7 @@ namespace {
             return false;
         }
 
-        const auto discordVersion = GetModuleFunctionW<DiscordVersion_pt>(hGetProcIDDLL, "DiscordVersion");
+        const auto discordVersion = reinterpret_cast<DiscordVersion_pt>(GetModuleFunctionW(hGetProcIDDLL, "DiscordVersion"));
         if (!discordVersion) {
             ASSERT(UnloadDll());
             Log::LogW(L"Failed to find address for DiscordVersion\n");
@@ -428,7 +428,7 @@ namespace {
             return false;
         }
 
-        discordCreate = GetModuleFunctionW<DiscordCreate_pt>(hGetProcIDDLL, "DiscordCreate");
+        discordCreate = reinterpret_cast<DiscordCreate_pt>(GetModuleFunctionW(hGetProcIDDLL, "DiscordCreate"));
         if (!discordCreate) {
             ASSERT(UnloadDll());
             Log::LogW(L"Failed to find address for DiscordCreate\n");

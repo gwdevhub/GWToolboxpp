@@ -12,7 +12,7 @@ namespace {
     {
         static const auto machine = []() -> USHORT {
             using IsWow64Process2_t = BOOL(WINAPI*)(HANDLE, USHORT*, USHORT*);
-            const auto is_wow64_process2 = GetModuleFunctionW<IsWow64Process2_t>(L"kernel32.dll", "IsWow64Process2");
+            const auto is_wow64_process2 = reinterpret_cast<IsWow64Process2_t>(GetModuleFunctionW(L"kernel32.dll", "IsWow64Process2"));
             auto process_machine = USHORT{IMAGE_FILE_MACHINE_UNKNOWN};
             auto native_machine = USHORT{IMAGE_FILE_MACHINE_UNKNOWN};
             if (is_wow64_process2 && is_wow64_process2(GetCurrentProcess(), &process_machine, &native_machine)) return native_machine;
@@ -59,10 +59,10 @@ bool GetWineDiagnostics(std::wstring& out, const bool include_launcher_environme
     };
     static const auto diagnostics = [] {
         auto result = Diagnostics{};
-        const auto get_version = GetModuleFunctionW<const char*(__cdecl*)()>(L"ntdll.dll", "wine_get_version");
+        const auto get_version = reinterpret_cast<const char*(__cdecl*)()>(GetModuleFunctionW(L"ntdll.dll", "wine_get_version"));
         if (!get_version) return result;
 
-        const auto get_host = GetModuleFunctionW<void(__cdecl*)(const char**, const char**)>(L"ntdll.dll", "wine_get_host_version");
+        const auto get_host = reinterpret_cast<void(__cdecl*)(const char**, const char**)>(GetModuleFunctionW(L"ntdll.dll", "wine_get_host_version"));
         const char* sysname = nullptr;
         const char* release = nullptr;
         if (get_host) get_host(&sysname, &release);
@@ -88,7 +88,7 @@ const std::wstring& GetOperatingSystemDescription()
         if (GetWineDiagnostics(wine, false)) return wine;
 
         using RtlGetVersionFunc = LONG(WINAPI*)(OSVERSIONINFOEXW*);
-        const auto get_version = GetModuleFunctionW<RtlGetVersionFunc>(L"ntdll.dll", "RtlGetVersion");
+        const auto get_version = reinterpret_cast<RtlGetVersionFunc>(GetModuleFunctionW(L"ntdll.dll", "RtlGetVersion"));
         auto version = OSVERSIONINFOEXW{};
         version.dwOSVersionInfoSize = sizeof(version);
         if (get_version && get_version(&version) == 0) {

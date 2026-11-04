@@ -56,7 +56,7 @@ int Window::Scale(const int value) const
 
 void Window::ApplyDpiScaling(HWND hWnd)
 {
-    static const auto pGetDpiForWindow = GetModuleFunctionW<UINT(WINAPI*)(HWND)>(L"user32.dll", "GetDpiForWindow");
+    static const auto pGetDpiForWindow = reinterpret_cast<UINT(WINAPI*)(HWND)>(GetModuleFunctionW(L"user32.dll", "GetDpiForWindow"));
     m_Dpi = pGetDpiForWindow ? static_cast<int>(pGetDpiForWindow(hWnd)) : USER_DEFAULT_SCREEN_DPI;
 
     if (m_Dpi != USER_DEFAULT_SCREEN_DPI) {

@@ -14,7 +14,7 @@ namespace {
     void LoadProcAddresses() {
         const auto module = LoadLibrary("d3d9");
         ASSERT(module);
-        Direct3DCreate9_Func = GetModuleFunctionW<Direct3DCreate9_pt>(module, "Direct3DCreate9");
+        Direct3DCreate9_Func = reinterpret_cast<Direct3DCreate9_pt>(GetModuleFunctionW(module, "Direct3DCreate9"));
         ASSERT(Direct3DCreate9_Func);
     }
 

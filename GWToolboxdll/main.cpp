@@ -21,7 +21,7 @@ namespace {
         return GetUserDefaultLCID_Ret();
     }
     void HookForInitialize() {
-        GetUserDefaultLCID_Func = GetModuleFunctionW<GetUserDefaultLCID_t>(L"kernel32.dll", "GetUserDefaultLCID");
+        GetUserDefaultLCID_Func = reinterpret_cast<GetUserDefaultLCID_t>(GetModuleFunctionW(L"kernel32.dll", "GetUserDefaultLCID"));
         ASSERT(GetUserDefaultLCID_Func);
         MH_Initialize();
         MH_CreateHook(GetUserDefaultLCID_Func, OnGetUserDefaultLCID, (void**)&GetUserDefaultLCID_Ret);
