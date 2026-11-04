@@ -237,19 +237,19 @@ namespace {
             return;
         }
         wchar_t buf[120];
-        swprintf(buf, _countof(buf) - 1, L"%s (%d users)",
+        swprintf(buf, _countof(buf) - 1, L"%ls (%d users)",
                  TextUtils::StringToWString(teamspeak_server->name).c_str(),
                  teamspeak_server->user_count);
         GW::Chat::SendChat('#', buf);
 
-        swprintf(buf, _countof(buf) - 1, L"TS3: [https://invite.teamspeak.com/%S/?port=%d;xx]",
-                 teamspeak_server->host.c_str(),
+        swprintf(buf, _countof(buf) - 1, L"TS3: [https://invite.teamspeak.com/%ls/?port=%d;xx]",
+                 TextUtils::StringToWString(teamspeak_server->host).c_str(),
                  teamspeak_server->port);
         GW::Chat::SendChat('#', buf);
 
         GetServerInviteLink(teamspeak_server, teamspeak_server->my_channel_id, [](const std::string& url) {
             wchar_t buf[120];
-            swprintf(buf, _countof(buf) - 1, L"TS5: [%S;xx]", url.c_str());
+            swprintf(buf, _countof(buf) - 1, L"TS5: [%ls;xx]", TextUtils::StringToWString(url).c_str());
             GW::Chat::SendChat('#', buf);
         });
     }

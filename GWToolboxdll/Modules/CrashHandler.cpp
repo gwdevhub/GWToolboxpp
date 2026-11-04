@@ -146,7 +146,7 @@ namespace {
     {
         // Crash() keeps this pointer for the dump's comment stream, and the process dies before it could be reused.
         static char crt_failure_message[512];
-        strncpy_s(crt_failure_message, message && *message ? message : "Unknown CRT failure", _TRUNCATE);
+        strncpy_s(crt_failure_message, _countof(crt_failure_message), message && *message ? message : "Unknown CRT failure", _TRUNCATE);
 
         CONTEXT context{};
         RtlCaptureContext(&context);
@@ -167,7 +167,7 @@ namespace {
     void __cdecl OnInvalidParameter(const wchar_t* expression, const wchar_t* function, const wchar_t* file, const unsigned int line, uintptr_t)
     {
         char message[512];
-        snprintf(message, _countof(message), "Invalid parameter: '%S' in '%S', '%S' line %u",
+        snprintf(message, _countof(message), "Invalid parameter: '%ls' in '%ls', '%ls' line %u",
                  expression ? expression : L"<no expression>",
                  function ? function : L"<unknown function>",
                  file ? file : L"<unknown file>",
@@ -453,7 +453,7 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const ch
         error_info += OriginalError(extra_info);
     }
     else {
-        wcsncpy_s(written_dump_path, szFileName, _TRUNCATE);
+        wcsncpy_s(written_dump_path, _countof(written_dump_path), szFileName, _TRUNCATE);
         error_info = L"Guild Wars crashed!\n\n";
 
         if (tb_exception_message && *tb_exception_message) {

@@ -312,8 +312,12 @@ target_link_libraries(GWToolboxdll PRIVATE
     RecastNavigation::Detour
 
     # libs:
-    dbghelp.lib # for MiniDump
+    dbghelp
     bcrypt
+    version
+    strmiids
+    gdi32
+    dwmapi
 	delayimp # for delay loading gwca
     )
 

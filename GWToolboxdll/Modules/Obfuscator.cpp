@@ -946,7 +946,7 @@ void Obfuscator::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
     ToolboxModule::LoadSettings(doc, legacy);
     doc.GetStruct(Name(), settings);
     if (!settings.own_player_name.empty()) {
-        strncpy_s(own_player_name, settings.own_player_name.c_str(), _TRUNCATE);
+        strncpy_s(own_player_name, _countof(own_player_name), settings.own_player_name.c_str(), _TRUNCATE);
         own_player_name_w = TextUtils::StringToWString(own_player_name);
     }
     if (settings.obfuscate) {

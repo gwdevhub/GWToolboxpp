@@ -12,6 +12,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <cwchar>
 #include <ctime>
 
 // c++ headers
@@ -110,7 +111,11 @@
 #endif
 
 #ifndef _countof
-#define _countof(array) (std::size(array))
+namespace ToolboxCompatibility {
+    template <typename T, size_t N>
+    auto CountOf(T (&)[N]) -> char (&)[N];
+}
+#define _countof(array) (sizeof(ToolboxCompatibility::CountOf(array)))
 #endif
 
 #pragma warning(pop)

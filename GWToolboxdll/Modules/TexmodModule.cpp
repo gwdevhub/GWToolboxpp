@@ -206,7 +206,6 @@ namespace {
         return GetModuleFunctionW(h, "AddFile") && GetModuleFunctionW(h, "RemoveFile") && GetModuleFunctionW(h, "GetFiles") && GetModuleFunctionW(h, "SetDevice");
     }
 
-    // Read a named string from a file's version resource (e.g. "ProductName"); empty if absent.
     std::string GetDllVersionString(const std::filesystem::path& path, const wchar_t* name)
     {
         if (path.empty()) return {};
@@ -222,7 +221,9 @@ namespace {
         UINT trLen = 0;
         if (!VerQueryValueW(data.data(), L"\\VarFileInfo\\Translation", reinterpret_cast<LPVOID*>(&tr), &trLen) || !tr || trLen < sizeof(LangCodepage)) return {};
         wchar_t query[64];
-        swprintf_s(query, L"\\StringFileInfo\\%04x%04x\\%s", tr->language, tr->codepage, name);
+        if (std::swprintf(query, _countof(query), L"\\StringFileInfo\\%04x%04x\\%ls",
+                          static_cast<unsigned int>(tr->language), static_cast<unsigned int>(tr->codepage), name) < 0)
+            return {};
         wchar_t* val = nullptr;
         UINT valLen = 0;
         if (!VerQueryValueW(data.data(), query, reinterpret_cast<LPVOID*>(&val), &valLen) || !val) return {};

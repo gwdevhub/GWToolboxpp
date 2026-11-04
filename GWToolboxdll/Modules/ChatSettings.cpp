@@ -654,7 +654,7 @@ void ChatSettings::SetAfkMessage(std::wstring&& message)
     else if (message.size() <= MAX_AFK_MSG_LEN) {
         afk_message = std::move(message);
         afk_message_time = clock();
-        Log::Info("Afk message set to \"%S\"", afk_message.c_str());
+        Log::Info("Afk message set to \"%ls\"", afk_message.c_str());
     }
     else {
         Log::Error("Afk message must be under 80 characters. (Yours is %zu)", message.size());
