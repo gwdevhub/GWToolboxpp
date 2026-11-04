@@ -109,6 +109,10 @@
 #include <Utils/SettingsRegistry.h>
 #endif
 
+#ifndef _countof
+#define _countof(array) (std::size(array))
+#endif
+
 #pragma warning(pop)
 
 #pragma warning(disable: 4201) // nonstandard extension used : nameless struct/union

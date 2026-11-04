@@ -1,16 +1,5 @@
 #include "stdafx.h"
 
-#include <algorithm>
-#include <cstdint>
-#include <cstdio>
-#include <filesystem>
-#include <fstream>
-#include <iterator>
-#include <mutex>
-#include <string>
-#include <system_error>
-#include <vector>
-
 #include <bcrypt.h>
 
 #include <Utf8.h>
@@ -550,7 +539,7 @@ namespace {
             case WM_INPUT: {
                 if (right_mouse_down && !mouse_moved_whilst_right_clicking && GET_RAWINPUT_CODE_WPARAM(wParam) == RIM_INPUT && lParam) {
                     BYTE lpb[128];
-                    UINT dwSize = static_cast<UINT>(std::size(lpb));
+                    UINT dwSize = _countof(lpb);
                     ASSERT(GetRawInputData((HRAWINPUT)lParam, RID_INPUT, lpb, &dwSize, sizeof(RAWINPUTHEADER)) < dwSize);
 
                     const RAWINPUT* raw = (RAWINPUT*)lpb;
