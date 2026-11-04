@@ -57,11 +57,7 @@
 #include <EmbeddedResource.h>
 #include "resource.h"
 
-#ifdef __MINGW32__
 #include <delayimp.h>
-#else
-#include <DelayImp.h>
-#endif
 
 // declare method here as recommended by imgui
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
