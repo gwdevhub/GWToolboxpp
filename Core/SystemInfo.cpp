@@ -4,6 +4,48 @@
 
 #include <format>
 
+namespace {
+    constexpr auto arm64_emulation_description = L"ARM64 host (running via CPU emulation)";
+
+    USHORT GetNativeProcessorMachine()
+    {
+        const auto kernel32 = GetModuleHandleW(L"kernel32.dll");
+        if (kernel32) {
+            using IsWow64Process2_t = BOOL(WINAPI*)(HANDLE, USHORT*, USHORT*);
+            const auto is_wow64_process2 = reinterpret_cast<IsWow64Process2_t>(GetProcAddress(kernel32, "IsWow64Process2"));
+            auto process_machine = USHORT{IMAGE_FILE_MACHINE_UNKNOWN};
+            auto native_machine = USHORT{IMAGE_FILE_MACHINE_UNKNOWN};
+            if (is_wow64_process2 && is_wow64_process2(GetCurrentProcess(), &process_machine, &native_machine)) return native_machine;
+        }
+
+        auto system_info = SYSTEM_INFO{};
+        GetNativeSystemInfo(&system_info);
+        switch (system_info.wProcessorArchitecture) {
+            case PROCESSOR_ARCHITECTURE_INTEL: return IMAGE_FILE_MACHINE_I386;
+            case PROCESSOR_ARCHITECTURE_AMD64: return IMAGE_FILE_MACHINE_AMD64;
+            case PROCESSOR_ARCHITECTURE_ARM64: return IMAGE_FILE_MACHINE_ARM64;
+            default: return IMAGE_FILE_MACHINE_UNKNOWN;
+        }
+    }
+}
+
+bool GetEmulationDiagnostics(std::wstring& out)
+{
+    if (GetNativeProcessorMachine() != IMAGE_FILE_MACHINE_ARM64) return false;
+    out = arm64_emulation_description;
+    return true;
+}
+
+std::wstring GetProcessorDescription()
+{
+    switch (GetNativeProcessorMachine()) {
+        case IMAGE_FILE_MACHINE_I386: return L"x86 host";
+        case IMAGE_FILE_MACHINE_AMD64: return L"x64 host";
+        case IMAGE_FILE_MACHINE_ARM64: return arm64_emulation_description;
+        default: return L"Unknown architecture";
+    }
+}
+
 bool GetWineDiagnostics(std::wstring& out, const bool include_launcher_environment)
 {
     const auto ntdll = GetModuleHandleW(L"ntdll.dll");

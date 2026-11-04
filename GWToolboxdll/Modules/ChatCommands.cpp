@@ -1524,8 +1524,9 @@ namespace {
     {
         const auto toolbox_version = TextUtils::StringToWString(GWTOOLBOXDLL_VERSION GWTOOLBOXDLL_VERSION_BETA);
         const auto operating_system = GetOperatingSystemDescription();
-        GW::Chat::WriteChatF(GW::Chat::CHANNEL_GLOBAL, L"Guild Wars build: %u\nGWToolbox++ version: %ls\nOperating system: %ls",
-                            GW::MemoryMgr::GetGWVersion(), toolbox_version.c_str(), operating_system.c_str());
+        const auto processor = GetProcessorDescription();
+        GW::Chat::WriteChatF(GW::Chat::CHANNEL_GLOBAL, L"Guild Wars build: %u\nGWToolbox++ version: %ls\nOperating system: %ls\nProcessor: %ls",
+                            GW::MemoryMgr::GetGWVersion(), toolbox_version.c_str(), operating_system.c_str(), processor.c_str());
     }
 
     void DrawChatCommandsHelp()
@@ -1681,7 +1682,7 @@ namespace {
         ImGui::Bullet();
         ImGui::Text(useskill_syntax);
         ImGui::Bullet();
-        ImGui::TextUnformatted("'/version' writes the Guild Wars build, Toolbox version and operating system to Global chat for support screenshots.");
+        ImGui::TextUnformatted("'/version' writes the Guild Wars build, Toolbox version, operating system and processor architecture to Global chat for support screenshots.");
         ImGui::Bullet();
         ImGui::Text("'/volume [master|music|background|effects|dialog|ui] <amount (0-100)>' set in-game volume.");
         ImGui::Bullet();
