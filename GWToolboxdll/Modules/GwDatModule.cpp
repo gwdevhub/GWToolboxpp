@@ -8,6 +8,7 @@
 #include <utility>
 
 #include <Logger.h>
+#include <Module.h>
 #include "GwDatModule.h"
 
 #include "Resources.h"
@@ -457,13 +458,9 @@ namespace {
     };
     using NtQuerySystemInformation_t = LONG(__stdcall*)(ULONG, void*, ULONG, ULONG*);
 
-    // Snapshots this process's handle table. Empty on failure.
     std::vector<uint8_t> QueryProcessHandles()
     {
-        const auto ntdll = GetModuleHandleW(L"ntdll.dll");
-        const auto NtQuerySystemInformation =
-            ntdll ? reinterpret_cast<NtQuerySystemInformation_t>(GetProcAddress(ntdll, "NtQuerySystemInformation"))
-                  : nullptr;
+        const auto NtQuerySystemInformation = GetModuleFunctionW<NtQuerySystemInformation_t>(L"ntdll.dll", "NtQuerySystemInformation");
         if (!NtQuerySystemInformation)
             return {};
 

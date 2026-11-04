@@ -17,6 +17,7 @@
 #include <Defines.h>
 #include <Defender.h>
 #include <Path.h>
+#include <Module.h>
 #include <Utils/TextUtils.h>
 #include <Utils/TextUtils_Time.h>
 
@@ -303,12 +304,9 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const ch
     SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX | SEM_NOOPENFILEERRORBOX);
 
     using SetProcessUserModeExceptionPolicy_t = BOOL(WINAPI *)(DWORD dwFlags);
-    HMODULE hKernel32 = GetModuleHandleA("kernel32.dll");
-    if (hKernel32) {
-        auto SetProcessUserModeExceptionPolicy = (SetProcessUserModeExceptionPolicy_t)GetProcAddress(hKernel32, "SetProcessUserModeExceptionPolicy");
-        if (SetProcessUserModeExceptionPolicy) {
-            SetProcessUserModeExceptionPolicy(0x1);
-        }
+    const auto SetProcessUserModeExceptionPolicy = GetModuleFunctionW<SetProcessUserModeExceptionPolicy_t>(L"kernel32.dll", "SetProcessUserModeExceptionPolicy");
+    if (SetProcessUserModeExceptionPolicy) {
+        SetProcessUserModeExceptionPolicy(0x1);
     }
 
 
@@ -508,16 +506,12 @@ void CrashHandler::Initialize()
     using SetProcessUserModeExceptionPolicy_t = BOOL(WINAPI *)(DWORD dwFlags);
     using GetProcessUserModeExceptionPolicy_t = BOOL(WINAPI *)(LPDWORD lpFlags);
 
-    HMODULE hKernel32 = GetModuleHandleA("kernel32.dll");
-    if (hKernel32) {
-        auto SetProcessUserModeExceptionPolicy = (SetProcessUserModeExceptionPolicy_t)GetProcAddress(hKernel32, "SetProcessUserModeExceptionPolicy");
-        auto GetProcessUserModeExceptionPolicy = (GetProcessUserModeExceptionPolicy_t)GetProcAddress(hKernel32, "GetProcessUserModeExceptionPolicy");
-
-        if (SetProcessUserModeExceptionPolicy && GetProcessUserModeExceptionPolicy) {
-            DWORD dwFlags;
-            if (GetProcessUserModeExceptionPolicy(&dwFlags)) {
-                SetProcessUserModeExceptionPolicy(dwFlags & ~0x1); // Disable the filter callback
-            }
+    const auto SetProcessUserModeExceptionPolicy = GetModuleFunctionW<SetProcessUserModeExceptionPolicy_t>(L"kernel32.dll", "SetProcessUserModeExceptionPolicy");
+    const auto GetProcessUserModeExceptionPolicy = GetModuleFunctionW<GetProcessUserModeExceptionPolicy_t>(L"kernel32.dll", "GetProcessUserModeExceptionPolicy");
+    if (SetProcessUserModeExceptionPolicy && GetProcessUserModeExceptionPolicy) {
+        DWORD dwFlags;
+        if (GetProcessUserModeExceptionPolicy(&dwFlags)) {
+            SetProcessUserModeExceptionPolicy(dwFlags & ~0x1);
         }
     }
 

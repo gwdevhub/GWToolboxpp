@@ -1,6 +1,7 @@
 #include "stdafx.h"
 
 #include <Defender.h>
+#include <Module.h>
 #include <Str.h>
 
 #include "Inject.h"
@@ -560,23 +561,6 @@ void InjectWindow::OnCommand(HWND hWnd, const LONG ControlId, LONG NotificationC
     }
 }
 
-static FARPROC GetLoadLibrary()
-{
-    const auto Kernel32 = GetModuleHandleW(L"Kernel32.dll");
-    if (Kernel32 == nullptr) {
-        fprintf(stderr, "GetModuleHandleW failed (%lu)\n", GetLastError());
-        return nullptr;
-    }
-
-    const auto pLoadLibraryW = GetProcAddress(Kernel32, "LoadLibraryW");
-    if (pLoadLibraryW == nullptr) {
-        fprintf(stderr, "GetProcAddress failed (%lu)\n", GetLastError());
-        return nullptr;
-    }
-
-    return pLoadLibraryW;
-}
-
 bool InjectRemoteThread(const Process* process, const LPCWSTR ImagePath, LPDWORD lpExitCode)
 {
     *lpExitCode = 0;
@@ -587,8 +571,9 @@ bool InjectRemoteThread(const Process* process, const LPCWSTR ImagePath, LPDWORD
         return FALSE;
     }
 
-    const LPVOID pLoadLibraryW = GetLoadLibrary();
+    const LPVOID pLoadLibraryW = GetModuleFunctionW(L"kernel32.dll", "LoadLibraryW");
     if (pLoadLibraryW == nullptr) {
+        fprintf(stderr, "Failed to resolve LoadLibraryW (%lu)\n", GetLastError());
         return FALSE;
     }
 

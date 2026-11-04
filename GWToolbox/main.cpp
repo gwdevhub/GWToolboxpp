@@ -3,6 +3,7 @@
 #include <cstdio>
 
 #include <Defender.h>
+#include <Module.h>
 #include <Path.h>
 #include <RestClient.h>
 #include <SystemInfo.h>
@@ -150,13 +151,10 @@ static bool InjectWasmModIntoSession(const WasmSession& session, std::wstring& e
 // Opts in to per-monitor DPI awareness so scaled displays get real layout instead of blurry bitmap-stretching; must run before any window (incl. a MessageBox) is created.
 static void EnableDpiAwareness()
 {
-    const HMODULE user32 = GetModuleHandleW(L"user32.dll");
-    if (user32) {
-        using SetProcessDpiAwarenessContextFn = BOOL(WINAPI*)(DPI_AWARENESS_CONTEXT);
-        const auto pSetProcessDpiAwarenessContext = reinterpret_cast<SetProcessDpiAwarenessContextFn>(GetProcAddress(user32, "SetProcessDpiAwarenessContext"));
-        if (pSetProcessDpiAwarenessContext && pSetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2)) {
-            return;
-        }
+    using SetProcessDpiAwarenessContextFn = BOOL(WINAPI*)(DPI_AWARENESS_CONTEXT);
+    const auto pSetProcessDpiAwarenessContext = GetModuleFunctionW<SetProcessDpiAwarenessContextFn>(L"user32.dll", "SetProcessDpiAwarenessContext");
+    if (pSetProcessDpiAwarenessContext && pSetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2)) {
+        return;
     }
 
     SetProcessDPIAware(); // Vista+ fallback: system-DPI aware still beats fully unaware.

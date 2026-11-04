@@ -6,6 +6,7 @@
 #include <GWCA/Managers/UIMgr.h>
 #include <Timer.h>
 #include <Defines.h>
+#include <Module.h>
 #include <ImGuiAddons.h>
 #include <GWCA/Utilities/Hooker.h>
 
@@ -41,8 +42,7 @@ namespace {
         static clock_t last_attempt = 0;
         if (last_attempt && TIMER_DIFF(last_attempt) < 1000) return;
         last_attempt = TIMER_INIT();
-        HMODULE hXInput = GetModuleHandleA("xinput1_4.dll");
-        XInputGetState_Func = hXInput ? (XInputGetState_pt)GetProcAddress(hXInput, "XInputGetState") : nullptr;
+        XInputGetState_Func = GetModuleFunctionW<XInputGetState_pt>(L"xinput1_4.dll", "XInputGetState");
         if (XInputGetState_Func) {
             GW::Hook::CreateHook((void**)&XInputGetState_Func, OnXInputGetState, (void**)&XInputGetState_Ret);
             GW::Hook::EnableHooks(XInputGetState_Func);

@@ -1,6 +1,7 @@
 #include "stdafx.h"
 
 #include "ToolboxBreakoutWindow.h"
+#include <Module.h>
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -13,7 +14,7 @@ namespace {
     void LoadProcAddresses() {
         const auto module = LoadLibrary("d3d9");
         ASSERT(module);
-        Direct3DCreate9_Func = (Direct3DCreate9_pt)GetProcAddress(module, "Direct3DCreate9");
+        Direct3DCreate9_Func = GetModuleFunctionW<Direct3DCreate9_pt>(module, "Direct3DCreate9");
         ASSERT(Direct3DCreate9_Func);
     }
 

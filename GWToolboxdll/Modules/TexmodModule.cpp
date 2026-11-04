@@ -23,6 +23,7 @@
 
 #include <ImGuiAddons.h>
 #include <Defender.h>
+#include <Module.h>
 #include <Modules/Resources.h>
 #include <Timer.h>
 #include <Utils/FontLoader.h>
@@ -120,10 +121,10 @@ namespace {
 
     bool ResolveTextureClientFunctions()
     {
-        pfnAddFile = reinterpret_cast<tGModAddFile>(GetProcAddress(gmodDll, "AddFile"));
-        pfnRemoveFile = reinterpret_cast<tGModRemoveFile>(GetProcAddress(gmodDll, "RemoveFile"));
-        pfnGetFiles = reinterpret_cast<tGModGetFiles>(GetProcAddress(gmodDll, "GetFiles"));
-        pfnSetDevice = reinterpret_cast<tGModSetDevice>(GetProcAddress(gmodDll, "SetDevice"));
+        pfnAddFile = GetModuleFunctionW<tGModAddFile>(gmodDll, "AddFile");
+        pfnRemoveFile = GetModuleFunctionW<tGModRemoveFile>(gmodDll, "RemoveFile");
+        pfnGetFiles = GetModuleFunctionW<tGModGetFiles>(gmodDll, "GetFiles");
+        pfnSetDevice = GetModuleFunctionW<tGModSetDevice>(gmodDll, "SetDevice");
         // GetFiles is required: we reconcile against the load order it reports, so a build lacking it can't be driven.
         if (!pfnAddFile || !pfnRemoveFile || !pfnGetFiles || !pfnSetDevice) {
             statusMessage = "Error: gMod.dll is missing AddFile/RemoveFile/GetFiles/SetDevice exports. "
@@ -200,10 +201,9 @@ namespace {
         return Resources::GetPath("gmod") / "gMod.dll";
     }
 
-    // True if the module exports the gMod texture API we drive.
     bool ModuleHasGmodExports(HMODULE h)
     {
-        return h && GetProcAddress(h, "AddFile") && GetProcAddress(h, "RemoveFile") && GetProcAddress(h, "GetFiles") && GetProcAddress(h, "SetDevice");
+        return GetModuleFunctionW(h, "AddFile") && GetModuleFunctionW(h, "RemoveFile") && GetModuleFunctionW(h, "GetFiles") && GetModuleFunctionW(h, "SetDevice");
     }
 
     // Read a named string from a file's version resource (e.g. "ProductName"); empty if absent.

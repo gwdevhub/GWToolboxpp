@@ -1,6 +1,7 @@
 #include "stdafx.h"
 
 #include "SystemInfo.h"
+#include "Module.h"
 
 #include <format>
 
@@ -9,14 +10,11 @@ namespace {
 
     USHORT GetNativeProcessorMachine()
     {
-        const auto kernel32 = GetModuleHandleW(L"kernel32.dll");
-        if (kernel32) {
-            using IsWow64Process2_t = BOOL(WINAPI*)(HANDLE, USHORT*, USHORT*);
-            const auto is_wow64_process2 = reinterpret_cast<IsWow64Process2_t>(GetProcAddress(kernel32, "IsWow64Process2"));
-            auto process_machine = USHORT{IMAGE_FILE_MACHINE_UNKNOWN};
-            auto native_machine = USHORT{IMAGE_FILE_MACHINE_UNKNOWN};
-            if (is_wow64_process2 && is_wow64_process2(GetCurrentProcess(), &process_machine, &native_machine)) return native_machine;
-        }
+        using IsWow64Process2_t = BOOL(WINAPI*)(HANDLE, USHORT*, USHORT*);
+        const auto is_wow64_process2 = GetModuleFunctionW<IsWow64Process2_t>(L"kernel32.dll", "IsWow64Process2");
+        auto process_machine = USHORT{IMAGE_FILE_MACHINE_UNKNOWN};
+        auto native_machine = USHORT{IMAGE_FILE_MACHINE_UNKNOWN};
+        if (is_wow64_process2 && is_wow64_process2(GetCurrentProcess(), &process_machine, &native_machine)) return native_machine;
 
         auto system_info = SYSTEM_INFO{};
         GetNativeSystemInfo(&system_info);
@@ -48,12 +46,10 @@ std::wstring GetProcessorDescription()
 
 bool GetWineDiagnostics(std::wstring& out, const bool include_launcher_environment)
 {
-    const auto ntdll = GetModuleHandleW(L"ntdll.dll");
-    if (!ntdll) return false;
-    const auto get_version = reinterpret_cast<const char*(__cdecl*)()>(GetProcAddress(ntdll, "wine_get_version"));
+    const auto get_version = GetModuleFunctionW<const char*(__cdecl*)()>(L"ntdll.dll", "wine_get_version");
     if (!get_version) return false;
 
-    const auto get_host = reinterpret_cast<void(__cdecl*)(const char**, const char**)>(GetProcAddress(ntdll, "wine_get_host_version"));
+    const auto get_host = GetModuleFunctionW<void(__cdecl*)(const char**, const char**)>(L"ntdll.dll", "wine_get_host_version");
     const char* sysname = nullptr;
     const char* release = nullptr;
     if (get_host) get_host(&sysname, &release);
@@ -76,19 +72,16 @@ std::wstring GetOperatingSystemDescription()
     std::wstring wine;
     if (GetWineDiagnostics(wine, false)) return wine;
 
-    const auto ntdll = GetModuleHandleW(L"ntdll.dll");
-    if (ntdll) {
-        using RtlGetVersionFunc = LONG(WINAPI*)(OSVERSIONINFOEXW*);
-        const auto get_version = reinterpret_cast<RtlGetVersionFunc>(GetProcAddress(ntdll, "RtlGetVersion"));
-        auto version = OSVERSIONINFOEXW{};
-        version.dwOSVersionInfoSize = sizeof(version);
-        if (get_version && get_version(&version) == 0) {
-            auto name = std::wstring(L"Windows");
-            if (version.dwMajorVersion == 10 && version.dwMinorVersion == 0 && version.wProductType == VER_NT_WORKSTATION) {
-                name = version.dwBuildNumber >= 22000 ? L"Windows 11" : L"Windows 10";
-            }
-            return std::format(L"{} ({}.{} build {})", name, version.dwMajorVersion, version.dwMinorVersion, version.dwBuildNumber);
+    using RtlGetVersionFunc = LONG(WINAPI*)(OSVERSIONINFOEXW*);
+    const auto get_version = GetModuleFunctionW<RtlGetVersionFunc>(L"ntdll.dll", "RtlGetVersion");
+    auto version = OSVERSIONINFOEXW{};
+    version.dwOSVersionInfoSize = sizeof(version);
+    if (get_version && get_version(&version) == 0) {
+        auto name = std::wstring(L"Windows");
+        if (version.dwMajorVersion == 10 && version.dwMinorVersion == 0 && version.wProductType == VER_NT_WORKSTATION) {
+            name = version.dwBuildNumber >= 22000 ? L"Windows 11" : L"Windows 10";
         }
+        return std::format(L"{} ({}.{} build {})", name, version.dwMajorVersion, version.dwMinorVersion, version.dwBuildNumber);
     }
     return L"Windows (version unavailable)";
 }

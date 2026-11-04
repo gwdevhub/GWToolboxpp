@@ -1,17 +1,7 @@
 #include "stdafx.h"
 
 #include "Window.h"
-
-namespace {
-    using GetDpiForWindowFn = UINT(WINAPI*)(HWND);
-
-    // GetDpiForWindow is Windows 10 1607+; resolve it dynamically so older Windows still starts, just without per-monitor scaling.
-    GetDpiForWindowFn ResolveGetDpiForWindow()
-    {
-        const HMODULE user32 = GetModuleHandleW(L"user32.dll");
-        return user32 ? reinterpret_cast<GetDpiForWindowFn>(GetProcAddress(user32, "GetDpiForWindow")) : nullptr;
-    }
-}
+#include <Module.h>
 
 LRESULT CALLBACK Window::MainWndProc(HWND hWnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam)
 {
@@ -66,7 +56,7 @@ int Window::Scale(const int value) const
 
 void Window::ApplyDpiScaling(HWND hWnd)
 {
-    static const GetDpiForWindowFn pGetDpiForWindow = ResolveGetDpiForWindow();
+    static const auto pGetDpiForWindow = GetModuleFunctionW<UINT(WINAPI*)(HWND)>(L"user32.dll", "GetDpiForWindow");
     m_Dpi = pGetDpiForWindow ? static_cast<int>(pGetDpiForWindow(hWnd)) : USER_DEFAULT_SCREEN_DPI;
 
     if (m_Dpi != USER_DEFAULT_SCREEN_DPI) {

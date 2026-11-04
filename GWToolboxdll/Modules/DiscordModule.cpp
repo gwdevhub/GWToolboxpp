@@ -11,6 +11,7 @@ NOTE: Disconnecting/reconnecting will mess this up so repeat process.
 */
 
 #include "stdafx.h"
+#include <Module.h>
 
 #include <GWCA/Constants/Constants.h>
 
@@ -413,7 +414,7 @@ namespace {
             return false;
         }
 
-        DiscordVersion_pt discordVersion = (DiscordVersion_pt)GetProcAddress(hGetProcIDDLL, "DiscordVersion");
+        const auto discordVersion = GetModuleFunctionW<DiscordVersion_pt>(hGetProcIDDLL, "DiscordVersion");
         if (!discordVersion) {
             ASSERT(UnloadDll());
             Log::LogW(L"Failed to find address for DiscordVersion\n");
@@ -427,7 +428,7 @@ namespace {
             return false;
         }
 
-        discordCreate = (DiscordCreate_pt)(uintptr_t)GetProcAddress(hGetProcIDDLL, "DiscordCreate");
+        discordCreate = GetModuleFunctionW<DiscordCreate_pt>(hGetProcIDDLL, "DiscordCreate");
         if (!discordCreate) {
             ASSERT(UnloadDll());
             Log::LogW(L"Failed to find address for DiscordCreate\n");
