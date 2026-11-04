@@ -1,7 +1,17 @@
 #include "stdafx.h"
 
+#include <algorithm>
+#include <cstdint>
+#include <cstdio>
+#include <filesystem>
+#include <fstream>
+#include <iterator>
+#include <mutex>
+#include <string>
+#include <system_error>
+#include <vector>
+
 #include <bcrypt.h>
-#pragma comment(lib, "bcrypt.lib")
 
 #include <Utf8.h>
 
@@ -58,7 +68,11 @@
 #include <EmbeddedResource.h>
 #include "resource.h"
 
+#ifdef __MINGW32__
+#include <delayimp.h>
+#else
 #include <DelayImp.h>
+#endif
 
 // declare method here as recommended by imgui
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -202,7 +216,7 @@ namespace {
         Resources::EnsureFileExists(Resources::GetPath(L"Font.ttf"), "https://raw.githubusercontent.com/gwdevhub/GWToolboxpp/master/resources/Font.ttf", [](const bool success, const std::wstring& error) {
             FontLoader::LoadFonts();
             if (!success) {
-                Log::ErrorW(L"Cannot download font, please download it manually!\n%s", error.c_str());
+                Log::ErrorW(L"Cannot download font, please download it manually!\n%ls", error.c_str());
                 GWToolbox::SignalTerminate();
             }
         });
@@ -261,7 +275,6 @@ namespace {
         });
     }
 
-    // Lowercase hex sha256 of a byte buffer; empty on failure.
     std::string Sha256Hex(const void* data, const size_t size)
     {
         unsigned char hash[32];
@@ -270,7 +283,7 @@ namespace {
             return {};
         char hex[2 * sizeof(hash) + 1];
         for (size_t i = 0; i < sizeof(hash); ++i)
-            sprintf_s(hex + i * 2, 3, "%02x", hash[i]);
+            std::snprintf(hex + i * 2, 3, "%02x", static_cast<unsigned int>(hash[i]));
         return hex;
     }
 
@@ -333,7 +346,7 @@ namespace {
         // Unload: may need multiple calls if ref count > 1
         while (GetModuleHandleW(L"gwca.dll") == existing_gwca) {
             if (!FreeLibrary(existing_gwca)) {
-                Log::Log("[LoadGWCADll] FreeLibrary failed for old gwca.dll: %d", GetLastError());
+                Log::Log("[LoadGWCADll] FreeLibrary failed for old gwca.dll: %lu", GetLastError());
                 break;
             }
         }
@@ -394,7 +407,7 @@ namespace {
             warn_if_antivirus(code);
             return nullptr;
         }
-        Log::Log("[LoadGWCADll] success, module ptr %p", gwcamodule);
+        Log::Log("[LoadGWCADll] success, module ptr %p", static_cast<void*>(gwcamodule));
         return gwcamodule;
     }
 
@@ -537,7 +550,7 @@ namespace {
             case WM_INPUT: {
                 if (right_mouse_down && !mouse_moved_whilst_right_clicking && GET_RAWINPUT_CODE_WPARAM(wParam) == RIM_INPUT && lParam) {
                     BYTE lpb[128];
-                    UINT dwSize = _countof(lpb);
+                    UINT dwSize = static_cast<UINT>(std::size(lpb));
                     ASSERT(GetRawInputData((HRAWINPUT)lParam, RID_INPUT, lpb, &dwSize, sizeof(RAWINPUTHEADER)) < dwSize);
 
                     const RAWINPUT* raw = (RAWINPUT*)lpb;
@@ -672,8 +685,8 @@ namespace {
         }
         Log::Log("installing event handler\n");
         gw_window_handle = GW::MemoryMgr::GetGWWindowHandle();
-        OldWndProc = reinterpret_cast<WNDPROC>(SetWindowLongPtrW(gw_window_handle, GWL_WNDPROC, reinterpret_cast<LONG>(SafeWndProc)));
-        Log::Log("Installed input event handler, oldwndproc = 0x%X\n", OldWndProc);
+        OldWndProc = reinterpret_cast<WNDPROC>(SetWindowLongPtrW(gw_window_handle, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(SafeWndProc)));
+        Log::Log("Installed input event handler, oldwndproc = %p\n", reinterpret_cast<void*>(OldWndProc));
 
         // NB: Inputs are being listened to in reforged
         // DEBUG_ASSERT(RegisterRawInputs(true));
@@ -691,7 +704,7 @@ namespace {
         // NB: Don't unregister the raw input - Guild Wars needs it
         // DEBUG_ASSERT(RegisterRawInputs(false));
 
-        SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, reinterpret_cast<LONG>(OldWndProc));
+        SetWindowLongPtrW(gw_window_handle, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(OldWndProc));
         event_handler_attached = false;
         return true;
     }
@@ -708,7 +721,7 @@ namespace {
             case dliFailGetProc: {
                 if (_stricmp(pdli->szDll, "gwca.dll") != 0) break;
                 ASSERT(pdli && *(pdli->dlp.szProcName));
-                Log::Log("Something is trying to access %ls, but failed", pdli->dlp.szProcName);
+                Log::Log("Something is trying to access %s, but failed", pdli->dlp.szProcName);
                 ASSERT(false && "Failed to find a valid proc address in GWCA. Ensure you're running the correct version, or delete gwca.dll in your toolbox folder!");
             } break;
                 // Add other sliNotify cases for debugging if you need to later
@@ -967,7 +980,7 @@ std::filesystem::path GWToolbox::SaveSettings()
     const auto dir = doc->location_on_disk.parent_path();
     const auto dirstr = dir.wstring();
     const auto printable = TextUtils::str_replace_all(dirstr, LR"(\\)", L"/");
-    Log::LogW(L"Toolbox settings saved to %s", printable.c_str());
+    Log::LogW(L"Toolbox settings saved to %ls", printable.c_str());
     settings_folder_changed = false;
     return doc->location_on_disk;
 }
