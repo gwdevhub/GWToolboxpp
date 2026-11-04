@@ -3,6 +3,7 @@
 #include <Defines.h>
 #include <GWToolbox.h>
 #include <Logger.h>
+#include <Module.h>
 #include <Modules/CrashHandler.h>
 #include <MinHook.h>
 
@@ -20,8 +21,7 @@ namespace {
         return GetUserDefaultLCID_Ret();
     }
     void HookForInitialize() {
-        const auto hTimeApi = GetModuleHandleA("kernel32.dll");
-        GetUserDefaultLCID_Func = hTimeApi ? (GetUserDefaultLCID_t)GetProcAddress(hTimeApi, "GetUserDefaultLCID") : nullptr;
+        GetUserDefaultLCID_Func = GetModuleFunctionW<GetUserDefaultLCID_t>(L"kernel32.dll", "GetUserDefaultLCID");
         ASSERT(GetUserDefaultLCID_Func);
         MH_Initialize();
         MH_CreateHook(GetUserDefaultLCID_Func, OnGetUserDefaultLCID, (void**)&GetUserDefaultLCID_Ret);

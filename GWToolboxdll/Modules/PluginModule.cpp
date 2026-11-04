@@ -7,6 +7,7 @@
 #include <GWCA/Managers/ChatMgr.h>
 
 #include <Defender.h>
+#include <Module.h>
 #include <Modules/Resources.h>
 #include <filesystem>
 #include <string>
@@ -71,7 +72,7 @@ namespace {
             return false;
         }
         using ToolboxPluginInstanceFn = ToolboxPlugin* (*)();
-        const auto instance_fn = reinterpret_cast<ToolboxPluginInstanceFn>(GetProcAddress(plugin.dll, "ToolboxPluginInstance"));
+        const auto instance_fn = GetModuleFunctionW<ToolboxPluginInstanceFn>(plugin.dll, "ToolboxPluginInstance");
         if (!instance_fn) {
             UnloadPlugin(plugin_ptr);
             Log::Error("Failed to load plugin %s (ToolboxPluginInstance)", TextUtils::PrintFilename(plugin.path.filename().string()).c_str());

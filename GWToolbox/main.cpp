@@ -3,8 +3,10 @@
 #include <cstdio>
 
 #include <Defender.h>
+#include <Module.h>
 #include <Path.h>
 #include <RestClient.h>
+#include <SystemInfo.h>
 
 #include "Inject.h"
 #include "Install.h"
@@ -50,50 +52,6 @@ static bool RestartAsAdminForInjection(const uint32_t target_pid)
     wchar_t args[64];
     swprintf(args, 64, L"/pid %u", target_pid);
     return RestartAsAdmin(args);
-}
-
-// Wine (and its forks: Proton, CrossOver, Lutris, ...) exports these from ntdll; absent on a real Windows host.
-// Returns false on Windows; otherwise fills `out` with the Wine version, host kernel and launcher environment.
-static bool GetWineDiagnostics(std::wstring& out)
-{
-    const HMODULE ntdll = GetModuleHandleW(L"ntdll.dll");
-    if (!ntdll) return false;
-    const auto get_version = reinterpret_cast<const char*(__cdecl*)()>(GetProcAddress(ntdll, "wine_get_version"));
-    if (!get_version) return false;
-
-    const auto get_host = reinterpret_cast<void(__cdecl*)(const char**, const char**)>(GetProcAddress(ntdll, "wine_get_host_version"));
-    const char* sysname = nullptr;
-    const char* release = nullptr;
-    if (get_host) get_host(&sysname, &release);
-
-    wchar_t buf[256];
-    swprintf(buf, _countof(buf), L"Wine %S on %S %S", get_version(), sysname ? sysname : "unknown", release ? release : "");
-    out = buf;
-
-    // Steam/Proton and Lutris sandbox the wine prefix in ways known to break injection (see the Linux guide).
-    if (GetEnvironmentVariableW(L"STEAM_COMPAT_DATA_PATH", nullptr, 0) || GetEnvironmentVariableW(L"SteamAppId", nullptr, 0))
-        out += L"; launched via Steam/Proton (sandboxed prefix - known to break injection)";
-    else if (GetEnvironmentVariableW(L"LUTRIS_GAME_UUID", nullptr, 0) || GetEnvironmentVariableW(L"LUTRIS_PGA_DB", nullptr, 0))
-        out += L"; launched via Lutris (sandboxed prefix - known to break injection)";
-    return true;
-}
-
-// IsWow64Process2's native-machine field reveals the real host CPU even for our 32-bit process; ARM64 there means Gw.exe is running under x86 emulation. Loaded dynamically (Windows 10 1511+ only). Returns false on a native x86/x64 host.
-static bool GetEmulationDiagnostics(std::wstring& out)
-{
-    const HMODULE kernel32 = GetModuleHandleW(L"kernel32.dll");
-    if (!kernel32) return false;
-    using IsWow64Process2_t = BOOL(WINAPI*)(HANDLE, USHORT*, USHORT*);
-    const auto is_wow64_process2 = reinterpret_cast<IsWow64Process2_t>(GetProcAddress(kernel32, "IsWow64Process2"));
-    if (!is_wow64_process2) return false;
-
-    USHORT process_machine = IMAGE_FILE_MACHINE_UNKNOWN;
-    USHORT native_machine = IMAGE_FILE_MACHINE_UNKNOWN;
-    if (!is_wow64_process2(GetCurrentProcess(), &process_machine, &native_machine)) return false;
-    if (native_machine != IMAGE_FILE_MACHINE_ARM64) return false; // AMD64/I386 hosts run x86 natively via ordinary WOW64
-
-    out = L"ARM64 host (running via CPU emulation)";
-    return true;
 }
 
 static bool InjectInstalledDllInProcess(const Process* process, std::wstring& error)
@@ -193,13 +151,10 @@ static bool InjectWasmModIntoSession(const WasmSession& session, std::wstring& e
 // Opts in to per-monitor DPI awareness so scaled displays get real layout instead of blurry bitmap-stretching; must run before any window (incl. a MessageBox) is created.
 static void EnableDpiAwareness()
 {
-    const HMODULE user32 = GetModuleHandleW(L"user32.dll");
-    if (user32) {
-        using SetProcessDpiAwarenessContextFn = BOOL(WINAPI*)(DPI_AWARENESS_CONTEXT);
-        const auto pSetProcessDpiAwarenessContext = reinterpret_cast<SetProcessDpiAwarenessContextFn>(GetProcAddress(user32, "SetProcessDpiAwarenessContext"));
-        if (pSetProcessDpiAwarenessContext && pSetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2)) {
-            return;
-        }
+    using SetProcessDpiAwarenessContextFn = BOOL(WINAPI*)(DPI_AWARENESS_CONTEXT);
+    const auto pSetProcessDpiAwarenessContext = GetModuleFunctionW<SetProcessDpiAwarenessContextFn>(L"user32.dll", "SetProcessDpiAwarenessContext");
+    if (pSetProcessDpiAwarenessContext && pSetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2)) {
+        return;
     }
 
     SetProcessDPIAware(); // Vista+ fallback: system-DPI aware still beats fully unaware.

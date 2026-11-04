@@ -23,6 +23,7 @@
 #include <Defines.h>
 #include <GWToolbox.h>
 #include <Logger.h>
+#include <Module.h>
 #include <Timer.h>
 #include <Utils/AoeEffects.h>
 #include <Utils/GameWorldCompositor.h>
@@ -310,8 +311,8 @@ namespace {
     void TerminateExistingGWCADll(HMODULE existing_gwca)
     {
         typedef void(__cdecl * GWFnVoid)();
-        const auto disable_hooks = (GWFnVoid)GetProcAddress(existing_gwca, "?DisableHooks@GW@@YAXXZ");
-        const auto terminate = (GWFnVoid)GetProcAddress(existing_gwca, "?Terminate@GW@@YAXXZ");
+        const auto disable_hooks = GetModuleFunctionW<GWFnVoid>(existing_gwca, "?DisableHooks@GW@@YAXXZ");
+        const auto terminate = GetModuleFunctionW<GWFnVoid>(existing_gwca, "?Terminate@GW@@YAXXZ");
         if (disable_hooks) {
             Log::Log("[LoadGWCADll] Calling DisableHooks on old gwca.dll");
             __try {

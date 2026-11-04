@@ -8,6 +8,7 @@ Previous releases are available on Github as dll files. There is no support for 
 the latest version, go to the [Home Page](./) instead.
 
 ## Version 8.35
+* [New] Added `/version` to write the Guild Wars build, Toolbox version, operating system and processor architecture to Global chat as one multiline entry for support screenshots. Flags ARM64 CPU emulation and includes Wine version and host OS details when available.
 * [New] Item Tooltip: added an optional "Show account inventory in item tooltip" setting to show matching item quantities recorded by Account Inventory, including storage totals and per-character quantities. Disabled by default.
 
 ## Version 8.34

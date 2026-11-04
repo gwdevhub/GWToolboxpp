@@ -37,8 +37,10 @@
 #include <GWCA/Utilities/Hooker.h>
 #include <GWCA/Utilities/Scanner.h>
 
+#include <Defines.h>
 #include <GWToolbox.h>
 #include <Logger.h>
+#include <SystemInfo.h>
 #include <Utils/GuiUtils.h>
 
 #include <Constants/EncStrings.h>
@@ -1518,6 +1520,14 @@ namespace {
         GW::Hook::EnableHooks(OnChatInteraction_Callback_Func);
     }
 
+    void CHAT_CMD_FUNC(CmdVersion)
+    {
+        static const auto setup = std::format(L"Guild Wars build: {}\nGWToolbox++ version: {}\nOperating system: {}\nProcessor: {}",
+                                             GW::MemoryMgr::GetGWVersion(), TextUtils::StringToWString(GWTOOLBOXDLL_VERSION GWTOOLBOXDLL_VERSION_BETA),
+                                             GetOperatingSystemDescription(), GetProcessorDescription());
+        GW::Chat::WriteChat(GW::Chat::CHANNEL_GLOBAL, setup.c_str());
+    }
+
     void DrawChatCommandsHelp()
     {
         if (!ImGui::TreeNodeEx("Chat Commands", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
@@ -1670,6 +1680,8 @@ namespace {
         ImGui::Text("'/travel [zv|zb|zm]' travel to nearest unlocked outpost to daily quest.");
         ImGui::Bullet();
         ImGui::Text(useskill_syntax);
+        ImGui::Bullet();
+        ImGui::TextUnformatted("'/version' writes the Guild Wars build, Toolbox version, operating system and processor architecture to Global chat for support screenshots.");
         ImGui::Bullet();
         ImGui::Text("'/volume [master|music|background|effects|dialog|ui] <amount (0-100)>' set in-game volume.");
         ImGui::Bullet();
@@ -1976,13 +1988,13 @@ void ChatCommands::Initialize()
     ToolboxModule::Initialize();
     SettingsRegistry::Register(this, settings);
 
-    // TODO: Move all of these callbacks into pvt namespace
     chat_commands = {
         {L"addhenchman", CmdAddHenchman},
         {L"button", CmdButtonPress},
         {L"chat", CmdChatTab},
         {L"enter", CmdEnterMission},
         {L"age2", CmdAge2},
+        {L"version", CmdVersion},
         {L"dialog", CmdDialog},
         {L"show", CmdShow},
         {L"hide", CmdHide},
