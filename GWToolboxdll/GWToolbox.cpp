@@ -314,19 +314,17 @@ namespace {
         const auto terminate = GetModuleFunctionW<GWFnVoid>(existing_gwca, "?Terminate@GW@@YAXXZ");
         if (disable_hooks) {
             Log::Log("[LoadGWCADll] Calling DisableHooks on old gwca.dll");
-            const auto result = TryCatch([&] {
+            if (!TryCatch([&] {
                 disable_hooks();
-            });
-            if (result.HasException()) {
+            })) {
                 Log::Log("[LoadGWCADll] DisableHooks on old gwca.dll crashed; continuing");
             }
         }
         if (terminate) {
             Log::Log("[LoadGWCADll] Calling Terminate on old gwca.dll");
-            const auto result = TryCatch([&] {
+            if (!TryCatch([&] {
                 terminate();
-            });
-            if (result.HasException()) {
+            })) {
                 Log::Log("[LoadGWCADll] Terminate on old gwca.dll crashed; continuing");
             }
         }

@@ -19,10 +19,12 @@ static int CaptureFault(EXCEPTION_RECORD* record, CONTEXT* context, ToolboxFault
         case EXCEPTION_FLT_UNDERFLOW:
         case EXCEPTION_DATATYPE_MISALIGNMENT:
         case EXCEPTION_ARRAY_BOUNDS_EXCEEDED:
-            fault->record = *record;
-            fault->record.ExceptionRecord = NULL;
-            fault->context = *context;
-            fault->context.ContextFlags &= CONTEXT_FULL | CONTEXT_FLOATING_POINT | CONTEXT_DEBUG_REGISTERS | CONTEXT_EXTENDED_REGISTERS;
+            if (fault) {
+                fault->record = *record;
+                fault->record.ExceptionRecord = NULL;
+                fault->context = *context;
+                fault->context.ContextFlags &= CONTEXT_FULL | CONTEXT_FLOATING_POINT | CONTEXT_DEBUG_REGISTERS | CONTEXT_EXTENDED_REGISTERS;
+            }
             return EXCEPTION_EXECUTE_HANDLER;
         default:
             return EXCEPTION_CONTINUE_SEARCH;
@@ -31,12 +33,14 @@ static int CaptureFault(EXCEPTION_RECORD* record, CONTEXT* context, ToolboxFault
 
 #if defined(_MSC_VER)
 
-void __cdecl ToolboxTryCatch(void (__cdecl *operation)(void*), void* context, ToolboxFault* fault)
+BOOL __cdecl ToolboxTryCatch(void (__cdecl *operation)(void*), void* context, ToolboxFault* fault)
 {
     __try {
         operation(context);
+        return TRUE;
     }
     __except (CaptureFault(GetExceptionInformation()->ExceptionRecord, GetExceptionInformation()->ContextRecord, fault)) {
+        return FALSE;
     }
 }
 
@@ -64,7 +68,7 @@ static EXCEPTION_DISPOSITION __cdecl HandleFault(EXCEPTION_RECORD* record, void*
     longjmp(frame->jump, 1);
 }
 
-void __cdecl ToolboxTryCatch(void (__cdecl *operation)(void*), void* context, ToolboxFault* fault)
+BOOL __cdecl ToolboxTryCatch(void (__cdecl *operation)(void*), void* context, ToolboxFault* fault)
 {
     FaultFrame frame;
     __asm__ __volatile__("movl %%fs:0, %0" : "=r" (frame.previous));
@@ -73,8 +77,11 @@ void __cdecl ToolboxTryCatch(void (__cdecl *operation)(void*), void* context, To
     if (setjmp(frame.jump) == 0) {
         __asm__ __volatile__("movl %0, %%fs:0" : : "r" (&frame) : "memory");
         operation(context);
+        __asm__ __volatile__("movl %0, %%fs:0" : : "r" (frame.previous) : "memory");
+        return TRUE;
     }
     __asm__ __volatile__("movl %0, %%fs:0" : : "r" (frame.previous) : "memory");
+    return FALSE;
 }
 
 #else

@@ -6,6 +6,11 @@
 #include <memory>
 #include <type_traits>
 
+class TryCatchResult;
+
+template <typename Operation>
+bool TryCatch(Operation&& operation, TryCatchResult* result = nullptr);
+
 class TryCatchResult {
 public:
     bool HasException() const noexcept
@@ -31,7 +36,7 @@ public:
 
 private:
     template <typename Operation>
-    friend TryCatchResult TryCatch(Operation&& operation);
+    friend bool TryCatch(Operation&& operation, TryCatchResult* result);
 
     ToolboxFault fault{};
     std::exception_ptr cpp_exception;
@@ -39,22 +44,27 @@ private:
 
 // GCC hardware-fault recovery unwinds Windows SEH frames, not GCC C++ object destructors.
 template <typename Operation>
-TryCatchResult TryCatch(Operation&& operation)
+bool TryCatch(Operation&& operation, TryCatchResult* result)
 {
-    TryCatchResult result;
+    if (result) {
+        result->fault.record.ExceptionCode = 0;
+        result->cpp_exception = nullptr;
+    }
     struct Invocation {
         std::remove_reference_t<Operation>* operation;
-        std::exception_ptr* exception;
-    } invocation{std::addressof(operation), &result.cpp_exception};
+        TryCatchResult* result;
+        bool cpp_failed = false;
+    } invocation{std::addressof(operation), result};
 
-    ToolboxTryCatch([](void* context) {
+    const auto completed = ToolboxTryCatch([](void* context) {
         auto& call = *static_cast<Invocation*>(context);
         try {
             (*call.operation)();
         }
         catch (...) {
-            *call.exception = std::current_exception();
+            call.cpp_failed = true;
+            if (call.result) call.result->cpp_exception = std::current_exception();
         }
-    }, &invocation, &result.fault);
-    return result;
+    }, &invocation, result ? &result->fault : nullptr);
+    return completed && !invocation.cpp_failed;
 }

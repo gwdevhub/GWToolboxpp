@@ -6,12 +6,13 @@ int main()
 {
     auto completed = false;
     const auto success = TryCatch([&] { completed = true; });
-    if (!completed || success.HasException()) return 1;
+    if (!completed || !success) return 1;
 
-    const auto cpp = TryCatch([] { throw std::runtime_error("expected"); });
-    if (!cpp.HasException() || !cpp.CppException() || cpp.ExceptionCode()) return 2;
+    TryCatchResult result;
+    if (TryCatch([] { throw std::runtime_error("expected"); }, &result)) return 2;
+    if (!result.HasException() || !result.CppException() || result.ExceptionCode()) return 2;
     try {
-        std::rethrow_exception(cpp.CppException());
+        std::rethrow_exception(result.CppException());
     }
     catch (const std::runtime_error&) {
     }
@@ -26,10 +27,10 @@ int main()
         (void)value;
     };
 
-    auto fault = TryCatch(read);
-    auto copy = fault;
+    const auto fault_succeeded = TryCatch(read, &result);
+    auto copy = result;
     auto pointers = copy.ExceptionPointers();
-    const auto captured = copy.HasException() && copy.ExceptionCode() == EXCEPTION_ACCESS_VIOLATION
+    const auto captured = !fault_succeeded && !copy.CppException() && copy.HasException() && copy.ExceptionCode() == EXCEPTION_ACCESS_VIOLATION
         && pointers.ExceptionRecord && pointers.ContextRecord
         && !pointers.ExceptionRecord->ExceptionRecord
         && pointers.ExceptionRecord->NumberParameters >= 2
@@ -38,14 +39,19 @@ int main()
 
     auto nested = false;
     const auto outer = TryCatch([&] {
-        const auto inner = TryCatch(read);
-        nested = inner.ExceptionCode() == EXCEPTION_ACCESS_VIOLATION;
+        TryCatchResult inner;
+        nested = !TryCatch(read, &inner) && inner.ExceptionCode() == EXCEPTION_ACCESS_VIOLATION;
     });
-    const auto subsequent = TryCatch([] {});
+    const auto omitted_result = TryCatch(read);
+    const auto omitted_cpp_result = TryCatch([] { throw std::runtime_error("expected"); });
+    const auto subsequent = TryCatch([] {}, &result);
     VirtualFree(memory, 0, MEM_RELEASE);
 
     if (!captured) return 5;
-    if (!nested || outer.HasException()) return 6;
-    if (subsequent.HasException()) return 7;
+    if (!nested || !outer) return 6;
+    if (!subsequent || result.HasException() || result.ExceptionCode() || result.CppException()) return 7;
+    const auto reset_pointers = result.ExceptionPointers();
+    if (reset_pointers.ExceptionRecord || reset_pointers.ContextRecord) return 8;
+    if (omitted_result || omitted_cpp_result) return 9;
     return 0;
 }

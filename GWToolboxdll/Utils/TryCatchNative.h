@@ -11,7 +11,7 @@ typedef struct ToolboxFault {
 extern "C" {
 #endif
 
-void __cdecl ToolboxTryCatch(void (__cdecl *operation)(void*), void* context, ToolboxFault* fault);
+BOOL __cdecl ToolboxTryCatch(void (__cdecl *operation)(void*), void* context, ToolboxFault* fault);
 
 #ifdef __cplusplus
 }
