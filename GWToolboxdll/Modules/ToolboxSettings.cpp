@@ -12,6 +12,7 @@
 
 #include <Modules/ChatFilter.h>
 #include <Modules/DiscordModule.h>
+#include <Modules/DownloadSpeedModule.h>
 #include <Modules/HeroPanelPositionModule.h>
 #include <Modules/HintsModule.h>
 #include <Modules/ItemDrops.h>
@@ -173,6 +174,7 @@ namespace {
         //HeroPanelPositionModule::Instance(),
         ToastNotifications::Instance(),
         DiscordModule::Instance(),
+        {DownloadSpeedModule::Instance(), false},
         TwitchModule::Instance(),
         TeamspeakModule::Instance(),
         Teamspeak5Module::Instance(),
