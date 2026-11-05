@@ -52,6 +52,7 @@
 #include <Windows/MainWindow.h>
 
 #include <Utils/TextUtils.h>
+#include <Utils/TryCatch.h>
 #include "Utils/FontLoader.h"
 
 #include <EmbeddedResource.h>
@@ -313,17 +314,19 @@ namespace {
         const auto terminate = GetModuleFunctionW<GWFnVoid>(existing_gwca, "?Terminate@GW@@YAXXZ");
         if (disable_hooks) {
             Log::Log("[LoadGWCADll] Calling DisableHooks on old gwca.dll");
-            __try {
+            const auto result = TryCatch([&] {
                 disable_hooks();
-            } __except (EXCEPTION_EXECUTE_HANDLER) {
+            });
+            if (result.HasException()) {
                 Log::Log("[LoadGWCADll] DisableHooks on old gwca.dll crashed; continuing");
             }
         }
         if (terminate) {
             Log::Log("[LoadGWCADll] Calling Terminate on old gwca.dll");
-            __try {
+            const auto result = TryCatch([&] {
                 terminate();
-            } __except (EXCEPTION_EXECUTE_HANDLER) {
+            });
+            if (result.HasException()) {
                 Log::Log("[LoadGWCADll] Terminate on old gwca.dll crashed; continuing");
             }
         }
