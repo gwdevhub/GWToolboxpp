@@ -6,6 +6,7 @@
 #include "DownloadSpeedModule.h"
 
 namespace {
+    constexpr uint32_t maximum_chunk_size = 0x8000;
     GW::MemoryPatcher chunk_patches[4];
 }
 
@@ -13,38 +14,34 @@ void DownloadSpeedModule::Initialize()
 {
     ToolboxModule::Initialize();
 
-    const auto file_client = GW::Scanner::FindAssertion("FcSrv.cpp", "dnsIndex < arrsize(s_dns2dc)", 0, 0);
-    if (!file_client) {
-        Log::Error("Download Speed: could not locate the file client assertion");
+    const auto file_client_begin = GW::Scanner::FindAssertion("FcSrv.cpp", "dnsIndex < arrsize(s_dns2dc)", 0, 0);
+    const auto file_client_end = GW::Scanner::FindAssertion("FcSrv.cpp", "s_currSrv != this", 0, 0);
+    if (!file_client_begin || !file_client_end || file_client_begin >= file_client_end) {
+        Log::Error("Download Speed: could not locate the file client assertions");
         return;
     }
-    const auto scan_end = file_client + 0x1000;
 
-    struct Scan {
-        const char* pattern;
-        const char* mask;
-        uintptr_t address = 0;
-    };
-    Scan scans[] = {
-        {"\xc7\x40\x78\x00\x40\x00\x00", "xxxxxxx"},
-        {"\xc7\x40\x7c\x00\x02\x00\x00", "xxxxxxx"},
-        {"\x8b\x44\x96\x78\xd1\xe8", "xxxxxx"},
-        {"\x8b\x44\x96\x78\x03\xc0", "xxxxxx"}
-    };
-    for (auto& scan : scans) {
-        scan.address = GW::Scanner::FindInRange(scan.pattern, scan.mask, 0, file_client, scan_end);
-        if (!scan.address || GW::Scanner::FindInRange(scan.pattern, scan.mask, 0, scan.address + 1, scan_end)) {
-            Log::Error("Download Speed: could not uniquely locate the file client chunk-size instructions");
-            return;
+    const auto find_operand = [file_client_begin, file_client_end](const char* pattern, const char* mask, const int operand_offset) -> uintptr_t {
+        const auto instruction = GW::Scanner::FindInRange(pattern, mask, 0, file_client_begin, file_client_end);
+        if (!instruction || GW::Scanner::FindInRange(pattern, mask, 0, instruction + 1, file_client_end)) {
+            return 0;
         }
+        return instruction + operand_offset;
+    };
+
+    const auto foreground_default = find_operand("\xc7\x40\x78\x00\x40\x00\x00", "x?xxxxx", 3);
+    const auto background_default = find_operand("\xc7\x40\x7c\x00\x02\x00\x00", "x?xxxxx", 3);
+    const auto minimum_comparison = find_operand("\x3d\x00\x02\x00\x00", "xxxxx", 1);
+    const auto minimum_assignment = find_operand("\xb8\x00\x02\x00\x00", "xxxxx", 1);
+    if (!foreground_default || !background_default || !minimum_comparison || !minimum_assignment) {
+        Log::Error("Download Speed: could not uniquely locate the chunk-size constants");
+        return;
     }
 
-    chunk_patches[0].SetPatch(scans[0].address + 3, "\x00\x80\x00\x00", 4);
-    chunk_patches[1].SetPatch(scans[1].address + 3, "\x00\x80\x00\x00", 4);
-    chunk_patches[2].SetPatch(scans[2].address, "\xb8\x00\x80\x00\x00\x90", 6);
-    chunk_patches[3].SetPatch(scans[3].address, "\xb8\x00\x80\x00\x00\x90", 6);
-    for (auto& patch : chunk_patches) {
-        patch.TogglePatch(true);
+    const uintptr_t operands[] = {foreground_default, background_default, minimum_comparison, minimum_assignment};
+    for (size_t i = 0; i < _countof(chunk_patches); ++i) {
+        chunk_patches[i].SetPatch(operands[i], reinterpret_cast<const char*>(&maximum_chunk_size), sizeof(maximum_chunk_size));
+        chunk_patches[i].TogglePatch(true);
     }
 }
 
