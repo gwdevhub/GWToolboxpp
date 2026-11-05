@@ -132,9 +132,8 @@ namespace {
         return 1;
     }
 
-    // The CRT kills the process for these without ever raising an SEH exception, so they never reach
-    // TopLevelExceptionFilter. Route them into Crash() with a context captured at the point of failure.
     constexpr DWORD EXCEPTION_TOOLBOX_CRT_FAILURE = 0xE0435254;
+    constexpr DWORD EXCEPTION_TOOLBOX_ASSERTION_FAILURE = 0xE0544241;
 
     _invalid_parameter_handler previous_invalid_parameter_handler = nullptr;
     _purecall_handler previous_purecall_handler = nullptr;
@@ -142,25 +141,27 @@ namespace {
     void(__cdecl* previous_sigabrt_handler)(int) = SIG_DFL;
     bool crt_handlers_installed = false;
 
-    void CrashFromCrtHandler(const char* message)
+    void CrashWithContext(const DWORD exception_code, const char* message)
     {
-        // Crash() keeps this pointer for the dump's comment stream, and the process dies before it could be reused.
-        static char crt_failure_message[512];
-        strncpy_s(crt_failure_message, _countof(crt_failure_message), message && *message ? message : "Unknown CRT failure", _TRUNCATE);
-
         CONTEXT context{};
         RtlCaptureContext(&context);
 
         EXCEPTION_RECORD record{};
-        record.ExceptionCode = EXCEPTION_TOOLBOX_CRT_FAILURE;
+        record.ExceptionCode = exception_code;
         record.ExceptionFlags = EXCEPTION_NONCONTINUABLE;
         record.ExceptionAddress = reinterpret_cast<PVOID>(context.Eip);
 
         EXCEPTION_POINTERS pointers{&record, &context};
-        CrashHandler::Crash(&pointers, crt_failure_message);
+        CrashHandler::Crash(&pointers, message);
 
-        // Crash() doesn't return, but don't let the CRT carry on if it somehow did.
         TerminateProcess(GetCurrentProcess(), 1);
+    }
+
+    void CrashFromCrtHandler(const char* message)
+    {
+        static char crt_failure_message[512];
+        strncpy_s(crt_failure_message, _countof(crt_failure_message), message && *message ? message : "Unknown CRT failure", _TRUNCATE);
+        CrashWithContext(EXCEPTION_TOOLBOX_CRT_FAILURE, crt_failure_message);
     }
 
     // Release CRTs pass null for everything but the line number, hence the placeholders.
@@ -262,20 +263,11 @@ void CrashHandler::GWCAPanicHandler(
 
 void CrashHandler::FatalAssert(const char* expr, const char* file, const unsigned line)
 {
-    __try {
-        auto fmt = "Assertion Error: '%s' in '%s' line %u";
-        const size_t len = snprintf(nullptr, 0, fmt, expr, file, line);
-        tb_exception_message = new char[len + 1];
-        snprintf(tb_exception_message, len + 1, fmt, expr, file, line);
-
-        throw std::runtime_error(tb_exception_message);
-    } __except (EXCEPT_EXPRESSION_ENTRY) {
-        // Crash() should already have terminated the process; force it if not.
-        TerminateProcess(GetCurrentProcess(), 1);
-    }
-
-    // Should never reach here
-    TerminateProcess(GetCurrentProcess(), 1);
+    const auto fmt = "Assertion Error: '%s' in '%s' line %u";
+    const size_t len = snprintf(nullptr, 0, fmt, expr, file, line);
+    tb_exception_message = new char[len + 1];
+    snprintf(tb_exception_message, len + 1, fmt, expr, file, line);
+    CrashWithContext(EXCEPTION_TOOLBOX_ASSERTION_FAILURE, tb_exception_message);
 }
 
 LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const char* extra_info)
