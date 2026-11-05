@@ -16,18 +16,15 @@
 namespace {
     constexpr uintptr_t MAX_IMAGE_BYTES = 64u * 1024 * 1024;
 
-    // DnCtl image-control ctor (asserts "m_image" @ DnCtl.cpp); __thiscall modelled as __fastcall.
-    // Only called for the two splash images, so `flags` picks the layer (see background/foreground).
     typedef void*(__fastcall* DnCtlImageCtor_pt)(void* thisptr, void* edx, uint32_t flags, int* rect,
                                                  uint32_t size, const void* data);
     DnCtlImageCtor_pt DnCtlImageCtor_Func = nullptr;
     DnCtlImageCtor_pt DnCtlImageCtor_Ret = nullptr;
 
-    // A replaceable splash image; `bytes` is the user's file, handed to the ctor verbatim.
     struct SplashLayer {
         const char* name;
         const char* label;
-        uint32_t flags; // ctor discriminator
+        uint32_t flags;
         std::string path;
         std::vector<uint8_t> bytes;
     };
@@ -53,6 +50,7 @@ namespace {
         if (SplashLayer* layer = LayerForFlags(flags); layer && !layer->bytes.empty()) {
             data = layer->bytes.data();
             size = static_cast<uint32_t>(layer->bytes.size());
+            Log::Log("[SplashScreen] replacing %s image (%zu bytes)\n", layer->name, layer->bytes.size());
         }
         const auto res = DnCtlImageCtor_Ret(thisptr, edx, flags, rect, size, data);
         GW::Hook::LeaveHook();
@@ -138,6 +136,15 @@ void SplashScreenModule::Initialize()
     ToolboxModule::Initialize();
     SettingsRegistry::RegisterField(this, "background_image", &background.path, "Path to the replacement splash background");
     SettingsRegistry::RegisterField(this, "foreground_image", &foreground.path, "Path to the replacement splash logo");
+}
+
+void SplashScreenModule::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
+{
+    ToolboxModule::LoadSettings(doc, legacy);
+    RefreshImages();
+    if (DnCtlImageCtor_Func) {
+        return;
+    }
 
     DnCtlImageCtor_Func = reinterpret_cast<DnCtlImageCtor_pt>(
         GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("DnCtl.cpp", "m_image", 0, 0), 0xfff));
@@ -149,12 +156,6 @@ void SplashScreenModule::Initialize()
                          reinterpret_cast<void**>(&DnCtlImageCtor_Ret));
     GW::Hook::EnableHooks(DnCtlImageCtor_Func);
     Log::Log("[SplashScreen] hooked splash image ctor @ 0x%p\n", (void*)DnCtlImageCtor_Func);
-}
-
-void SplashScreenModule::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
-{
-    ToolboxModule::LoadSettings(doc, legacy); // populates the image paths
-    RefreshImages();
 }
 
 void SplashScreenModule::Terminate()
@@ -173,8 +174,7 @@ void SplashScreenModule::Terminate()
 void SplashScreenModule::DrawSettingsInternal()
 {
     ImGui::TextWrapped("Replaces the background and logo artwork on the Guild Wars startup splash window.");
-    ImGui::TextDisabled("Changes take effect the next time you launch Guild Wars, since the splash "
-                        "is drawn before Toolbox can redraw it.");
+    ImGui::TextWrapped("Load Toolbox through GW Launcher before Guild Wars starts. Image changes apply on the next launch.");
     ImGui::Spacing();
 
     if (!DnCtlImageCtor_Func) {

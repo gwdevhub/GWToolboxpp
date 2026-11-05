@@ -42,6 +42,7 @@
 #include <Modules/InventoryManager.h>
 #include <Modules/ItemDescriptionHandler.h>
 #include <Modules/Resources.h>
+#include <Modules/SplashScreenModule.h>
 #include <Modules/ToolboxSettings.h>
 #include <Modules/ToolboxTheme.h>
 #include <Modules/TransmoModule.h>
@@ -830,6 +831,14 @@ void GWToolbox::Initialize(LPVOID module)
     Log::InitializeGWCALog();
     GW::RegisterPanicHandler(CrashHandler::GWCAPanicHandler, nullptr);
     GW::Initialize();
+    auto& splash_screen = SplashScreenModule::Instance();
+    auto splash_screen_enabled = false;
+    if (!GetSettingsDoc()->Get("Toolbox Modules", splash_screen.Name(), splash_screen_enabled)) {
+        splash_screen_enabled = OpenSettingsFile()->GetBoolValue("Toolbox Modules", splash_screen.Name(), false);
+    }
+    if (splash_screen_enabled) {
+        ToggleModule(splash_screen);
+    }
     Log::InitializeChat();
 
     HookUiRoot();
