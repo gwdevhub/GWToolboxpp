@@ -328,13 +328,11 @@ void Resources::EnqueueDxTask(const std::function<void(IDirect3DDevice9*)>& f)
 
 void Resources::OpenFileDialog(std::function<void(const char*)> callback, const char* filterList, const char* defaultPath)
 {
-    auto filterList_cpy = new std::string(filterList);
-    auto defaultPath_cpy = new std::string(defaultPath);
-    EnqueueWorkerTask([callback, filterList_cpy, defaultPath_cpy] {
+    EnqueueWorkerTask([callback = std::move(callback),
+                       filter_list = std::string(filterList ? filterList : ""),
+                       default_path = std::string(defaultPath ? defaultPath : "")] {
         nfdchar_t* outPath = nullptr;
-        const nfdresult_t result = NFD_OpenDialog(filterList_cpy->c_str(), defaultPath_cpy->c_str(), &outPath);
-        delete filterList_cpy;
-        delete defaultPath_cpy;
+        const auto result = NFD_OpenDialog(filter_list.c_str(), default_path.c_str(), &outPath);
 
         switch (result) {
             case NFD_OKAY:
@@ -354,14 +352,11 @@ void Resources::OpenFileDialog(std::function<void(const char*)> callback, const 
 
 void Resources::SaveFileDialog(std::function<void(const char*)> callback, const char* filterList, const char* defaultPath)
 {
-    auto filterList_cpy = new std::string(filterList);
-    auto defaultPath_cpy = new std::string(defaultPath);
-
-    EnqueueWorkerTask([callback, filterList_cpy, defaultPath_cpy] {
+    EnqueueWorkerTask([callback = std::move(callback),
+                       filter_list = std::string(filterList ? filterList : ""),
+                       default_path = std::string(defaultPath ? defaultPath : "")] {
         nfdchar_t* outPath = nullptr;
-        const nfdresult_t result = NFD_SaveDialog(filterList_cpy->c_str(), defaultPath_cpy->c_str(), &outPath);
-        delete filterList_cpy;
-        delete defaultPath_cpy;
+        const auto result = NFD_SaveDialog(filter_list.c_str(), default_path.c_str(), &outPath);
 
         switch (result) {
             case NFD_OKAY:
