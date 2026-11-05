@@ -12,7 +12,7 @@ HotkeySendChat::HotkeySendChat(const ToolboxIni* ini, const char* section)
     : TBHotkey(ini, section)
 {
     if (!ini) return;
-    strcpy_s(message, ini->GetValue(section, "msg", ""));
+    strcpy_s(message, _countof(message), ini->GetValue(section, "msg", ""));
     channel = ini->GetValue(section, "channel", "/")[0];
 }
 

@@ -16,7 +16,7 @@ HotkeyUseItem::HotkeyUseItem(const ToolboxIni* ini, const char* section)
         return;
     }
     item_id = static_cast<size_t>(ini->GetLongValue(section, "ItemID", 0));
-    strcpy_s(name, ini->GetValue(section, "ItemName", ""));
+    strcpy_s(name, _countof(name), ini->GetValue(section, "ItemName", ""));
     bag_idx = static_cast<size_t>(ini->GetLongValue(section, "Bag", bag_idx));
     slot_idx = static_cast<size_t>(ini->GetLongValue(section, "Slot", slot_idx));
     use_by = static_cast<UseBy>(ini->GetLongValue(section, "UseBy", use_by));

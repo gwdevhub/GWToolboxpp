@@ -12,7 +12,7 @@ HotkeyDialog::HotkeyDialog(const ToolboxIni* ini, const char* section)
 {
     if (!ini) return;
     id = static_cast<size_t>(ini->GetLongValue(section, "DialogID", 0));
-    strcpy_s(name, ini->GetValue(section, "DialogName", ""));
+    strcpy_s(name, _countof(name), ini->GetValue(section, "DialogName", ""));
 }
 
 void HotkeyDialog::Save(ToolboxIni* ini, const char* section) const

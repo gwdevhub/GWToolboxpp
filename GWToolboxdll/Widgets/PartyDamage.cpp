@@ -255,7 +255,8 @@ void PartyDamage::WriteDamageOf(size_t index, uint32_t rank)
     }
 
     constexpr size_t buffer_size = 200;
-    wchar_t buffer[buffer_size];
+    wchar_t buffer[buffer_size]{};
+    auto written = 0;
 
     const auto& entry = damage[index];
     std::wstring prof_str;
@@ -269,22 +270,23 @@ void PartyDamage::WriteDamageOf(size_t index, uint32_t rank)
     const bool has_healing = settings.show_healing && entry.healing > 0;
 
     if (has_healing && entry.damage > 0) {
-        swprintf_s(buffer, buffer_size, L"#%2d ~ %ls %ls ~ Dmg: %3.2f%% (%d) ~ Heal: %3.2f%% (%d)",
+        written = std::swprintf(buffer, buffer_size, L"#%2d ~ %ls %ls ~ Dmg: %3.2f%% (%d) ~ Heal: %3.2f%% (%d)",
             rank, prof_str.c_str(), entry.name.c_str(),
             GetPercentageOfTotal(entry.damage), entry.damage,
             GetPercentageOfTotalHealing(entry.healing), entry.healing);
     }
     else if (has_healing) {
-        swprintf_s(buffer, buffer_size, L"#%2d ~ %ls %ls ~ Heal: %3.2f%% (%d)",
+        written = std::swprintf(buffer, buffer_size, L"#%2d ~ %ls %ls ~ Heal: %3.2f%% (%d)",
             rank, prof_str.c_str(), entry.name.c_str(),
             GetPercentageOfTotalHealing(entry.healing), entry.healing);
     }
     else {
-        swprintf_s(buffer, buffer_size, L"#%2d ~ %ls %ls ~ Dmg: %3.2f%% (%d)",
+        written = std::swprintf(buffer, buffer_size, L"#%2d ~ %ls %ls ~ Dmg: %3.2f%% (%d)",
             rank, prof_str.c_str(), entry.name.c_str(),
             GetPercentageOfTotal(entry.damage), entry.damage);
     }
 
+    if (written < 0 || static_cast<size_t>(written) >= _countof(buffer)) return;
     send_queue.push(buffer);
 }
 

@@ -20,7 +20,7 @@ HotkeyMove::HotkeyMove(const ToolboxIni* ini, const char* section)
     range = static_cast<float>(ini->GetDoubleValue(section, "distance",
                                                    GW::Constants::Range::Compass));
     distance_from_location = static_cast<float>(ini->GetDoubleValue(section, "distance_from_location", distance_from_location));
-    strcpy_s(name, ini->GetValue(section, "name", ""));
+    strcpy_s(name, _countof(name), ini->GetValue(section, "name", ""));
 }
 
 void HotkeyMove::Save(ToolboxIni* ini, const char* section) const

@@ -166,6 +166,7 @@ file(GLOB SOURCES CONFIGURE_DEPENDS
     
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${SOURCES})
 target_sources(GWToolboxdll PRIVATE ${SOURCES})
+set_source_files_properties("Utils/TryCatchNative.cpp" PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
 
 # Wasm/*.cpp is the Emscripten-only mod_init scaffold (see Wasm/main_wasm.cpp) --
 # never compiled into this native target (uses GLES3/emscripten_sleep, not part of
@@ -312,8 +313,12 @@ target_link_libraries(GWToolboxdll PRIVATE
     RecastNavigation::Detour
 
     # libs:
-    dbghelp.lib # for MiniDump
-    bcrypt.lib  # for SHA256 (Resources.cpp)
+    dbghelp
+    bcrypt
+    version
+    strmiids
+    gdi32
+    dwmapi
 	delayimp # for delay loading gwca
     )
 

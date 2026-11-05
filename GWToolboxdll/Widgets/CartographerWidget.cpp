@@ -247,7 +247,7 @@ namespace Carto {
         declined_cells.clear();
         for (const auto& tok : TextUtils::Split(declined_cells_str, ",")) {
             int cx, cy;
-            if (sscanf_s(tok.c_str(), "%d:%d", &cx, &cy) == 2) declined_cells.insert({cx, cy});
+            if (std::sscanf(tok.c_str(), "%d:%d", &cx, &cy) == 2) declined_cells.insert({cx, cy});
         }
     }
 
@@ -263,8 +263,8 @@ namespace Carto {
         custom_points.clear();
         for (const auto& tok : TextUtils::Split(custom_points_str, ",")) {
             float x, y;
-            int was_fog = 1; // points written before the flag existed were all placed on fog
-            if (sscanf_s(tok.c_str(), "%f:%f:%d", &x, &y, &was_fog) >= 2) custom_points.push_back({{x, y}, was_fog != 0});
+            int was_fog = 1;
+            if (std::sscanf(tok.c_str(), "%f:%f:%d", &x, &y, &was_fog) >= 2) custom_points.push_back({{x, y}, was_fog != 0});
         }
     }
 

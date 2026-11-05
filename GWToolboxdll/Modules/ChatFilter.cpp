@@ -762,8 +762,8 @@ void ChatFilter::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
     ToolboxModule::LoadSettings(doc, legacy);
     doc.GetStruct(Name(), settings);
 
-    strcpy_s(bycontent_word_buf, "");
-    strcpy_s(bycontent_regex_buf, "");
+    bycontent_word_buf[0] = '\0';
+    bycontent_regex_buf[0] = '\0';
 
     std::ifstream file1;
     file1.open(Resources::GetSettingFileOrLegacy(L"FilterByContent.txt"));
@@ -780,7 +780,7 @@ void ChatFilter::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
         ParseBuffer(bycontent_regex_buf, bycontent_regex, Pattern::Fallback::Regex, std::regex_constants::optimize);
     }
 
-    strcpy_s(byauthor_buf, "");
+    byauthor_buf[0] = '\0';
     std::ifstream byauthor_file;
     byauthor_file.open(Resources::GetSettingFileOrLegacy(L"FilterByAuthor.txt"));
     if (byauthor_file.is_open()) {

@@ -12,6 +12,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <cwchar>
 #include <ctime>
 
 // c++ headers
@@ -107,6 +108,14 @@
 #ifndef __EMSCRIPTEN__
 // Pulls in glaze (see above) transitively; not needed by the wasm source list either.
 #include <Utils/SettingsRegistry.h>
+#endif
+
+#ifndef _countof
+namespace ToolboxCompatibility {
+    template <typename T, size_t N>
+    auto CountOf(T (&)[N]) -> char (&)[N];
+}
+#define _countof(array) (sizeof(ToolboxCompatibility::CountOf(array)))
 #endif
 
 #pragma warning(pop)

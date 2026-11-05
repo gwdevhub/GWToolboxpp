@@ -36,7 +36,6 @@
 #pragma warning(pop)
 #include <dxgiformat.h>
 #include <bcrypt.h>
-#pragma comment(lib, "bcrypt.lib")
 
 #include <Modules/GwDatModule.h>
 #include <Constants/EncStrings.h>

@@ -19,14 +19,14 @@ HotkeyTarget::HotkeyTarget(const ToolboxIni* ini, const char* section)
         return;
     }
     std::string ini_name = ini->GetValue(section, "TargetID", "");
-    strcpy_s(id, ini_name.substr(0, sizeof(id) - 1).c_str());
+    strcpy_s(id, _countof(id), ini_name.substr(0, sizeof(id) - 1).c_str());
     id[sizeof(id) - 1] = 0;
     long ini_type = ini->GetLongValue(section, "TargetType", -1);
     if (ini_type >= NPC && ini_type < Count) {
         type = static_cast<HotkeyTargetType>(ini_type);
     }
     ini_name = ini->GetValue(section, "TargetName", "");
-    strcpy_s(name, ini_name.substr(0, sizeof(name) - 1).c_str());
+    strcpy_s(name, _countof(name), ini_name.substr(0, sizeof(name) - 1).c_str());
     name[sizeof(name) - 1] = 0;
 
     ini->GetBoolValue(section, VAR_NAME(show_message_in_emote_channel),

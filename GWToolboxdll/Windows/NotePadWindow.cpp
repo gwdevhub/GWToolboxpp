@@ -23,7 +23,7 @@ namespace {
         {
             text = new char[text_buffer_length]{};
             if (tab_name && *tab_name) {
-                strncpy_s(name, tab_name, tab_name_length - 1);
+                strncpy_s(name, _countof(name), tab_name, tab_name_length - 1);
             }
         }
 
@@ -167,7 +167,7 @@ void NotePadWindow::Draw(IDirect3DDevice9*)
                 if (ImGui::BeginPopupContextItem()) {
                     if (ImGui::MenuItem("Rename")) {
                         renaming_tab = i;
-                        strncpy_s(rename_buf, tab.name, tab_name_length - 1);
+                        strncpy_s(rename_buf, _countof(rename_buf), tab.name, tab_name_length - 1);
                         rename_needs_focus = true;
                     }
                     if (tabs.size() > 1 && ImGui::MenuItem("Close")) {
@@ -192,7 +192,7 @@ void NotePadWindow::Draw(IDirect3DDevice9*)
                             ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll);
                         if (confirmed) {
                             if (rename_buf[0]) {
-                                strncpy_s(tab.name, rename_buf, tab_name_length - 1);
+                                strncpy_s(tab.name, _countof(tab.name), rename_buf, tab_name_length - 1);
                             }
                             renaming_tab = -1;
                         }

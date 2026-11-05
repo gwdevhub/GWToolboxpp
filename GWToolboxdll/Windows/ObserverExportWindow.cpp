@@ -795,7 +795,7 @@ void ObserverExportWindow::Draw(IDirect3DDevice9*)
     }
     
     char date_buf[64];
-    strncpy_s(date_buf, settings.match_date.c_str(), 63);
+    strncpy_s(date_buf, _countof(date_buf), settings.match_date.c_str(), 63);
     if (ImGui::InputText("Match Date", date_buf, 64)) {
         settings.match_date = date_buf;
     }
@@ -874,8 +874,8 @@ void ObserverExportWindow::DrawSettingsInternal()
     
     char api_key_buf[256];
     char endpoint_buf[256];
-    strncpy_s(api_key_buf, settings.gwrank_api_key.c_str(), 255);
-    strncpy_s(endpoint_buf, settings.gwrank_endpoint.c_str(), 255);
+    strncpy_s(api_key_buf, _countof(api_key_buf), settings.gwrank_api_key.c_str(), 255);
+    strncpy_s(endpoint_buf, _countof(endpoint_buf), settings.gwrank_endpoint.c_str(), 255);
     
     if (ImGui::InputText("API Key", api_key_buf, 256, ImGuiInputTextFlags_Password)) {
         settings.gwrank_api_key = api_key_buf;
