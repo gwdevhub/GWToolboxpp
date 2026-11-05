@@ -16,10 +16,9 @@ void DownloadSpeedModule::Initialize()
 
     const auto file_client_begin = GW::Scanner::FindAssertion("FcSrv.cpp", "dnsIndex < arrsize(s_dns2dc)", 0, 0);
     const auto file_client_end = GW::Scanner::FindAssertion("FcSrv.cpp", "s_currSrv != this", 0, 0);
-    if (!file_client_begin || !file_client_end || file_client_begin >= file_client_end) {
-        Log::Error("Download Speed: could not locate the file client assertions");
-        return;
-    }
+    ASSERT(file_client_begin);
+    ASSERT(file_client_end);
+    ASSERT(file_client_begin < file_client_end);
 
     const auto find_operand = [file_client_begin, file_client_end](const char* pattern, const char* mask, const int operand_offset) -> uintptr_t {
         const auto instruction = GW::Scanner::FindInRange(pattern, mask, 0, file_client_begin, file_client_end);
@@ -33,10 +32,10 @@ void DownloadSpeedModule::Initialize()
     const auto background_default = find_operand("\xc7\x40\x7c\x00\x02\x00\x00", "x?xxxxx", 3);
     const auto minimum_comparison = find_operand("\x3d\x00\x02\x00\x00", "xxxxx", 1);
     const auto minimum_assignment = find_operand("\xb8\x00\x02\x00\x00", "xxxxx", 1);
-    if (!foreground_default || !background_default || !minimum_comparison || !minimum_assignment) {
-        Log::Error("Download Speed: could not uniquely locate the chunk-size constants");
-        return;
-    }
+    ASSERT(foreground_default);
+    ASSERT(background_default);
+    ASSERT(minimum_comparison);
+    ASSERT(minimum_assignment);
 
     const uintptr_t operands[] = {foreground_default, background_default, minimum_comparison, minimum_assignment};
     for (size_t i = 0; i < _countof(chunk_patches); ++i) {
