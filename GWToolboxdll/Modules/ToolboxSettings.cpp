@@ -174,7 +174,6 @@ namespace {
         //HeroPanelPositionModule::Instance(),
         ToastNotifications::Instance(),
         DiscordModule::Instance(),
-        {DownloadSpeedModule::Instance(), false},
         TwitchModule::Instance(),
         TeamspeakModule::Instance(),
         Teamspeak5Module::Instance(),
@@ -297,6 +296,7 @@ void ToolboxSettings::LoadModules(ToolboxIni* ini)
 #endif
     GWToolbox::ToggleModule(VendorFix::Instance());
     GWToolbox::ToggleModule(AudioSettings::Instance());
+    GWToolbox::ToggleModule(DownloadSpeedModule::Instance());
 
     for (const auto& m : optional_modules) {
         GWToolbox::ToggleModule(*m.toolbox_module, m.enabled);

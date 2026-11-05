@@ -6,12 +6,7 @@
 #include "DownloadSpeedModule.h"
 
 namespace {
-    GW::MemoryPatcher foreground_chunk_patch;
-    GW::MemoryPatcher background_chunk_patch;
-    GW::MemoryPatcher decrease_chunk_patch;
-    GW::MemoryPatcher increase_chunk_patch;
-
-    bool patches_applied = false;
+    GW::MemoryPatcher chunk_patches[4];
 }
 
 void DownloadSpeedModule::Initialize()
@@ -44,36 +39,19 @@ void DownloadSpeedModule::Initialize()
         }
     }
 
-    foreground_chunk_patch.SetPatch(scans[0].address + 3, "\x00\x80\x00\x00", 4);
-    background_chunk_patch.SetPatch(scans[1].address + 3, "\x00\x80\x00\x00", 4);
-    decrease_chunk_patch.SetPatch(scans[2].address, "\xb8\x00\x80\x00\x00\x90", 6);
-    increase_chunk_patch.SetPatch(scans[3].address, "\xb8\x00\x80\x00\x00\x90", 6);
-
-    patches_applied = foreground_chunk_patch.TogglePatch(true)
-        && background_chunk_patch.TogglePatch(true)
-        && decrease_chunk_patch.TogglePatch(true)
-        && increase_chunk_patch.TogglePatch(true);
-    if (!patches_applied) {
-        foreground_chunk_patch.Reset();
-        background_chunk_patch.Reset();
-        decrease_chunk_patch.Reset();
-        increase_chunk_patch.Reset();
-        Log::Error("Download Speed: failed to apply the file client chunk-size patches");
+    chunk_patches[0].SetPatch(scans[0].address + 3, "\x00\x80\x00\x00", 4);
+    chunk_patches[1].SetPatch(scans[1].address + 3, "\x00\x80\x00\x00", 4);
+    chunk_patches[2].SetPatch(scans[2].address, "\xb8\x00\x80\x00\x00\x90", 6);
+    chunk_patches[3].SetPatch(scans[3].address, "\xb8\x00\x80\x00\x00\x90", 6);
+    for (auto& patch : chunk_patches) {
+        patch.TogglePatch(true);
     }
 }
 
 void DownloadSpeedModule::Terminate()
 {
-    foreground_chunk_patch.Reset();
-    background_chunk_patch.Reset();
-    decrease_chunk_patch.Reset();
-    increase_chunk_patch.Reset();
-    patches_applied = false;
+    for (auto& patch : chunk_patches) {
+        patch.Reset();
+    }
     ToolboxModule::Terminate();
-}
-
-void DownloadSpeedModule::DrawSettingsInternal()
-{
-    ImGui::TextUnformatted(patches_applied ? "Maximum download chunk size: 32 KiB" : "Download speed patch unavailable for this game client.");
-    ImGui::TextWrapped("Existing connections switch on their next adaptive chunk-size update. New connections start at the maximum size.");
 }

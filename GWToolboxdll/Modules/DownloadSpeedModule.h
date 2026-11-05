@@ -14,9 +14,8 @@ public:
     }
 
     [[nodiscard]] const char* Name() const override { return "Download Speed"; }
-    [[nodiscard]] const char* Description() const override { return "Uses the game's maximum supported 32 KiB receive chunks for Gw.dat downloads instead of adapting down to smaller chunks."; }
+    bool HasSettings() override { return false; }
 
     void Initialize() override;
     void Terminate() override;
-    void DrawSettingsInternal() override;
 };
