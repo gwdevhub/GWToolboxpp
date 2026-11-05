@@ -14,6 +14,7 @@ public:
     }
 
     [[nodiscard]] const char* Name() const override { return "Download Speed"; }
+    [[nodiscard]] const char* Description() const override { return "Forces Gw.dat downloads to use the maximum supported 32 KiB chunk size instead of adapting to smaller chunks."; }
     bool HasSettings() override { return false; }
 
     void Initialize() override;
