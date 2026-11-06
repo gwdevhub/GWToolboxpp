@@ -1,6 +1,10 @@
 #include "stdafx.h"
 
+#include <atomic>
+#include <exception>
 #include <Utils/GuiUtils.h>
+#include <Utils/TextUtils.h>
+#include <bcrypt.h>
 #include <GWToolbox.h>
 #include <Logger.h>
 
@@ -12,12 +16,13 @@ namespace github_api {
     struct ReleaseAsset {
         std::string name;
         std::string browser_download_url;
-        double size = 0.0; // bytes (double to survive 53-bit JSON precision)
+        uintmax_t size = 0;
+        std::optional<std::string> digest;
     };
 
     struct Release {
         std::string tag_name;
-        std::optional<std::string> body; // Github sends null when a release has no description text
+        std::optional<std::string> body;
         bool prerelease = false;
         std::vector<ReleaseAsset> assets;
     };
@@ -32,7 +37,6 @@ namespace {
 
     Updater::Settings settings;
 
-    // 0=checking, 1=asking, 2=downloading, 3=done
     enum Step {
         Checking,
         CheckAndAsk,
@@ -43,15 +47,10 @@ namespace {
         Done
     };
 
-    Step step = Checking;
+    std::atomic<Step> step = Done;
 
-    bool is_latest_version = true;
-    bool notified = false;
-    bool forced_ask = false;
-    clock_t last_check = 0;
-
-    // Set once on launch when the running version differs from the version we
-    // last saved — i.e. Toolbox was just updated. Drives the one-time star request.
+    std::atomic_bool is_latest_version = true;
+    std::atomic_bool startup_check_complete = false;
     bool show_star_request = false;
 
     GWToolboxRelease latest_release;
@@ -125,16 +124,16 @@ namespace {
         return left.prerelease ? CompareNaturalVersions(VersionSuffix(left.version), VersionSuffix(right.version)) : 0;
     }
 
-    GWToolboxRelease* GetLatestRelease(GWToolboxRelease* release)
+    GWToolboxRelease* GetLatestRelease(GWToolboxRelease* release, const unsigned int max_tries = 5)
     {
         std::string response;
         unsigned int tries = 0;
         const auto url = "https://api.github.com/repos/gwdevhub/GWToolboxpp/releases";
         bool success = false;
         do {
-            success = Resources::Instance().Download(url, response);
+            success = Resources::Download(url, response);
             tries++;
-        } while (!success && tries < 5);
+        } while (!success && tries < max_tries);
         if (!success) {
             Log::Log("Failed to download %s\n%s", url, response.c_str());
             return nullptr;
@@ -156,7 +155,7 @@ namespace {
             }
             for (const auto& asset : js.assets) {
                 if (asset.name != "GWToolbox.dll" && asset.name != "GWToolboxdll.dll") {
-                    continue; // This release doesn't have a dll download.
+                    continue;
                 }
                 release->download_url = asset.browser_download_url;
                 release->version = js.tag_name.substr(0, version_number_len);
@@ -166,8 +165,9 @@ namespace {
                 release->prerelease = js.prerelease;
                 std::ranges::transform(release->version, release->version.begin(), [](const auto chr) { return static_cast<char>(std::tolower(chr)); });
                 release->body = js.body.value_or("");
-                const auto size_bytes = static_cast<uintmax_t>(asset.size); // Slight rounding, GitHub isn't always correct down to the byte.
-                release->size = static_cast<uintmax_t>(std::ceil(size_bytes / 16.0) * 16);
+                release->asset_size = asset.size;
+                release->digest = asset.digest;
+                release->size = static_cast<uintmax_t>(std::ceil(asset.size / 16.0) * 16);
                 return release;
             }
         }
@@ -191,64 +191,149 @@ namespace {
         return update_available_text;
     }
 
+    void ReadUpdaterSettings(SettingsDoc& doc, ToolboxIni* legacy)
+    {
+        if (legacy) {
+            if (!doc.Has("Updater", "update_mode"))
+                settings.update_mode = static_cast<Mode>(legacy->GetLongValue("Updater", "update_mode", static_cast<long>(settings.update_mode)));
+            if (!doc.Has("Updater", "update_release_type"))
+                settings.update_release_type = static_cast<ReleaseType>(legacy->GetLongValue("Updater", "update_release_type", static_cast<long>(settings.update_release_type)));
+            if (!doc.Has("Updater", "has_starred"))
+                settings.has_starred = legacy->GetBoolValue("Updater", "has_starred", settings.has_starred);
+        }
+        doc.GetStruct("Updater", settings);
+#ifdef _DEBUG
+        settings.update_mode = Mode::DontCheckForUpdates;
+        settings.update_release_type = ReleaseType::Beta;
+#endif
+    }
+
+    bool FindUpdate(const bool forced, const HMODULE module = nullptr, const unsigned int max_tries = 5)
+    {
+        step = Checking;
+        if (!forced && settings.update_mode == Mode::DontCheckForUpdates) {
+            step = Done;
+            return true;
+        }
+        if (!Updater::GetCurrentVersionInfo(&current_release, module) || !GetLatestRelease(&latest_release, max_tries)) {
+            step = Done;
+            return false;
+        }
+
+        const auto comparison = CompareReleases(latest_release, current_release);
+        is_latest_version = comparison < 0 || (comparison == 0 && latest_release.size == current_release.size);
+        if (is_latest_version) {
+            step = Done;
+            return true;
+        }
+
+        auto mode = forced ? Mode::CheckAndAsk : settings.update_mode;
+        if constexpr (!std::string_view(GWTOOLBOXDLL_VERSION_BETA).empty()) {
+            mode = Mode::CheckAndAsk;
+        }
+        switch (mode) {
+            case Mode::CheckAndAsk:
+                step = CheckAndAsk;
+                break;
+            case Mode::CheckAndAutoUpdate:
+                step = CheckAndAutoUpdate;
+                break;
+            case Mode::CheckAndWarn:
+                step = CheckAndWarn;
+                break;
+            case Mode::DontCheckForUpdates:
+                step = Done;
+                break;
+            default:
+                step = CheckAndAsk;
+                break;
+        }
+        return true;
+    }
+
+    bool MatchesRelease(const std::string_view data, const GWToolboxRelease& release)
+    {
+        if (data.size() != release.asset_size || !release.digest || !release.digest->starts_with("sha256:")) return false;
+        auto expected = release.digest->substr(7);
+        if (expected.size() != 64) return false;
+        std::ranges::transform(expected, expected.begin(), [](const unsigned char c) { return static_cast<char>(std::tolower(c)); });
+        unsigned char digest[32];
+        if (data.size() > MAXULONG || BCryptHash(BCRYPT_SHA256_ALG_HANDLE, nullptr, 0,
+                reinterpret_cast<PUCHAR>(const_cast<char*>(data.data())), static_cast<ULONG>(data.size()), digest, sizeof(digest)) != 0) return false;
+        std::string actual;
+        for (const auto byte : digest) actual += std::format("{:02x}", byte);
+        return actual == expected;
+    }
+
+    bool InstallUpdate(const HMODULE module, const GWToolboxRelease& release, std::wstring& error)
+    {
+        wchar_t dllfile[MAX_PATH];
+        const auto length = GetModuleFileNameW(module, dllfile, _countof(dllfile));
+        if (!length || length == _countof(dllfile)) {
+            error = L"Cannot find the Toolbox DLL path.";
+            return false;
+        }
+        std::string data;
+        if (!Resources::Download(release.download_url, data)) {
+            error = TextUtils::StringToWString(data);
+            return false;
+        }
+        if (!MatchesRelease(data, release)) {
+            error = L"The download does not match the release size and SHA-256 checksum, or GitHub did not provide a valid checksum.";
+            return false;
+        }
+        if (!BackupModule::CreateAutoBackup()) Log::Log("Failed to create pre-update backup; continuing with update anyway.");
+
+        const auto path = std::filesystem::path(dllfile);
+        const auto new_path = std::filesystem::path(path.wstring() + L".new");
+        const auto old_path = std::filesystem::path(path.wstring() + L".old");
+        const auto verify_file = [&release](const std::filesystem::path& file_path) {
+            std::ifstream file(file_path, std::ios::binary);
+            const std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+            return file.is_open() && !file.bad() && MatchesRelease(content, release);
+        };
+        if (!Resources::WriteFile(new_path, data) || !verify_file(new_path)) {
+            DeleteFileW(new_path.c_str());
+            error = L"Could not write and verify the downloaded DLL. Antivirus software or protected folder access may be blocking the update.";
+            return false;
+        }
+        DeleteFileW(old_path.c_str());
+        if (!MoveFileW(path.c_str(), old_path.c_str())) {
+            const auto code = GetLastError();
+            DeleteFileW(new_path.c_str());
+            error = std::format(L"Could not rename the current DLL (Windows error {}).", code);
+            return false;
+        }
+        if (!MoveFileW(new_path.c_str(), path.c_str()) || !verify_file(path)) {
+            const auto code = GetLastError();
+            DeleteFileW(path.c_str());
+            const auto restored = MoveFileW(old_path.c_str(), path.c_str());
+            DeleteFileW(new_path.c_str());
+            error = std::format(L"Could not install and verify the updated DLL (Windows error {}). {}",
+                code, restored ? L"The original DLL was restored." : L"The original DLL remains in the .old file; restore it manually.");
+            return false;
+        }
+        return true;
+    }
+
     void DoUpdate()
     {
-        Log::Warning("Creating settings backup before update...");
-        if (!BackupModule::CreateAutoBackup())
-            Log::Warning("Failed to create pre-update backup; continuing with update anyway.");
-
-        Log::Warning("Downloading update...");
-
         step = Downloading;
-
-        // 0. find toolbox dll path
-        const HMODULE module = GWToolbox::GetDLLModule();
-        WCHAR dllfile[MAX_PATH];
-        const DWORD size = GetModuleFileNameW(module, dllfile, MAX_PATH);
-        if (size == 0) {
-            Log::Error("Updater error - cannot find GWToolbox.dll path");
-            step = Done;
-            return;
-        }
-        Log::Log("dll file name is %s\n", dllfile);
-
-        const std::wstring dll_path(dllfile);
-        std::wstring dll_name;
-        wchar_t sep = '/';
-#ifdef _WIN32
-        sep = '\\';
-#endif
-
-        const size_t i = dll_path.rfind(sep, dll_path.length());
-        if (i != std::wstring::npos) {
-            dll_name = dll_path.substr(i + 1, dll_path.length() - i);
-        }
-        if (dll_name.empty()) {
-            Log::Error("Updater error - failed to extract dll name from path");
-            step = Done;
-            return;
-        }
-
-        // 1. rename toolbox dll
-        const auto dllold = std::wstring(dllfile) + L".old";
-        Log::Log("moving to %s\n", dllold.c_str());
-        DeleteFileW(dllold.c_str());
-        MoveFileW(dllfile, dllold.c_str());
-
-        // 2. download new dll
-        Resources::Instance().Download(
-            dllfile, latest_release.download_url,
-            [wdll = std::wstring(dllfile), dllold](const bool success, const std::wstring& error) -> void {
+        const auto module = GWToolbox::GetDLLModule();
+        const auto release = latest_release;
+        Resources::EnqueueWorkerTask([module, release] {
+            std::wstring error;
+            const auto success = InstallUpdate(module, release, error);
+            Resources::EnqueueMainTask([success, error] {
                 if (success) {
                     step = Success;
                     Log::WarningW(L"Update successful, please restart toolbox.");
+                    return;
                 }
-                else {
-                    Log::ErrorW(L"Updated error - cannot download GWToolbox.dll\n%s", error.c_str());
-                    MoveFileW(dllold.c_str(), wdll.c_str());
-                    step = Done;
-                }
+                Log::ErrorW(L"Updater error - cannot update GWToolbox.dll\n%s", error.c_str());
+                step = Done;
             });
+        });
     }
 
     void DrawStarRequest()
@@ -312,13 +397,16 @@ const std::string& Updater::GetServerVersion()
     return latest_release.version;
 }
 
-const GWToolboxRelease* Updater::GetCurrentVersionInfo(GWToolboxRelease* out)
+const GWToolboxRelease* Updater::GetCurrentVersionInfo(GWToolboxRelease* out, const HMODULE module)
 {
     wchar_t path[MAX_PATH];
-    if (GetModuleFileNameW(GWToolbox::GetDLLModule(), path, _countof(path)) == 0) {
+    const auto length = GetModuleFileNameW(module ? module : GWToolbox::GetDLLModule(), path, _countof(path));
+    if (!length || length == _countof(path)) {
         return nullptr;
     }
-    auto size_bytes = std::filesystem::file_size(path);
+    std::error_code error;
+    const auto size_bytes = std::filesystem::file_size(path, error);
+    if (error) return nullptr;
     out->size = static_cast<uintmax_t>(std::ceil(size_bytes / 16.0) * 16);
     out->version = GWTOOLBOXDLL_VERSION;
     out->version.append(GWTOOLBOXDLL_VERSION_BETA);
@@ -333,7 +421,6 @@ void Updater::Initialize()
 {
     ToolboxUIElement::Initialize();
 #ifndef _DEBUG
-    // Debug builds never load/save update settings (forced values below), so don't register them
     SettingsRegistry::Register(this, settings);
 #endif
 }
@@ -341,17 +428,16 @@ void Updater::Initialize()
 void Updater::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
     ToolboxUIElement::LoadSettings(doc, legacy);
-    doc.GetStruct(Name(), settings);
-#ifdef _DEBUG
-    settings.update_mode = Mode::DontCheckForUpdates;
-    settings.update_release_type = ReleaseType::Beta;
-#else
+    ReadUpdaterSettings(doc, legacy);
+#ifndef _DEBUG
     std::string previous_version;
     if (doc.Get(Name(), "dllversion", previous_version) && !previous_version.empty() && previous_version != GWTOOLBOXDLL_VERSION && !settings.has_starred) {
         show_star_request = true;
     }
 #endif
-    CheckForUpdate();
+    if (!startup_check_complete.exchange(false)) {
+        CheckForUpdate();
+    }
 }
 
 void Updater::SaveSettings(SettingsDoc& doc)
@@ -387,54 +473,60 @@ void Updater::DrawSettingsInternal()
 
 void Updater::CheckForUpdate(const bool forced)
 {
-    if (!GetCurrentVersionInfo(&current_release)) {
-        Log::Error("Failed to get current toolbox version info");
+    if (step == Checking || step == Downloading) return;
+    if (!forced && settings.update_mode == Mode::DontCheckForUpdates) {
+        step = Done;
+        return;
     }
     step = Checking;
-    last_check = clock();
     Resources::EnqueueWorkerTask([forced] {
-        // Here we are in the worker thread and can do blocking operations
-        // Reminder: do not send stuff to gw chat from this thread!
-        if (!GetLatestRelease(&latest_release)) {
-            // Error getting server version. Server down? We can do nothing.
+        if (!FindUpdate(forced)) {
             Log::Flash("Error checking for updates");
-            step = Done;
-            return;
         }
-
-        const auto release_comparison = CompareReleases(latest_release, current_release);
-        if (release_comparison < 0
-            || (release_comparison == 0 && latest_release.size == current_release.size)) {
-            step = Done;
-            is_latest_version = true;
-            if (forced) {
-                Log::Flash("GWToolbox++ is up-to-date");
-            }
-            return;
-        }
-        is_latest_version = false;
-        if (!forced && settings.update_mode == Mode::DontCheckForUpdates) {
-            step = Done;
-            return; // Do not check for updates
-        }
-
-        // we have a new version!
-        Mode iMode = forced ? Mode::CheckAndAsk : settings.update_mode;
-        if constexpr (!std::string_view(GWTOOLBOXDLL_VERSION_BETA).empty()) {
-            iMode = Mode::CheckAndAsk;
-        }
-        switch (iMode) {
-            case Mode::CheckAndAsk:
-                step = CheckAndAsk;
-                break;
-            case Mode::CheckAndAutoUpdate:
-                step = CheckAndAutoUpdate;
-                break;
-            case Mode::CheckAndWarn:
-                step = CheckAndWarn;
-                break;
+        else if (forced && is_latest_version) {
+            Log::Flash("GWToolbox++ is up-to-date");
         }
     });
+}
+
+bool Updater::CheckBeforeInitialize(const HMODULE module) try
+{
+    ReadUpdaterSettings(*GWToolbox::GetSettingsDoc(), GWToolbox::OpenSettingsFile());
+    startup_check_complete = true;
+    if (!FindUpdate(false, module, 1)) {
+        return MessageBoxW(nullptr,
+            L"Could not check for Toolbox updates. Continue loading the current version?\n\nChoose No to leave Guild Wars running without Toolbox.",
+            L"GWToolbox++ Update", MB_YESNO | MB_ICONWARNING | MB_DEFBUTTON2 | MB_SETFOREGROUND) == IDYES;
+    }
+    const auto action = step.load();
+    step = Done;
+    if (action == Done) return true;
+
+    auto message = TextUtils::StringToWString(UpdateAvailableText());
+    if (action == CheckAndWarn) {
+        message += L"\n\nChoose OK to continue with the current version, or Cancel to skip Toolbox this session.";
+        return MessageBoxW(nullptr, message.c_str(), L"GWToolbox++ Update", MB_OKCANCEL | MB_ICONINFORMATION | MB_SETFOREGROUND) == IDOK;
+    }
+    if (action == CheckAndAsk) {
+        message += L"\n\nUpdate before loading Toolbox?\n\nYes: update and unload Toolbox; reload it to use the new version.\nNo: continue with the current version.\nCancel: skip Toolbox this session.";
+        const auto choice = MessageBoxW(nullptr, message.c_str(), L"GWToolbox++ Update", MB_YESNOCANCEL | MB_ICONQUESTION | MB_SETFOREGROUND);
+        if (choice != IDYES) return choice == IDNO;
+    }
+    std::wstring error;
+    if (!InstallUpdate(module, latest_release, error)) {
+        message = error + L"\n\nContinue loading the current version? Choose No to skip Toolbox this session.";
+        return MessageBoxW(nullptr, message.c_str(), L"GWToolbox++ Update", MB_YESNO | MB_ICONERROR | MB_DEFBUTTON2 | MB_SETFOREGROUND) == IDYES;
+    }
+    MessageBoxW(nullptr, L"Toolbox was updated successfully. Reload Toolbox to use the new version.\n\nGuild Wars will keep running without Toolbox until you reload it.",
+        L"GWToolbox++ Update", MB_OK | MB_ICONINFORMATION | MB_SETFOREGROUND);
+    return false;
+}
+catch (const std::exception& error)
+{
+    const auto message = L"Could not prepare Toolbox startup:\n\n" + TextUtils::StringToWString(error.what())
+        + L"\n\nToolbox will not load this session. Guild Wars will keep running.";
+    MessageBoxW(nullptr, message.c_str(), L"GWToolbox++ Update", MB_OK | MB_ICONERROR | MB_SETFOREGROUND);
+    return false;
 }
 
 bool Updater::IsLatestVersion()
@@ -515,5 +607,4 @@ void Updater::Draw(IDirect3DDevice9*)
         }
         break;
     }
-    // if step == Done do nothing
 }
