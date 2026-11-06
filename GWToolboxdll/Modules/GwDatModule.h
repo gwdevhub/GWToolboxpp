@@ -23,7 +23,9 @@ public:
 
     const char* Name() const override { return "GW Dat Module"; };
     bool HasSettings() override { return false; }
+    void Initialize() override;
     void Update(float) override;
+    void SignalTerminate() override;
     void Terminate() override;
 
     // True once the client's Gw.dat has been located and its index parsed (no load attempt of its own).
@@ -44,11 +46,8 @@ public:
 
 
     // --- Archive reading ---
-    // Decompressed bytes for a GW file id; stream_id picks a stream (0 = the file's own data). False if absent.
     static bool ReadFile(uint32_t file_id, std::vector<uint8_t>& out, uint32_t stream_id = 0);
 
-    // True once any read found the dat mapped but did not contain the requested file - i.e. an incomplete
-    // (streaming/Steam) install. UI can surface this to suggest running Guild Wars with -image.
     static bool MissingDatData();
 
 private:
@@ -90,7 +89,7 @@ private:
     bool AcquireMappingInto(void*& mapping, long long& size);
     bool ParseFrom(void* mapping, long long size, std::vector<MftEntry>& slots,
                    std::unordered_map<uint32_t, int>& fileid_to_slot); // header + MFT + hash list -> temporaries
-    bool ReadRaw(uint32_t file_id, uint32_t stream_id, std::vector<uint8_t>& input, bool& compressed, bool& file_known);
+    bool ReadRaw(uint32_t file_id, uint32_t stream_id, std::vector<uint8_t>& input, bool& compressed, bool& file_known, bool& payload_missing);
 
     std::mutex m_load_mutex;                        // serialises the one-time ParseIndex
     std::atomic<bool> m_loaded{false};
