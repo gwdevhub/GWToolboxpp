@@ -1,5 +1,7 @@
 #pragma once
 
+#include <type_traits>
+
 #include <GWCA/Utilities/Debug.h>
 #include <GWCA/Managers/MemoryMgr.h>
 
@@ -86,5 +88,35 @@ namespace GW {
 
 		uint32_t m_param;     // +h000C
 	}; // Size: 0x0010
+
+	// Use for arrays that are sorted on an integer key
+	// Examples are skillbars, questlog, etc. A lot of WorldContext arrays are bsearchable
+	// Key is the field that the array is sorted/indexed on.
+	// 
+	// ex  typedef ArraySorted<Quest,&Quest::quest_id> QuestLog;
+	//	   QuestLog& log = GetQuestLogOrWhatever();
+	//	   Quest* q = log.find(QUEST_ID_MALLYX_THE_UNYIELDING);
+	template <typename T, auto Key>
+		requires requires(T* t) { t->*Key; }
+	class ArraySorted : public Array<T>
+	{
+	public:
+		using key_type = std::decay_t<decltype(static_cast<T*>(nullptr)->*Key)>;
+
+		// Since the array is ordered by the key we can bsearch off it
+		inline T* find(key_type key)
+		{
+			T* lo = this->begin();
+			T* hi = this->end();
+			while (lo < hi) {
+				T* mid = lo + (hi - lo) / 2;
+				if (mid->*Key < key)
+					lo = mid + 1;
+				else
+					hi = mid;
+			}
+			return (lo != this->end() && lo->*Key == key) ? lo : nullptr;
+		}
+	};
 
 }

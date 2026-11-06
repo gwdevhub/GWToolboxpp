@@ -1,4 +1,5 @@
 #pragma once
+#include <GWCA/Runtime.h>
 
 #include <GWCA/GameEntities/Guild.h>
 #include <GWCA/GameContainers/Array.h>
@@ -6,7 +7,7 @@
 
 namespace GW {
     struct GuildContext;
-    GWCA_API GuildContext* GetGuildContext();
+    GuildContext* GetGuildContext();
 
     typedef Array<Guild *> GuildArray;
     typedef Array<GuildPlayer *> GuildRoster;
@@ -50,3 +51,16 @@ namespace GW {
         //... end of what i care about
     };
 }
+
+namespace GW {
+    extern "C" GWCA_API GuildContext* __cdecl GW_GetGuildContext() noexcept;
+}
+
+#if !defined(GWCA_BUILD_EXPORTS)
+namespace GW {
+    inline GuildContext* GetGuildContext()
+    {
+        return GWCA_CALL_C(GW_GetGuildContext);
+    }
+}
+#endif

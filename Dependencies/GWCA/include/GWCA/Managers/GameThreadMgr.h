@@ -1,4 +1,5 @@
 #pragma once
+#include <GWCA/Runtime.h>
 
 #include <GWCA/Utilities/Hook.h>
 #include <GWCA/Utilities/Export.h>
@@ -12,30 +13,68 @@ namespace GW {
     extern Module GameThreadModule;
 
     namespace GameThread {
-        GWCA_API void EnableHooks();
+        void EnableHooks();
 
-        GWCA_API void ClearCalls();
+        void ClearCallsNative();
+#if !defined(GWCA_STDLIB)
+        inline void ClearCalls() { ClearCallsNative(); }
+#endif
 
-        // force_enqueue = false runs immediately if already on the game thread; true always enqueues for the next loop.
-        GWCA_API void Enqueue(std::function<void ()> f, bool force_enqueue = false);
+        using NativeTaskCallback = void (__cdecl *)(void* context);
+        bool Enqueue(NativeTaskCallback callback, void* context = nullptr, uint32_t force_enqueue = 0);
 
-        typedef HookCallback<> GameThreadCallback;
-        GWCA_API void RegisterGameThreadCallback(
-            HookEntry *entry,
-            const GameThreadCallback& callback,
-            int altitude = 0x4000);
+        using NativeGameThreadCallback = void (__cdecl *)(HookStatus* status, void* context);
+        bool RegisterGameThreadCallback(HookEntry* entry, NativeGameThreadCallback callback,
+                                                void* context = nullptr, int32_t altitude = 0x4000);
 
-        GWCA_API void RemoveGameThreadCallback(HookEntry *entry);
+        bool RemoveGameThreadCallbackNative(HookEntry* entry);
+#if !defined(GWCA_STDLIB)
+        inline bool RemoveGameThreadCallback(HookEntry* entry) { return RemoveGameThreadCallbackNative(entry); }
+#endif
 
-        GWCA_API bool IsInGameThread();
+        bool IsInGameThread();
     };
 }
-// C Interop API
-extern "C" {
-    typedef void(__cdecl* GW_GameThreadCallback)();
-    typedef void(__cdecl* GW_GameThreadHookCallback)(GW::HookStatus* status);
-    GWCA_API void Enqueue(GW_GameThreadCallback callback, bool force_enqueue);
-    GWCA_API bool IsInGameThread();
-    GWCA_API void RegisterGameThreadCallback(GW::HookEntry* entry, GW_GameThreadHookCallback callback, int altitude);
-    GWCA_API void RemoveGameThreadCallback(GW::HookEntry* entry);
+
+namespace GW::GameThread {
+    extern "C" GWCA_API void __cdecl GW_GameThread_EnableHooks() noexcept;
+    extern "C" GWCA_API void __cdecl GW_GameThread_ClearCallsNative() noexcept;
+    extern "C" GWCA_API bool __cdecl GW_GameThread_Enqueue(NativeTaskCallback callback, void* context, uint32_t force_enqueue) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_GameThread_RegisterGameThreadCallback(HookEntry* entry, NativeGameThreadCallback callback, void* context, int32_t altitude) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_GameThread_RemoveGameThreadCallbackNative(HookEntry* entry) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_GameThread_IsInGameThread() noexcept;
 }
+
+#if !defined(GWCA_BUILD_EXPORTS)
+namespace GW::GameThread {
+    inline void EnableHooks()
+    {
+        return GWCA_CALL_C(GW_GameThread_EnableHooks);
+    }
+
+    inline void ClearCallsNative()
+    {
+        return GWCA_CALL_C(GW_GameThread_ClearCallsNative);
+    }
+
+    inline bool Enqueue(NativeTaskCallback callback, void* context, uint32_t force_enqueue)
+    {
+        return GWCA_CALL_C(GW_GameThread_Enqueue, callback, context, force_enqueue);
+    }
+
+    inline bool RegisterGameThreadCallback(HookEntry* entry, NativeGameThreadCallback callback, void* context, int32_t altitude)
+    {
+        return GWCA_CALL_C(GW_GameThread_RegisterGameThreadCallback, entry, callback, context, altitude);
+    }
+
+    inline bool RemoveGameThreadCallbackNative(HookEntry* entry)
+    {
+        return GWCA_CALL_C(GW_GameThread_RemoveGameThreadCallbackNative, entry);
+    }
+
+    inline bool IsInGameThread()
+    {
+        return GWCA_CALL_C(GW_GameThread_IsInGameThread);
+    }
+}
+#endif

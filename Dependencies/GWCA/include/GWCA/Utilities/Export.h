@@ -22,10 +22,6 @@ static_assert(sizeof(void*) == 4,
 #ifdef GWCA_BUILD_EXPORTS
 # define GWCA_API DllExport
 #else
-#ifdef GWCA_IMPORT
 # define GWCA_API DllImport
-#else
-# define GWCA_API
-#endif
 #endif
 #endif

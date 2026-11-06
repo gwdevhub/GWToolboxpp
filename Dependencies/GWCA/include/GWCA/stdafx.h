@@ -57,8 +57,8 @@
 // No Win32 here: the shim keeps the few Windows typedefs in GWCA's public headers parsing, and does not ship.
 #include <Platform/Wasm/Win32Shim.h>
 #else
-#include <Windows.h>
-#include <ShellApi.h>
+#include <windows.h>
+#include <shellapi.h>
 #endif
 
 #ifdef _MSC_VER

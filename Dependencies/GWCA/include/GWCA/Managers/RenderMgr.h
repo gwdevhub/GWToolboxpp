@@ -1,4 +1,5 @@
 #pragma once
+#include <GWCA/Runtime.h>
 
 #include <GWCA/Utilities/Export.h>
 
@@ -22,7 +23,7 @@ namespace GW {
             GLES3,
         };
 
-        GWCA_API Backend GetBackend();
+        Backend GetBackend();
 
         // VirtualDeviceRenderer::renderer_mode -- all windowed variants, ordered as the settings dropdown lists them.
         enum class RendererMode : uint32_t {
@@ -32,7 +33,7 @@ namespace GW {
         };
 
         // Unknown values pass through rather than being coerced.
-        GWCA_API RendererMode GetRendererMode();
+        RendererMode GetRendererMode();
 
         // GetDevice() is the Dx9 device, GetGlesDevice() the GLES3 one; pick with GetBackend(). The rest works on all three.
 
@@ -74,7 +75,7 @@ namespace GW {
         static_assert(offsetof(GlesDevice, uniform_buffer)  == 0x10C0);
 
         // Captured from a hook -- not reachable from the generic device. Null unless GetBackend() is GLES3.
-        GWCA_API GlesDevice* GetGlesDevice();
+        GlesDevice* GetGlesDevice();
 
         typedef void(__cdecl* RenderCallback) (IDirect3DDevice9*);
 
@@ -108,61 +109,224 @@ namespace GW {
             Count
         };
 
-        GWCA_API void EnableHooks();
+        void EnableHooks();
 
         // this returns the FoV used for rendering
-        GWCA_API float GetFieldOfView();
+        float GetFieldOfView();
 
         // Called after GW render each frame on D3D9 (End Scene); call GW::Terminate() or RestoreHooks() from within it.
-        GWCA_API void SetRenderCallback(RenderCallback callback);
+        void SetRenderCallback(RenderCallback callback);
 
-        GWCA_API RenderCallback GetRenderCallback();
+        RenderCallback GetRenderCallback();
 
         // Flush GW's deferred GR queue so submitted draws materialise, letting a render hook draw between the world and UI passes.
-        GWCA_API void FlushCommandQueue();
+        void FlushCommandQueue();
 
         // Can be used to get information like vsync status or monitor refresh rate of the renderer
-        GWCA_API uint32_t GetGraphicsRendererValue(Metric metric_id, uint32_t renderer_mode = 0xf);
-        GWCA_API bool SetGraphicsRendererValue(Metric metric_id, uint32_t value, uint32_t renderer_mode = 0xf);
+        uint32_t GetGraphicsRendererValue(Metric metric_id, uint32_t renderer_mode = 0xf);
+        bool SetGraphicsRendererValue(Metric metric_id, uint32_t value, uint32_t renderer_mode = 0xf);
 
         // Returns actual hard frame limit, factoring in vsync, monitor refresh rate and in-game preferences
-        GWCA_API uint32_t GetFrameLimit();
+        uint32_t GetFrameLimit();
         // Set a hard upper limit for frame rate. Actual limit may be lower (but not higher) depending on vsync/in-game preference
-        GWCA_API bool SetFrameLimit(uint32_t value);
+        bool SetFrameLimit(uint32_t value);
 
         // D3D9 device reset. GLES has no lost-device concept; SetGlesResetCallback covers the corresponding event.
-        GWCA_API void SetResetCallback(RenderCallback callback);
-        GWCA_API RenderCallback GetResetCallback();
+        void SetResetCallback(RenderCallback callback);
+        RenderCallback GetResetCallback();
 
         // The same two events typed on the GLES device -- set whichever pair matches GetBackend().
 
         // Fires each frame on GLES3 at the queue flush, so anything drawn goes out with that frame's commands.
         typedef void(__cdecl* GlesRenderCallback)(GlesDevice* gles_device);
 
-        GWCA_API void SetGlesRenderCallback(GlesRenderCallback callback);
-        GWCA_API GlesRenderCallback GetGlesRenderCallback();
+        void SetGlesRenderCallback(GlesRenderCallback callback);
+        GlesRenderCallback GetGlesRenderCallback();
 
         // Fires when the GLES device is created or updated -- a state-change event, not per-frame, and where the pointer is captured.
-        GWCA_API void SetGlesResetCallback(GlesRenderCallback callback);
-        GWCA_API GlesRenderCallback GetGlesResetCallback();
+        void SetGlesResetCallback(GlesRenderCallback callback);
+        GlesRenderCallback GetGlesResetCallback();
 
         // The same frame boundary as the render callbacks, without a device, for callers that only need the tick.
         typedef void(__cdecl* FrameCallback)();
 
-        GWCA_API void SetFrameCallback(FrameCallback callback);
-        GWCA_API FrameCallback GetFrameCallback();
+        void SetFrameCallback(FrameCallback callback);
+        FrameCallback GetFrameCallback();
 
         // Needs a callback set and called first, does not update while minimized, and returns -1 until known.
-        GWCA_API int GetIsFullscreen();
+        int GetIsFullscreen();
 
-        GWCA_API bool SetFog(bool enabled);
+        bool SetFog(bool enabled);
 
-        GWCA_API HWND GetWindowHandle();
+        HWND GetWindowHandle();
 
         // Null unless GetBackend() == Backend::D3D9.
-        GWCA_API IDirect3DDevice9* GetDevice();
+        IDirect3DDevice9* GetDevice();
 
-        GWCA_API uint32_t GetViewportWidth();
-        GWCA_API uint32_t GetViewportHeight();
+        uint32_t GetViewportWidth();
+        uint32_t GetViewportHeight();
     }
 }
+
+namespace GW::Render {
+    extern "C" GWCA_API Backend __cdecl GW_Render_GetBackend() noexcept;
+    extern "C" GWCA_API RendererMode __cdecl GW_Render_GetRendererMode() noexcept;
+    extern "C" GWCA_API GlesDevice* __cdecl GW_Render_GetGlesDevice() noexcept;
+    extern "C" GWCA_API void __cdecl GW_Render_EnableHooks() noexcept;
+    extern "C" GWCA_API float __cdecl GW_Render_GetFieldOfView() noexcept;
+    extern "C" GWCA_API void __cdecl GW_Render_SetRenderCallback(RenderCallback callback) noexcept;
+    extern "C" GWCA_API RenderCallback __cdecl GW_Render_GetRenderCallback() noexcept;
+    extern "C" GWCA_API void __cdecl GW_Render_FlushCommandQueue() noexcept;
+    extern "C" GWCA_API uint32_t __cdecl GW_Render_GetGraphicsRendererValue(Metric metric_id, uint32_t renderer_mode) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_Render_SetGraphicsRendererValue(Metric metric_id, uint32_t value, uint32_t renderer_mode) noexcept;
+    extern "C" GWCA_API uint32_t __cdecl GW_Render_GetFrameLimit() noexcept;
+    extern "C" GWCA_API bool __cdecl GW_Render_SetFrameLimit(uint32_t value) noexcept;
+    extern "C" GWCA_API void __cdecl GW_Render_SetResetCallback(RenderCallback callback) noexcept;
+    extern "C" GWCA_API RenderCallback __cdecl GW_Render_GetResetCallback() noexcept;
+    extern "C" GWCA_API void __cdecl GW_Render_SetGlesRenderCallback(GlesRenderCallback callback) noexcept;
+    extern "C" GWCA_API GlesRenderCallback __cdecl GW_Render_GetGlesRenderCallback() noexcept;
+    extern "C" GWCA_API void __cdecl GW_Render_SetGlesResetCallback(GlesRenderCallback callback) noexcept;
+    extern "C" GWCA_API GlesRenderCallback __cdecl GW_Render_GetGlesResetCallback() noexcept;
+    extern "C" GWCA_API void __cdecl GW_Render_SetFrameCallback(FrameCallback callback) noexcept;
+    extern "C" GWCA_API FrameCallback __cdecl GW_Render_GetFrameCallback() noexcept;
+    extern "C" GWCA_API int __cdecl GW_Render_GetIsFullscreen() noexcept;
+    extern "C" GWCA_API bool __cdecl GW_Render_SetFog(bool enabled) noexcept;
+    extern "C" GWCA_API HWND __cdecl GW_Render_GetWindowHandle() noexcept;
+    extern "C" GWCA_API IDirect3DDevice9* __cdecl GW_Render_GetDevice() noexcept;
+    extern "C" GWCA_API uint32_t __cdecl GW_Render_GetViewportWidth() noexcept;
+    extern "C" GWCA_API uint32_t __cdecl GW_Render_GetViewportHeight() noexcept;
+}
+
+#if !defined(GWCA_BUILD_EXPORTS)
+namespace GW::Render {
+    inline Backend GetBackend()
+    {
+        return GWCA_CALL_C(GW_Render_GetBackend);
+    }
+
+    inline RendererMode GetRendererMode()
+    {
+        return GWCA_CALL_C(GW_Render_GetRendererMode);
+    }
+
+    inline GlesDevice* GetGlesDevice()
+    {
+        return GWCA_CALL_C(GW_Render_GetGlesDevice);
+    }
+
+    inline void EnableHooks()
+    {
+        return GWCA_CALL_C(GW_Render_EnableHooks);
+    }
+
+    inline float GetFieldOfView()
+    {
+        return GWCA_CALL_C(GW_Render_GetFieldOfView);
+    }
+
+    inline void SetRenderCallback(RenderCallback callback)
+    {
+        return GWCA_CALL_C(GW_Render_SetRenderCallback, callback);
+    }
+
+    inline RenderCallback GetRenderCallback()
+    {
+        return GWCA_CALL_C(GW_Render_GetRenderCallback);
+    }
+
+    inline void FlushCommandQueue()
+    {
+        return GWCA_CALL_C(GW_Render_FlushCommandQueue);
+    }
+
+    inline uint32_t GetGraphicsRendererValue(Metric metric_id, uint32_t renderer_mode)
+    {
+        return GWCA_CALL_C(GW_Render_GetGraphicsRendererValue, metric_id, renderer_mode);
+    }
+
+    inline bool SetGraphicsRendererValue(Metric metric_id, uint32_t value, uint32_t renderer_mode)
+    {
+        return GWCA_CALL_C(GW_Render_SetGraphicsRendererValue, metric_id, value, renderer_mode);
+    }
+
+    inline uint32_t GetFrameLimit()
+    {
+        return GWCA_CALL_C(GW_Render_GetFrameLimit);
+    }
+
+    inline bool SetFrameLimit(uint32_t value)
+    {
+        return GWCA_CALL_C(GW_Render_SetFrameLimit, value);
+    }
+
+    inline void SetResetCallback(RenderCallback callback)
+    {
+        return GWCA_CALL_C(GW_Render_SetResetCallback, callback);
+    }
+
+    inline RenderCallback GetResetCallback()
+    {
+        return GWCA_CALL_C(GW_Render_GetResetCallback);
+    }
+
+    inline void SetGlesRenderCallback(GlesRenderCallback callback)
+    {
+        return GWCA_CALL_C(GW_Render_SetGlesRenderCallback, callback);
+    }
+
+    inline GlesRenderCallback GetGlesRenderCallback()
+    {
+        return GWCA_CALL_C(GW_Render_GetGlesRenderCallback);
+    }
+
+    inline void SetGlesResetCallback(GlesRenderCallback callback)
+    {
+        return GWCA_CALL_C(GW_Render_SetGlesResetCallback, callback);
+    }
+
+    inline GlesRenderCallback GetGlesResetCallback()
+    {
+        return GWCA_CALL_C(GW_Render_GetGlesResetCallback);
+    }
+
+    inline void SetFrameCallback(FrameCallback callback)
+    {
+        return GWCA_CALL_C(GW_Render_SetFrameCallback, callback);
+    }
+
+    inline FrameCallback GetFrameCallback()
+    {
+        return GWCA_CALL_C(GW_Render_GetFrameCallback);
+    }
+
+    inline int GetIsFullscreen()
+    {
+        return GWCA_CALL_C(GW_Render_GetIsFullscreen);
+    }
+
+    inline bool SetFog(bool enabled)
+    {
+        return GWCA_CALL_C(GW_Render_SetFog, enabled);
+    }
+
+    inline HWND GetWindowHandle()
+    {
+        return GWCA_CALL_C(GW_Render_GetWindowHandle);
+    }
+
+    inline IDirect3DDevice9* GetDevice()
+    {
+        return GWCA_CALL_C(GW_Render_GetDevice);
+    }
+
+    inline uint32_t GetViewportWidth()
+    {
+        return GWCA_CALL_C(GW_Render_GetViewportWidth);
+    }
+
+    inline uint32_t GetViewportHeight()
+    {
+        return GWCA_CALL_C(GW_Render_GetViewportHeight);
+    }
+}
+#endif

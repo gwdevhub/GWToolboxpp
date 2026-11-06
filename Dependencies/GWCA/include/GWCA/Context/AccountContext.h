@@ -1,11 +1,12 @@
 #pragma once
+#include <GWCA/Runtime.h>
 
 #include <GWCA/GameContainers/Array.h>
 #include <GWCA/Utilities/Export.h>
 
 namespace GW {
     struct AccountContext;
-    GWCA_API AccountContext* GetAccountContext();
+    AccountContext* GetAccountContext();
 
     struct AccountUnlockedCount {
         uint32_t id;
@@ -32,3 +33,16 @@ namespace GW {
     };
     static_assert(sizeof(AccountContext) == 0x138);
 }
+
+namespace GW {
+    extern "C" GWCA_API AccountContext* __cdecl GW_GetAccountContext() noexcept;
+}
+
+#if !defined(GWCA_BUILD_EXPORTS)
+namespace GW {
+    inline AccountContext* GetAccountContext()
+    {
+        return GWCA_CALL_C(GW_GetAccountContext);
+    }
+}
+#endif

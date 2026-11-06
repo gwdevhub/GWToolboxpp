@@ -1,3 +1,5 @@
+#pragma once
+
 namespace GW {
 	enum class CallTargetType : uint32_t;
 	enum class WorldActionId : uint32_t;
@@ -905,6 +907,8 @@ namespace GW {
 				void* wparam = 0;
 				void* lparam = 0;
 			};
+			static_assert(sizeof(ActionState) == 4);
+			static_assert(sizeof(kMouseAction) == 0x14);
 			struct kWriteToChatLog {
 				GW::Chat::Channel channel;
 				wchar_t* message;

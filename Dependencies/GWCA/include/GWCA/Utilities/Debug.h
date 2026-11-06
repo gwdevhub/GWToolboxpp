@@ -1,4 +1,5 @@
 #pragma once
+#include <GWCA/Runtime.h>
 #ifdef _DEBUG
     // ##__VA_ARGS__ is a GNU extension swallowing the trailing comma when no extra args are passed; MSVC tolerates plain __VA_ARGS__.
     #define GWCA_TRACE(fmt, ...) GW::LogMessage(GW::LEVEL_TRACE, __FILE__, (unsigned)__LINE__, __FUNCTION__, fmt, ##__VA_ARGS__)
@@ -19,6 +20,7 @@
 #endif
 
 #include <GWCA/Utilities/Export.h>
+#include <cstdarg>
 
 namespace GW
 {
@@ -31,36 +33,28 @@ namespace GW
         LEVEL_CRITICAL,
     };
 
-    typedef void (*LogHandler)(
+    typedef void (__cdecl *LogHandler)(
         void *context,
         LogLevel level,
         const char *msg,
         const char *file,
         unsigned int line,
         const char *function);
-    GWCA_API void RegisterLogHandler(LogHandler handler, void *context);
+    void RegisterLogHandler(LogHandler handler, void *context);
 
-    typedef void (*PanicHandler)(
+    typedef void (__cdecl *PanicHandler)(
         void *context,
         const char *expr,
         const char *file,
         unsigned int line,
         const char *function);
-    GWCA_API void RegisterPanicHandler(PanicHandler handler, void *context);
+    void RegisterPanicHandler(PanicHandler handler, void *context);
 
-    GWCA_API void FatalAssert(
+    void FatalAssert(
         const char *expr,
         const char *file,
         unsigned int line,
         const char *function);
-
-    GWCA_API void __cdecl LogMessage(
-        LogLevel level,
-        const char *file,
-        unsigned int line,
-        const char *function,
-        const char *fmt,
-        ...);
 
     void __cdecl LogMessageV(
         LogLevel level,
@@ -69,4 +63,50 @@ namespace GW
         const char *function,
         const char *fmt,
         va_list args);
+
+    inline void __cdecl LogMessage(
+        LogLevel level,
+        const char *file,
+        unsigned int line,
+        const char *function,
+        const char *fmt,
+        ...)
+    {
+        va_list args;
+        va_start(args, fmt);
+        LogMessageV(level, file, line, function, fmt, args);
+        va_end(args);
+    }
+
 }
+
+namespace GW {
+    extern "C" GWCA_API void __cdecl GW_RegisterLogHandler(LogHandler handler, void* context) noexcept;
+    extern "C" GWCA_API void __cdecl GW_RegisterPanicHandler(PanicHandler handler, void* context) noexcept;
+    extern "C" GWCA_API void __cdecl GW_FatalAssert(const char* expr, const char* file, unsigned int line, const char* function) noexcept;
+    extern "C" GWCA_API void __cdecl GW_LogMessageV(LogLevel level, const char* file, unsigned int line, const char* function, const char* fmt, va_list args) noexcept;
+}
+
+#if !defined(GWCA_BUILD_EXPORTS)
+namespace GW {
+    inline void RegisterLogHandler(LogHandler handler, void* context)
+    {
+        return GWCA_CALL_C(GW_RegisterLogHandler, handler, context);
+    }
+
+    inline void RegisterPanicHandler(PanicHandler handler, void* context)
+    {
+        return GWCA_CALL_C(GW_RegisterPanicHandler, handler, context);
+    }
+
+    inline void FatalAssert(const char* expr, const char* file, unsigned int line, const char* function)
+    {
+        return GWCA_CALL_C(GW_FatalAssert, expr, file, line, function);
+    }
+
+    inline void LogMessageV(LogLevel level, const char* file, unsigned int line, const char* function, const char* fmt, va_list args)
+    {
+        return GWCA_CALL_C(GW_LogMessageV, level, file, line, function, fmt, args);
+    }
+}
+#endif

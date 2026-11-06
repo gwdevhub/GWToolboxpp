@@ -1,4 +1,5 @@
 #pragma once
+#include <GWCA/Runtime.h>
 
 #include <GWCA/GameContainers/Array.h>
 
@@ -93,7 +94,7 @@ namespace GW {
         /* +h000C */ Constants::SkillID skill_id; // see GWConst::SkillIds
         /* +h0010 */ uint32_t event;
 
-        GWCA_API uint32_t GetRecharge() const; // returns recharge time remaining in milliseconds, or 0 if recharged
+        uint32_t GetRecharge() const; // returns recharge time remaining in milliseconds, or 0 if recharged
     };
     static_assert(sizeof(SkillbarSkill) == 20, "struct SkillbarSkill has incorrect size");
 
@@ -114,7 +115,7 @@ namespace GW {
 
         bool IsValid() const { return agent_id > 0; }
 
-        GWCA_API SkillbarSkill* GetSkillById(Constants::SkillID skill_id, size_t* slot_out = nullptr);
+        SkillbarSkill* GetSkillById(Constants::SkillID skill_id, size_t* slot_out = nullptr);
     };
     static_assert(sizeof(Skillbar) == 0xbc, "struct Skillbar has incorrect size");
 
@@ -128,8 +129,8 @@ namespace GW {
         /* +h0010 */ float duration; // non-zero if effect has a duration
         /* +h0014 */ DWORD timestamp; // GW-timestamp of when effect was applied - only with duration
 
-        GWCA_API DWORD GetTimeElapsed() const;
-        GWCA_API DWORD GetTimeRemaining() const;
+        DWORD GetTimeElapsed() const;
+        DWORD GetTimeRemaining() const;
     };
     static_assert(sizeof(Effect) == 24, "struct Effect has incorrect size");
 
@@ -153,3 +154,34 @@ namespace GW {
 
     typedef Array<AgentEffects> AgentEffectsArray;
 }
+
+namespace GW {
+    extern "C" GWCA_API uint32_t __cdecl GW_SkillbarSkill_GetRecharge(const SkillbarSkill* self) noexcept;
+    extern "C" GWCA_API SkillbarSkill* __cdecl GW_Skillbar_GetSkillById(Skillbar* self, Constants::SkillID skill_id, size_t* slot_out) noexcept;
+    extern "C" GWCA_API DWORD __cdecl GW_Effect_GetTimeElapsed(const Effect* self) noexcept;
+    extern "C" GWCA_API DWORD __cdecl GW_Effect_GetTimeRemaining(const Effect* self) noexcept;
+}
+
+#if !defined(GWCA_BUILD_EXPORTS)
+namespace GW {
+    inline uint32_t SkillbarSkill::GetRecharge() const
+    {
+        return GWCA_CALL_C(GW_SkillbarSkill_GetRecharge, this);
+    }
+
+    inline SkillbarSkill* Skillbar::GetSkillById(Constants::SkillID skill_id, size_t* slot_out)
+    {
+        return GWCA_CALL_C(GW_Skillbar_GetSkillById, this, skill_id, slot_out);
+    }
+
+    inline DWORD Effect::GetTimeElapsed() const
+    {
+        return GWCA_CALL_C(GW_Effect_GetTimeElapsed, this);
+    }
+
+    inline DWORD Effect::GetTimeRemaining() const
+    {
+        return GWCA_CALL_C(GW_Effect_GetTimeRemaining, this);
+    }
+}
+#endif

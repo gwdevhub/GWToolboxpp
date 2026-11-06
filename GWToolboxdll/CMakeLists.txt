@@ -105,6 +105,9 @@ if(EMSCRIPTEN)
     else()
         set(GWTOOLBOX_WASM_GWCA_FILE "gwca.wasm")
     endif()
+    if(NOT EXISTS "${PROJECT_SOURCE_DIR}/Dependencies/GWCA/wasm/${GWTOOLBOX_WASM_GWCA_FILE}")
+        message(FATAL_ERROR "The pinned native GWCA release has no wasm binary. Supply a matching ${GWTOOLBOX_WASM_GWCA_FILE} before building Toolbox for wasm.")
+    endif()
 
     add_custom_command(
         OUTPUT "${GWTOOLBOX_WASM_DIST_DIR}/gwtoolbox.gwmod"
@@ -248,7 +251,6 @@ source_group(Generated REGULAR_EXPRESSION cmake_pch)
 
 target_compile_definitions(GWToolboxdll PRIVATE
     "_USRDLL"
-    "GWCA_IMPORT"
     )
       
 target_compile_options(GWToolboxdll PRIVATE /Gy /utf-8)
@@ -274,7 +276,6 @@ target_link_options(GWToolboxdll PRIVATE
     $<$<CONFIG:RelWithDebInfo>:/OPT:NOICF>
     $<$<CONFIG:Debug>:/NODEFAULTLIB:LIBCMT>
     /IGNORE:4099 # pdb not found for github action
-    "/DELAYLOAD:gwca.dll"
     )
 
 target_include_directories(GWToolboxdll PRIVATE
@@ -314,7 +315,6 @@ target_link_libraries(GWToolboxdll PRIVATE
     # libs:
     dbghelp.lib # for MiniDump
     bcrypt.lib  # for SHA256 (Resources.cpp)
-	delayimp # for delay loading gwca
     )
 
 # Only 1.19 has actually been validated against these shaders; 1.6 (the version most

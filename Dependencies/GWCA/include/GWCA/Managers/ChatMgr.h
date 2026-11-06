@@ -1,7 +1,9 @@
 #pragma once
+#include <GWCA/Runtime.h>
 
 #include <GWCA/Utilities/Export.h>
 #include <GWCA/Utilities/Hook.h>
+#include <cstdarg>
 
 namespace GW {
 	struct Module;
@@ -74,57 +76,189 @@ namespace GW {
 			CHANNEL_UNKNOW = -1
 		};
 
-		typedef HookCallback<const wchar_t*, const wchar_t*> ChatLinkCallback;
 
-		GWCA_API Chat::ChatBuffer* GetChatLog();
-		GWCA_API bool AddToChatLog(wchar_t* message, uint32_t channel);
-		GWCA_API bool GetIsTyping();
+		Chat::ChatBuffer* GetChatLog();
+		bool AddToChatLog(wchar_t* message, uint32_t channel);
+		bool GetIsTyping();
 
-		GWCA_API bool SendChat(const char* msg);
-		GWCA_API bool SendChat(const wchar_t* msg);
-		GWCA_API bool SendChat(char channel, const char* msg);
-		GWCA_API bool SendChat(char channel, const wchar_t* msg);
-		GWCA_API bool SendChat(const wchar_t* to, const wchar_t* msg);
+		bool SendChatCurrentA(const char* msg);
+		bool SendChatCurrentW(const wchar_t* msg);
+		bool SendChatChannelA(char channel, const char* msg);
+		bool SendChatChannelW(char channel, const wchar_t* msg);
+		bool SendWhisper(const wchar_t* to, const wchar_t* msg);
+        inline bool SendChat(const char* msg) { return SendChatCurrentA(msg); }
+        inline bool SendChat(const wchar_t* msg) { return SendChatCurrentW(msg); }
+        inline bool SendChat(char channel, const char* msg) { return SendChatChannelA(channel, msg); }
+        inline bool SendChat(char channel, const wchar_t* msg) { return SendChatChannelW(channel, msg); }
+        inline bool SendChat(const wchar_t* to, const wchar_t* msg) { return SendWhisper(to, msg); }
 
-		GWCA_API void WriteChatF(Channel channel, const wchar_t* format, ...);
-		GWCA_API void WriteChat(Channel channel, const wchar_t* message, const wchar_t* sender = nullptr, bool transient = false);
-		GWCA_API void WriteChatEnc(Channel channel, const wchar_t* message, const wchar_t* sender = nullptr, bool transient = false);
+		void WriteChatV(Channel channel, const wchar_t* format, va_list args);
+		inline void WriteChatF(Channel channel, const wchar_t* format, ...)
+		{
+			va_list args;
+			va_start(args, format);
+			WriteChatV(channel, format, args);
+			va_end(args);
+		}
+		void WriteChat(Channel channel, const wchar_t* message, const wchar_t* sender = nullptr, bool transient = false);
+		void WriteChatEnc(Channel channel, const wchar_t* message, const wchar_t* sender = nullptr, bool transient = false);
 
 		typedef void(__cdecl* ChatCommandCallback)(GW::HookStatus*, const wchar_t* cmd, int argc, const LPWSTR* argv);
-		GWCA_API void CreateCommand(GW::HookEntry* entry, const wchar_t* cmd, ChatCommandCallback callback);
-		GWCA_API void DeleteCommand(GW::HookEntry* entry, const wchar_t* cmd = 0);
+		void CreateCommand(GW::HookEntry* entry, const wchar_t* cmd, ChatCommandCallback callback);
+		void DeleteCommand(GW::HookEntry* entry, const wchar_t* cmd = 0);
 
-		GWCA_API void ToggleTimestamps(bool enable);
-		GWCA_API void SetTimestampsFormat(bool use_24h, bool show_timestamp_seconds = false);
-		GWCA_API void SetTimestampsColor(Color color);
+		void ToggleTimestamps(bool enable);
+		void SetTimestampsFormat(bool use_24h, bool show_timestamp_seconds = false);
+		void SetTimestampsColor(Color color);
 
-		GWCA_API Color SetSenderColor(Channel chan, Color col);
-		GWCA_API Color SetMessageColor(Channel chan, Color col);
-		GWCA_API void  GetChannelColors(Channel chan, Color* sender, Color* message);
-		GWCA_API void  GetDefaultColors(Channel chan, Color* sender, Color* message);
+		Color SetSenderColor(Channel chan, Color col);
+		Color SetMessageColor(Channel chan, Color col);
+		void  GetChannelColors(Channel chan, Color* sender, Color* message);
+		void  GetDefaultColors(Channel chan, Color* sender, Color* message);
 
-		GWCA_API Channel GetChannel(wchar_t opcode);
-		GWCA_API Channel GetChannel(char opcode);
-		GWCA_API Channel GetCurrentChatChannel();
+		Channel GetChannel(char opcode);
+		inline Channel GetChannel(wchar_t opcode) { return GetChannel(static_cast<char>(opcode)); }
+		Channel GetCurrentChatChannel();
 	};
 }
 
 // C Interop API
-extern "C" {
-	GWCA_API void* GetChatLog();
-	GWCA_API bool     AddToChatLog(wchar_t* message, uint32_t channel);
-	GWCA_API bool     GetIsTyping();
-	GWCA_API bool     SendChat(char channel, const wchar_t* message);
-	GWCA_API bool     SendWhisper(const wchar_t* to, const wchar_t* message);
-	GWCA_API void     WriteChat(int channel, const wchar_t* message, const wchar_t* sender, bool transient);
-	GWCA_API void     WriteChatEnc(int channel, const wchar_t* message, const wchar_t* sender, bool transient);
-	GWCA_API void     ToggleTimestamps(bool enable);
-	GWCA_API void     SetTimestampsFormat(bool use_24h, bool show_timestamp_seconds);
-	GWCA_API void     SetTimestampsColor(uint32_t color);
-	GWCA_API uint32_t SetSenderColor(int channel, uint32_t color);
-	GWCA_API uint32_t SetMessageColor(int channel, uint32_t color);
-	GWCA_API void     GetChannelColors(int channel, uint32_t* sender, uint32_t* message);
-	GWCA_API void     GetDefaultColors(int channel, uint32_t* sender, uint32_t* message);
-	GWCA_API int      GetChannelFromWChar(wchar_t opcode);
-	GWCA_API int      GetChannelFromChar(char opcode);
+
+namespace GW::Chat {
+    extern "C" GWCA_API Chat::ChatBuffer* __cdecl GW_Chat_GetChatLog() noexcept;
+    extern "C" GWCA_API bool __cdecl GW_Chat_AddToChatLog(wchar_t* message, uint32_t channel) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_Chat_GetIsTyping() noexcept;
+    extern "C" GWCA_API bool __cdecl GW_Chat_SendChatCurrentA(const char* msg) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_Chat_SendChatCurrentW(const wchar_t* msg) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_Chat_SendChatChannelA(char channel, const char* msg) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_Chat_SendChatChannelW(char channel, const wchar_t* msg) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_Chat_SendWhisper(const wchar_t* to, const wchar_t* msg) noexcept;
+    extern "C" GWCA_API void __cdecl GW_Chat_WriteChatV(Channel channel, const wchar_t* format, va_list args) noexcept;
+    extern "C" GWCA_API void __cdecl GW_Chat_WriteChat(Channel channel, const wchar_t* message, const wchar_t* sender, bool transient) noexcept;
+    extern "C" GWCA_API void __cdecl GW_Chat_WriteChatEnc(Channel channel, const wchar_t* message, const wchar_t* sender, bool transient) noexcept;
+    extern "C" GWCA_API void __cdecl GW_Chat_CreateCommand(GW::HookEntry* entry, const wchar_t* cmd, ChatCommandCallback callback) noexcept;
+    extern "C" GWCA_API void __cdecl GW_Chat_DeleteCommand(GW::HookEntry* entry, const wchar_t* cmd) noexcept;
+    extern "C" GWCA_API void __cdecl GW_Chat_ToggleTimestamps(bool enable) noexcept;
+    extern "C" GWCA_API void __cdecl GW_Chat_SetTimestampsFormat(bool use_24h, bool show_timestamp_seconds) noexcept;
+    extern "C" GWCA_API void __cdecl GW_Chat_SetTimestampsColor(Color color) noexcept;
+    extern "C" GWCA_API Color __cdecl GW_Chat_SetSenderColor(Channel chan, Color col) noexcept;
+    extern "C" GWCA_API Color __cdecl GW_Chat_SetMessageColor(Channel chan, Color col) noexcept;
+    extern "C" GWCA_API void __cdecl GW_Chat_GetChannelColors(Channel chan, Color* sender, Color* message) noexcept;
+    extern "C" GWCA_API void __cdecl GW_Chat_GetDefaultColors(Channel chan, Color* sender, Color* message) noexcept;
+    extern "C" GWCA_API Channel __cdecl GW_Chat_GetChannel(char opcode) noexcept;
+    extern "C" GWCA_API Channel __cdecl GW_Chat_GetCurrentChatChannel() noexcept;
 }
+
+#if !defined(GWCA_BUILD_EXPORTS)
+namespace GW::Chat {
+    inline Chat::ChatBuffer* GetChatLog()
+    {
+        return GWCA_CALL_C(GW_Chat_GetChatLog);
+    }
+
+    inline bool AddToChatLog(wchar_t* message, uint32_t channel)
+    {
+        return GWCA_CALL_C(GW_Chat_AddToChatLog, message, channel);
+    }
+
+    inline bool GetIsTyping()
+    {
+        return GWCA_CALL_C(GW_Chat_GetIsTyping);
+    }
+
+    inline bool SendChatCurrentA(const char* msg)
+    {
+        return GWCA_CALL_C(GW_Chat_SendChatCurrentA, msg);
+    }
+
+    inline bool SendChatCurrentW(const wchar_t* msg)
+    {
+        return GWCA_CALL_C(GW_Chat_SendChatCurrentW, msg);
+    }
+
+    inline bool SendChatChannelA(char channel, const char* msg)
+    {
+        return GWCA_CALL_C(GW_Chat_SendChatChannelA, channel, msg);
+    }
+
+    inline bool SendChatChannelW(char channel, const wchar_t* msg)
+    {
+        return GWCA_CALL_C(GW_Chat_SendChatChannelW, channel, msg);
+    }
+
+    inline bool SendWhisper(const wchar_t* to, const wchar_t* msg)
+    {
+        return GWCA_CALL_C(GW_Chat_SendWhisper, to, msg);
+    }
+
+    inline void WriteChatV(Channel channel, const wchar_t* format, va_list args)
+    {
+        return GWCA_CALL_C(GW_Chat_WriteChatV, channel, format, args);
+    }
+
+    inline void WriteChat(Channel channel, const wchar_t* message, const wchar_t* sender, bool transient)
+    {
+        return GWCA_CALL_C(GW_Chat_WriteChat, channel, message, sender, transient);
+    }
+
+    inline void WriteChatEnc(Channel channel, const wchar_t* message, const wchar_t* sender, bool transient)
+    {
+        return GWCA_CALL_C(GW_Chat_WriteChatEnc, channel, message, sender, transient);
+    }
+
+    inline void CreateCommand(GW::HookEntry* entry, const wchar_t* cmd, ChatCommandCallback callback)
+    {
+        return GWCA_CALL_C(GW_Chat_CreateCommand, entry, cmd, callback);
+    }
+
+    inline void DeleteCommand(GW::HookEntry* entry, const wchar_t* cmd)
+    {
+        return GWCA_CALL_C(GW_Chat_DeleteCommand, entry, cmd);
+    }
+
+    inline void ToggleTimestamps(bool enable)
+    {
+        return GWCA_CALL_C(GW_Chat_ToggleTimestamps, enable);
+    }
+
+    inline void SetTimestampsFormat(bool use_24h, bool show_timestamp_seconds)
+    {
+        return GWCA_CALL_C(GW_Chat_SetTimestampsFormat, use_24h, show_timestamp_seconds);
+    }
+
+    inline void SetTimestampsColor(Color color)
+    {
+        return GWCA_CALL_C(GW_Chat_SetTimestampsColor, color);
+    }
+
+    inline Color SetSenderColor(Channel chan, Color col)
+    {
+        return GWCA_CALL_C(GW_Chat_SetSenderColor, chan, col);
+    }
+
+    inline Color SetMessageColor(Channel chan, Color col)
+    {
+        return GWCA_CALL_C(GW_Chat_SetMessageColor, chan, col);
+    }
+
+    inline void GetChannelColors(Channel chan, Color* sender, Color* message)
+    {
+        return GWCA_CALL_C(GW_Chat_GetChannelColors, chan, sender, message);
+    }
+
+    inline void GetDefaultColors(Channel chan, Color* sender, Color* message)
+    {
+        return GWCA_CALL_C(GW_Chat_GetDefaultColors, chan, sender, message);
+    }
+
+    inline Channel GetChannel(char opcode)
+    {
+        return GWCA_CALL_C(GW_Chat_GetChannel, opcode);
+    }
+
+    inline Channel GetCurrentChatChannel()
+    {
+        return GWCA_CALL_C(GW_Chat_GetCurrentChatChannel);
+    }
+}
+#endif

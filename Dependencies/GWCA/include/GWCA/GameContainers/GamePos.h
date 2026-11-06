@@ -1,4 +1,5 @@
 #pragma once
+#include <GWCA/Runtime.h>
 #include "../Utilities/Export.h"
 
 namespace GW {
@@ -60,6 +61,8 @@ namespace GW {
 
         Vec3f() = default;
     };
+    static_assert(sizeof(Vec2f) == 8);
+    static_assert(sizeof(Vec3f) == 12);
 
     constexpr Vec3f& operator+=(Vec3f& lhs, const Vec3f& rhs) {
         lhs.x += rhs.x;
@@ -204,8 +207,10 @@ namespace GW {
         return dx * dx + dy * dy;
     }
 
-    GWCA_API float GetDistance(Vec3f p1, Vec3f p2);
-    GWCA_API float GetDistance(const Vec2f& p1, const Vec2f& p2);
+    float GetDistance3D(Vec3f p1, Vec3f p2);
+    float GetDistance2D(const Vec2f& p1, const Vec2f& p2);
+    inline float GetDistance(Vec3f p1, Vec3f p2) { return GetDistance3D(p1, p2); }
+    inline float GetDistance(const Vec2f& p1, const Vec2f& p2) { return GetDistance2D(p1, p2); }
 
     constexpr float GetSquaredNorm(const Vec3f& p) {
         return (p.x * p.x) + (p.y * p.y) + (p.z * p.z);
@@ -215,8 +220,10 @@ namespace GW {
         return (p.x * p.x) + (p.y * p.y);
     }
 
-    GWCA_API float GetNorm(Vec3f p);
-    GWCA_API float GetNorm(Vec2f p);
+    float GetNorm3D(Vec3f p);
+    float GetNorm2D(Vec2f p);
+    inline float GetNorm(Vec3f p) { return GetNorm3D(p); }
+    inline float GetNorm(Vec2f p) { return GetNorm2D(p); }
 
     inline Vec3f Normalize(Vec3f v) {
         float n = GetNorm(v);
@@ -240,7 +247,13 @@ namespace GW {
         return res;
     }
 
-    GWCA_API Vec2f Rotate(Vec2f v, float rotation);
+    void RotateNative(Vec2f value, float rotation, Vec2f* result);
+    inline Vec2f Rotate(Vec2f value, float rotation)
+    {
+        Vec2f result;
+        RotateNative(value, rotation, &result);
+        return result;
+    }
 
     struct GamePos {
         float    x;
@@ -270,3 +283,40 @@ namespace GW {
         return (lhs.x == rhs.x) && (lhs.y == rhs.y) && (lhs.zplane == rhs.zplane);
     }
 }
+
+namespace GW {
+    extern "C" GWCA_API float __cdecl GW_GetDistance3D(Vec3f p1, Vec3f p2) noexcept;
+    extern "C" GWCA_API float __cdecl GW_GetDistance2D(const Vec2f& p1, const Vec2f& p2) noexcept;
+    extern "C" GWCA_API float __cdecl GW_GetNorm3D(Vec3f p) noexcept;
+    extern "C" GWCA_API float __cdecl GW_GetNorm2D(Vec2f p) noexcept;
+    extern "C" GWCA_API void __cdecl GW_RotateNative(Vec2f value, float rotation, Vec2f* result) noexcept;
+}
+
+#if !defined(GWCA_BUILD_EXPORTS)
+namespace GW {
+    inline float GetDistance3D(Vec3f p1, Vec3f p2)
+    {
+        return GWCA_CALL_C(GW_GetDistance3D, p1, p2);
+    }
+
+    inline float GetDistance2D(const Vec2f& p1, const Vec2f& p2)
+    {
+        return GWCA_CALL_C(GW_GetDistance2D, p1, p2);
+    }
+
+    inline float GetNorm3D(Vec3f p)
+    {
+        return GWCA_CALL_C(GW_GetNorm3D, p);
+    }
+
+    inline float GetNorm2D(Vec2f p)
+    {
+        return GWCA_CALL_C(GW_GetNorm2D, p);
+    }
+
+    inline void RotateNative(Vec2f value, float rotation, Vec2f* result)
+    {
+        return GWCA_CALL_C(GW_RotateNative, value, rotation, result);
+    }
+}
+#endif

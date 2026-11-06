@@ -1,4 +1,5 @@
 #pragma once
+#include <GWCA/Runtime.h>
 
 #include <GWCA/GameContainers/GamePos.h>
 #include <GWCA/GameContainers/List.h>
@@ -284,5 +285,18 @@ namespace GW {
         /* +h0134 */ uint32_t h0134;
     };
     static_assert(sizeof(MapContext) == 0x138, "struct MapContext has incorrect size");
-    GWCA_API MapContext* GetMapContext();
+    MapContext* GetMapContext();
 }
+
+namespace GW {
+    extern "C" GWCA_API MapContext* __cdecl GW_GetMapContext() noexcept;
+}
+
+#if !defined(GWCA_BUILD_EXPORTS)
+namespace GW {
+    inline MapContext* GetMapContext()
+    {
+        return GWCA_CALL_C(GW_GetMapContext);
+    }
+}
+#endif

@@ -56,6 +56,7 @@ source_group(TREE "${imgui_SOURCE_DIR}" FILES ${SOURCES})
 target_sources(imgui PRIVATE ${SOURCES} ${HOOK_SOURCES})
 target_include_directories(imgui PUBLIC
     "${CMAKE_CURRENT_LIST_DIR}/../Dependencies"
+    "${CMAKE_CURRENT_LIST_DIR}/../Dependencies/GWCA/include"
     "${imgui_SOURCE_DIR}"
     "${imgui_SOURCE_DIR}/backends"
 	)
@@ -68,7 +69,6 @@ if(EMSCRIPTEN)
     # GWToolboxdll, since imgui.cpp itself is compiled against imconfig.h.
     target_compile_definitions(imgui PUBLIC GWCA_WASM=1)
     target_include_directories(imgui PUBLIC
-        "${CMAKE_CURRENT_LIST_DIR}/../Dependencies/GWCA/include"
         "${CMAKE_CURRENT_LIST_DIR}/../Dependencies/GWCA/source")
 endif()
 

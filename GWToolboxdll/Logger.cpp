@@ -20,6 +20,7 @@
 
 namespace {
     FILE* logfile = nullptr;
+    bool gwca_log_initialized = false;
     FILE* logfile2 = nullptr; // Debug: a second sink (log.txt on disk) so the harness can read it while the console stays
     [[maybe_unused]] FILE* stdout_file = nullptr;
     [[maybe_unused]] FILE* stderr_file = nullptr;
@@ -233,6 +234,7 @@ bool Log::InitializeLog()
 
 bool Log::InitializeGWCALog() {
     GW::RegisterLogHandler(GWCALogHandler, nullptr);
+    gwca_log_initialized = true;
     return true;
 }
 
@@ -247,8 +249,11 @@ void Log::InitializeChat()
 
 void Log::Terminate()
 {
-    GW::RegisterLogHandler(nullptr, nullptr);
-    GW::RegisterPanicHandler(nullptr, nullptr);
+    if (gwca_log_initialized) {
+        GW::RegisterLogHandler(nullptr, nullptr);
+        GW::RegisterPanicHandler(nullptr, nullptr);
+        gwca_log_initialized = false;
+    }
 
 #ifdef _DEBUG
     if (console_thread.joinable()) {

@@ -1,4 +1,5 @@
 #pragma once
+#include <GWCA/Runtime.h>
 
 #include <GWCA/GameContainers/GamePos.h>
 
@@ -93,103 +94,253 @@ namespace GW {
     namespace Map {
 
 
-        GWCA_API MissionMapContext* GetMissionMapContext();
+        MissionMapContext* GetMissionMapContext();
 
-        GWCA_API WorldMapContext* GetWorldMapContext();
+        WorldMapContext* GetWorldMapContext();
 
         // Allows you to load map geometry/pathing/props from the DAT file if you know a map's file_id. Be sure to call DestroyMapContext later to avoid a mem leak
-        GWCA_API MapContext* CreateMapContext(uint32_t map_file_id);
+        MapContext* CreateMapContext(uint32_t map_file_id);
 
         // Call this to free a MapContext created via CreateMapContext
-        GWCA_API bool DestroyMapContext(MapContext*);
+        bool DestroyMapContext(MapContext*);
 
-        GWCA_API float QueryAltitude(const GamePos* pos, float radius = 5.f, GW::MapContext* context = 0);
+        float QueryAltitude(const GamePos* pos, float radius = 5.f, GW::MapContext* context = 0);
 
-        GWCA_API bool GetIsMapLoaded();
+        bool GetIsMapLoaded();
 
         // Get current map ID.
-        GWCA_API Constants::MapID GetMapID();
+        Constants::MapID GetMapID();
 
         // Get current region you are in.
-        GWCA_API bool GetIsMapUnlocked(Constants::MapID map_id);
+        bool GetIsMapUnlocked(Constants::MapID map_id);
 
         // Get current region you are in.
-        GWCA_API GW::Constants::ServerRegion GetRegion();
+        GW::Constants::ServerRegion GetRegion();
 
         // Get current language you are in.
-        GWCA_API GW::Constants::Language GetLanguage();
+        GW::Constants::Language GetLanguage();
 
         // Get whether current character is observing a match
-        GWCA_API bool GetIsObserving();
+        bool GetIsObserving();
 
         // Get the district number you are in.
-        GWCA_API int GetDistrict();
+        int GetDistrict();
 
-		GWCA_API size_t GetDistrictCount();
+		size_t GetDistrictCount();
 
         // Get time, in ms, since the instance you are residing in has been created.
-        GWCA_API uint32_t GetInstanceTime();
+        uint32_t GetInstanceTime();
 
         // Get the instance type (Outpost, Explorable or Loading)
-        GWCA_API Constants::InstanceType GetInstanceType();
+        Constants::InstanceType GetInstanceType();
 
         // Travel to specified outpost.
-        GWCA_API bool Travel(Constants::MapID map_id, GW::Constants::ServerRegion region, int district_number = 0, GW::Constants::Language language = (GW::Constants::Language)0);
+        bool TravelByRegion(Constants::MapID map_id, GW::Constants::ServerRegion region, int district_number = 0, GW::Constants::Language language = (GW::Constants::Language)0);
+        inline bool Travel(Constants::MapID map_id, GW::Constants::ServerRegion region, int district_number = 0, GW::Constants::Language language = (GW::Constants::Language)0) { return TravelByRegion(map_id, region, district_number, language); }
 
-        GWCA_API bool Travel(Constants::MapID map_id, Constants::District district = (Constants::District)0, int district_number = 0);
+        bool TravelByDistrict(Constants::MapID map_id, Constants::District district = (Constants::District)0, int district_number = 0);
+        inline bool Travel(Constants::MapID map_id, Constants::District district = (Constants::District)0, int district_number = 0) { return TravelByDistrict(map_id, district, district_number); }
 
-        GWCA_API Constants::ServerRegion RegionFromDistrict(const GW::Constants::District _district);
+        Constants::ServerRegion RegionFromDistrict(const GW::Constants::District _district);
 
-        GWCA_API Constants::Language LanguageFromDistrict(const GW::Constants::District _district);
+        Constants::Language LanguageFromDistrict(const GW::Constants::District _district);
 
         // Array of icons (res shrines, quarries, traders...) on the mission map; see MissionMapIcon.
-        GWCA_API MissionMapIconArray* GetMissionMapIconArray();
+        MissionMapIconArray* GetMissionMapIconArray();
 
         // Returns pointer of collision trapezoid array.
-        GWCA_API PathingMapArray* GetPathingMap();
+        PathingMapArray* GetPathingMap();
 
-        GWCA_API uint32_t GetFoesKilled();
-        GWCA_API uint32_t GetFoesToKill();
+        uint32_t GetFoesKilled();
+        uint32_t GetFoesToKill();
 
-        GWCA_API AreaInfo *GetMapInfo(Constants::MapID map_id = (Constants::MapID)0);
+        AreaInfo *GetMapInfo(Constants::MapID map_id = (Constants::MapID)0);
 
         inline AreaInfo *GetCurrentMapInfo() {
             Constants::MapID map_id = GetMapID();
             return GetMapInfo(map_id);
         }
 
-        GWCA_API bool GetIsInCinematic();
-        GWCA_API bool SkipCinematic();
+        bool GetIsInCinematic();
+        bool SkipCinematic();
 
-        GWCA_API bool EnterChallenge();
-        GWCA_API bool CancelEnterChallenge();
+        bool EnterChallenge();
+        bool CancelEnterChallenge();
     };
 }
 // C Interop API
-extern "C" {
-    GWCA_API void* GetMissionMapContext();
-    GWCA_API void* GetWorldMapContext();
-    GWCA_API void* CreateMapContext(uint32_t map_file_id);
-    GWCA_API bool     DestroyMapContext(void* context);
-    GWCA_API float    QueryAltitude(const float* x, const float* y, float radius, void* context);
-    GWCA_API bool     GetIsMapLoaded();
-    GWCA_API uint32_t GetMapID();
-    GWCA_API bool     GetIsMapUnlocked(uint32_t map_id);
-    GWCA_API uint32_t GetRegion();
-    GWCA_API uint32_t GetLanguage();
-    GWCA_API bool     GetIsObserving();
-    GWCA_API int      GetDistrict();
-    GWCA_API uint32_t GetInstanceTime();
-    GWCA_API uint32_t GetInstanceType();
-    GWCA_API bool     TravelByRegion(uint32_t map_id, uint32_t region, int district_number, uint32_t language);
-    GWCA_API bool     TravelByDistrict(uint32_t map_id, uint32_t district, int district_number);
-    GWCA_API uint32_t RegionFromDistrict(uint32_t district);
-    GWCA_API uint32_t LanguageFromDistrict(uint32_t district);
-    GWCA_API uint32_t GetFoesKilled();
-    GWCA_API uint32_t GetFoesToKill();
-    GWCA_API void* GetMapInfo(uint32_t map_id);
-    GWCA_API bool     GetIsInCinematic();
-    GWCA_API bool     SkipCinematic();
-    GWCA_API bool     EnterChallenge();
-    GWCA_API bool     CancelEnterChallenge();
+
+namespace GW::Map {
+    extern "C" GWCA_API MissionMapContext* __cdecl GW_Map_GetMissionMapContext() noexcept;
+    extern "C" GWCA_API WorldMapContext* __cdecl GW_Map_GetWorldMapContext() noexcept;
+    extern "C" GWCA_API MapContext* __cdecl GW_Map_CreateMapContext(uint32_t map_file_id) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_Map_DestroyMapContext(MapContext* gwca_arg0) noexcept;
+    extern "C" GWCA_API float __cdecl GW_Map_QueryAltitude(const GamePos* pos, float radius, GW::MapContext* context) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_Map_GetIsMapLoaded() noexcept;
+    extern "C" GWCA_API Constants::MapID __cdecl GW_Map_GetMapID() noexcept;
+    extern "C" GWCA_API bool __cdecl GW_Map_GetIsMapUnlocked(Constants::MapID map_id) noexcept;
+    extern "C" GWCA_API GW::Constants::ServerRegion __cdecl GW_Map_GetRegion() noexcept;
+    extern "C" GWCA_API GW::Constants::Language __cdecl GW_Map_GetLanguage() noexcept;
+    extern "C" GWCA_API bool __cdecl GW_Map_GetIsObserving() noexcept;
+    extern "C" GWCA_API int __cdecl GW_Map_GetDistrict() noexcept;
+    extern "C" GWCA_API size_t __cdecl GW_Map_GetDistrictCount() noexcept;
+    extern "C" GWCA_API uint32_t __cdecl GW_Map_GetInstanceTime() noexcept;
+    extern "C" GWCA_API Constants::InstanceType __cdecl GW_Map_GetInstanceType() noexcept;
+    extern "C" GWCA_API bool __cdecl GW_Map_TravelByRegion(Constants::MapID map_id, GW::Constants::ServerRegion region, int district_number, GW::Constants::Language language) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_Map_TravelByDistrict(Constants::MapID map_id, Constants::District district, int district_number) noexcept;
+    extern "C" GWCA_API Constants::ServerRegion __cdecl GW_Map_RegionFromDistrict(const GW::Constants::District _district) noexcept;
+    extern "C" GWCA_API Constants::Language __cdecl GW_Map_LanguageFromDistrict(const GW::Constants::District _district) noexcept;
+    extern "C" GWCA_API MissionMapIconArray* __cdecl GW_Map_GetMissionMapIconArray() noexcept;
+    extern "C" GWCA_API PathingMapArray* __cdecl GW_Map_GetPathingMap() noexcept;
+    extern "C" GWCA_API uint32_t __cdecl GW_Map_GetFoesKilled() noexcept;
+    extern "C" GWCA_API uint32_t __cdecl GW_Map_GetFoesToKill() noexcept;
+    extern "C" GWCA_API AreaInfo* __cdecl GW_Map_GetMapInfo(Constants::MapID map_id) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_Map_GetIsInCinematic() noexcept;
+    extern "C" GWCA_API bool __cdecl GW_Map_SkipCinematic() noexcept;
+    extern "C" GWCA_API bool __cdecl GW_Map_EnterChallenge() noexcept;
+    extern "C" GWCA_API bool __cdecl GW_Map_CancelEnterChallenge() noexcept;
 }
+
+#if !defined(GWCA_BUILD_EXPORTS)
+namespace GW::Map {
+    inline MissionMapContext* GetMissionMapContext()
+    {
+        return GWCA_CALL_C(GW_Map_GetMissionMapContext);
+    }
+
+    inline WorldMapContext* GetWorldMapContext()
+    {
+        return GWCA_CALL_C(GW_Map_GetWorldMapContext);
+    }
+
+    inline MapContext* CreateMapContext(uint32_t map_file_id)
+    {
+        return GWCA_CALL_C(GW_Map_CreateMapContext, map_file_id);
+    }
+
+    inline bool DestroyMapContext(MapContext* gwca_arg0)
+    {
+        return GWCA_CALL_C(GW_Map_DestroyMapContext, gwca_arg0);
+    }
+
+    inline float QueryAltitude(const GamePos* pos, float radius, GW::MapContext* context)
+    {
+        return GWCA_CALL_C(GW_Map_QueryAltitude, pos, radius, context);
+    }
+
+    inline bool GetIsMapLoaded()
+    {
+        return GWCA_CALL_C(GW_Map_GetIsMapLoaded);
+    }
+
+    inline Constants::MapID GetMapID()
+    {
+        return GWCA_CALL_C(GW_Map_GetMapID);
+    }
+
+    inline bool GetIsMapUnlocked(Constants::MapID map_id)
+    {
+        return GWCA_CALL_C(GW_Map_GetIsMapUnlocked, map_id);
+    }
+
+    inline GW::Constants::ServerRegion GetRegion()
+    {
+        return GWCA_CALL_C(GW_Map_GetRegion);
+    }
+
+    inline GW::Constants::Language GetLanguage()
+    {
+        return GWCA_CALL_C(GW_Map_GetLanguage);
+    }
+
+    inline bool GetIsObserving()
+    {
+        return GWCA_CALL_C(GW_Map_GetIsObserving);
+    }
+
+    inline int GetDistrict()
+    {
+        return GWCA_CALL_C(GW_Map_GetDistrict);
+    }
+
+    inline size_t GetDistrictCount()
+    {
+        return GWCA_CALL_C(GW_Map_GetDistrictCount);
+    }
+
+    inline uint32_t GetInstanceTime()
+    {
+        return GWCA_CALL_C(GW_Map_GetInstanceTime);
+    }
+
+    inline Constants::InstanceType GetInstanceType()
+    {
+        return GWCA_CALL_C(GW_Map_GetInstanceType);
+    }
+
+    inline bool TravelByRegion(Constants::MapID map_id, GW::Constants::ServerRegion region, int district_number, GW::Constants::Language language)
+    {
+        return GWCA_CALL_C(GW_Map_TravelByRegion, map_id, region, district_number, language);
+    }
+
+    inline bool TravelByDistrict(Constants::MapID map_id, Constants::District district, int district_number)
+    {
+        return GWCA_CALL_C(GW_Map_TravelByDistrict, map_id, district, district_number);
+    }
+
+    inline Constants::ServerRegion RegionFromDistrict(const GW::Constants::District _district)
+    {
+        return GWCA_CALL_C(GW_Map_RegionFromDistrict, _district);
+    }
+
+    inline Constants::Language LanguageFromDistrict(const GW::Constants::District _district)
+    {
+        return GWCA_CALL_C(GW_Map_LanguageFromDistrict, _district);
+    }
+
+    inline MissionMapIconArray* GetMissionMapIconArray()
+    {
+        return GWCA_CALL_C(GW_Map_GetMissionMapIconArray);
+    }
+
+    inline PathingMapArray* GetPathingMap()
+    {
+        return GWCA_CALL_C(GW_Map_GetPathingMap);
+    }
+
+    inline uint32_t GetFoesKilled()
+    {
+        return GWCA_CALL_C(GW_Map_GetFoesKilled);
+    }
+
+    inline uint32_t GetFoesToKill()
+    {
+        return GWCA_CALL_C(GW_Map_GetFoesToKill);
+    }
+
+    inline AreaInfo* GetMapInfo(Constants::MapID map_id)
+    {
+        return GWCA_CALL_C(GW_Map_GetMapInfo, map_id);
+    }
+
+    inline bool GetIsInCinematic()
+    {
+        return GWCA_CALL_C(GW_Map_GetIsInCinematic);
+    }
+
+    inline bool SkipCinematic()
+    {
+        return GWCA_CALL_C(GW_Map_SkipCinematic);
+    }
+
+    inline bool EnterChallenge()
+    {
+        return GWCA_CALL_C(GW_Map_EnterChallenge);
+    }
+
+    inline bool CancelEnterChallenge()
+    {
+        return GWCA_CALL_C(GW_Map_CancelEnterChallenge);
+    }
+}
+#endif

@@ -1,0 +1,3311 @@
+{
+  "abi": "0x040C0000u",
+  "schema": "f84bbdbff525d558",
+  "validation_export": "GWCA_ValidateApi",
+  "exports": [
+    {
+      "name": "GW_GetAccountContext",
+      "signature": "AccountContext* __cdecl GW_GetAccountContext() noexcept",
+      "guards": [],
+      "header": "GWCA/Context/AccountContext.h"
+    },
+    {
+      "name": "GW_GetAgentContext",
+      "signature": "AgentContext* __cdecl GW_GetAgentContext() noexcept",
+      "guards": [],
+      "header": "GWCA/Context/AgentContext.h"
+    },
+    {
+      "name": "GW_GetCharContext",
+      "signature": "CharContext* __cdecl GW_GetCharContext() noexcept",
+      "guards": [],
+      "header": "GWCA/Context/CharContext.h"
+    },
+    {
+      "name": "GW_GetGameContext",
+      "signature": "GameContext* __cdecl GW_GetGameContext() noexcept",
+      "guards": [],
+      "header": "GWCA/Context/GameContext.h"
+    },
+    {
+      "name": "GW_GetGameplayContext",
+      "signature": "GameplayContext* __cdecl GW_GetGameplayContext() noexcept",
+      "guards": [],
+      "header": "GWCA/Context/GameplayContext.h"
+    },
+    {
+      "name": "GW_GetGuildContext",
+      "signature": "GuildContext* __cdecl GW_GetGuildContext() noexcept",
+      "guards": [],
+      "header": "GWCA/Context/GuildContext.h"
+    },
+    {
+      "name": "GW_GetItemContext",
+      "signature": "ItemContext* __cdecl GW_GetItemContext() noexcept",
+      "guards": [],
+      "header": "GWCA/Context/ItemContext.h"
+    },
+    {
+      "name": "GW_GetMapContext",
+      "signature": "MapContext* __cdecl GW_GetMapContext() noexcept",
+      "guards": [],
+      "header": "GWCA/Context/MapContext.h"
+    },
+    {
+      "name": "GW_GetPartyContext",
+      "signature": "PartyContext* __cdecl GW_GetPartyContext() noexcept",
+      "guards": [],
+      "header": "GWCA/Context/PartyContext.h"
+    },
+    {
+      "name": "GW_GetPreGameContext",
+      "signature": "PreGameContext* __cdecl GW_GetPreGameContext() noexcept",
+      "guards": [],
+      "header": "GWCA/Context/PreGameContext.h"
+    },
+    {
+      "name": "GW_GetAvailableChars",
+      "signature": "Array < CharacterInformation >* __cdecl GW_GetAvailableChars() noexcept",
+      "guards": [],
+      "header": "GWCA/Context/PreGameContext.h"
+    },
+    {
+      "name": "GW_GetTradeContext",
+      "signature": "TradeContext* __cdecl GW_GetTradeContext() noexcept",
+      "guards": [],
+      "header": "GWCA/Context/TradeContext.h"
+    },
+    {
+      "name": "GW_GetWorldContext",
+      "signature": "WorldContext* __cdecl GW_GetWorldContext() noexcept",
+      "guards": [],
+      "header": "GWCA/Context/WorldContext.h"
+    },
+    {
+      "name": "GW_Initialize",
+      "signature": "bool __cdecl GW_Initialize() noexcept",
+      "guards": [],
+      "header": "GWCA/GWCA.h"
+    },
+    {
+      "name": "GW_DisableHooks",
+      "signature": "void __cdecl GW_DisableHooks() noexcept",
+      "guards": [],
+      "header": "GWCA/GWCA.h"
+    },
+    {
+      "name": "GW_EnableHooks",
+      "signature": "void __cdecl GW_EnableHooks() noexcept",
+      "guards": [],
+      "header": "GWCA/GWCA.h"
+    },
+    {
+      "name": "GW_TerminateNative",
+      "signature": "void __cdecl GW_TerminateNative() noexcept",
+      "guards": [],
+      "header": "GWCA/GWCA.h"
+    },
+    {
+      "name": "GW_GetDistance3D",
+      "signature": "float __cdecl GW_GetDistance3D(Vec3f p1, Vec3f p2) noexcept",
+      "guards": [],
+      "header": "GWCA/GameContainers/GamePos.h"
+    },
+    {
+      "name": "GW_GetDistance2D",
+      "signature": "float __cdecl GW_GetDistance2D(const Vec2f& p1, const Vec2f& p2) noexcept",
+      "guards": [],
+      "header": "GWCA/GameContainers/GamePos.h"
+    },
+    {
+      "name": "GW_GetNorm3D",
+      "signature": "float __cdecl GW_GetNorm3D(Vec3f p) noexcept",
+      "guards": [],
+      "header": "GWCA/GameContainers/GamePos.h"
+    },
+    {
+      "name": "GW_GetNorm2D",
+      "signature": "float __cdecl GW_GetNorm2D(Vec2f p) noexcept",
+      "guards": [],
+      "header": "GWCA/GameContainers/GamePos.h"
+    },
+    {
+      "name": "GW_RotateNative",
+      "signature": "void __cdecl GW_RotateNative(Vec2f value, float rotation, Vec2f* result) noexcept",
+      "guards": [],
+      "header": "GWCA/GameContainers/GamePos.h"
+    },
+    {
+      "name": "GW_Hash",
+      "signature": "uint32_t __cdecl GW_Hash(const void* data, size_t size) noexcept",
+      "guards": [],
+      "header": "GWCA/GameContainers/Hash.h"
+    },
+    {
+      "name": "GW_Hash8",
+      "signature": "uint32_t __cdecl GW_Hash8(uint8_t data) noexcept",
+      "guards": [],
+      "header": "GWCA/GameContainers/Hash.h"
+    },
+    {
+      "name": "GW_Hash16",
+      "signature": "uint32_t __cdecl GW_Hash16(uint16_t data) noexcept",
+      "guards": [],
+      "header": "GWCA/GameContainers/Hash.h"
+    },
+    {
+      "name": "GW_Hash32",
+      "signature": "uint32_t __cdecl GW_Hash32(uint32_t data) noexcept",
+      "guards": [],
+      "header": "GWCA/GameContainers/Hash.h"
+    },
+    {
+      "name": "GW_HashWString",
+      "signature": "uint32_t __cdecl GW_HashWString(const wchar_t* str, uint32_t maxLength) noexcept",
+      "guards": [],
+      "header": "GWCA/GameContainers/Hash.h"
+    },
+    {
+      "name": "GW_NPCEquipment_GetType",
+      "signature": "uint32_t __cdecl GW_NPCEquipment_GetType(NPCEquipment* self) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Agent.h"
+    },
+    {
+      "name": "GW_NPCEquipment_RedrawEquipmentSlot",
+      "signature": "bool __cdecl GW_NPCEquipment_RedrawEquipmentSlot(NPCEquipment* self, uint32_t slot) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Agent.h"
+    },
+    {
+      "name": "GW_NPCEquipment_UndrawEquipmentSlot",
+      "signature": "bool __cdecl GW_NPCEquipment_UndrawEquipmentSlot(NPCEquipment* self, uint32_t slot) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Agent.h"
+    },
+    {
+      "name": "GW_UI_SetFrameMargins",
+      "signature": "bool __cdecl GW_UI_SetFrameMargins(GW::UI::Frame* frame, uint32_t flags, float size [4], float input_mask [4], uint32_t type) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_ButtonFrame_Create",
+      "signature": "ButtonFrame* __cdecl GW_ButtonFrame_Create(uint32_t parent_frame_id, uint32_t flags, uint32_t child_offset_id, const wchar_t* button_label, const wchar_t* frame_label) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_ButtonFrame_GetLabel",
+      "signature": "bool __cdecl GW_ButtonFrame_GetLabel(ButtonFrame* self, const wchar_t** enc_string) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_ButtonFrame_SetLabel",
+      "signature": "bool __cdecl GW_ButtonFrame_SetLabel(ButtonFrame* self, const wchar_t* enc_string) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_ButtonFrame_Click",
+      "signature": "bool __cdecl GW_ButtonFrame_Click(ButtonFrame* self) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_ButtonFrame_MouseAction",
+      "signature": "bool __cdecl GW_ButtonFrame_MouseAction(ButtonFrame* self, UI::UIPacket::ActionState action) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_ButtonFrame_DoubleClick",
+      "signature": "bool __cdecl GW_ButtonFrame_DoubleClick(ButtonFrame* self) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_TabsFrame_AddTab",
+      "signature": "GW::UI::Frame* __cdecl GW_TabsFrame_AddTab(TabsFrame* self, const wchar_t* tab_name_enc, uint32_t flags, uint32_t child_offset_id, GW::UI::UIInteractionCallback callback, void* wparam) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_TabsFrame_DisableTab",
+      "signature": "bool __cdecl GW_TabsFrame_DisableTab(TabsFrame* self, uint32_t tab_id) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_TabsFrame_EnableTab",
+      "signature": "bool __cdecl GW_TabsFrame_EnableTab(TabsFrame* self, uint32_t tab_id) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_TabsFrame_RemoveTab",
+      "signature": "bool __cdecl GW_TabsFrame_RemoveTab(TabsFrame* self, uint32_t tab_id) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_TabsFrame_GetCurrentTabIndex",
+      "signature": "bool __cdecl GW_TabsFrame_GetCurrentTabIndex(TabsFrame* self, uint32_t* tab_id) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_TabsFrame_GetTabFrameId",
+      "signature": "bool __cdecl GW_TabsFrame_GetTabFrameId(TabsFrame* self, uint32_t tab_id, uint32_t* frame_id) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_TabsFrame_GetIsTabEnabled",
+      "signature": "bool __cdecl GW_TabsFrame_GetIsTabEnabled(TabsFrame* self, uint32_t tab_id, uint32_t* is_enabled) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_TabsFrame_GetTabByLabel",
+      "signature": "GW::UI::Frame* __cdecl GW_TabsFrame_GetTabByLabel(TabsFrame* self, const wchar_t* label) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_TabsFrame_GetCurrentTab",
+      "signature": "GW::UI::Frame* __cdecl GW_TabsFrame_GetCurrentTab(TabsFrame* self) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_TabsFrame_ChooseTab",
+      "signature": "bool __cdecl GW_TabsFrame_ChooseTab(TabsFrame* self, uint32_t tab_index) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_TabsFrame_GetTabButton",
+      "signature": "GW::ButtonFrame* __cdecl GW_TabsFrame_GetTabButton(TabsFrame* self, GW::UI::Frame* tab_frame) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_ItemListFrame_GetSelectedValue",
+      "signature": "bool __cdecl GW_ItemListFrame_GetSelectedValue(ItemListFrame* self, uint32_t* selected_value) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_ItemListFrame_SetSortHandler",
+      "signature": "bool __cdecl GW_ItemListFrame_SetSortHandler(ItemListFrame* self, SortHandler_pt sortHandler) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_ItemListFrame_GetSortHandler",
+      "signature": "SortHandler_pt __cdecl GW_ItemListFrame_GetSortHandler(ItemListFrame* self) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_ScrollableFrame_Create",
+      "signature": "ScrollableFrame* __cdecl GW_ScrollableFrame_Create(uint32_t parent_frame_id, uint32_t flags, uint32_t child_offset_id, ScrollableFrame::ScrollablePageContext* context, const wchar_t* frame_label) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_ScrollableFrame_SetSortHandler",
+      "signature": "bool __cdecl GW_ScrollableFrame_SetSortHandler(ScrollableFrame* self, SortHandler_pt sortHandler) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_ScrollableFrame_GetSortHandler",
+      "signature": "SortHandler_pt __cdecl GW_ScrollableFrame_GetSortHandler(ScrollableFrame* self) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_ScrollableFrame_ClearItems",
+      "signature": "bool __cdecl GW_ScrollableFrame_ClearItems(ScrollableFrame* self) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_ScrollableFrame_RemoveItem",
+      "signature": "bool __cdecl GW_ScrollableFrame_RemoveItem(ScrollableFrame* self, uint32_t child_offset_id) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_ScrollableFrame_AddItem",
+      "signature": "uint32_t __cdecl GW_ScrollableFrame_AddItem(ScrollableFrame* self, uint32_t flags, uint32_t child_offset_id, GW::UI::UIInteractionCallback callback) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_ScrollableFrame_GetItemFrameId",
+      "signature": "uint32_t __cdecl GW_ScrollableFrame_GetItemFrameId(ScrollableFrame* self, uint32_t child_offset_id) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_ScrollableFrame_GetSelectedValue",
+      "signature": "bool __cdecl GW_ScrollableFrame_GetSelectedValue(ScrollableFrame* self, uint32_t* selected_value) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_ScrollableFrame_GetCount",
+      "signature": "bool __cdecl GW_ScrollableFrame_GetCount(ScrollableFrame* self, uint32_t* size) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_ScrollableFrame_GetItems",
+      "signature": "uint32_t __cdecl GW_ScrollableFrame_GetItems(ScrollableFrame* self, uint32_t* child_frame_id_buffer, uint32_t buffer_len) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_ScrollableFrame_GetPage",
+      "signature": "GW::ItemListFrame* __cdecl GW_ScrollableFrame_GetPage(ScrollableFrame* self) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_ScrollableFrame_SetPage",
+      "signature": "GW::ItemListFrame* __cdecl GW_ScrollableFrame_SetPage(ScrollableFrame* self, ScrollableFrame::ScrollablePageContext* gwca_arg0) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_EditableTextFrame_GetValue",
+      "signature": "const wchar_t* __cdecl GW_EditableTextFrame_GetValue(EditableTextFrame* self) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_EditableTextFrame_SetValue",
+      "signature": "bool __cdecl GW_EditableTextFrame_SetValue(EditableTextFrame* self, const wchar_t* value) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_EditableTextFrame_SetMaxLength",
+      "signature": "bool __cdecl GW_EditableTextFrame_SetMaxLength(EditableTextFrame* self, uint32_t max_length) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_EditableTextFrame_IsReadOnly",
+      "signature": "bool __cdecl GW_EditableTextFrame_IsReadOnly(EditableTextFrame* self) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_EditableTextFrame_SetReadOnly",
+      "signature": "bool __cdecl GW_EditableTextFrame_SetReadOnly(EditableTextFrame* self, bool readonly) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_ProgressBar_GetValue",
+      "signature": "uint32_t __cdecl GW_ProgressBar_GetValue(ProgressBar* self) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_ProgressBar_SetValue",
+      "signature": "bool __cdecl GW_ProgressBar_SetValue(ProgressBar* self, uint32_t value) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_ProgressBar_SetMax",
+      "signature": "bool __cdecl GW_ProgressBar_SetMax(ProgressBar* self, uint32_t value) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_ProgressBar_SetColorId",
+      "signature": "bool __cdecl GW_ProgressBar_SetColorId(ProgressBar* self, uint32_t color_id) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_ProgressBar_SetStyle",
+      "signature": "bool __cdecl GW_ProgressBar_SetStyle(ProgressBar* self, ProgressBar::ProgressBarStyle style) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_CheckboxFrame_Create",
+      "signature": "CheckboxFrame* __cdecl GW_CheckboxFrame_Create(uint32_t parent_frame_id, uint32_t flags, uint32_t child_offset_id, const wchar_t* text_label_enc_string, const wchar_t* frame_label) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_CheckboxFrame_IsChecked",
+      "signature": "bool __cdecl GW_CheckboxFrame_IsChecked(CheckboxFrame* self) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_CheckboxFrame_SetChecked",
+      "signature": "bool __cdecl GW_CheckboxFrame_SetChecked(CheckboxFrame* self, bool checked) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_CheckboxFrame_GetValue",
+      "signature": "uint32_t __cdecl GW_CheckboxFrame_GetValue(CheckboxFrame* self) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_CheckboxFrame_SetValue",
+      "signature": "bool __cdecl GW_CheckboxFrame_SetValue(CheckboxFrame* self, uint32_t value) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_DropdownFrame_GetOptions",
+      "signature": "uint32_t __cdecl GW_DropdownFrame_GetOptions(DropdownFrame* self, uint32_t* buffer, uint32_t capacity) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_DropdownFrame_SelectOption",
+      "signature": "bool __cdecl GW_DropdownFrame_SelectOption(DropdownFrame* self, uint32_t value) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_DropdownFrame_SelectIndex",
+      "signature": "bool __cdecl GW_DropdownFrame_SelectIndex(DropdownFrame* self, uint32_t index) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_DropdownFrame_AddOption",
+      "signature": "bool __cdecl GW_DropdownFrame_AddOption(DropdownFrame* self, const wchar_t* label_enc_string, uint32_t value) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_DropdownFrame_GetCount",
+      "signature": "bool __cdecl GW_DropdownFrame_GetCount(DropdownFrame* self, uint32_t* count) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_DropdownFrame_GetOptionValue",
+      "signature": "bool __cdecl GW_DropdownFrame_GetOptionValue(DropdownFrame* self, uint32_t index, uint32_t* value) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_DropdownFrame_GetOptionIndex",
+      "signature": "bool __cdecl GW_DropdownFrame_GetOptionIndex(DropdownFrame* self, uint32_t value, uint32_t* index) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_DropdownFrame_GetSelectedIndex",
+      "signature": "bool __cdecl GW_DropdownFrame_GetSelectedIndex(DropdownFrame* self, uint32_t* index) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_DropdownFrame_HasValueMapping",
+      "signature": "bool __cdecl GW_DropdownFrame_HasValueMapping(DropdownFrame* self) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_DropdownFrame_GetValue",
+      "signature": "uint32_t __cdecl GW_DropdownFrame_GetValue(DropdownFrame* self) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_DropdownFrame_SetValue",
+      "signature": "bool __cdecl GW_DropdownFrame_SetValue(DropdownFrame* self, uint32_t value) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_SliderFrame_GetValue",
+      "signature": "bool __cdecl GW_SliderFrame_GetValue(SliderFrame* self, uint32_t* selected_value) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_SliderFrame_SetValue",
+      "signature": "bool __cdecl GW_SliderFrame_SetValue(SliderFrame* self, uint32_t value) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_TextLabelFrame_Create",
+      "signature": "TextLabelFrame* __cdecl GW_TextLabelFrame_Create(uint32_t parent_frame_id, uint32_t flags, uint32_t child_offset_id, const wchar_t* text_label_enc_string, const wchar_t* frame_label) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_TextLabelFrame_GetEncodedLabel",
+      "signature": "const wchar_t* __cdecl GW_TextLabelFrame_GetEncodedLabel(TextLabelFrame* self) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_TextLabelFrame_GetDecodedLabel",
+      "signature": "const wchar_t* __cdecl GW_TextLabelFrame_GetDecodedLabel(TextLabelFrame* self) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_TextLabelFrame_SetLabel",
+      "signature": "bool __cdecl GW_TextLabelFrame_SetLabel(TextLabelFrame* self, const wchar_t* enc_string) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_TextLabelFrame_SetFont",
+      "signature": "bool __cdecl GW_TextLabelFrame_SetFont(TextLabelFrame* self, uint32_t gwca_arg0) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_MultiLineTextLabelFrame_GetEncodedLabel",
+      "signature": "const wchar_t* __cdecl GW_MultiLineTextLabelFrame_GetEncodedLabel(MultiLineTextLabelFrame* self) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_MultiLineTextLabelFrame_GetDecodedLabel",
+      "signature": "const wchar_t* __cdecl GW_MultiLineTextLabelFrame_GetDecodedLabel(MultiLineTextLabelFrame* self) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_MultiLineTextLabelFrame_SetLabel",
+      "signature": "bool __cdecl GW_MultiLineTextLabelFrame_SetLabel(MultiLineTextLabelFrame* self, const wchar_t* enc_string) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Frame.h"
+    },
+    {
+      "name": "GW_Item_GetIsMaterial",
+      "signature": "bool __cdecl GW_Item_GetIsMaterial(const Item* self) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Item.h"
+    },
+    {
+      "name": "GW_Item_GetIsZcoin",
+      "signature": "bool __cdecl GW_Item_GetIsZcoin(const Item* self) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Item.h"
+    },
+    {
+      "name": "GW_SkillbarSkill_GetRecharge",
+      "signature": "uint32_t __cdecl GW_SkillbarSkill_GetRecharge(const SkillbarSkill* self) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Skill.h"
+    },
+    {
+      "name": "GW_Skillbar_GetSkillById",
+      "signature": "SkillbarSkill* __cdecl GW_Skillbar_GetSkillById(Skillbar* self, Constants::SkillID skill_id, size_t* slot_out) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Skill.h"
+    },
+    {
+      "name": "GW_Effect_GetTimeElapsed",
+      "signature": "DWORD __cdecl GW_Effect_GetTimeElapsed(const Effect* self) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Skill.h"
+    },
+    {
+      "name": "GW_Effect_GetTimeRemaining",
+      "signature": "DWORD __cdecl GW_Effect_GetTimeRemaining(const Effect* self) noexcept",
+      "guards": [],
+      "header": "GWCA/GameEntities/Skill.h"
+    },
+    {
+      "name": "GW_Agents_SendDialog",
+      "signature": "bool __cdecl GW_Agents_SendDialog(uint32_t dialog_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/AgentMgr.h"
+    },
+    {
+      "name": "GW_Agents_GetObservingId",
+      "signature": "uint32_t __cdecl GW_Agents_GetObservingId() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/AgentMgr.h"
+    },
+    {
+      "name": "GW_Agents_GetControlledCharacterId",
+      "signature": "uint32_t __cdecl GW_Agents_GetControlledCharacterId() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/AgentMgr.h"
+    },
+    {
+      "name": "GW_Agents_GetTargetId",
+      "signature": "uint32_t __cdecl GW_Agents_GetTargetId() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/AgentMgr.h"
+    },
+    {
+      "name": "GW_Agents_GetEvaluatedTargetId",
+      "signature": "uint32_t __cdecl GW_Agents_GetEvaluatedTargetId() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/AgentMgr.h"
+    },
+    {
+      "name": "GW_Agents_GetAgentArray",
+      "signature": "AgentArray* __cdecl GW_Agents_GetAgentArray() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/AgentMgr.h"
+    },
+    {
+      "name": "GW_Agents_GetAgentByID",
+      "signature": "Agent* __cdecl GW_Agents_GetAgentByID(uint32_t id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/AgentMgr.h"
+    },
+    {
+      "name": "GW_Agents_GetPlayerByID",
+      "signature": "Agent* __cdecl GW_Agents_GetPlayerByID(uint32_t player_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/AgentMgr.h"
+    },
+    {
+      "name": "GW_Agents_GetControlledCharacter",
+      "signature": "AgentLiving* __cdecl GW_Agents_GetControlledCharacter() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/AgentMgr.h"
+    },
+    {
+      "name": "GW_Agents_GetAgentMatchesFlags",
+      "signature": "bool __cdecl GW_Agents_GetAgentMatchesFlags(const Agent* gwca_arg0, AgentTargetFlags flags) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/AgentMgr.h"
+    },
+    {
+      "name": "GW_Agents_RefreshAgentNameTag",
+      "signature": "bool __cdecl GW_Agents_RefreshAgentNameTag(const Agent* gwca_arg0) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/AgentMgr.h"
+    },
+    {
+      "name": "GW_Agents_IsObserving",
+      "signature": "bool __cdecl GW_Agents_IsObserving() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/AgentMgr.h"
+    },
+    {
+      "name": "GW_Agents_GetTargetAsAgentLiving",
+      "signature": "AgentLiving* __cdecl GW_Agents_GetTargetAsAgentLiving() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/AgentMgr.h"
+    },
+    {
+      "name": "GW_Agents_GetAmountOfPlayersInInstance",
+      "signature": "uint32_t __cdecl GW_Agents_GetAmountOfPlayersInInstance() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/AgentMgr.h"
+    },
+    {
+      "name": "GW_Agents_GetMapAgentArray",
+      "signature": "MapAgentArray* __cdecl GW_Agents_GetMapAgentArray() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/AgentMgr.h"
+    },
+    {
+      "name": "GW_Agents_CountAllegianceInRange",
+      "signature": "uint32_t __cdecl GW_Agents_CountAllegianceInRange(GW::Constants::Allegiance allegiance, float sqr_range) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/AgentMgr.h"
+    },
+    {
+      "name": "GW_Agents_GetAgentCharData",
+      "signature": "AgentCharData* __cdecl GW_Agents_GetAgentCharData(uint32_t agent_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/AgentMgr.h"
+    },
+    {
+      "name": "GW_Agents_GetMapAgentByID",
+      "signature": "MapAgent* __cdecl GW_Agents_GetMapAgentByID(uint32_t agent_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/AgentMgr.h"
+    },
+    {
+      "name": "GW_Agents_GetAgentPrimary",
+      "signature": "GW::Constants::ProfessionByte __cdecl GW_Agents_GetAgentPrimary(uint32_t agent_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/AgentMgr.h"
+    },
+    {
+      "name": "GW_Agents_GetAgentSecondary",
+      "signature": "GW::Constants::ProfessionByte __cdecl GW_Agents_GetAgentSecondary(uint32_t agent_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/AgentMgr.h"
+    },
+    {
+      "name": "GW_Agents_GetPlayerArray",
+      "signature": "PlayerArray* __cdecl GW_Agents_GetPlayerArray() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/AgentMgr.h"
+    },
+    {
+      "name": "GW_Agents_GetNPCArray",
+      "signature": "NPCArray* __cdecl GW_Agents_GetNPCArray() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/AgentMgr.h"
+    },
+    {
+      "name": "GW_Agents_GetNPCByID",
+      "signature": "NPC* __cdecl GW_Agents_GetNPCByID(uint32_t npc_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/AgentMgr.h"
+    },
+    {
+      "name": "GW_Agents_ChangeTarget",
+      "signature": "bool __cdecl GW_Agents_ChangeTarget(AgentID agent_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/AgentMgr.h"
+    },
+    {
+      "name": "GW_Agents_Move",
+      "signature": "bool __cdecl GW_Agents_Move(GamePos pos) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/AgentMgr.h"
+    },
+    {
+      "name": "GW_Agents_InteractAgent",
+      "signature": "bool __cdecl GW_Agents_InteractAgent(const Agent* agent, bool call_target) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/AgentMgr.h"
+    },
+    {
+      "name": "GW_Agents_GetPlayerNameByLoginNumber",
+      "signature": "wchar_t* __cdecl GW_Agents_GetPlayerNameByLoginNumber(uint32_t login_number) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/AgentMgr.h"
+    },
+    {
+      "name": "GW_Agents_GetAgentIdByLoginNumber",
+      "signature": "uint32_t __cdecl GW_Agents_GetAgentIdByLoginNumber(uint32_t login_number) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/AgentMgr.h"
+    },
+    {
+      "name": "GW_Agents_GetHeroAgentID",
+      "signature": "AgentID __cdecl GW_Agents_GetHeroAgentID(uint32_t hero_index) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/AgentMgr.h"
+    },
+    {
+      "name": "GW_Agents_GetAgentEncNameByAgent",
+      "signature": "wchar_t* __cdecl GW_Agents_GetAgentEncNameByAgent(const Agent* agent) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/AgentMgr.h"
+    },
+    {
+      "name": "GW_Agents_GetAgentEncNameById",
+      "signature": "wchar_t* __cdecl GW_Agents_GetAgentEncNameById(uint32_t agent_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/AgentMgr.h"
+    },
+    {
+      "name": "GW_CameraMgr_GetCamera",
+      "signature": "Camera* __cdecl GW_CameraMgr_GetCamera() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/CameraMgr.h"
+    },
+    {
+      "name": "GW_CameraMgr_SetMaxDist",
+      "signature": "bool __cdecl GW_CameraMgr_SetMaxDist(float dist) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/CameraMgr.h"
+    },
+    {
+      "name": "GW_CameraMgr_SetFieldOfView",
+      "signature": "bool __cdecl GW_CameraMgr_SetFieldOfView(float fov) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/CameraMgr.h"
+    },
+    {
+      "name": "GW_CameraMgr_ComputeCamPos",
+      "signature": "Vec3f __cdecl GW_CameraMgr_ComputeCamPos(float dist) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/CameraMgr.h"
+    },
+    {
+      "name": "GW_CameraMgr_UpdateCameraPos",
+      "signature": "bool __cdecl GW_CameraMgr_UpdateCameraPos() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/CameraMgr.h"
+    },
+    {
+      "name": "GW_CameraMgr_GetFieldOfView",
+      "signature": "float __cdecl GW_CameraMgr_GetFieldOfView() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/CameraMgr.h"
+    },
+    {
+      "name": "GW_CameraMgr_GetYaw",
+      "signature": "float __cdecl GW_CameraMgr_GetYaw() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/CameraMgr.h"
+    },
+    {
+      "name": "GW_CameraMgr_UnlockCam",
+      "signature": "bool __cdecl GW_CameraMgr_UnlockCam(bool flag) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/CameraMgr.h"
+    },
+    {
+      "name": "GW_CameraMgr_GetCameraUnlock",
+      "signature": "bool __cdecl GW_CameraMgr_GetCameraUnlock() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/CameraMgr.h"
+    },
+    {
+      "name": "GW_CameraMgr_SetFog",
+      "signature": "bool __cdecl GW_CameraMgr_SetFog(bool flag) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/CameraMgr.h"
+    },
+    {
+      "name": "GW_Chat_GetChatLog",
+      "signature": "Chat::ChatBuffer* __cdecl GW_Chat_GetChatLog() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ChatMgr.h"
+    },
+    {
+      "name": "GW_Chat_AddToChatLog",
+      "signature": "bool __cdecl GW_Chat_AddToChatLog(wchar_t* message, uint32_t channel) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ChatMgr.h"
+    },
+    {
+      "name": "GW_Chat_GetIsTyping",
+      "signature": "bool __cdecl GW_Chat_GetIsTyping() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ChatMgr.h"
+    },
+    {
+      "name": "GW_Chat_SendChatCurrentA",
+      "signature": "bool __cdecl GW_Chat_SendChatCurrentA(const char* msg) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ChatMgr.h"
+    },
+    {
+      "name": "GW_Chat_SendChatCurrentW",
+      "signature": "bool __cdecl GW_Chat_SendChatCurrentW(const wchar_t* msg) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ChatMgr.h"
+    },
+    {
+      "name": "GW_Chat_SendChatChannelA",
+      "signature": "bool __cdecl GW_Chat_SendChatChannelA(char channel, const char* msg) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ChatMgr.h"
+    },
+    {
+      "name": "GW_Chat_SendChatChannelW",
+      "signature": "bool __cdecl GW_Chat_SendChatChannelW(char channel, const wchar_t* msg) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ChatMgr.h"
+    },
+    {
+      "name": "GW_Chat_SendWhisper",
+      "signature": "bool __cdecl GW_Chat_SendWhisper(const wchar_t* to, const wchar_t* msg) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ChatMgr.h"
+    },
+    {
+      "name": "GW_Chat_WriteChatV",
+      "signature": "void __cdecl GW_Chat_WriteChatV(Channel channel, const wchar_t* format, va_list args) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ChatMgr.h"
+    },
+    {
+      "name": "GW_Chat_WriteChat",
+      "signature": "void __cdecl GW_Chat_WriteChat(Channel channel, const wchar_t* message, const wchar_t* sender, bool transient) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ChatMgr.h"
+    },
+    {
+      "name": "GW_Chat_WriteChatEnc",
+      "signature": "void __cdecl GW_Chat_WriteChatEnc(Channel channel, const wchar_t* message, const wchar_t* sender, bool transient) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ChatMgr.h"
+    },
+    {
+      "name": "GW_Chat_CreateCommand",
+      "signature": "void __cdecl GW_Chat_CreateCommand(GW::HookEntry* entry, const wchar_t* cmd, ChatCommandCallback callback) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ChatMgr.h"
+    },
+    {
+      "name": "GW_Chat_DeleteCommand",
+      "signature": "void __cdecl GW_Chat_DeleteCommand(GW::HookEntry* entry, const wchar_t* cmd) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ChatMgr.h"
+    },
+    {
+      "name": "GW_Chat_ToggleTimestamps",
+      "signature": "void __cdecl GW_Chat_ToggleTimestamps(bool enable) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ChatMgr.h"
+    },
+    {
+      "name": "GW_Chat_SetTimestampsFormat",
+      "signature": "void __cdecl GW_Chat_SetTimestampsFormat(bool use_24h, bool show_timestamp_seconds) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ChatMgr.h"
+    },
+    {
+      "name": "GW_Chat_SetTimestampsColor",
+      "signature": "void __cdecl GW_Chat_SetTimestampsColor(Color color) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ChatMgr.h"
+    },
+    {
+      "name": "GW_Chat_SetSenderColor",
+      "signature": "Color __cdecl GW_Chat_SetSenderColor(Channel chan, Color col) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ChatMgr.h"
+    },
+    {
+      "name": "GW_Chat_SetMessageColor",
+      "signature": "Color __cdecl GW_Chat_SetMessageColor(Channel chan, Color col) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ChatMgr.h"
+    },
+    {
+      "name": "GW_Chat_GetChannelColors",
+      "signature": "void __cdecl GW_Chat_GetChannelColors(Channel chan, Color* sender, Color* message) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ChatMgr.h"
+    },
+    {
+      "name": "GW_Chat_GetDefaultColors",
+      "signature": "void __cdecl GW_Chat_GetDefaultColors(Channel chan, Color* sender, Color* message) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ChatMgr.h"
+    },
+    {
+      "name": "GW_Chat_GetChannel",
+      "signature": "Channel __cdecl GW_Chat_GetChannel(char opcode) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ChatMgr.h"
+    },
+    {
+      "name": "GW_Chat_GetCurrentChatChannel",
+      "signature": "Channel __cdecl GW_Chat_GetCurrentChatChannel() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ChatMgr.h"
+    },
+    {
+      "name": "GW_Effects_GetAlcoholLevel",
+      "signature": "uint32_t __cdecl GW_Effects_GetAlcoholLevel() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/EffectMgr.h"
+    },
+    {
+      "name": "GW_Effects_GetDrunkAf",
+      "signature": "void __cdecl GW_Effects_GetDrunkAf(float intensity, uint32_t tint) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/EffectMgr.h"
+    },
+    {
+      "name": "GW_Effects_GetPartyEffectsArray",
+      "signature": "AgentEffectsArray* __cdecl GW_Effects_GetPartyEffectsArray() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/EffectMgr.h"
+    },
+    {
+      "name": "GW_Effects_GetAgentEffectsArray",
+      "signature": "AgentEffects* __cdecl GW_Effects_GetAgentEffectsArray(uint32_t agent_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/EffectMgr.h"
+    },
+    {
+      "name": "GW_Effects_GetPlayerEffectsArray",
+      "signature": "AgentEffects* __cdecl GW_Effects_GetPlayerEffectsArray() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/EffectMgr.h"
+    },
+    {
+      "name": "GW_Effects_GetAgentEffects",
+      "signature": "EffectArray* __cdecl GW_Effects_GetAgentEffects(uint32_t agent_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/EffectMgr.h"
+    },
+    {
+      "name": "GW_Effects_GetAgentBuffs",
+      "signature": "BuffArray* __cdecl GW_Effects_GetAgentBuffs(uint32_t agent_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/EffectMgr.h"
+    },
+    {
+      "name": "GW_Effects_GetPlayerEffects",
+      "signature": "EffectArray* __cdecl GW_Effects_GetPlayerEffects() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/EffectMgr.h"
+    },
+    {
+      "name": "GW_Effects_GetPlayerBuffs",
+      "signature": "BuffArray* __cdecl GW_Effects_GetPlayerBuffs() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/EffectMgr.h"
+    },
+    {
+      "name": "GW_Effects_DropBuff",
+      "signature": "bool __cdecl GW_Effects_DropBuff(uint32_t buff_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/EffectMgr.h"
+    },
+    {
+      "name": "GW_Effects_GetPlayerEffectBySkillId",
+      "signature": "Effect* __cdecl GW_Effects_GetPlayerEffectBySkillId(Constants::SkillID skill_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/EffectMgr.h"
+    },
+    {
+      "name": "GW_Effects_GetPlayerBuffBySkillId",
+      "signature": "Buff* __cdecl GW_Effects_GetPlayerBuffBySkillId(Constants::SkillID skill_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/EffectMgr.h"
+    },
+    {
+      "name": "GW_EventMgr_RegisterEventCallback",
+      "signature": "bool __cdecl GW_EventMgr_RegisterEventCallback(HookEntry* entry, EventID event_id, NativeEventCallback callback, void* context, int32_t altitude) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/EventMgr.h"
+    },
+    {
+      "name": "GW_EventMgr_RemoveEventCallbackNative",
+      "signature": "void __cdecl GW_EventMgr_RemoveEventCallbackNative(HookEntry* entry, EventID event_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/EventMgr.h"
+    },
+    {
+      "name": "GW_EventMgr_SendEventMessage",
+      "signature": "bool __cdecl GW_EventMgr_SendEventMessage(EventID event_id, void* packet_bytes, uint32_t packet_bytes_len) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/EventMgr.h"
+    },
+    {
+      "name": "GW_FriendListMgr_GetFriendList",
+      "signature": "FriendList* __cdecl GW_FriendListMgr_GetFriendList() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/FriendListMgr.h"
+    },
+    {
+      "name": "GW_FriendListMgr_GetFriendByName",
+      "signature": "Friend* __cdecl GW_FriendListMgr_GetFriendByName(const wchar_t* alias, const wchar_t* charname, FriendType type) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/FriendListMgr.h"
+    },
+    {
+      "name": "GW_FriendListMgr_GetFriendByIndex",
+      "signature": "Friend* __cdecl GW_FriendListMgr_GetFriendByIndex(uint32_t index) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/FriendListMgr.h"
+    },
+    {
+      "name": "GW_FriendListMgr_GetFriendByUuid",
+      "signature": "Friend* __cdecl GW_FriendListMgr_GetFriendByUuid(const uint8_t* uuid) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/FriendListMgr.h"
+    },
+    {
+      "name": "GW_FriendListMgr_GetNumberOfFriends",
+      "signature": "uint32_t __cdecl GW_FriendListMgr_GetNumberOfFriends(FriendType gwca_arg0) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/FriendListMgr.h"
+    },
+    {
+      "name": "GW_FriendListMgr_GetNumberOfIgnores",
+      "signature": "uint32_t __cdecl GW_FriendListMgr_GetNumberOfIgnores() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/FriendListMgr.h"
+    },
+    {
+      "name": "GW_FriendListMgr_GetNumberOfPartners",
+      "signature": "uint32_t __cdecl GW_FriendListMgr_GetNumberOfPartners() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/FriendListMgr.h"
+    },
+    {
+      "name": "GW_FriendListMgr_GetNumberOfTraders",
+      "signature": "uint32_t __cdecl GW_FriendListMgr_GetNumberOfTraders() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/FriendListMgr.h"
+    },
+    {
+      "name": "GW_FriendListMgr_GetMyStatus",
+      "signature": "FriendStatus __cdecl GW_FriendListMgr_GetMyStatus() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/FriendListMgr.h"
+    },
+    {
+      "name": "GW_FriendListMgr_SetFriendListStatus",
+      "signature": "bool __cdecl GW_FriendListMgr_SetFriendListStatus(FriendStatus status) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/FriendListMgr.h"
+    },
+    {
+      "name": "GW_FriendListMgr_RegisterFriendStatusCallback",
+      "signature": "bool __cdecl GW_FriendListMgr_RegisterFriendStatusCallback(HookEntry* entry, NativeFriendStatusCallback callback, void* context) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/FriendListMgr.h"
+    },
+    {
+      "name": "GW_FriendListMgr_RemoveFriendStatusCallbackNative",
+      "signature": "void __cdecl GW_FriendListMgr_RemoveFriendStatusCallbackNative(HookEntry* entry) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/FriendListMgr.h"
+    },
+    {
+      "name": "GW_FriendListMgr_AddFriend",
+      "signature": "bool __cdecl GW_FriendListMgr_AddFriend(const wchar_t* name, const wchar_t* alias) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/FriendListMgr.h"
+    },
+    {
+      "name": "GW_FriendListMgr_AddIgnore",
+      "signature": "bool __cdecl GW_FriendListMgr_AddIgnore(const wchar_t* name, const wchar_t* alias) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/FriendListMgr.h"
+    },
+    {
+      "name": "GW_FriendListMgr_RemoveFriend",
+      "signature": "bool __cdecl GW_FriendListMgr_RemoveFriend(Friend* _friend) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/FriendListMgr.h"
+    },
+    {
+      "name": "GW_FriendListMgr_ChangeFriendType",
+      "signature": "bool __cdecl GW_FriendListMgr_ChangeFriendType(Friend* _friend, FriendType type) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/FriendListMgr.h"
+    },
+    {
+      "name": "GW_GameThread_EnableHooks",
+      "signature": "void __cdecl GW_GameThread_EnableHooks() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/GameThreadMgr.h"
+    },
+    {
+      "name": "GW_GameThread_ClearCallsNative",
+      "signature": "void __cdecl GW_GameThread_ClearCallsNative() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/GameThreadMgr.h"
+    },
+    {
+      "name": "GW_GameThread_Enqueue",
+      "signature": "bool __cdecl GW_GameThread_Enqueue(NativeTaskCallback callback, void* context, uint32_t force_enqueue) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/GameThreadMgr.h"
+    },
+    {
+      "name": "GW_GameThread_RegisterGameThreadCallback",
+      "signature": "bool __cdecl GW_GameThread_RegisterGameThreadCallback(HookEntry* entry, NativeGameThreadCallback callback, void* context, int32_t altitude) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/GameThreadMgr.h"
+    },
+    {
+      "name": "GW_GameThread_RemoveGameThreadCallbackNative",
+      "signature": "bool __cdecl GW_GameThread_RemoveGameThreadCallbackNative(HookEntry* entry) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/GameThreadMgr.h"
+    },
+    {
+      "name": "GW_GameThread_IsInGameThread",
+      "signature": "bool __cdecl GW_GameThread_IsInGameThread() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/GameThreadMgr.h"
+    },
+    {
+      "name": "GW_GuildMgr_GetGuildArray",
+      "signature": "GuildArray* __cdecl GW_GuildMgr_GetGuildArray() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/GuildMgr.h"
+    },
+    {
+      "name": "GW_GuildMgr_GetPlayerGuild",
+      "signature": "Guild* __cdecl GW_GuildMgr_GetPlayerGuild() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/GuildMgr.h"
+    },
+    {
+      "name": "GW_GuildMgr_GetCurrentGH",
+      "signature": "Guild* __cdecl GW_GuildMgr_GetCurrentGH() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/GuildMgr.h"
+    },
+    {
+      "name": "GW_GuildMgr_GetGuildInfo",
+      "signature": "Guild* __cdecl GW_GuildMgr_GetGuildInfo(uint32_t guild_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/GuildMgr.h"
+    },
+    {
+      "name": "GW_GuildMgr_GetPlayerGuildIndex",
+      "signature": "uint32_t __cdecl GW_GuildMgr_GetPlayerGuildIndex() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/GuildMgr.h"
+    },
+    {
+      "name": "GW_GuildMgr_GetPlayerGuildAnnouncement",
+      "signature": "wchar_t* __cdecl GW_GuildMgr_GetPlayerGuildAnnouncement() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/GuildMgr.h"
+    },
+    {
+      "name": "GW_GuildMgr_GetPlayerGuildAnnouncer",
+      "signature": "wchar_t* __cdecl GW_GuildMgr_GetPlayerGuildAnnouncer() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/GuildMgr.h"
+    },
+    {
+      "name": "GW_GuildMgr_TravelGHForPlayer",
+      "signature": "bool __cdecl GW_GuildMgr_TravelGHForPlayer() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/GuildMgr.h"
+    },
+    {
+      "name": "GW_GuildMgr_TravelGHByKey",
+      "signature": "bool __cdecl GW_GuildMgr_TravelGHByKey(GHKey key) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/GuildMgr.h"
+    },
+    {
+      "name": "GW_GuildMgr_LeaveGH",
+      "signature": "bool __cdecl GW_GuildMgr_LeaveGH() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/GuildMgr.h"
+    },
+    {
+      "name": "GW_Items_GetSalvageSessionInfo",
+      "signature": "SalvageSessionInfo* __cdecl GW_Items_GetSalvageSessionInfo() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ItemMgr.h"
+    },
+    {
+      "name": "GW_Items_GetItemArray",
+      "signature": "ItemArray* __cdecl GW_Items_GetItemArray() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ItemMgr.h"
+    },
+    {
+      "name": "GW_Items_GetInventory",
+      "signature": "Inventory* __cdecl GW_Items_GetInventory() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ItemMgr.h"
+    },
+    {
+      "name": "GW_Items_GetHeroInventory",
+      "signature": "Inventory* __cdecl GW_Items_GetHeroInventory(GW::Constants::HeroID hero_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ItemMgr.h"
+    },
+    {
+      "name": "GW_Items_GetBagArray",
+      "signature": "Bag** __cdecl GW_Items_GetBagArray() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ItemMgr.h"
+    },
+    {
+      "name": "GW_Items_GetBag",
+      "signature": "Bag* __cdecl GW_Items_GetBag(Constants::Bag bag_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ItemMgr.h"
+    },
+    {
+      "name": "GW_Items_GetBagByIndex",
+      "signature": "Bag* __cdecl GW_Items_GetBagByIndex(uint32_t bag_index) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ItemMgr.h"
+    },
+    {
+      "name": "GW_Items_GetMaterialStorageStackSize",
+      "signature": "uint32_t __cdecl GW_Items_GetMaterialStorageStackSize() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ItemMgr.h"
+    },
+    {
+      "name": "GW_Items_GetItemBySlot",
+      "signature": "Item* __cdecl GW_Items_GetItemBySlot(const Bag* bag, uint32_t slot) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ItemMgr.h"
+    },
+    {
+      "name": "GW_Items_GetHoveredItem",
+      "signature": "Item* __cdecl GW_Items_GetHoveredItem() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ItemMgr.h"
+    },
+    {
+      "name": "GW_Items_GetItemById",
+      "signature": "Item* __cdecl GW_Items_GetItemById(uint32_t item_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ItemMgr.h"
+    },
+    {
+      "name": "GW_Items_UseItem",
+      "signature": "bool __cdecl GW_Items_UseItem(const Item* item) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ItemMgr.h"
+    },
+    {
+      "name": "GW_Items_EquipItem",
+      "signature": "bool __cdecl GW_Items_EquipItem(const Item* item, uint32_t agent_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ItemMgr.h"
+    },
+    {
+      "name": "GW_Items_DropItem",
+      "signature": "bool __cdecl GW_Items_DropItem(const Item* item, uint32_t quantity) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ItemMgr.h"
+    },
+    {
+      "name": "GW_Items_PingWeaponSet",
+      "signature": "bool __cdecl GW_Items_PingWeaponSet(uint32_t agent_id, uint32_t weapon_item_id, uint32_t offhand_item_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ItemMgr.h"
+    },
+    {
+      "name": "GW_Items_CanInteractWithItem",
+      "signature": "bool __cdecl GW_Items_CanInteractWithItem(const Item* item) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ItemMgr.h"
+    },
+    {
+      "name": "GW_Items_PickUpItem",
+      "signature": "bool __cdecl GW_Items_PickUpItem(const Item* item, uint32_t call_target) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ItemMgr.h"
+    },
+    {
+      "name": "GW_Items_OpenXunlaiWindow",
+      "signature": "bool __cdecl GW_Items_OpenXunlaiWindow(bool anniversary_pane_unlocked, bool storage_pane_unlocked) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ItemMgr.h"
+    },
+    {
+      "name": "GW_Items_CanAccessXunlaiChest",
+      "signature": "bool __cdecl GW_Items_CanAccessXunlaiChest() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ItemMgr.h"
+    },
+    {
+      "name": "GW_Items_DropGold",
+      "signature": "bool __cdecl GW_Items_DropGold(uint32_t amount) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ItemMgr.h"
+    },
+    {
+      "name": "GW_Items_SalvageStart",
+      "signature": "bool __cdecl GW_Items_SalvageStart(uint32_t salvage_kit_id, uint32_t item_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ItemMgr.h"
+    },
+    {
+      "name": "GW_Items_IdentifyItem",
+      "signature": "bool __cdecl GW_Items_IdentifyItem(uint32_t identification_kit_id, uint32_t item_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ItemMgr.h"
+    },
+    {
+      "name": "GW_Items_SalvageSessionCancel",
+      "signature": "bool __cdecl GW_Items_SalvageSessionCancel() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ItemMgr.h"
+    },
+    {
+      "name": "GW_Items_DestroyItem",
+      "signature": "bool __cdecl GW_Items_DestroyItem(uint32_t item_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ItemMgr.h"
+    },
+    {
+      "name": "GW_Items_SalvageMaterials",
+      "signature": "bool __cdecl GW_Items_SalvageMaterials() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ItemMgr.h"
+    },
+    {
+      "name": "GW_Items_GetGoldAmountOnCharacter",
+      "signature": "uint32_t __cdecl GW_Items_GetGoldAmountOnCharacter() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ItemMgr.h"
+    },
+    {
+      "name": "GW_Items_GetGoldAmountInStorage",
+      "signature": "uint32_t __cdecl GW_Items_GetGoldAmountInStorage() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ItemMgr.h"
+    },
+    {
+      "name": "GW_Items_DepositGold",
+      "signature": "uint32_t __cdecl GW_Items_DepositGold(uint32_t amount) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ItemMgr.h"
+    },
+    {
+      "name": "GW_Items_WithdrawGold",
+      "signature": "uint32_t __cdecl GW_Items_WithdrawGold(uint32_t amount) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ItemMgr.h"
+    },
+    {
+      "name": "GW_Items_MoveItem",
+      "signature": "bool __cdecl GW_Items_MoveItem(const Item* item, const Bag* bag, uint32_t slot, uint32_t quantity) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ItemMgr.h"
+    },
+    {
+      "name": "GW_Items_UseItemByModelId",
+      "signature": "bool __cdecl GW_Items_UseItemByModelId(uint32_t model_id, int bag_start, int bag_end) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ItemMgr.h"
+    },
+    {
+      "name": "GW_Items_CountItemByModelId",
+      "signature": "uint32_t __cdecl GW_Items_CountItemByModelId(uint32_t model_id, int bag_start, int bag_end) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ItemMgr.h"
+    },
+    {
+      "name": "GW_Items_GetItemByModelId",
+      "signature": "Item* __cdecl GW_Items_GetItemByModelId(uint32_t model_id, int bag_start, int bag_end) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ItemMgr.h"
+    },
+    {
+      "name": "GW_Items_GetItemByModelIdAndModifiers",
+      "signature": "Item* __cdecl GW_Items_GetItemByModelIdAndModifiers(uint32_t modelid, const ItemModifier* modifiers, uint32_t modifiers_len, int bagStart, int bagEnd) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ItemMgr.h"
+    },
+    {
+      "name": "GW_Items_GetStoragePage",
+      "signature": "GW::Constants::StoragePane __cdecl GW_Items_GetStoragePage() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ItemMgr.h"
+    },
+    {
+      "name": "GW_Items_GetIsStorageOpen",
+      "signature": "bool __cdecl GW_Items_GetIsStorageOpen() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ItemMgr.h"
+    },
+    {
+      "name": "GW_Items_RegisterItemClickCallback",
+      "signature": "bool __cdecl GW_Items_RegisterItemClickCallback(HookEntry* entry, NativeItemClickCallback callback, void* context) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ItemMgr.h"
+    },
+    {
+      "name": "GW_Items_RemoveItemClickCallbackNative",
+      "signature": "bool __cdecl GW_Items_RemoveItemClickCallbackNative(HookEntry* entry) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ItemMgr.h"
+    },
+    {
+      "name": "GW_Items_GetMaterialSlot",
+      "signature": "Constants::MaterialSlot __cdecl GW_Items_GetMaterialSlot(const Item* item) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ItemMgr.h"
+    },
+    {
+      "name": "GW_Items_GetEquipmentVisibility",
+      "signature": "EquipmentStatus __cdecl GW_Items_GetEquipmentVisibility(EquipmentType type) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ItemMgr.h"
+    },
+    {
+      "name": "GW_Items_SetEquipmentVisibility",
+      "signature": "bool __cdecl GW_Items_SetEquipmentVisibility(EquipmentType type, EquipmentStatus state) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ItemMgr.h"
+    },
+    {
+      "name": "GW_Items_GetPvPItemUpgradesArray",
+      "signature": "const BaseArray < PvPItemUpgradeInfo >& __cdecl GW_Items_GetPvPItemUpgradesArray() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ItemMgr.h"
+    },
+    {
+      "name": "GW_Items_GetPvPItemUpgrade",
+      "signature": "const PvPItemUpgradeInfo* __cdecl GW_Items_GetPvPItemUpgrade(uint32_t pvp_item_upgrade_idx) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ItemMgr.h"
+    },
+    {
+      "name": "GW_Items_GetPvPItemInfo",
+      "signature": "const PvPItemInfo* __cdecl GW_Items_GetPvPItemInfo(uint32_t pvp_item_idx) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ItemMgr.h"
+    },
+    {
+      "name": "GW_Items_GetPvPItemInfoArray",
+      "signature": "const BaseArray < PvPItemInfo >& __cdecl GW_Items_GetPvPItemInfoArray() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ItemMgr.h"
+    },
+    {
+      "name": "GW_Items_GetCompositeModelInfo",
+      "signature": "const CompositeModelInfo* __cdecl GW_Items_GetCompositeModelInfo(uint32_t model_file_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ItemMgr.h"
+    },
+    {
+      "name": "GW_Items_GetCompositeModelInfoArray",
+      "signature": "const BaseArray < CompositeModelInfo >& __cdecl GW_Items_GetCompositeModelInfoArray() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ItemMgr.h"
+    },
+    {
+      "name": "GW_Items_GetPvPItemUpgradeEncodedName",
+      "signature": "bool __cdecl GW_Items_GetPvPItemUpgradeEncodedName(uint32_t pvp_item_upgrade_idx, wchar_t** out) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ItemMgr.h"
+    },
+    {
+      "name": "GW_Items_GetPvPItemUpgradeEncodedDescription",
+      "signature": "bool __cdecl GW_Items_GetPvPItemUpgradeEncodedDescription(uint32_t pvp_item_upgrade_idx, wchar_t** out) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ItemMgr.h"
+    },
+    {
+      "name": "GW_Items_GetItemFormula",
+      "signature": "const ItemFormula* __cdecl GW_Items_GetItemFormula(const GW::Item* item) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/ItemMgr.h"
+    },
+    {
+      "name": "GW_Map_GetMissionMapContext",
+      "signature": "MissionMapContext* __cdecl GW_Map_GetMissionMapContext() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/MapMgr.h"
+    },
+    {
+      "name": "GW_Map_GetWorldMapContext",
+      "signature": "WorldMapContext* __cdecl GW_Map_GetWorldMapContext() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/MapMgr.h"
+    },
+    {
+      "name": "GW_Map_CreateMapContext",
+      "signature": "MapContext* __cdecl GW_Map_CreateMapContext(uint32_t map_file_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/MapMgr.h"
+    },
+    {
+      "name": "GW_Map_DestroyMapContext",
+      "signature": "bool __cdecl GW_Map_DestroyMapContext(MapContext* gwca_arg0) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/MapMgr.h"
+    },
+    {
+      "name": "GW_Map_QueryAltitude",
+      "signature": "float __cdecl GW_Map_QueryAltitude(const GamePos* pos, float radius, GW::MapContext* context) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/MapMgr.h"
+    },
+    {
+      "name": "GW_Map_GetIsMapLoaded",
+      "signature": "bool __cdecl GW_Map_GetIsMapLoaded() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/MapMgr.h"
+    },
+    {
+      "name": "GW_Map_GetMapID",
+      "signature": "Constants::MapID __cdecl GW_Map_GetMapID() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/MapMgr.h"
+    },
+    {
+      "name": "GW_Map_GetIsMapUnlocked",
+      "signature": "bool __cdecl GW_Map_GetIsMapUnlocked(Constants::MapID map_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/MapMgr.h"
+    },
+    {
+      "name": "GW_Map_GetRegion",
+      "signature": "GW::Constants::ServerRegion __cdecl GW_Map_GetRegion() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/MapMgr.h"
+    },
+    {
+      "name": "GW_Map_GetLanguage",
+      "signature": "GW::Constants::Language __cdecl GW_Map_GetLanguage() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/MapMgr.h"
+    },
+    {
+      "name": "GW_Map_GetIsObserving",
+      "signature": "bool __cdecl GW_Map_GetIsObserving() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/MapMgr.h"
+    },
+    {
+      "name": "GW_Map_GetDistrict",
+      "signature": "int __cdecl GW_Map_GetDistrict() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/MapMgr.h"
+    },
+    {
+      "name": "GW_Map_GetDistrictCount",
+      "signature": "size_t __cdecl GW_Map_GetDistrictCount() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/MapMgr.h"
+    },
+    {
+      "name": "GW_Map_GetInstanceTime",
+      "signature": "uint32_t __cdecl GW_Map_GetInstanceTime() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/MapMgr.h"
+    },
+    {
+      "name": "GW_Map_GetInstanceType",
+      "signature": "Constants::InstanceType __cdecl GW_Map_GetInstanceType() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/MapMgr.h"
+    },
+    {
+      "name": "GW_Map_TravelByRegion",
+      "signature": "bool __cdecl GW_Map_TravelByRegion(Constants::MapID map_id, GW::Constants::ServerRegion region, int district_number, GW::Constants::Language language) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/MapMgr.h"
+    },
+    {
+      "name": "GW_Map_TravelByDistrict",
+      "signature": "bool __cdecl GW_Map_TravelByDistrict(Constants::MapID map_id, Constants::District district, int district_number) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/MapMgr.h"
+    },
+    {
+      "name": "GW_Map_RegionFromDistrict",
+      "signature": "Constants::ServerRegion __cdecl GW_Map_RegionFromDistrict(const GW::Constants::District _district) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/MapMgr.h"
+    },
+    {
+      "name": "GW_Map_LanguageFromDistrict",
+      "signature": "Constants::Language __cdecl GW_Map_LanguageFromDistrict(const GW::Constants::District _district) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/MapMgr.h"
+    },
+    {
+      "name": "GW_Map_GetMissionMapIconArray",
+      "signature": "MissionMapIconArray* __cdecl GW_Map_GetMissionMapIconArray() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/MapMgr.h"
+    },
+    {
+      "name": "GW_Map_GetPathingMap",
+      "signature": "PathingMapArray* __cdecl GW_Map_GetPathingMap() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/MapMgr.h"
+    },
+    {
+      "name": "GW_Map_GetFoesKilled",
+      "signature": "uint32_t __cdecl GW_Map_GetFoesKilled() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/MapMgr.h"
+    },
+    {
+      "name": "GW_Map_GetFoesToKill",
+      "signature": "uint32_t __cdecl GW_Map_GetFoesToKill() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/MapMgr.h"
+    },
+    {
+      "name": "GW_Map_GetMapInfo",
+      "signature": "AreaInfo* __cdecl GW_Map_GetMapInfo(Constants::MapID map_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/MapMgr.h"
+    },
+    {
+      "name": "GW_Map_GetIsInCinematic",
+      "signature": "bool __cdecl GW_Map_GetIsInCinematic() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/MapMgr.h"
+    },
+    {
+      "name": "GW_Map_SkipCinematic",
+      "signature": "bool __cdecl GW_Map_SkipCinematic() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/MapMgr.h"
+    },
+    {
+      "name": "GW_Map_EnterChallenge",
+      "signature": "bool __cdecl GW_Map_EnterChallenge() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/MapMgr.h"
+    },
+    {
+      "name": "GW_Map_CancelEnterChallenge",
+      "signature": "bool __cdecl GW_Map_CancelEnterChallenge() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/MapMgr.h"
+    },
+    {
+      "name": "GW_MemoryMgr_GetGWVersion",
+      "signature": "uint32_t __cdecl GW_MemoryMgr_GetGWVersion() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/MemoryMgr.h"
+    },
+    {
+      "name": "GW_MemoryMgr_GetSkillTimer",
+      "signature": "DWORD __cdecl GW_MemoryMgr_GetSkillTimer() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/MemoryMgr.h"
+    },
+    {
+      "name": "GW_MemoryMgr_GetPersonalDir",
+      "signature": "bool __cdecl GW_MemoryMgr_GetPersonalDir(size_t buf_len, wchar_t* buf) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/MemoryMgr.h"
+    },
+    {
+      "name": "GW_MemoryMgr_GetGWWindowHandle",
+      "signature": "HWND __cdecl GW_MemoryMgr_GetGWWindowHandle() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/MemoryMgr.h"
+    },
+    {
+      "name": "GW_MemoryMgr_MemAlloc",
+      "signature": "void* __cdecl GW_MemoryMgr_MemAlloc(size_t size) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/MemoryMgr.h"
+    },
+    {
+      "name": "GW_MemoryMgr_MemRealloc",
+      "signature": "void* __cdecl GW_MemoryMgr_MemRealloc(void* buf, size_t newSize) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/MemoryMgr.h"
+    },
+    {
+      "name": "GW_MemoryMgr_MemFree",
+      "signature": "void __cdecl GW_MemoryMgr_MemFree(void* buf) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/MemoryMgr.h"
+    },
+    {
+      "name": "GW_Merchant_TransactItems",
+      "signature": "bool __cdecl GW_Merchant_TransactItems() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/MerchantMgr.h"
+    },
+    {
+      "name": "GW_Merchant_RequestQuote",
+      "signature": "bool __cdecl GW_Merchant_RequestQuote(TransactionType type, uint32_t item_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/MerchantMgr.h"
+    },
+    {
+      "name": "GW_Merchant_GetMerchantItems",
+      "signature": "size_t __cdecl GW_Merchant_GetMerchantItems(TransactionType type, size_t buffer_len, uint32_t* buffer) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/MerchantMgr.h"
+    },
+    {
+      "name": "GW_PartyMgr_SetTickToggle",
+      "signature": "void __cdecl GW_PartyMgr_SetTickToggle(bool enable) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PartyMgr.h"
+    },
+    {
+      "name": "GW_PartyMgr_Tick",
+      "signature": "bool __cdecl GW_PartyMgr_Tick(bool flag) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PartyMgr.h"
+    },
+    {
+      "name": "GW_PartyMgr_GetAgentAttributes",
+      "signature": "Attribute* __cdecl GW_PartyMgr_GetAgentAttributes(uint32_t agent_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PartyMgr.h"
+    },
+    {
+      "name": "GW_PartyMgr_GetPartySearch",
+      "signature": "PartySearch* __cdecl GW_PartyMgr_GetPartySearch(uint32_t party_search_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PartyMgr.h"
+    },
+    {
+      "name": "GW_PartyMgr_GetPartyInfo",
+      "signature": "PartyInfo* __cdecl GW_PartyMgr_GetPartyInfo(uint32_t party_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PartyMgr.h"
+    },
+    {
+      "name": "GW_PartyMgr_GetPartySize",
+      "signature": "uint32_t __cdecl GW_PartyMgr_GetPartySize() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PartyMgr.h"
+    },
+    {
+      "name": "GW_PartyMgr_GetPartyPlayerCount",
+      "signature": "uint32_t __cdecl GW_PartyMgr_GetPartyPlayerCount() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PartyMgr.h"
+    },
+    {
+      "name": "GW_PartyMgr_GetPartyHeroCount",
+      "signature": "uint32_t __cdecl GW_PartyMgr_GetPartyHeroCount() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PartyMgr.h"
+    },
+    {
+      "name": "GW_PartyMgr_GetPartyHenchmanCount",
+      "signature": "uint32_t __cdecl GW_PartyMgr_GetPartyHenchmanCount() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PartyMgr.h"
+    },
+    {
+      "name": "GW_PartyMgr_GetIsPartyDefeated",
+      "signature": "bool __cdecl GW_PartyMgr_GetIsPartyDefeated() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PartyMgr.h"
+    },
+    {
+      "name": "GW_PartyMgr_SetHardMode",
+      "signature": "bool __cdecl GW_PartyMgr_SetHardMode(bool flag) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PartyMgr.h"
+    },
+    {
+      "name": "GW_PartyMgr_ReturnToOutpost",
+      "signature": "bool __cdecl GW_PartyMgr_ReturnToOutpost() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PartyMgr.h"
+    },
+    {
+      "name": "GW_PartyMgr_GetIsPartyInHardMode",
+      "signature": "bool __cdecl GW_PartyMgr_GetIsPartyInHardMode() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PartyMgr.h"
+    },
+    {
+      "name": "GW_PartyMgr_GetIsHardModeUnlocked",
+      "signature": "bool __cdecl GW_PartyMgr_GetIsHardModeUnlocked() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PartyMgr.h"
+    },
+    {
+      "name": "GW_PartyMgr_GetIsPartyTicked",
+      "signature": "bool __cdecl GW_PartyMgr_GetIsPartyTicked() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PartyMgr.h"
+    },
+    {
+      "name": "GW_PartyMgr_GetIsPlayerTicked",
+      "signature": "bool __cdecl GW_PartyMgr_GetIsPlayerTicked(uint32_t player_index) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PartyMgr.h"
+    },
+    {
+      "name": "GW_PartyMgr_GetIsPartyLoaded",
+      "signature": "bool __cdecl GW_PartyMgr_GetIsPartyLoaded() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PartyMgr.h"
+    },
+    {
+      "name": "GW_PartyMgr_GetIsLeader",
+      "signature": "bool __cdecl GW_PartyMgr_GetIsLeader() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PartyMgr.h"
+    },
+    {
+      "name": "GW_PartyMgr_RespondToPartyRequest",
+      "signature": "bool __cdecl GW_PartyMgr_RespondToPartyRequest(uint32_t party_id, bool accept) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PartyMgr.h"
+    },
+    {
+      "name": "GW_PartyMgr_LeaveParty",
+      "signature": "bool __cdecl GW_PartyMgr_LeaveParty() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PartyMgr.h"
+    },
+    {
+      "name": "GW_PartyMgr_AddHero",
+      "signature": "bool __cdecl GW_PartyMgr_AddHero(GW::Constants::HeroID heroid) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PartyMgr.h"
+    },
+    {
+      "name": "GW_PartyMgr_KickHero",
+      "signature": "bool __cdecl GW_PartyMgr_KickHero(GW::Constants::HeroID heroid) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PartyMgr.h"
+    },
+    {
+      "name": "GW_PartyMgr_KickAllHeroes",
+      "signature": "bool __cdecl GW_PartyMgr_KickAllHeroes() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PartyMgr.h"
+    },
+    {
+      "name": "GW_PartyMgr_AddHenchman",
+      "signature": "bool __cdecl GW_PartyMgr_AddHenchman(uint32_t agent_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PartyMgr.h"
+    },
+    {
+      "name": "GW_PartyMgr_KickHenchman",
+      "signature": "bool __cdecl GW_PartyMgr_KickHenchman(uint32_t agent_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PartyMgr.h"
+    },
+    {
+      "name": "GW_PartyMgr_InvitePlayerById",
+      "signature": "bool __cdecl GW_PartyMgr_InvitePlayerById(uint32_t player_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PartyMgr.h"
+    },
+    {
+      "name": "GW_PartyMgr_InvitePlayerByName",
+      "signature": "bool __cdecl GW_PartyMgr_InvitePlayerByName(const wchar_t* player_name) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PartyMgr.h"
+    },
+    {
+      "name": "GW_PartyMgr_KickPlayer",
+      "signature": "bool __cdecl GW_PartyMgr_KickPlayer(uint32_t player_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PartyMgr.h"
+    },
+    {
+      "name": "GW_PartyMgr_FlagHero",
+      "signature": "bool __cdecl GW_PartyMgr_FlagHero(uint32_t hero_index, GamePos pos) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PartyMgr.h"
+    },
+    {
+      "name": "GW_PartyMgr_UnflagHero",
+      "signature": "bool __cdecl GW_PartyMgr_UnflagHero(uint32_t hero_index) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PartyMgr.h"
+    },
+    {
+      "name": "GW_PartyMgr_FlagAll",
+      "signature": "bool __cdecl GW_PartyMgr_FlagAll(GamePos pos) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PartyMgr.h"
+    },
+    {
+      "name": "GW_PartyMgr_UnflagAll",
+      "signature": "bool __cdecl GW_PartyMgr_UnflagAll() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PartyMgr.h"
+    },
+    {
+      "name": "GW_PartyMgr_SetHeroTarget",
+      "signature": "bool __cdecl GW_PartyMgr_SetHeroTarget(uint32_t hero_agent_id, uint32_t target_agent_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PartyMgr.h"
+    },
+    {
+      "name": "GW_PartyMgr_SetHeroBehavior",
+      "signature": "bool __cdecl GW_PartyMgr_SetHeroBehavior(uint32_t hero_agent_id, HeroBehavior behavior) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PartyMgr.h"
+    },
+    {
+      "name": "GW_PartyMgr_SetPetBehavior",
+      "signature": "bool __cdecl GW_PartyMgr_SetPetBehavior(uint32_t owner_agent_id, HeroBehavior behavior) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PartyMgr.h"
+    },
+    {
+      "name": "GW_PartyMgr_SetHeroSkillDisabled",
+      "signature": "bool __cdecl GW_PartyMgr_SetHeroSkillDisabled(uint32_t hero_agent_id, uint32_t slot_index, bool disabled) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PartyMgr.h"
+    },
+    {
+      "name": "GW_PartyMgr_GetPetInfo",
+      "signature": "PetInfo* __cdecl GW_PartyMgr_GetPetInfo(uint32_t owner_agent_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PartyMgr.h"
+    },
+    {
+      "name": "GW_PartyMgr_GetHeroAgentID",
+      "signature": "uint32_t __cdecl GW_PartyMgr_GetHeroAgentID(uint32_t hero_index) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PartyMgr.h"
+    },
+    {
+      "name": "GW_PartyMgr_GetHeroInfo",
+      "signature": "HeroInfo* __cdecl GW_PartyMgr_GetHeroInfo(GW::Constants::HeroID hero_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PartyMgr.h"
+    },
+    {
+      "name": "GW_PartyMgr_GetHeroConstData",
+      "signature": "HeroConstData* __cdecl GW_PartyMgr_GetHeroConstData(GW::Constants::HeroID hero_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PartyMgr.h"
+    },
+    {
+      "name": "GW_PartyMgr_SearchParty",
+      "signature": "bool __cdecl GW_PartyMgr_SearchParty(uint32_t search_type, const wchar_t* advertisement) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PartyMgr.h"
+    },
+    {
+      "name": "GW_PartyMgr_SearchPartyCancel",
+      "signature": "bool __cdecl GW_PartyMgr_SearchPartyCancel() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PartyMgr.h"
+    },
+    {
+      "name": "GW_PartyMgr_SearchPartyReply",
+      "signature": "bool __cdecl GW_PartyMgr_SearchPartyReply(uint32_t party_search_id, bool accept) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PartyMgr.h"
+    },
+    {
+      "name": "GW_PlayerMgr_SetActiveTitle",
+      "signature": "bool __cdecl GW_PlayerMgr_SetActiveTitle(Constants::TitleID title_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PlayerMgr.h"
+    },
+    {
+      "name": "GW_PlayerMgr_RemoveActiveTitle",
+      "signature": "bool __cdecl GW_PlayerMgr_RemoveActiveTitle() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PlayerMgr.h"
+    },
+    {
+      "name": "GW_PlayerMgr_GetPlayerAgentId",
+      "signature": "uint32_t __cdecl GW_PlayerMgr_GetPlayerAgentId(uint32_t player_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PlayerMgr.h"
+    },
+    {
+      "name": "GW_PlayerMgr_GetAmountOfPlayersInInstance",
+      "signature": "uint32_t __cdecl GW_PlayerMgr_GetAmountOfPlayersInInstance() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PlayerMgr.h"
+    },
+    {
+      "name": "GW_PlayerMgr_GetPlayerArray",
+      "signature": "PlayerArray* __cdecl GW_PlayerMgr_GetPlayerArray() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PlayerMgr.h"
+    },
+    {
+      "name": "GW_PlayerMgr_GetPlayerNumber",
+      "signature": "PlayerNumber __cdecl GW_PlayerMgr_GetPlayerNumber() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PlayerMgr.h"
+    },
+    {
+      "name": "GW_PlayerMgr_GetPlayerByID",
+      "signature": "Player* __cdecl GW_PlayerMgr_GetPlayerByID(uint32_t player_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PlayerMgr.h"
+    },
+    {
+      "name": "GW_PlayerMgr_GetPlayerName",
+      "signature": "wchar_t* __cdecl GW_PlayerMgr_GetPlayerName(uint32_t player_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PlayerMgr.h"
+    },
+    {
+      "name": "GW_PlayerMgr_SetPlayerName",
+      "signature": "wchar_t* __cdecl GW_PlayerMgr_SetPlayerName(uint32_t player_id, const wchar_t* replace_name) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PlayerMgr.h"
+    },
+    {
+      "name": "GW_PlayerMgr_ChangeSecondProfession",
+      "signature": "bool __cdecl GW_PlayerMgr_ChangeSecondProfession(Constants::Profession prof, uint32_t hero_index) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PlayerMgr.h"
+    },
+    {
+      "name": "GW_PlayerMgr_GetPlayerByName",
+      "signature": "Player* __cdecl GW_PlayerMgr_GetPlayerByName(const wchar_t* name) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PlayerMgr.h"
+    },
+    {
+      "name": "GW_PlayerMgr_GetTitleTrack",
+      "signature": "Title* __cdecl GW_PlayerMgr_GetTitleTrack(Constants::TitleID title_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PlayerMgr.h"
+    },
+    {
+      "name": "GW_PlayerMgr_GetActiveTitleId",
+      "signature": "Constants::TitleID __cdecl GW_PlayerMgr_GetActiveTitleId() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PlayerMgr.h"
+    },
+    {
+      "name": "GW_PlayerMgr_GetActiveTitle",
+      "signature": "Title* __cdecl GW_PlayerMgr_GetActiveTitle() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PlayerMgr.h"
+    },
+    {
+      "name": "GW_PlayerMgr_GetTitleData",
+      "signature": "TitleClientData* __cdecl GW_PlayerMgr_GetTitleData(Constants::TitleID title_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/PlayerMgr.h"
+    },
+    {
+      "name": "GW_QuestMgr_GetActiveQuestId",
+      "signature": "GW::Constants::QuestID __cdecl GW_QuestMgr_GetActiveQuestId() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/QuestMgr.h"
+    },
+    {
+      "name": "GW_QuestMgr_SetActiveQuestId",
+      "signature": "bool __cdecl GW_QuestMgr_SetActiveQuestId(Constants::QuestID quest_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/QuestMgr.h"
+    },
+    {
+      "name": "GW_QuestMgr_GetActiveQuest",
+      "signature": "Quest* __cdecl GW_QuestMgr_GetActiveQuest() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/QuestMgr.h"
+    },
+    {
+      "name": "GW_QuestMgr_SetActiveQuest",
+      "signature": "bool __cdecl GW_QuestMgr_SetActiveQuest(Quest* quest) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/QuestMgr.h"
+    },
+    {
+      "name": "GW_QuestMgr_AbandonQuest",
+      "signature": "bool __cdecl GW_QuestMgr_AbandonQuest(Quest* quest) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/QuestMgr.h"
+    },
+    {
+      "name": "GW_QuestMgr_AbandonQuestId",
+      "signature": "bool __cdecl GW_QuestMgr_AbandonQuestId(Constants::QuestID quest_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/QuestMgr.h"
+    },
+    {
+      "name": "GW_QuestMgr_GetQuestLog",
+      "signature": "QuestLog* __cdecl GW_QuestMgr_GetQuestLog() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/QuestMgr.h"
+    },
+    {
+      "name": "GW_QuestMgr_GetQuest",
+      "signature": "Quest* __cdecl GW_QuestMgr_GetQuest(GW::Constants::QuestID gwca_arg0) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/QuestMgr.h"
+    },
+    {
+      "name": "GW_QuestMgr_GetQuestEntryGroupName",
+      "signature": "bool __cdecl GW_QuestMgr_GetQuestEntryGroupName(GW::Constants::QuestID quest_id, wchar_t* out, size_t out_len) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/QuestMgr.h"
+    },
+    {
+      "name": "GW_QuestMgr_RequestQuestInfo",
+      "signature": "bool __cdecl GW_QuestMgr_RequestQuestInfo(const Quest* quest, bool update_markers) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/QuestMgr.h"
+    },
+    {
+      "name": "GW_QuestMgr_RequestQuestInfoId",
+      "signature": "bool __cdecl GW_QuestMgr_RequestQuestInfoId(Constants::QuestID quest_id, bool update_markers) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/QuestMgr.h"
+    },
+    {
+      "name": "GW_Render_GetBackend",
+      "signature": "Backend __cdecl GW_Render_GetBackend() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/RenderMgr.h"
+    },
+    {
+      "name": "GW_Render_GetRendererMode",
+      "signature": "RendererMode __cdecl GW_Render_GetRendererMode() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/RenderMgr.h"
+    },
+    {
+      "name": "GW_Render_GetGlesDevice",
+      "signature": "GlesDevice* __cdecl GW_Render_GetGlesDevice() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/RenderMgr.h"
+    },
+    {
+      "name": "GW_Render_EnableHooks",
+      "signature": "void __cdecl GW_Render_EnableHooks() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/RenderMgr.h"
+    },
+    {
+      "name": "GW_Render_GetFieldOfView",
+      "signature": "float __cdecl GW_Render_GetFieldOfView() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/RenderMgr.h"
+    },
+    {
+      "name": "GW_Render_SetRenderCallback",
+      "signature": "void __cdecl GW_Render_SetRenderCallback(RenderCallback callback) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/RenderMgr.h"
+    },
+    {
+      "name": "GW_Render_GetRenderCallback",
+      "signature": "RenderCallback __cdecl GW_Render_GetRenderCallback() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/RenderMgr.h"
+    },
+    {
+      "name": "GW_Render_FlushCommandQueue",
+      "signature": "void __cdecl GW_Render_FlushCommandQueue() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/RenderMgr.h"
+    },
+    {
+      "name": "GW_Render_GetGraphicsRendererValue",
+      "signature": "uint32_t __cdecl GW_Render_GetGraphicsRendererValue(Metric metric_id, uint32_t renderer_mode) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/RenderMgr.h"
+    },
+    {
+      "name": "GW_Render_SetGraphicsRendererValue",
+      "signature": "bool __cdecl GW_Render_SetGraphicsRendererValue(Metric metric_id, uint32_t value, uint32_t renderer_mode) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/RenderMgr.h"
+    },
+    {
+      "name": "GW_Render_GetFrameLimit",
+      "signature": "uint32_t __cdecl GW_Render_GetFrameLimit() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/RenderMgr.h"
+    },
+    {
+      "name": "GW_Render_SetFrameLimit",
+      "signature": "bool __cdecl GW_Render_SetFrameLimit(uint32_t value) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/RenderMgr.h"
+    },
+    {
+      "name": "GW_Render_SetResetCallback",
+      "signature": "void __cdecl GW_Render_SetResetCallback(RenderCallback callback) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/RenderMgr.h"
+    },
+    {
+      "name": "GW_Render_GetResetCallback",
+      "signature": "RenderCallback __cdecl GW_Render_GetResetCallback() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/RenderMgr.h"
+    },
+    {
+      "name": "GW_Render_SetGlesRenderCallback",
+      "signature": "void __cdecl GW_Render_SetGlesRenderCallback(GlesRenderCallback callback) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/RenderMgr.h"
+    },
+    {
+      "name": "GW_Render_GetGlesRenderCallback",
+      "signature": "GlesRenderCallback __cdecl GW_Render_GetGlesRenderCallback() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/RenderMgr.h"
+    },
+    {
+      "name": "GW_Render_SetGlesResetCallback",
+      "signature": "void __cdecl GW_Render_SetGlesResetCallback(GlesRenderCallback callback) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/RenderMgr.h"
+    },
+    {
+      "name": "GW_Render_GetGlesResetCallback",
+      "signature": "GlesRenderCallback __cdecl GW_Render_GetGlesResetCallback() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/RenderMgr.h"
+    },
+    {
+      "name": "GW_Render_SetFrameCallback",
+      "signature": "void __cdecl GW_Render_SetFrameCallback(FrameCallback callback) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/RenderMgr.h"
+    },
+    {
+      "name": "GW_Render_GetFrameCallback",
+      "signature": "FrameCallback __cdecl GW_Render_GetFrameCallback() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/RenderMgr.h"
+    },
+    {
+      "name": "GW_Render_GetIsFullscreen",
+      "signature": "int __cdecl GW_Render_GetIsFullscreen() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/RenderMgr.h"
+    },
+    {
+      "name": "GW_Render_SetFog",
+      "signature": "bool __cdecl GW_Render_SetFog(bool enabled) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/RenderMgr.h"
+    },
+    {
+      "name": "GW_Render_GetWindowHandle",
+      "signature": "HWND __cdecl GW_Render_GetWindowHandle() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/RenderMgr.h"
+    },
+    {
+      "name": "GW_Render_GetDevice",
+      "signature": "IDirect3DDevice9* __cdecl GW_Render_GetDevice() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/RenderMgr.h"
+    },
+    {
+      "name": "GW_Render_GetViewportWidth",
+      "signature": "uint32_t __cdecl GW_Render_GetViewportWidth() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/RenderMgr.h"
+    },
+    {
+      "name": "GW_Render_GetViewportHeight",
+      "signature": "uint32_t __cdecl GW_Render_GetViewportHeight() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/RenderMgr.h"
+    },
+    {
+      "name": "GW_SkillbarMgr_RegisterDecodeTemplateHeaderCallback",
+      "signature": "bool __cdecl GW_SkillbarMgr_RegisterDecodeTemplateHeaderCallback(HookEntry* entry, NativeDecodeTemplateHeaderCallback callback, void* context, int32_t altitude) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/SkillbarMgr.h"
+    },
+    {
+      "name": "GW_SkillbarMgr_RegisterGetAccountTemplateDataCallback",
+      "signature": "bool __cdecl GW_SkillbarMgr_RegisterGetAccountTemplateDataCallback(HookEntry* entry, NativeGetAccountTemplateDataCallback callback, void* context, int32_t altitude) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/SkillbarMgr.h"
+    },
+    {
+      "name": "GW_SkillbarMgr_RegisterUpdateTemplateDisplayCallback",
+      "signature": "bool __cdecl GW_SkillbarMgr_RegisterUpdateTemplateDisplayCallback(HookEntry* entry, NativeUpdateTemplateDisplayCallback callback, void* context, int32_t altitude) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/SkillbarMgr.h"
+    },
+    {
+      "name": "GW_SkillbarMgr_RegisterDecodeTemplateStringCallback",
+      "signature": "bool __cdecl GW_SkillbarMgr_RegisterDecodeTemplateStringCallback(HookEntry* entry, NativeDecodeTemplateStringCallback callback, void* context, int32_t altitude) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/SkillbarMgr.h"
+    },
+    {
+      "name": "GW_SkillbarMgr_RegisterLoadSkillTemplateCallback",
+      "signature": "bool __cdecl GW_SkillbarMgr_RegisterLoadSkillTemplateCallback(HookEntry* entry, NativeLoadSkillTemplateCallback callback, void* context, int32_t altitude) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/SkillbarMgr.h"
+    },
+    {
+      "name": "GW_SkillbarMgr_RemoveTemplateCallbackNative",
+      "signature": "void __cdecl GW_SkillbarMgr_RemoveTemplateCallbackNative(HookEntry* entry) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/SkillbarMgr.h"
+    },
+    {
+      "name": "GW_SkillbarMgr_GetSkillSlot",
+      "signature": "int __cdecl GW_SkillbarMgr_GetSkillSlot(Constants::SkillID skill_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/SkillbarMgr.h"
+    },
+    {
+      "name": "GW_SkillbarMgr_UseSkill",
+      "signature": "bool __cdecl GW_SkillbarMgr_UseSkill(uint32_t slot, uint32_t target) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/SkillbarMgr.h"
+    },
+    {
+      "name": "GW_SkillbarMgr_UseSkillByID",
+      "signature": "bool __cdecl GW_SkillbarMgr_UseSkillByID(uint32_t skill_id, uint32_t target) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/SkillbarMgr.h"
+    },
+    {
+      "name": "GW_SkillbarMgr_GetSkillConstantData",
+      "signature": "Skill* __cdecl GW_SkillbarMgr_GetSkillConstantData(Constants::SkillID skill_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/SkillbarMgr.h"
+    },
+    {
+      "name": "GW_SkillbarMgr_GetSkillCount",
+      "signature": "uint32_t __cdecl GW_SkillbarMgr_GetSkillCount() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/SkillbarMgr.h"
+    },
+    {
+      "name": "GW_SkillbarMgr_GetAttributeConstantData",
+      "signature": "AttributeInfo* __cdecl GW_SkillbarMgr_GetAttributeConstantData(Constants::Attribute attribute_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/SkillbarMgr.h"
+    },
+    {
+      "name": "GW_SkillbarMgr_GetSkillbarArray",
+      "signature": "SkillbarArray* __cdecl GW_SkillbarMgr_GetSkillbarArray() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/SkillbarMgr.h"
+    },
+    {
+      "name": "GW_SkillbarMgr_GetPlayerSkillbar",
+      "signature": "Skillbar* __cdecl GW_SkillbarMgr_GetPlayerSkillbar() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/SkillbarMgr.h"
+    },
+    {
+      "name": "GW_SkillbarMgr_GetSkillbar",
+      "signature": "Skillbar* __cdecl GW_SkillbarMgr_GetSkillbar(const uint32_t agent_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/SkillbarMgr.h"
+    },
+    {
+      "name": "GW_SkillbarMgr_GetHeroSkillbar",
+      "signature": "Skillbar* __cdecl GW_SkillbarMgr_GetHeroSkillbar(uint32_t hero_index) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/SkillbarMgr.h"
+    },
+    {
+      "name": "GW_SkillbarMgr_GetHoveredSkill",
+      "signature": "Skill* __cdecl GW_SkillbarMgr_GetHoveredSkill() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/SkillbarMgr.h"
+    },
+    {
+      "name": "GW_SkillbarMgr_GetSkillTemplate",
+      "signature": "bool __cdecl GW_SkillbarMgr_GetSkillTemplate(uint32_t agent_id, SkillTemplate& skill_template) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/SkillbarMgr.h"
+    },
+    {
+      "name": "GW_SkillbarMgr_GetIsSkillUnlocked",
+      "signature": "bool __cdecl GW_SkillbarMgr_GetIsSkillUnlocked(Constants::SkillID skill_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/SkillbarMgr.h"
+    },
+    {
+      "name": "GW_SkillbarMgr_GetIsSkillLearnt",
+      "signature": "bool __cdecl GW_SkillbarMgr_GetIsSkillLearnt(Constants::SkillID skill_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/SkillbarMgr.h"
+    },
+    {
+      "name": "GW_SkillbarMgr_ChangeSecondProfession",
+      "signature": "bool __cdecl GW_SkillbarMgr_ChangeSecondProfession(uint32_t agent_id, Constants::Profession profession) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/SkillbarMgr.h"
+    },
+    {
+      "name": "GW_SkillbarMgr_DecodeSkillTemplate",
+      "signature": "bool __cdecl GW_SkillbarMgr_DecodeSkillTemplate(SkillTemplate& skill_template, const char* temp) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/SkillbarMgr.h"
+    },
+    {
+      "name": "GW_SkillbarMgr_EncodeSkillTemplate",
+      "signature": "bool __cdecl GW_SkillbarMgr_EncodeSkillTemplate(const SkillTemplate& skill_template, char* result, uint32_t result_len) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/SkillbarMgr.h"
+    },
+    {
+      "name": "GW_SkillbarMgr_LoadSkillTemplate",
+      "signature": "bool __cdecl GW_SkillbarMgr_LoadSkillTemplate(uint32_t agent_id, SkillTemplate& skill_template) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/SkillbarMgr.h"
+    },
+    {
+      "name": "GW_StoC_RegisterPacketCallback",
+      "signature": "bool __cdecl GW_StoC_RegisterPacketCallback(HookEntry* entry, uint32_t header, NativePacketCallback callback, void* context, int32_t altitude) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/StoCMgr.h"
+    },
+    {
+      "name": "GW_StoC_RegisterPostPacketCallback",
+      "signature": "bool __cdecl GW_StoC_RegisterPostPacketCallback(HookEntry* entry, uint32_t header, NativePacketCallback callback, void* context) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/StoCMgr.h"
+    },
+    {
+      "name": "GW_StoC_RemoveCallbackNative",
+      "signature": "size_t __cdecl GW_StoC_RemoveCallbackNative(uint32_t header, HookEntry* entry) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/StoCMgr.h"
+    },
+    {
+      "name": "GW_StoC_RemoveCallbacksNative",
+      "signature": "size_t __cdecl GW_StoC_RemoveCallbacksNative(HookEntry* entry) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/StoCMgr.h"
+    },
+    {
+      "name": "GW_StoC_EmulatePacket",
+      "signature": "bool __cdecl GW_StoC_EmulatePacket(Packet::StoC::PacketBase* packet) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/StoCMgr.h"
+    },
+    {
+      "name": "GW_Trade_OpenTradeWindow",
+      "signature": "bool __cdecl GW_Trade_OpenTradeWindow(uint32_t agent_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/TradeMgr.h"
+    },
+    {
+      "name": "GW_Trade_AcceptTrade",
+      "signature": "bool __cdecl GW_Trade_AcceptTrade() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/TradeMgr.h"
+    },
+    {
+      "name": "GW_Trade_CancelTrade",
+      "signature": "bool __cdecl GW_Trade_CancelTrade() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/TradeMgr.h"
+    },
+    {
+      "name": "GW_Trade_ChangeOffer",
+      "signature": "bool __cdecl GW_Trade_ChangeOffer() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/TradeMgr.h"
+    },
+    {
+      "name": "GW_Trade_SubmitOffer",
+      "signature": "bool __cdecl GW_Trade_SubmitOffer(uint32_t gold) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/TradeMgr.h"
+    },
+    {
+      "name": "GW_Trade_RemoveItem",
+      "signature": "bool __cdecl GW_Trade_RemoveItem(uint32_t slot) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/TradeMgr.h"
+    },
+    {
+      "name": "GW_Trade_IsItemOffered",
+      "signature": "TradeItem* __cdecl GW_Trade_IsItemOffered(uint32_t item_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/TradeMgr.h"
+    },
+    {
+      "name": "GW_Trade_OfferItem",
+      "signature": "bool __cdecl GW_Trade_OfferItem(uint32_t item_id, uint32_t quantity) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/TradeMgr.h"
+    },
+    {
+      "name": "GW_UI_FrameRelation_GetFrame",
+      "signature": "Frame* __cdecl GW_UI_FrameRelation_GetFrame(FrameRelation* self) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_FrameRelation_GetParent",
+      "signature": "Frame* __cdecl GW_UI_FrameRelation_GetParent(const FrameRelation* self) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_FramePosition_GetTopLeftOnScreenNative",
+      "signature": "void __cdecl GW_UI_FramePosition_GetTopLeftOnScreenNative(const FramePosition* self, GW::Vec2f* result, const Frame* frame) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_FramePosition_GetBottomRightOnScreenNative",
+      "signature": "void __cdecl GW_UI_FramePosition_GetBottomRightOnScreenNative(const FramePosition* self, GW::Vec2f* result, const Frame* frame) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_FramePosition_GetContentTopLeftNative",
+      "signature": "void __cdecl GW_UI_FramePosition_GetContentTopLeftNative(const FramePosition* self, GW::Vec2f* result, const Frame* frame) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_FramePosition_GetContentBottomRightNative",
+      "signature": "void __cdecl GW_UI_FramePosition_GetContentBottomRightNative(const FramePosition* self, GW::Vec2f* result, const Frame* frame) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_FramePosition_GetSizeOnScreenNative",
+      "signature": "void __cdecl GW_UI_FramePosition_GetSizeOnScreenNative(const FramePosition* self, GW::Vec2f* result, const Frame* frame) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_FramePosition_GetViewportScaleNative",
+      "signature": "void __cdecl GW_UI_FramePosition_GetViewportScaleNative(const FramePosition* self, GW::Vec2f* result, const Frame* frame) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_WindowPosition_xAxisNative",
+      "signature": "void __cdecl GW_UI_WindowPosition_xAxisNative(const WindowPosition* self, Vec2f* result, float multiplier, bool clamp_position) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_WindowPosition_yAxisNative",
+      "signature": "void __cdecl GW_UI_WindowPosition_yAxisNative(const WindowPosition* self, Vec2f* result, float multiplier, bool clamp_position) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_GetTextLanguage",
+      "signature": "GW::Constants::Language __cdecl GW_UI_GetTextLanguage() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_ButtonClick",
+      "signature": "bool __cdecl GW_UI_ButtonClick(Frame* btn_frame) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_GetMultilineTextFrameByEncodedString",
+      "signature": "GW::MultiLineTextLabelFrame* __cdecl GW_UI_GetMultilineTextFrameByEncodedString(const wchar_t* encoded_string, const bool partial_match) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_GetButtonFrameByEncodedString",
+      "signature": "GW::ButtonFrame* __cdecl GW_UI_GetButtonFrameByEncodedString(const wchar_t* encoded_string, const bool partial_match) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_GetTextFrameByEncodedString",
+      "signature": "GW::TextLabelFrame* __cdecl GW_UI_GetTextFrameByEncodedString(const wchar_t* encoded_string, const bool partial_match) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_CreateUIComponent",
+      "signature": "uint32_t __cdecl GW_UI_CreateUIComponent(uint32_t parent_frame_id, uint32_t component_flags, uint32_t tab_index, UIInteractionCallback event_callback, void* wparam, const wchar_t* component_label) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_DestroyUIComponent",
+      "signature": "bool __cdecl GW_UI_DestroyUIComponent(Frame* frame) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_SetFrameBounds",
+      "signature": "void __cdecl GW_UI_SetFrameBounds(Frame* frame, FrameLayoutMode mode, float* rect, float* size_out) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_SetFramePosition",
+      "signature": "void __cdecl GW_UI_SetFramePosition(Frame* frame, FrameLayoutMode mode, float* rect) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_AddFrameCallback",
+      "signature": "bool __cdecl GW_UI_AddFrameCallback(Frame* frame, UIInteractionCallback callback, void* uictl_context) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_SelectDropdownOption",
+      "signature": "bool __cdecl GW_UI_SelectDropdownOption(Frame* frame, uint32_t value) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_GetFrameContext",
+      "signature": "void* __cdecl GW_UI_GetFrameContext(GW::UI::Frame* frame) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_GetLastFrameContext",
+      "signature": "void* __cdecl GW_UI_GetLastFrameContext(GW::UI::Frame* frame) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_GetRootFrame",
+      "signature": "Frame* __cdecl GW_UI_GetRootFrame() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_GetChildFrame",
+      "signature": "Frame* __cdecl GW_UI_GetChildFrame(Frame* parent, uint32_t child_offset) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_SetFrameTitle",
+      "signature": "bool __cdecl GW_UI_SetFrameTitle(GW::UI::Frame* gwca_arg0, const wchar_t* title) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_GetParentFrame",
+      "signature": "Frame* __cdecl GW_UI_GetParentFrame(Frame* frame) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_GetFrameById",
+      "signature": "Frame* __cdecl GW_UI_GetFrameById(uint32_t frame_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_GetFrameByLabel",
+      "signature": "Frame* __cdecl GW_UI_GetFrameByLabel(const wchar_t* frame_label) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_Default_UICallback",
+      "signature": "bool __cdecl GW_UI_Default_UICallback(InteractionMessage* interaction, void* wparam, void* lparam) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_SendFrameUIMessage",
+      "signature": "bool __cdecl GW_UI_SendFrameUIMessage(UI::Frame* frame, UI::UIMessage message_id, void* wParam, void* lParam) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_SendUIMessage",
+      "signature": "bool __cdecl GW_UI_SendUIMessage(UI::UIMessage msgid, void* wParam, void* lParam) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_Keydown",
+      "signature": "bool __cdecl GW_UI_Keydown(ControlAction key, Frame* target) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_Keyup",
+      "signature": "bool __cdecl GW_UI_Keyup(ControlAction key, Frame* target) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_Keypress",
+      "signature": "bool __cdecl GW_UI_Keypress(ControlAction key, Frame* target) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_GetWindowPosition",
+      "signature": "UI::WindowPosition* __cdecl GW_UI_GetWindowPosition(UI::WindowID window_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_SetWindowVisible",
+      "signature": "bool __cdecl GW_UI_SetWindowVisible(UI::WindowID window_id, bool is_visible) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_SetWindowPosition",
+      "signature": "bool __cdecl GW_UI_SetWindowPosition(UI::WindowID window_id, UI::WindowPosition* info) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_DrawOnCompass",
+      "signature": "bool __cdecl GW_UI_DrawOnCompass(unsigned session_id, unsigned pt_count, CompassPoint* pts) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_GetSettings",
+      "signature": "ArrayByte* __cdecl GW_UI_GetSettings() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_GetIsUIDrawn",
+      "signature": "bool __cdecl GW_UI_GetIsUIDrawn() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_GetIsShiftScreenShot",
+      "signature": "bool __cdecl GW_UI_GetIsShiftScreenShot() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_GetIsWorldMapShowing",
+      "signature": "bool __cdecl GW_UI_GetIsWorldMapShowing() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_AsyncDecodeStrToBuffer",
+      "signature": "void __cdecl GW_UI_AsyncDecodeStrToBuffer(const wchar_t* enc_str, wchar_t* buffer, size_t size) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_AsyncDecodeStrWithCallback",
+      "signature": "void __cdecl GW_UI_AsyncDecodeStrWithCallback(const wchar_t* enc_str, DecodeStr_Callback callback, void* callback_param, GW::Constants::Language language_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_IsValidEncStr",
+      "signature": "bool __cdecl GW_UI_IsValidEncStr(const wchar_t* enc_str) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_UInt32ToEncStr",
+      "signature": "bool __cdecl GW_UI_UInt32ToEncStr(uint32_t value, wchar_t* buffer, size_t count) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_EncStrToUInt32",
+      "signature": "uint32_t __cdecl GW_UI_EncStrToUInt32(const wchar_t* enc_str) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_SetOpenLinks",
+      "signature": "void __cdecl GW_UI_SetOpenLinks(bool toggle) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_GetEnumPreference",
+      "signature": "uint32_t __cdecl GW_UI_GetEnumPreference(EnumPreference pref) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_GetPreferenceOptions",
+      "signature": "uint32_t __cdecl GW_UI_GetPreferenceOptions(EnumPreference pref, uint32_t** options_out) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_GetNumberPreference",
+      "signature": "uint32_t __cdecl GW_UI_GetNumberPreference(NumberPreference pref) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_GetFlagPreference",
+      "signature": "bool __cdecl GW_UI_GetFlagPreference(FlagPreference pref) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_GetStringPreference",
+      "signature": "wchar_t* __cdecl GW_UI_GetStringPreference(StringPreference pref) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_SetEnumPreference",
+      "signature": "bool __cdecl GW_UI_SetEnumPreference(EnumPreference pref, uint32_t value) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_SetNumberPreference",
+      "signature": "bool __cdecl GW_UI_SetNumberPreference(NumberPreference pref, uint32_t value) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_SetFlagPreference",
+      "signature": "bool __cdecl GW_UI_SetFlagPreference(FlagPreference pref, bool value) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_SetStringPreference",
+      "signature": "bool __cdecl GW_UI_SetStringPreference(StringPreference pref, wchar_t* value) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_GetCommandLinePrefString",
+      "signature": "bool __cdecl GW_UI_GetCommandLinePrefString(const wchar_t* label, wchar_t** out) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_GetCommandLinePrefNumber",
+      "signature": "bool __cdecl GW_UI_GetCommandLinePrefNumber(const wchar_t* label, uint32_t* out) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_SetCommandLinePrefString",
+      "signature": "bool __cdecl GW_UI_SetCommandLinePrefString(const wchar_t* label, wchar_t* value) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_SetCommandLinePrefNumber",
+      "signature": "bool __cdecl GW_UI_SetCommandLinePrefNumber(const wchar_t* label, uint32_t value) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_SetFrameVisible",
+      "signature": "bool __cdecl GW_UI_SetFrameVisible(UI::Frame* frame, bool flag) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_SetFrameDisabled",
+      "signature": "bool __cdecl GW_UI_SetFrameDisabled(UI::Frame* frame, bool flag) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_AddFrameUIInteractionCallback",
+      "signature": "bool __cdecl GW_UI_AddFrameUIInteractionCallback(GW::UI::Frame* gwca_arg0, UI::UIInteractionCallback callback, void* wparam) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_TriggerFrameRedraw",
+      "signature": "bool __cdecl GW_UI_TriggerFrameRedraw(UI::Frame* frame) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_IsInControllerMode",
+      "signature": "bool __cdecl GW_UI_IsInControllerMode() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_IsInMobileMode",
+      "signature": "bool __cdecl GW_UI_IsInMobileMode() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_IsInControllerCursorMode",
+      "signature": "bool __cdecl GW_UI_IsInControllerCursorMode() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_RegisterKeydownCallback",
+      "signature": "bool __cdecl GW_UI_RegisterKeydownCallback(HookEntry* entry, NativeKeyCallback callback, void* context) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_RemoveKeydownCallbackNative",
+      "signature": "void __cdecl GW_UI_RemoveKeydownCallbackNative(HookEntry* entry) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_RegisterKeyupCallback",
+      "signature": "bool __cdecl GW_UI_RegisterKeyupCallback(HookEntry* entry, NativeKeyCallback callback, void* context) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_RemoveKeyupCallbackNative",
+      "signature": "void __cdecl GW_UI_RemoveKeyupCallbackNative(HookEntry* entry) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_RegisterUIMessageCallback",
+      "signature": "bool __cdecl GW_UI_RegisterUIMessageCallback(HookEntry* entry, UIMessage message_id, NativeUIMessageCallback callback, void* context, int32_t altitude) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_RemoveUIMessageCallbackNative",
+      "signature": "void __cdecl GW_UI_RemoveUIMessageCallbackNative(HookEntry* entry, UIMessage message_id) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_RegisterFrameUIMessageCallback",
+      "signature": "bool __cdecl GW_UI_RegisterFrameUIMessageCallback(HookEntry* entry, UIMessage message_id, NativeFrameUIMessageCallback callback, void* context, int32_t altitude) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_RemoveFrameUIMessageCallbackNative",
+      "signature": "bool __cdecl GW_UI_RemoveFrameUIMessageCallbackNative(HookEntry* entry) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_GetCurrentTooltip",
+      "signature": "TooltipInfo* __cdecl GW_UI_GetCurrentTooltip() noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_RegisterCreateUIComponentCallback",
+      "signature": "bool __cdecl GW_UI_RegisterCreateUIComponentCallback(HookEntry* entry, NativeCreateUIComponentCallback callback, void* context, int32_t altitude) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_UI_RemoveCreateUIComponentCallbackNative",
+      "signature": "bool __cdecl GW_UI_RemoveCreateUIComponentCallbackNative(HookEntry* entry) noexcept",
+      "guards": [],
+      "header": "GWCA/Managers/UIMgr.h"
+    },
+    {
+      "name": "GW_RegisterLogHandler",
+      "signature": "void __cdecl GW_RegisterLogHandler(LogHandler handler, void* context) noexcept",
+      "guards": [],
+      "header": "GWCA/Utilities/Debug.h"
+    },
+    {
+      "name": "GW_RegisterPanicHandler",
+      "signature": "void __cdecl GW_RegisterPanicHandler(PanicHandler handler, void* context) noexcept",
+      "guards": [],
+      "header": "GWCA/Utilities/Debug.h"
+    },
+    {
+      "name": "GW_FatalAssert",
+      "signature": "void __cdecl GW_FatalAssert(const char* expr, const char* file, unsigned int line, const char* function) noexcept",
+      "guards": [],
+      "header": "GWCA/Utilities/Debug.h"
+    },
+    {
+      "name": "GW_LogMessageV",
+      "signature": "void __cdecl GW_LogMessageV(LogLevel level, const char* file, unsigned int line, const char* function, const char* fmt, va_list args) noexcept",
+      "guards": [],
+      "header": "GWCA/Utilities/Debug.h"
+    },
+    {
+      "name": "GW_Hook_Initialize",
+      "signature": "void __cdecl GW_Hook_Initialize() noexcept",
+      "guards": [
+        "(!((GWCA_WASM)))"
+      ],
+      "header": "GWCA/Utilities/Hooker.h"
+    },
+    {
+      "name": "GW_Hook_Deinitialize",
+      "signature": "void __cdecl GW_Hook_Deinitialize() noexcept",
+      "guards": [],
+      "header": "GWCA/Utilities/Hooker.h"
+    },
+    {
+      "name": "GW_Hook_EnableHooks",
+      "signature": "void __cdecl GW_Hook_EnableHooks(HookTarget target) noexcept",
+      "guards": [],
+      "header": "GWCA/Utilities/Hooker.h"
+    },
+    {
+      "name": "GW_Hook_DisableHooks",
+      "signature": "void __cdecl GW_Hook_DisableHooks(HookTarget target) noexcept",
+      "guards": [],
+      "header": "GWCA/Utilities/Hooker.h"
+    },
+    {
+      "name": "GW_Hook_CreateHook",
+      "signature": "int __cdecl GW_Hook_CreateHook(void** target, HookTarget detour, void** trampoline) noexcept",
+      "guards": [
+        "(!((GWCA_WASM)))"
+      ],
+      "header": "GWCA/Utilities/Hooker.h"
+    },
+    {
+      "name": "GW_Hook_RemoveHook",
+      "signature": "void __cdecl GW_Hook_RemoveHook(HookTarget target) noexcept",
+      "guards": [],
+      "header": "GWCA/Utilities/Hooker.h"
+    },
+    {
+      "name": "GW_Hook_EnterHook",
+      "signature": "void __cdecl GW_Hook_EnterHook() noexcept",
+      "guards": [],
+      "header": "GWCA/Utilities/Hooker.h"
+    },
+    {
+      "name": "GW_Hook_LeaveHook",
+      "signature": "void __cdecl GW_Hook_LeaveHook() noexcept",
+      "guards": [],
+      "header": "GWCA/Utilities/Hooker.h"
+    },
+    {
+      "name": "GW_Hook_GetInHookCount",
+      "signature": "int __cdecl GW_Hook_GetInHookCount() noexcept",
+      "guards": [],
+      "header": "GWCA/Utilities/Hooker.h"
+    },
+    {
+      "name": "GW_MemoryPatcher_Reset",
+      "signature": "void __cdecl GW_MemoryPatcher_Reset(MemoryPatcher* self) noexcept",
+      "guards": [],
+      "header": "GWCA/Utilities/MemoryPatcher.h"
+    },
+    {
+      "name": "GW_MemoryPatcher_SetPatch",
+      "signature": "void __cdecl GW_MemoryPatcher_SetPatch(MemoryPatcher* self, uintptr_t addr, const char* patch, size_t size) noexcept",
+      "guards": [],
+      "header": "GWCA/Utilities/MemoryPatcher.h"
+    },
+    {
+      "name": "GW_MemoryPatcher_SetRedirect",
+      "signature": "bool __cdecl GW_MemoryPatcher_SetRedirect(MemoryPatcher* self, uintptr_t call_instruction_address, void* redirect_func) noexcept",
+      "guards": [],
+      "header": "GWCA/Utilities/MemoryPatcher.h"
+    },
+    {
+      "name": "GW_MemoryPatcher_TogglePatch",
+      "signature": "bool __cdecl GW_MemoryPatcher_TogglePatch(MemoryPatcher* self, bool flag) noexcept",
+      "guards": [],
+      "header": "GWCA/Utilities/MemoryPatcher.h"
+    },
+    {
+      "name": "GW_MemoryPatcher_DisableHooks",
+      "signature": "void __cdecl GW_MemoryPatcher_DisableHooks() noexcept",
+      "guards": [],
+      "header": "GWCA/Utilities/MemoryPatcher.h"
+    },
+    {
+      "name": "GW_MemoryPatcher_EnableHooks",
+      "signature": "void __cdecl GW_MemoryPatcher_EnableHooks() noexcept",
+      "guards": [],
+      "header": "GWCA/Utilities/MemoryPatcher.h"
+    },
+    {
+      "name": "GW_Scanner_InitializeByName",
+      "signature": "void __cdecl GW_Scanner_InitializeByName(const char* moduleName) noexcept",
+      "guards": [],
+      "header": "GWCA/Utilities/Scanner.h"
+    },
+    {
+      "name": "GW_Scanner_InitializeForModule",
+      "signature": "void __cdecl GW_Scanner_InitializeForModule(HMODULE hModule) noexcept",
+      "guards": [],
+      "header": "GWCA/Utilities/Scanner.h"
+    },
+    {
+      "name": "GW_Scanner_GetGameTlsIndex",
+      "signature": "DWORD __cdecl GW_Scanner_GetGameTlsIndex() noexcept",
+      "guards": [],
+      "header": "GWCA/Utilities/Scanner.h"
+    },
+    {
+      "name": "GW_Scanner_FindAssertion",
+      "signature": "uintptr_t __cdecl GW_Scanner_FindAssertion(const char* assertion_file, const char* assertion_msg, uint32_t line_number, int offset) noexcept",
+      "guards": [],
+      "header": "GWCA/Utilities/Scanner.h"
+    },
+    {
+      "name": "GW_Scanner_FindInRange",
+      "signature": "uintptr_t __cdecl GW_Scanner_FindInRange(const char* pattern, const char* mask, int offset, DWORD start, DWORD end) noexcept",
+      "guards": [],
+      "header": "GWCA/Utilities/Scanner.h"
+    },
+    {
+      "name": "GW_Scanner_FindUseOfStringA",
+      "signature": "uintptr_t __cdecl GW_Scanner_FindUseOfStringA(const char* str, int offset, ScannerSection section) noexcept",
+      "guards": [],
+      "header": "GWCA/Utilities/Scanner.h"
+    },
+    {
+      "name": "GW_Scanner_FindNthUseOfStringA",
+      "signature": "uintptr_t __cdecl GW_Scanner_FindNthUseOfStringA(const char* str, size_t nth, int offset, ScannerSection section) noexcept",
+      "guards": [],
+      "header": "GWCA/Utilities/Scanner.h"
+    },
+    {
+      "name": "GW_Scanner_FindUseOfStringW",
+      "signature": "uintptr_t __cdecl GW_Scanner_FindUseOfStringW(const wchar_t* str, int offset, ScannerSection section) noexcept",
+      "guards": [],
+      "header": "GWCA/Utilities/Scanner.h"
+    },
+    {
+      "name": "GW_Scanner_FindNthUseOfStringW",
+      "signature": "uintptr_t __cdecl GW_Scanner_FindNthUseOfStringW(const wchar_t* str, size_t nth, int offset, ScannerSection section) noexcept",
+      "guards": [],
+      "header": "GWCA/Utilities/Scanner.h"
+    },
+    {
+      "name": "GW_Scanner_Find",
+      "signature": "uintptr_t __cdecl GW_Scanner_Find(const char* pattern, const char* mask, int offset, ScannerSection section) noexcept",
+      "guards": [],
+      "header": "GWCA/Utilities/Scanner.h"
+    },
+    {
+      "name": "GW_Scanner_FindNth",
+      "signature": "uintptr_t __cdecl GW_Scanner_FindNth(const char* pattern, const char* mask, size_t nth, int offset, ScannerSection section) noexcept",
+      "guards": [],
+      "header": "GWCA/Utilities/Scanner.h"
+    },
+    {
+      "name": "GW_Scanner_GetSectionAddressRange",
+      "signature": "void __cdecl GW_Scanner_GetSectionAddressRange(ScannerSection section, uintptr_t* start, uintptr_t* end) noexcept",
+      "guards": [],
+      "header": "GWCA/Utilities/Scanner.h"
+    },
+    {
+      "name": "GW_Scanner_IsValidPtr",
+      "signature": "bool __cdecl GW_Scanner_IsValidPtr(uintptr_t address, ScannerSection section) noexcept",
+      "guards": [],
+      "header": "GWCA/Utilities/Scanner.h"
+    },
+    {
+      "name": "GW_Scanner_FunctionFromNearCall",
+      "signature": "uintptr_t __cdecl GW_Scanner_FunctionFromNearCall(uintptr_t call_instruction_address, bool check_valid_ptr) noexcept",
+      "guards": [],
+      "header": "GWCA/Utilities/Scanner.h"
+    },
+    {
+      "name": "GW_Scanner_ToFunctionStart",
+      "signature": "uintptr_t __cdecl GW_Scanner_ToFunctionStart(uintptr_t call_instruction_address, uint32_t scan_range) noexcept",
+      "guards": [],
+      "header": "GWCA/Utilities/Scanner.h"
+    },
+    {
+      "name": "GW_GetAbiVersion",
+      "signature": "uint32_t __cdecl GW_GetAbiVersion() noexcept",
+      "guards": [],
+      "header": "GWCA/Utilities/Version.h"
+    }
+  ]
+}

@@ -12,11 +12,8 @@ and needs network access to compile. Same arrangement as kamadanwasm's
 tools/update_gwca.py, for the same reasons; this is that script adapted to
 GWToolboxpp's existing Dependencies/GWCA/ layout instead of vendor/gwca/.
 
-All four assets come from one release, which is the point: gwca.dll/gwca.lib
-(native), gwca.wasm (wasm), and the headers everything compiles against are
-matched by construction. Taking them from different places leaves nothing but
-GWCA_ABI_VERSION between you and struct offsets read at the wrong addresses,
-and that only moves when the version does.
+The native DLL and SDK headers come from one release. GWCA 4.12 no longer
+publishes import libraries or wasm binaries in its native releases.
 
 Auth: gwdevhub/GWCA is a PRIVATE repo, so a credential is required. This prefers
 the GitHub CLI (`gh`) when installed and authenticated -- it handles private
@@ -26,9 +23,8 @@ stripping the bearer token on the CDN redirect so the download is not rejected.
 
 What it vendors, from one release:
   * gwca.dll          -> Dependencies/GWCA/bin/gwca.dll     (native build)
-  * gwca.lib           -> Dependencies/GWCA/lib/gwca.lib     (native build)
-  * gwca.wasm         -> Dependencies/GWCA/wasm/gwca.wasm   (wasm build)
   * GWCA-headers.zip  -> Dependencies/GWCA/include/ and Dependencies/GWCA/source/
+  * exports.json     -> Dependencies/GWCA/exports.json (from the headers zip)
   * the pin           -> Dependencies/GWCA/gwca.json (tag, ABI, sha256 of each asset)
 
 The zip's Include/ is flattened to include/ (matching the directory this repo
@@ -45,7 +41,7 @@ Usage:
   python3 tools/update_gwca.py            # vendor the latest release, if newer
   python3 tools/update_gwca.py --check    # report only; exit 10 if an update exists
   python3 tools/update_gwca.py --force    # re-download even if already current
-  python3 tools/update_gwca.py --tag v4.7.2.9   # pin to a specific release
+  python3 tools/update_gwca.py --tag v4.12.0.0  # pin to a runtime SDK release
   python3 tools/update_gwca.py --dry-run  # show what would change, write nothing
 
 Exit codes:
@@ -75,10 +71,8 @@ API_TIMEOUT = 20        # short: the build-time --check must not hang a build
 DOWNLOAD_TIMEOUT = 240
 
 DLL_ASSET = "gwca.dll"
-LIB_ASSET = "gwca.lib"
-WASM_ASSET = "gwca.wasm"
 HEADERS_ASSET = "GWCA-headers.zip"
-REQUIRED_ASSETS = (DLL_ASSET, LIB_ASSET, WASM_ASSET, HEADERS_ASSET)
+REQUIRED_ASSETS = (DLL_ASSET, HEADERS_ASSET)
 
 # What to take out of the headers zip. GWCA's own build leaves artefacts in
 # Include/ -- a UIMessages.h.bak from its enum-comment updater -- which the
@@ -245,6 +239,9 @@ def headers_members(zip_path):
     out = []
     with zipfile.ZipFile(zip_path) as z:
         for m in z.namelist():
+            if m == "exports.json":
+                out.append((m, m))
+                continue
             if m.endswith("/") or m.endswith("\\"):
                 continue
             parts = m.replace("\\", "/").split("/")
@@ -275,7 +272,7 @@ def extract_headers(zip_path, members, dest):
     with zipfile.ZipFile(zip_path) as z:
         for member, rel in members:
             target = (dest / rel).resolve()
-            if not str(target).startswith(str(base)):
+            if not target.is_relative_to(base):
                 die("refusing to extract %s outside Dependencies/GWCA/" % member)
             target.parent.mkdir(parents=True, exist_ok=True)
             with z.open(member) as src:
@@ -331,9 +328,7 @@ def main():
         return 10
 
     if missing:
-        die("release %s has no %s. gwca.wasm is published by GWCA's build-wasm "
-            "CI job; a release cut before that job existed will not have it -- "
-            "pass --tag to pick one that does." % (tag, ", ".join(missing)))
+        die("release %s has no %s" % (tag, ", ".join(missing)))
 
     if have and not args.force and parse_version(tag) <= parse_version(have) \
             and GWCA_DIR.is_dir():
@@ -360,19 +355,19 @@ def main():
         members = headers_members(tmp / HEADERS_ASSET)
         if not any(rel.startswith("include/") for _, rel in members):
             die("%s has no Include/ -- not the expected layout" % HEADERS_ASSET)
-        if not any(rel.startswith("source/") for _, rel in members):
-            die("%s has no Source/ -- it predates the wasm shim being staged into "
-                "the zip, so it cannot build a wasm consumer" % HEADERS_ASSET)
+        required_headers = {"include/GWCA/Runtime.h", "include/GWCA/RuntimeLayout.h",
+                            "include/GWCA/stdlib/GWCA.h", "exports.json"}
+        if not required_headers.issubset({rel for _, rel in members}):
+            die("%s is missing the runtime SDK or export manifest" % HEADERS_ASSET)
 
         GWCA_DIR.mkdir(parents=True, exist_ok=True)
         extract_headers(tmp / HEADERS_ASSET, members, GWCA_DIR)
 
         (GWCA_DIR / "bin").mkdir(parents=True, exist_ok=True)
         shutil.copyfile(tmp / DLL_ASSET, GWCA_DIR / "bin" / DLL_ASSET)
-        (GWCA_DIR / "lib").mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(tmp / LIB_ASSET, GWCA_DIR / "lib" / LIB_ASSET)
-        (GWCA_DIR / "wasm").mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(tmp / WASM_ASSET, GWCA_DIR / "wasm" / WASM_ASSET)
+        (GWCA_DIR / "lib" / "gwca.lib").unlink(missing_ok=True)
+        for filename in ("gwca.wasm", "gwcad.wasm"):
+            (GWCA_DIR / "wasm" / filename).unlink(missing_ok=True)
 
         abi = abi_from_headers(GWCA_DIR / "include")
         if not abi:
@@ -380,9 +375,8 @@ def main():
 
         pin = {
             "_": "Written by tools/update_gwca.py. The pinned GWCA release this "
-                 "repo builds against: gwca.dll/gwca.lib (native), gwca.wasm "
-                 "(wasm) and the headers, from one release so they cannot "
-                 "disagree. Read `abi` to guard against a headers/binary mismatch.",
+                 "repo builds against: native gwca.dll and SDK headers from "
+                 "one release. Runtime binding validates ABI and export schema.",
             "repo": args.repo,
             "tag": tag,
             "abi": abi,
@@ -393,8 +387,6 @@ def main():
         PIN.write_text(json.dumps(pin, indent=2) + "\n", encoding="utf-8")
 
     info("    %-20s %d bytes" % (DLL_ASSET, (GWCA_DIR / "bin" / DLL_ASSET).stat().st_size))
-    info("    %-20s %d bytes" % (LIB_ASSET, (GWCA_DIR / "lib" / LIB_ASSET).stat().st_size))
-    info("    %-20s %d bytes" % (WASM_ASSET, (GWCA_DIR / "wasm" / WASM_ASSET).stat().st_size))
     info("    %-20s %d files" % ("headers", len(members)))
     info("    ABI %s, pinned in %s" % (abi, PIN.name))
     info("")

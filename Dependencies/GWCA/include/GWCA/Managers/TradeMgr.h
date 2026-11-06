@@ -1,4 +1,5 @@
 #pragma once
+#include <GWCA/Runtime.h>
 
 #include <GWCA/Utilities/Export.h>
 
@@ -9,26 +10,71 @@ namespace GW {
 
     namespace Trade {
 
-        GWCA_API bool OpenTradeWindow(uint32_t agent_id);
-        GWCA_API bool AcceptTrade();
-        GWCA_API bool CancelTrade();
-        GWCA_API bool ChangeOffer();
-        GWCA_API bool SubmitOffer(uint32_t gold);
-        GWCA_API bool RemoveItem(uint32_t slot);
-        GWCA_API TradeItem* IsItemOffered(uint32_t item_id);
+        bool OpenTradeWindow(uint32_t agent_id);
+        bool AcceptTrade();
+        bool CancelTrade();
+        bool ChangeOffer();
+        bool SubmitOffer(uint32_t gold);
+        bool RemoveItem(uint32_t slot);
+        TradeItem* IsItemOffered(uint32_t item_id);
 
         // Passing quantity = 0 will prompt the player for the amount
-        GWCA_API bool OfferItem(uint32_t item_id, uint32_t quantity = 0);
+        bool OfferItem(uint32_t item_id, uint32_t quantity = 0);
     };
 }
 // C Interop API
-extern "C" {
-    GWCA_API bool      OpenTradeWindow(uint32_t agent_id);
-    GWCA_API bool AcceptTrade();
-    GWCA_API bool CancelTrade();
-    GWCA_API bool ChangeOffer();
-    GWCA_API bool SubmitOffer(uint32_t gold);
-    GWCA_API bool OfferItem(uint32_t item_id, uint32_t quantity = 0);
-    GWCA_API bool RemoveOfferedItem(uint32_t slot);
-    GWCA_API void* IsItemOffered(uint32_t item_id);
+
+namespace GW::Trade {
+    extern "C" GWCA_API bool __cdecl GW_Trade_OpenTradeWindow(uint32_t agent_id) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_Trade_AcceptTrade() noexcept;
+    extern "C" GWCA_API bool __cdecl GW_Trade_CancelTrade() noexcept;
+    extern "C" GWCA_API bool __cdecl GW_Trade_ChangeOffer() noexcept;
+    extern "C" GWCA_API bool __cdecl GW_Trade_SubmitOffer(uint32_t gold) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_Trade_RemoveItem(uint32_t slot) noexcept;
+    extern "C" GWCA_API TradeItem* __cdecl GW_Trade_IsItemOffered(uint32_t item_id) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_Trade_OfferItem(uint32_t item_id, uint32_t quantity) noexcept;
 }
+
+#if !defined(GWCA_BUILD_EXPORTS)
+namespace GW::Trade {
+    inline bool OpenTradeWindow(uint32_t agent_id)
+    {
+        return GWCA_CALL_C(GW_Trade_OpenTradeWindow, agent_id);
+    }
+
+    inline bool AcceptTrade()
+    {
+        return GWCA_CALL_C(GW_Trade_AcceptTrade);
+    }
+
+    inline bool CancelTrade()
+    {
+        return GWCA_CALL_C(GW_Trade_CancelTrade);
+    }
+
+    inline bool ChangeOffer()
+    {
+        return GWCA_CALL_C(GW_Trade_ChangeOffer);
+    }
+
+    inline bool SubmitOffer(uint32_t gold)
+    {
+        return GWCA_CALL_C(GW_Trade_SubmitOffer, gold);
+    }
+
+    inline bool RemoveItem(uint32_t slot)
+    {
+        return GWCA_CALL_C(GW_Trade_RemoveItem, slot);
+    }
+
+    inline TradeItem* IsItemOffered(uint32_t item_id)
+    {
+        return GWCA_CALL_C(GW_Trade_IsItemOffered, item_id);
+    }
+
+    inline bool OfferItem(uint32_t item_id, uint32_t quantity)
+    {
+        return GWCA_CALL_C(GW_Trade_OfferItem, item_id, quantity);
+    }
+}
+#endif

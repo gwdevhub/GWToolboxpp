@@ -72,8 +72,7 @@ public:
 
     virtual bool CanTerminate() { return true; }
 
-    // Terminate module. Release any resources used. Make sure to revert all callbacks
-    virtual void Terminate() {}
+    virtual void Terminate();
 
     // Update. Will be called once every frame unless the world map is showing and ShowInWorldMap returns false.
     // Delta is in milliseconds.

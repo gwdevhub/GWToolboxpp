@@ -1,4 +1,5 @@
 #pragma once
+#include <GWCA/Runtime.h>
 
 #include <stdint.h>
 
@@ -36,5 +37,18 @@ namespace GW {
         bool GetIsTradeAccepted()  const { return (flags & TRADE_ACCEPTED)   != 0; }
     };
 
-    GWCA_API TradeContext* GetTradeContext();
+    TradeContext* GetTradeContext();
 }
+
+namespace GW {
+    extern "C" GWCA_API TradeContext* __cdecl GW_GetTradeContext() noexcept;
+}
+
+#if !defined(GWCA_BUILD_EXPORTS)
+namespace GW {
+    inline TradeContext* GetTradeContext()
+    {
+        return GWCA_CALL_C(GW_GetTradeContext);
+    }
+}
+#endif
