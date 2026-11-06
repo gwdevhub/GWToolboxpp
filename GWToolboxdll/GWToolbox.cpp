@@ -59,13 +59,11 @@
 #include <EmbeddedResource.h>
 #include "resource.h"
 
-#include <DelayImp.h>
-
-// declare method here as recommended by imgui
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 namespace {
     HMODULE gwcamodule = nullptr;
+    bool initialization_failed = false;
     HMODULE dllmodule = nullptr;
     WNDPROC OldWndProc = nullptr;
     HWND gw_window_handle = nullptr;
@@ -312,8 +310,10 @@ namespace {
     void TerminateExistingGWCADll(HMODULE existing_gwca)
     {
         typedef void(__cdecl * GWFnVoid)();
-        const auto disable_hooks = GetModuleFunctionW<GWFnVoid>(existing_gwca, "?DisableHooks@GW@@YAXXZ");
-        const auto terminate = GetModuleFunctionW<GWFnVoid>(existing_gwca, "?Terminate@GW@@YAXXZ");
+        auto disable_hooks = GetModuleFunctionW<GWFnVoid>(existing_gwca, "GW_DisableHooks");
+        if (!disable_hooks) disable_hooks = GetModuleFunctionW<GWFnVoid>(existing_gwca, "?DisableHooks@GW@@YAXXZ");
+        auto terminate = GetModuleFunctionW<GWFnVoid>(existing_gwca, "GW_TerminateNative");
+        if (!terminate) terminate = GetModuleFunctionW<GWFnVoid>(existing_gwca, "?Terminate@GW@@YAXXZ");
         if (disable_hooks) {
             Log::Log("[LoadGWCADll] Calling DisableHooks on old gwca.dll");
             __try {
@@ -331,7 +331,6 @@ namespace {
             }
         }
         Sleep(160);
-        // Unload: may need multiple calls if ref count > 1
         while (GetModuleHandleW(L"gwca.dll") == existing_gwca) {
             if (!FreeLibrary(existing_gwca)) {
                 Log::Log("[LoadGWCADll] FreeLibrary failed for old gwca.dll: %d", GetLastError());
@@ -352,7 +351,6 @@ namespace {
             return nullptr;
         }
 
-        // If a gwca.dll is already loaded that isn't our expected version, terminate and unload it first
         const HMODULE existing_gwca = GetModuleHandleW(L"gwca.dll");
         if (existing_gwca) {
             wchar_t existing_path[MAX_PATH] = {};
@@ -363,7 +361,6 @@ namespace {
             }
         }
 
-        // Defender returns these from CreateFile/LoadLibrary when it blocks or quarantines a file.
         const auto warn_if_antivirus = [](const DWORD err) {
             if (err != ERROR_VIRUS_INFECTED && err != ERROR_VIRUS_DELETED) return;
             std::wstring message =
@@ -388,10 +385,10 @@ namespace {
             }
         }
 
-        gwcamodule = LoadLibraryW(gwca_dll_path.wstring().c_str());
+        gwcamodule = GW::Runtime::LoadGWCA(gwca_dll_path.c_str());
         if (!gwcamodule) {
             const DWORD code = GetLastError();
-            Log::Log("[LoadGWCADll] LoadLibraryW fail, %lu", code);
+            Log::Log("[LoadGWCADll] Runtime load/bind failed, %lu", code);
             warn_if_antivirus(code);
             return nullptr;
         }
@@ -401,7 +398,9 @@ namespace {
 
     bool UnloadGWCADll()
     {
-        ASSERT(!gwcamodule || FreeLibrary(gwcamodule));
+        GW::Runtime::api = {};
+        if (gwcamodule && !FreeLibrary(gwcamodule)) return false;
+        gwcamodule = nullptr;
         return true;
     }
 
@@ -697,29 +696,7 @@ namespace {
         return true;
     }
 
-    FARPROC WINAPI CustomDliHook(const unsigned dliNotify, PDelayLoadInfo pdli)
-    {
-        switch (dliNotify) {
-            case dliNotePreLoadLibrary: {
-                if (_stricmp(pdli->szDll, "gwca.dll") != 0) break;
-                const auto loaded = LoadGWCADll(dllmodule);
-                ASSERT(loaded);
-                return (FARPROC)loaded;
-            } break;
-            case dliFailGetProc: {
-                if (_stricmp(pdli->szDll, "gwca.dll") != 0) break;
-                ASSERT(pdli && *(pdli->dlp.szProcName));
-                Log::Log("Something is trying to access %ls, but failed", pdli->dlp.szProcName);
-                ASSERT(false && "Failed to find a valid proc address in GWCA. Ensure you're running the correct version, or delete gwca.dll in your toolbox folder!");
-            } break;
-                // Add other sliNotify cases for debugging if you need to later
-        }
-        return nullptr;
-    }
 } // namespace
-
-extern const PfnDliHook __pfnDliFailureHook2 = CustomDliHook;
-extern const PfnDliHook __pfnDliNotifyHook2 = CustomDliHook;
 
 const std::vector<ToolboxModule*>& GWToolbox::GetAllModules()
 {
@@ -786,13 +763,14 @@ DWORD __stdcall GWToolbox::MainLoop(LPVOID module) noexcept
     dllmodule = static_cast<HMODULE>(module);
     __try {
         Initialize(module);
+        if (!gwcamodule) {
+            Log::Terminate();
+            return EXIT_FAILURE;
+        }
         while (gwtoolbox_state != GWToolboxState::Terminated) {
-            // wait until destruction
             Sleep(100);
         }
 
-        // @Remark:
-        // Hooks are disable from Guild Wars thread (safely), so we just make sure we exit the last hooks
         GW::DisableHooks();
         while (GW::Hook::GetInHookCount()) {
             Sleep(16);
@@ -820,17 +798,26 @@ void GWToolbox::Initialize(LPVOID module)
     if (module) {
         dllmodule = static_cast<HMODULE>(module);
     }
-    if (gwtoolbox_state != GWToolboxState::Terminated) return;
+    if (initialization_failed || gwtoolbox_state != GWToolboxState::Terminated) return;
     gwtoolbox_state = GWToolboxState::Initialising;
 
     Log::InitializeLog();
 
-    // @Cleanup: atm its just an ASSERT - this could be a valid issue where the user can't write gwca.dll to disk, so need to handle it better later.
-    ASSERT(LoadGWCADll(dllmodule));
+    if (!LoadGWCADll(dllmodule)) {
+        initialization_failed = true;
+        gwtoolbox_state = GWToolboxState::Terminated;
+        MessageBoxW(nullptr, L"Failed to load or bind GWCA. Check your Toolbox log for details and try reinstalling GWToolbox.", L"GWToolbox", MB_ICONERROR | MB_TOPMOST);
+        return;
+    }
 
     Log::InitializeGWCALog();
     GW::RegisterPanicHandler(CrashHandler::GWCAPanicHandler, nullptr);
-    GW::Initialize();
+    if (!GW::Initialize()) {
+        initialization_failed = true;
+        gwtoolbox_state = GWToolboxState::Terminated;
+        MessageBoxW(nullptr, L"GWCA could not initialize for this Guild Wars client. Check your Toolbox log for details.", L"GWToolbox", MB_ICONERROR | MB_TOPMOST);
+        return;
+    }
     auto& splash_screen = SplashScreenModule::Instance();
     auto splash_screen_enabled = false;
     if (!GetSettingsDoc()->Get("Toolbox Modules", splash_screen.Name(), splash_screen_enabled)) {

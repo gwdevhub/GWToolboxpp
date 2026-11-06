@@ -1,9 +1,10 @@
 #pragma once
+#include <GWCA/Runtime.h>
 #include <GWCA/Utilities/Export.h>
 
 namespace GW {
     struct GameContext;
-    GWCA_API GameContext* GetGameContext();
+    GameContext* GetGameContext();
 
     struct Cinematic;
     struct MapContext;
@@ -45,3 +46,16 @@ namespace GW {
         /* +h0058 */ TradeContext* trade;
     };
 }
+
+namespace GW {
+    extern "C" GWCA_API GameContext* __cdecl GW_GetGameContext() noexcept;
+}
+
+#if !defined(GWCA_BUILD_EXPORTS)
+namespace GW {
+    inline GameContext* GetGameContext()
+    {
+        return GWCA_CALL_C(GW_GetGameContext);
+    }
+}
+#endif

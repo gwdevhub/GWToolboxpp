@@ -62,6 +62,8 @@
 #include <d3d9.h>
 #include <DirectXMath.h>
 
+#include <Utils/GWCAClient.h>
+
 #include <imgui.h>
 #include <imgui_internal.h>
 

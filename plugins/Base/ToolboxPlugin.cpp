@@ -27,6 +27,13 @@ void ToolboxPlugin::LoadSettings(const wchar_t* folder)
     legacy_ini.LoadIfExists(GetLegacySettingFile(folder));
 }
 
+void ToolboxPlugin::Terminate()
+{
+    GW::Client::Clearing guard;
+    GW::Client::UnregisterAll();
+    GW::Client::CancelTasks();
+}
+
 void ToolboxPlugin::SaveSettings(const wchar_t* folder)
 {
     settings.SaveFile(GetSettingFile(folder));

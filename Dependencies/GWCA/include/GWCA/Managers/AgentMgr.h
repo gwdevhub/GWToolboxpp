@@ -1,6 +1,9 @@
 #pragma once
+#include <GWCA/Runtime.h>
 
 #include <GWCA/GameContainers/Array.h>
+#include <GWCA/GameContainers/GamePos.h>
+#include <GWCA/GameEntities/Agent.h>
 #include <GWCA/Constants/Constants.h>
 
 #include <GWCA/Utilities/Export.h>
@@ -127,27 +130,26 @@ namespace GW {
 
 
 	namespace Agents {
-		typedef HookCallback<const GW::AgentLiving*, const AgentEffect*> AgentEffectCallback;
 
 		// Dialogs -- same as pressing button (id) while talking to an NPC.
-		GWCA_API bool SendDialog(uint32_t dialog_id);
+		bool SendDialog(uint32_t dialog_id);
 
 		// === Agent Array ===
 
 		// Get Agent ID of currently observed agent
-		GWCA_API uint32_t GetObservingId();
+		uint32_t GetObservingId();
 		// Get Agent ID of client's logged in player
-		GWCA_API uint32_t GetControlledCharacterId();
+		uint32_t GetControlledCharacterId();
 		// Get Agent ID of current target
-		GWCA_API uint32_t GetTargetId();
+		uint32_t GetTargetId();
 		// Get Agent ID of current evaluated target - either auto target or actual target
-		GWCA_API uint32_t GetEvaluatedTargetId();
+		uint32_t GetEvaluatedTargetId();
 
 		// Returns Agentstruct Array of agents in compass range, full structs.
-		GWCA_API AgentArray* GetAgentArray();
+		AgentArray* GetAgentArray();
 
 		// Get AgentArray Structures of player or target.
-		GWCA_API Agent* GetAgentByID(uint32_t id);
+		Agent* GetAgentByID(uint32_t id);
 		// Get agent that we're currently observing
 		inline Agent* GetObservingAgent() { return GetAgentByID(GetObservingId()); }
 		// Get Agent of current target
@@ -155,91 +157,254 @@ namespace GW {
 		// Get Agent of current evaluated target - either auto target or actual target
 		inline Agent* GetEvaluatedTarget() { return GetAgentByID(GetEvaluatedTargetId()); }
 
-		GWCA_API Agent* GetPlayerByID(uint32_t player_id);
+		Agent* GetPlayerByID(uint32_t player_id);
 
 		// Get Agent of current logged in character
-		GWCA_API AgentLiving* GetControlledCharacter();
+		AgentLiving* GetControlledCharacter();
 
-		GWCA_API bool GetAgentMatchesFlags(const Agent*, AgentTargetFlags flags = TargetFilter::Any);
+		bool GetAgentMatchesFlags(const Agent*, AgentTargetFlags flags = TargetFilter::Any);
 
-		GWCA_API bool RefreshAgentNameTag(const Agent*);
+		bool RefreshAgentNameTag(const Agent*);
 
         // Whether we're observing someone else
-        GWCA_API bool IsObserving();
+        bool IsObserving();
 
         // Get AgentLiving of current target
-        GWCA_API AgentLiving    *GetTargetAsAgentLiving();
+        AgentLiving    *GetTargetAsAgentLiving();
 
-        GWCA_API uint32_t GetAmountOfPlayersInInstance();
+        uint32_t GetAmountOfPlayersInInstance();
 
         // Alternate agent array readable beyond compass range; holds limited info and needs more exploration.
-        GWCA_API MapAgentArray* GetMapAgentArray();
-        GWCA_API uint32_t CountAllegianceInRange(GW::Constants::Allegiance allegiance, float sqr_range);
+        MapAgentArray* GetMapAgentArray();
+        uint32_t CountAllegianceInRange(GW::Constants::Allegiance allegiance, float sqr_range);
 
-        GWCA_API AgentCharData* GetAgentCharData(uint32_t agent_id);
-        GWCA_API MapAgent* GetMapAgentByID(uint32_t agent_id);
+        AgentCharData* GetAgentCharData(uint32_t agent_id);
+        MapAgent* GetMapAgentByID(uint32_t agent_id);
 
-        GWCA_API GW::Constants::ProfessionByte GetAgentPrimary(uint32_t agent_id);
-        GWCA_API GW::Constants::ProfessionByte GetAgentSecondary(uint32_t agent_id);
+        GW::Constants::ProfessionByte GetAgentPrimary(uint32_t agent_id);
+        GW::Constants::ProfessionByte GetAgentSecondary(uint32_t agent_id);
         // === Other Arrays ===
-        GWCA_API PlayerArray* GetPlayerArray();
+        PlayerArray* GetPlayerArray();
 
-        GWCA_API NPCArray* GetNPCArray();
-        GWCA_API NPC *GetNPCByID(uint32_t npc_id);
+        NPCArray* GetNPCArray();
+        NPC *GetNPCByID(uint32_t npc_id);
 
         // Change targeted agent to (Agent)
-        GWCA_API bool ChangeTarget(const Agent *agent);
-        GWCA_API bool ChangeTarget(AgentID agent_id);
+        bool ChangeTarget(AgentID agent_id);
+        inline bool ChangeTarget(const Agent* agent) { return agent ? ChangeTarget(agent->agent_id) : false; }
 
         // Move to specified coordinates. Does nothing if the coordinate is outside the map.
-        GWCA_API bool Move(float x, float y, uint32_t zplane = 0);
-        GWCA_API bool Move(GamePos pos);
+		bool Move(GamePos pos);
+        inline bool Move(float x, float y, uint32_t zplane = 0) { return Move(GamePos(x, y, zplane)); }
 
-        GWCA_API bool InteractAgent(const Agent* agent, bool call_target = false);
+        bool InteractAgent(const Agent* agent, bool call_target = false);
 
         // Returns name of player with selected login_number.
-        GWCA_API wchar_t *GetPlayerNameByLoginNumber(uint32_t login_number);
+        wchar_t *GetPlayerNameByLoginNumber(uint32_t login_number);
 
         // Returns AgentID of player with selected login_number.
-        GWCA_API uint32_t GetAgentIdByLoginNumber(uint32_t login_number);
+        uint32_t GetAgentIdByLoginNumber(uint32_t login_number);
 
-        GWCA_API AgentID GetHeroAgentID(uint32_t hero_index);
+        AgentID GetHeroAgentID(uint32_t hero_index);
 
         // Might be bugged, avoid to use.
-        GWCA_API wchar_t* GetAgentEncName(const Agent* agent);
-        GWCA_API wchar_t* GetAgentEncName(uint32_t agent_id);
+		wchar_t* GetAgentEncNameByAgent(const Agent* agent);
+		wchar_t* GetAgentEncNameById(uint32_t agent_id);
+        inline wchar_t* GetAgentEncName(const Agent* agent) { return GetAgentEncNameByAgent(agent); }
+        inline wchar_t* GetAgentEncName(uint32_t agent_id) { return GetAgentEncNameById(agent_id); }
     };
 }
 // C Interop API
-extern "C" {
-    GWCA_API bool     SendDialog(uint32_t dialog_id);
 
-    GWCA_API uint32_t GetObservingId();
-    GWCA_API uint32_t GetControlledCharacterId();
-    GWCA_API uint32_t GetTargetId();
-    GWCA_API uint32_t GetEvaluatedTargetId();
-
-    GWCA_API void* GetAgentByID(uint32_t agent_id);
-    GWCA_API void* GetPlayerByID(uint32_t player_id);
-    GWCA_API void* GetControlledCharacter();
-    GWCA_API void* GetTargetAsAgentLiving();
-    GWCA_API void* GetMapAgentByID(uint32_t agent_id);
-    GWCA_API void* GetNPCByID(uint32_t npc_id);
-
-    GWCA_API bool     IsObserving();
-    GWCA_API uint32_t GetAmountOfPlayersInInstance();
-    GWCA_API uint32_t CountAllegianceInRange(uint32_t allegiance, float sqr_range);
-
-    GWCA_API bool     ChangeTargetByAgent(const void* agent);
-    GWCA_API bool     ChangeTargetById(uint32_t agent_id);
-
-    GWCA_API bool     Move(float x, float y, uint32_t zplane);
-    GWCA_API bool     InteractAgent(const void* agent, bool call_target);
-
-    GWCA_API const wchar_t* GetPlayerNameByLoginNumber(uint32_t login_number);
-    GWCA_API uint32_t GetAgentIdByLoginNumber(uint32_t login_number);
-    GWCA_API uint32_t GetHeroAgentID(uint32_t hero_index);
-
-    GWCA_API const wchar_t* GetAgentEncNameByAgent(const void* agent);
-    GWCA_API const wchar_t* GetAgentEncNameById(uint32_t agent_id);
+namespace GW::Agents {
+    extern "C" GWCA_API bool __cdecl GW_Agents_SendDialog(uint32_t dialog_id) noexcept;
+    extern "C" GWCA_API uint32_t __cdecl GW_Agents_GetObservingId() noexcept;
+    extern "C" GWCA_API uint32_t __cdecl GW_Agents_GetControlledCharacterId() noexcept;
+    extern "C" GWCA_API uint32_t __cdecl GW_Agents_GetTargetId() noexcept;
+    extern "C" GWCA_API uint32_t __cdecl GW_Agents_GetEvaluatedTargetId() noexcept;
+    extern "C" GWCA_API AgentArray* __cdecl GW_Agents_GetAgentArray() noexcept;
+    extern "C" GWCA_API Agent* __cdecl GW_Agents_GetAgentByID(uint32_t id) noexcept;
+    extern "C" GWCA_API Agent* __cdecl GW_Agents_GetPlayerByID(uint32_t player_id) noexcept;
+    extern "C" GWCA_API AgentLiving* __cdecl GW_Agents_GetControlledCharacter() noexcept;
+    extern "C" GWCA_API bool __cdecl GW_Agents_GetAgentMatchesFlags(const Agent* gwca_arg0, AgentTargetFlags flags) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_Agents_RefreshAgentNameTag(const Agent* gwca_arg0) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_Agents_IsObserving() noexcept;
+    extern "C" GWCA_API AgentLiving* __cdecl GW_Agents_GetTargetAsAgentLiving() noexcept;
+    extern "C" GWCA_API uint32_t __cdecl GW_Agents_GetAmountOfPlayersInInstance() noexcept;
+    extern "C" GWCA_API MapAgentArray* __cdecl GW_Agents_GetMapAgentArray() noexcept;
+    extern "C" GWCA_API uint32_t __cdecl GW_Agents_CountAllegianceInRange(GW::Constants::Allegiance allegiance, float sqr_range) noexcept;
+    extern "C" GWCA_API AgentCharData* __cdecl GW_Agents_GetAgentCharData(uint32_t agent_id) noexcept;
+    extern "C" GWCA_API MapAgent* __cdecl GW_Agents_GetMapAgentByID(uint32_t agent_id) noexcept;
+    extern "C" GWCA_API GW::Constants::ProfessionByte __cdecl GW_Agents_GetAgentPrimary(uint32_t agent_id) noexcept;
+    extern "C" GWCA_API GW::Constants::ProfessionByte __cdecl GW_Agents_GetAgentSecondary(uint32_t agent_id) noexcept;
+    extern "C" GWCA_API PlayerArray* __cdecl GW_Agents_GetPlayerArray() noexcept;
+    extern "C" GWCA_API NPCArray* __cdecl GW_Agents_GetNPCArray() noexcept;
+    extern "C" GWCA_API NPC* __cdecl GW_Agents_GetNPCByID(uint32_t npc_id) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_Agents_ChangeTarget(AgentID agent_id) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_Agents_Move(GamePos pos) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_Agents_InteractAgent(const Agent* agent, bool call_target) noexcept;
+    extern "C" GWCA_API wchar_t* __cdecl GW_Agents_GetPlayerNameByLoginNumber(uint32_t login_number) noexcept;
+    extern "C" GWCA_API uint32_t __cdecl GW_Agents_GetAgentIdByLoginNumber(uint32_t login_number) noexcept;
+    extern "C" GWCA_API AgentID __cdecl GW_Agents_GetHeroAgentID(uint32_t hero_index) noexcept;
+    extern "C" GWCA_API wchar_t* __cdecl GW_Agents_GetAgentEncNameByAgent(const Agent* agent) noexcept;
+    extern "C" GWCA_API wchar_t* __cdecl GW_Agents_GetAgentEncNameById(uint32_t agent_id) noexcept;
 }
+
+#if !defined(GWCA_BUILD_EXPORTS)
+namespace GW::Agents {
+    inline bool SendDialog(uint32_t dialog_id)
+    {
+        return GWCA_CALL_C(GW_Agents_SendDialog, dialog_id);
+    }
+
+    inline uint32_t GetObservingId()
+    {
+        return GWCA_CALL_C(GW_Agents_GetObservingId);
+    }
+
+    inline uint32_t GetControlledCharacterId()
+    {
+        return GWCA_CALL_C(GW_Agents_GetControlledCharacterId);
+    }
+
+    inline uint32_t GetTargetId()
+    {
+        return GWCA_CALL_C(GW_Agents_GetTargetId);
+    }
+
+    inline uint32_t GetEvaluatedTargetId()
+    {
+        return GWCA_CALL_C(GW_Agents_GetEvaluatedTargetId);
+    }
+
+    inline AgentArray* GetAgentArray()
+    {
+        return GWCA_CALL_C(GW_Agents_GetAgentArray);
+    }
+
+    inline Agent* GetAgentByID(uint32_t id)
+    {
+        return GWCA_CALL_C(GW_Agents_GetAgentByID, id);
+    }
+
+    inline Agent* GetPlayerByID(uint32_t player_id)
+    {
+        return GWCA_CALL_C(GW_Agents_GetPlayerByID, player_id);
+    }
+
+    inline AgentLiving* GetControlledCharacter()
+    {
+        return GWCA_CALL_C(GW_Agents_GetControlledCharacter);
+    }
+
+    inline bool GetAgentMatchesFlags(const Agent* gwca_arg0, AgentTargetFlags flags)
+    {
+        return GWCA_CALL_C(GW_Agents_GetAgentMatchesFlags, gwca_arg0, flags);
+    }
+
+    inline bool RefreshAgentNameTag(const Agent* gwca_arg0)
+    {
+        return GWCA_CALL_C(GW_Agents_RefreshAgentNameTag, gwca_arg0);
+    }
+
+    inline bool IsObserving()
+    {
+        return GWCA_CALL_C(GW_Agents_IsObserving);
+    }
+
+    inline AgentLiving* GetTargetAsAgentLiving()
+    {
+        return GWCA_CALL_C(GW_Agents_GetTargetAsAgentLiving);
+    }
+
+    inline uint32_t GetAmountOfPlayersInInstance()
+    {
+        return GWCA_CALL_C(GW_Agents_GetAmountOfPlayersInInstance);
+    }
+
+    inline MapAgentArray* GetMapAgentArray()
+    {
+        return GWCA_CALL_C(GW_Agents_GetMapAgentArray);
+    }
+
+    inline uint32_t CountAllegianceInRange(GW::Constants::Allegiance allegiance, float sqr_range)
+    {
+        return GWCA_CALL_C(GW_Agents_CountAllegianceInRange, allegiance, sqr_range);
+    }
+
+    inline AgentCharData* GetAgentCharData(uint32_t agent_id)
+    {
+        return GWCA_CALL_C(GW_Agents_GetAgentCharData, agent_id);
+    }
+
+    inline MapAgent* GetMapAgentByID(uint32_t agent_id)
+    {
+        return GWCA_CALL_C(GW_Agents_GetMapAgentByID, agent_id);
+    }
+
+    inline GW::Constants::ProfessionByte GetAgentPrimary(uint32_t agent_id)
+    {
+        return GWCA_CALL_C(GW_Agents_GetAgentPrimary, agent_id);
+    }
+
+    inline GW::Constants::ProfessionByte GetAgentSecondary(uint32_t agent_id)
+    {
+        return GWCA_CALL_C(GW_Agents_GetAgentSecondary, agent_id);
+    }
+
+    inline PlayerArray* GetPlayerArray()
+    {
+        return GWCA_CALL_C(GW_Agents_GetPlayerArray);
+    }
+
+    inline NPCArray* GetNPCArray()
+    {
+        return GWCA_CALL_C(GW_Agents_GetNPCArray);
+    }
+
+    inline NPC* GetNPCByID(uint32_t npc_id)
+    {
+        return GWCA_CALL_C(GW_Agents_GetNPCByID, npc_id);
+    }
+
+    inline bool ChangeTarget(AgentID agent_id)
+    {
+        return GWCA_CALL_C(GW_Agents_ChangeTarget, agent_id);
+    }
+
+    inline bool Move(GamePos pos)
+    {
+        return GWCA_CALL_C(GW_Agents_Move, pos);
+    }
+
+    inline bool InteractAgent(const Agent* agent, bool call_target)
+    {
+        return GWCA_CALL_C(GW_Agents_InteractAgent, agent, call_target);
+    }
+
+    inline wchar_t* GetPlayerNameByLoginNumber(uint32_t login_number)
+    {
+        return GWCA_CALL_C(GW_Agents_GetPlayerNameByLoginNumber, login_number);
+    }
+
+    inline uint32_t GetAgentIdByLoginNumber(uint32_t login_number)
+    {
+        return GWCA_CALL_C(GW_Agents_GetAgentIdByLoginNumber, login_number);
+    }
+
+    inline AgentID GetHeroAgentID(uint32_t hero_index)
+    {
+        return GWCA_CALL_C(GW_Agents_GetHeroAgentID, hero_index);
+    }
+
+    inline wchar_t* GetAgentEncNameByAgent(const Agent* agent)
+    {
+        return GWCA_CALL_C(GW_Agents_GetAgentEncNameByAgent, agent);
+    }
+
+    inline wchar_t* GetAgentEncNameById(uint32_t agent_id)
+    {
+        return GWCA_CALL_C(GW_Agents_GetAgentEncNameById, agent_id);
+    }
+}
+#endif

@@ -1,12 +1,14 @@
 #pragma once
+#include <GWCA/Runtime.h>
 
 #include <GWCA/GameContainers/Array.h>
+#include <GWCA/GameContainers/Hash.h>
 #include <GWCA/GameContainers/GamePos.h>
 #include <GWCA/Utilities/Export.h>
 
 namespace GW {
     struct WorldContext;
-    GWCA_API WorldContext* GetWorldContext();
+    WorldContext* GetWorldContext();
 
     namespace Constants {
         enum class Profession : uint32_t;
@@ -90,11 +92,10 @@ namespace GW {
 
     struct PartyMemberMoraleInfo {
         uint32_t agent_id;
-        uint32_t agent_id_dup;
-        uint32_t unk[4];
-        uint32_t morale;
-        // ... unknown size
+        THashLink<PartyMemberMoraleInfo> link;
+        uint32_t morale; // base morale = 100, boost/dp is offset from 100
     };
+    static_assert(sizeof(PartyMemberMoraleInfo) == 0x1c);
 
     struct PartyMoraleLink {
         uint32_t unk;
@@ -238,11 +239,8 @@ namespace GW {
         /* +h05EC */ Array<uint32_t> missions_completed_hm;
         /* +h05FC */ Array<uint32_t> missions_bonus_hm;
         /* +h060C */ Array<uint32_t> unlocked_map;
-        /* +h061C */ uint32_t h061C[2];
-        /* +h0624 */ PartyMemberMoraleInfo* player_morale_info;
-        /* +h0628 */ uint32_t h028C;
-        /* +h062C */ Array<PartyMoraleLink> party_morale_related;
-        /* +h063C */ uint32_t h063C[16];
+        /* +h061C */ THash<PartyMemberMoraleInfo, THashKeyIdentity<uint32_t>> morale_table; // keyed on agentid
+        /* +h0640 */ uint32_t h0640[15];
         /* +h067C */ uint32_t player_number;
         /* +h0680 */ PlayerControlledCharacter* playerControlledChar; // Struct size = 0x134 ?
         /* +h0684 */ uint32_t is_hard_mode_unlocked;
@@ -309,3 +307,16 @@ namespace GW {
     };
     static_assert(sizeof(WorldContext) == 0x854); // Not the final size of WorldContext, but used to make sure offsets are correct.
 }
+
+namespace GW {
+    extern "C" GWCA_API WorldContext* __cdecl GW_GetWorldContext() noexcept;
+}
+
+#if !defined(GWCA_BUILD_EXPORTS)
+namespace GW {
+    inline WorldContext* GetWorldContext()
+    {
+        return GWCA_CALL_C(GW_GetWorldContext);
+    }
+}
+#endif

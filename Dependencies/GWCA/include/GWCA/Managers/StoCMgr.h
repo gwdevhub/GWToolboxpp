@@ -1,4 +1,5 @@
 #pragma once
+#include <GWCA/Runtime.h>
 
 #include <GWCA/Utilities/Hook.h>
 #include <GWCA/Utilities/Export.h>
@@ -20,44 +21,27 @@ namespace GW {
     extern Module StoCModule;
 
     namespace StoC {
-        typedef HookCallback<Packet::StoC::PacketBase *> PacketCallback;
+        using NativePacketCallback = void (__cdecl *)(HookStatus* status, Packet::StoC::PacketBase* packet, void* context);
         // Altitude <= 0 fires before the packet is processed, > 0 after it.
-        GWCA_API bool RegisterPacketCallback(
+        bool RegisterPacketCallback(
             HookEntry *entry,
             uint32_t header,
-            const PacketCallback& callback,
-            int altitude = -0x8000);
+            NativePacketCallback callback,
+            void* context = nullptr,
+            int32_t altitude = -0x8000);
 
         // @Deprecated: use RegisterPacketCallback with a positive altitude instead.
-        GWCA_API bool RegisterPostPacketCallback(
+        bool RegisterPostPacketCallback(
             HookEntry* entry,
             uint32_t header,
-            const PacketCallback& callback);
+            NativePacketCallback callback, void* context = nullptr);
 
-        /* Use this to add handlers to the stocmgr, primary function. */
-        template <typename T>
-        bool RegisterPacketCallback(HookEntry *entry, const HookCallback<T*>& handler, int altitude = -0x8000) {
-            uint32_t header = Packet::StoC::Packet<T>::STATIC_HEADER;
-            return RegisterPacketCallback(entry, header,
-                                          [handler](HookStatus *status, Packet::StoC::PacketBase *pak) -> void {
-                                              return handler(status, static_cast<T *>(pak));
-                                          }, altitude);
-        }
+        size_t RemoveCallbackNative(uint32_t header, HookEntry *entry);
+        size_t RemoveCallbacksNative(HookEntry *entry);
 
-
-        // @Deprecated: use RegisterPacketCallback with a positive altitude instead.
-        template <typename T>
-        bool RegisterPostPacketCallback(HookEntry* entry, const HookCallback<T*>& handler) {
-            uint32_t header = Packet::StoC::Packet<T>::STATIC_HEADER;
-            return RegisterPostPacketCallback(entry, header,
-                                              [handler](HookStatus* status, Packet::StoC::PacketBase* pak) -> void {
-                                                  return handler(status, static_cast<T*>(pak));
-                                              });
-        }
-
-        GWCA_API size_t RemoveCallback(uint32_t header, HookEntry *entry);
-        GWCA_API size_t RemoveCallbacks(HookEntry *entry);
-
+#if !defined(GWCA_STDLIB)
+        inline size_t RemoveCallback(uint32_t header, HookEntry* entry) { return RemoveCallbackNative(header, entry); }
+        inline size_t RemoveCallbacks(HookEntry* entry) { return RemoveCallbacksNative(entry); }
         template <typename T>
         void RemoveCallback(HookEntry* entry) {
             uint32_t header = Packet::StoC::Packet<T>::STATIC_HEADER;
@@ -65,15 +49,16 @@ namespace GW {
         }
 
         // @Deprecated: use RegisterPacketCallback with a positive altitude instead.
-        GWCA_API void RemovePostCallback(uint32_t header, HookEntry* entry);
+        inline void RemovePostCallback(uint32_t header, HookEntry* entry) { (void)RemoveCallbackNative(header, entry); }
 
         template <typename T>
         void RemovePostCallback(HookEntry* entry) {
             uint32_t header = Packet::StoC::Packet<T>::STATIC_HEADER;
             RemovePostCallback(header, entry);
         }
+#endif
 
-        GWCA_API bool EmulatePacket(Packet::StoC::PacketBase *packet);
+        bool EmulatePacket(Packet::StoC::PacketBase *packet);
 
         template <typename T>
         bool EmulatePacket(Packet::StoC::Packet<T> *packet) {
@@ -82,3 +67,40 @@ namespace GW {
         }
     };
 }
+
+namespace GW::StoC {
+    extern "C" GWCA_API bool __cdecl GW_StoC_RegisterPacketCallback(HookEntry* entry, uint32_t header, NativePacketCallback callback, void* context, int32_t altitude) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_StoC_RegisterPostPacketCallback(HookEntry* entry, uint32_t header, NativePacketCallback callback, void* context) noexcept;
+    extern "C" GWCA_API size_t __cdecl GW_StoC_RemoveCallbackNative(uint32_t header, HookEntry* entry) noexcept;
+    extern "C" GWCA_API size_t __cdecl GW_StoC_RemoveCallbacksNative(HookEntry* entry) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_StoC_EmulatePacket(Packet::StoC::PacketBase* packet) noexcept;
+}
+
+#if !defined(GWCA_BUILD_EXPORTS)
+namespace GW::StoC {
+    inline bool RegisterPacketCallback(HookEntry* entry, uint32_t header, NativePacketCallback callback, void* context, int32_t altitude)
+    {
+        return GWCA_CALL_C(GW_StoC_RegisterPacketCallback, entry, header, callback, context, altitude);
+    }
+
+    inline bool RegisterPostPacketCallback(HookEntry* entry, uint32_t header, NativePacketCallback callback, void* context)
+    {
+        return GWCA_CALL_C(GW_StoC_RegisterPostPacketCallback, entry, header, callback, context);
+    }
+
+    inline size_t RemoveCallbackNative(uint32_t header, HookEntry* entry)
+    {
+        return GWCA_CALL_C(GW_StoC_RemoveCallbackNative, header, entry);
+    }
+
+    inline size_t RemoveCallbacksNative(HookEntry* entry)
+    {
+        return GWCA_CALL_C(GW_StoC_RemoveCallbacksNative, entry);
+    }
+
+    inline bool EmulatePacket(Packet::StoC::PacketBase* packet)
+    {
+        return GWCA_CALL_C(GW_StoC_EmulatePacket, packet);
+    }
+}
+#endif

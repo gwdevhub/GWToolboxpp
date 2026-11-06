@@ -1,4 +1,5 @@
 #pragma once
+#include <GWCA/Runtime.h>
 
 #include <GWCA/GameContainers/List.h>
 #include <GWCA/GameContainers/Array.h>
@@ -7,6 +8,7 @@
 
 #include <GWCA/GameEntities/Item.h>
 #include <GWCA/Utilities/Export.h>
+#include <GWCA/Utilities/Macros.h>
 
 namespace GW {
     typedef uint32_t AgentID;
@@ -94,9 +96,9 @@ namespace GW {
         // These three call through the game's vtable (see Source/Agent.cpp) -- kept
         // out of line so the wasm table-adoption dance stays an implementation
         // detail rather than something every caller's translation unit compiles.
-        GWCA_API uint32_t GetType();
-        GWCA_API bool RedrawEquipmentSlot(uint32_t slot);
-        GWCA_API bool UndrawEquipmentSlot(uint32_t slot);
+        uint32_t GetType();
+        bool RedrawEquipmentSlot(uint32_t slot);
+        bool UndrawEquipmentSlot(uint32_t slot);
     };
     static_assert(sizeof(NPCEquipment) == 0x10C);
 
@@ -237,7 +239,7 @@ namespace GW {
         /* +h00D0 */ uint32_t extra_type;
     };
     static_assert(sizeof(AgentItem) == 212, "struct AgentItem has incorrect size");
-    static_assert(offsetof(AgentItem, owner) == 0xC4, "struct AgentItem offsets are incorrect");
+    static_assert(GWCA_OFFSETOF(AgentItem, owner) == 0xC4, "struct AgentItem offsets are incorrect");
 
     struct AgentGadget : public Agent { // total: 0xE4/228
         /* +h00C4 */ uint32_t h00C4;
@@ -247,7 +249,7 @@ namespace GW {
         /* +h00D4 */ uint32_t h00D4[4];
     };
     static_assert(sizeof(AgentGadget) == 228, "struct AgentGadget has incorrect size");
-    static_assert(offsetof(AgentGadget, h00C4) == 0xC4, "struct AgentGadget offsets are incorrect");
+    static_assert(GWCA_OFFSETOF(AgentGadget, h00C4) == 0xC4, "struct AgentGadget offsets are incorrect");
 
     // Internal engine-only action-queue node: one per skill/attack state change (activated, stopped,
     // interrupted, cast started, knocked down...) from StoC GenericValue/GenericValueTarget packets, drained
@@ -362,7 +364,7 @@ namespace GW {
         inline bool IsNPC()                const { return login_number == 0; }
     };
     static_assert(sizeof(AgentLiving) == 0x1C4, "struct AgentLiving has incorrect size");
-    static_assert(offsetof(AgentLiving, owner) == 0xC4, "struct AgentLiving offsets are incorrect");
+    static_assert(GWCA_OFFSETOF(AgentLiving, owner) == 0xC4, "struct AgentLiving offsets are incorrect");
 
     AgentItem* Agent::GetAsAgentItem() {
         if (GetIsItemType())
@@ -481,3 +483,28 @@ namespace GW {
     typedef Array<AgentInfo> AgentInfoArray;
     typedef Array<AgentMovement *> AgentMovementArray;
 }
+
+namespace GW {
+    extern "C" GWCA_API uint32_t __cdecl GW_NPCEquipment_GetType(NPCEquipment* self) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_NPCEquipment_RedrawEquipmentSlot(NPCEquipment* self, uint32_t slot) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_NPCEquipment_UndrawEquipmentSlot(NPCEquipment* self, uint32_t slot) noexcept;
+}
+
+#if !defined(GWCA_BUILD_EXPORTS)
+namespace GW {
+    inline uint32_t NPCEquipment::GetType()
+    {
+        return GWCA_CALL_C(GW_NPCEquipment_GetType, this);
+    }
+
+    inline bool NPCEquipment::RedrawEquipmentSlot(uint32_t slot)
+    {
+        return GWCA_CALL_C(GW_NPCEquipment_RedrawEquipmentSlot, this, slot);
+    }
+
+    inline bool NPCEquipment::UndrawEquipmentSlot(uint32_t slot)
+    {
+        return GWCA_CALL_C(GW_NPCEquipment_UndrawEquipmentSlot, this, slot);
+    }
+}
+#endif

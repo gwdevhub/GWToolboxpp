@@ -1,4 +1,5 @@
 #pragma once
+#include <GWCA/Runtime.h>
 
 #include <GWCA/Utilities/Export.h>
 
@@ -7,43 +8,43 @@
 namespace GW {
     namespace Hook {
 
-        // A code address on x86, a function index on wasm; not void*, since function-pointer-to-void* is ill-formed and clang rejects it.
         struct HookTarget {
             uintptr_t value = 0;
             constexpr HookTarget() = default;
             constexpr HookTarget(decltype(nullptr)) {}
-            template <class T> HookTarget(T* p)
-                : value((uintptr_t)p) {}
+            constexpr HookTarget(uintptr_t address) : value(address) {}
+            template <typename T> HookTarget(T* pointer) : value(reinterpret_cast<uintptr_t>(pointer)) {}
             constexpr explicit operator bool() const { return value != 0; }
         };
 
 #if GWCA_WASM
         // The loader sizes the dispatch table with TableBytes and passes it in -- the no-arg form below has no wasm definition.
-        GWCA_API size_t TableBytes(uint32_t first_func, uint32_t func_count);
-        GWCA_API bool Initialize(void* memory, uint32_t first_func, uint32_t func_count);
+        size_t TableBytes(uint32_t first_func, uint32_t func_count);
+        bool InitializeWasm(void* memory, uint32_t first_func, uint32_t func_count);
+        inline bool Initialize(void* memory, uint32_t first, uint32_t count) { return InitializeWasm(memory, first, count); }
 
         // Move one funcref between GWCA's table and the game's, for a callback written into a game data structure (see StoCMgr).
-        GWCA_API uint32_t PublishFuncref(HookTarget local);
-        GWCA_API uint32_t AdoptFuncref(uint32_t game_slot);
+        uint32_t PublishFuncref(HookTarget local);
+        uint32_t AdoptFuncref(uint32_t game_slot);
 
         // A scanned function made callable. A scan yields a tagged code offset,
         // which is not a table index -- calling one directly traps with "table
         // index is out of bounds". A hooked function gets a callable form for
         // free as its trampoline; anything called directly and never hooked has
         // to be converted here first. 0 if it does not resolve.
-        GWCA_API uintptr_t CallableFromScan(uintptr_t scan_result);
+        uintptr_t CallableFromScan(uintptr_t scan_result);
 #else
-        GWCA_API void Initialize();
+        void Initialize();
 
         // x86 scan results are already code addresses, so call sites can be unconditional.
         inline uintptr_t CallableFromScan(uintptr_t scan_result) { return scan_result; }
 #endif
-        GWCA_API void Deinitialize();
+        void Deinitialize();
 
         // static void EnqueueHook(HookBase*); static void RemoveHook(HookBase*);
 
-        GWCA_API void EnableHooks(HookTarget target = nullptr);
-        GWCA_API void DisableHooks(HookTarget target = nullptr);
+        void EnableHooks(HookTarget target = nullptr);
+        void DisableHooks(HookTarget target = nullptr);
 
 #if GWCA_WASM
         // A trampoline is only valid for call_indirect FROM WHICHEVER MODULE'S
@@ -74,10 +75,14 @@ namespace GW {
         // be called from code compiled into gwca.wasm. Passing this from a mod
         // reproduces exactly the bug this parameter exists to prevent -- a mod
         // must supply its own import instead (see above).
-        GWCA_API uint32_t GwcaTableAdopt(uint32_t game_slot);
+        uint32_t GwcaTableAdopt(uint32_t game_slot);
 
-        GWCA_API int CreateHook(void** target, HookTarget detour, void** trampoline,
+        int CreateHookWasm(void** target, HookTarget detour, void** trampoline,
                                  TableAdoptFn caller_table_adopt);
+        inline int CreateHook(void** target, HookTarget detour, void** trampoline, TableAdoptFn adopt)
+        {
+            return CreateHookWasm(target, detour, trampoline, adopt);
+        }
 
         // Prefer this form. The void** overload erases both signatures, so a
         // detour whose type differs from its target's compiles on either
@@ -100,7 +105,7 @@ namespace GW {
         #define GWCA_CREATE_HOOK(target, detour, trampoline) \
             GW::Hook::CreateHook(target, detour, trampoline, GW::Hook::GwcaTableAdopt)
 #else
-        GWCA_API int CreateHook(void** target, HookTarget detour, void** trampoline);
+        int CreateHook(void** target, HookTarget detour, void** trampoline);
 
         // Prefer this form. The void** overload erases both signatures, so a
         // detour whose type differs from its target's compiles on either
@@ -119,10 +124,124 @@ namespace GW {
         #define GWCA_CREATE_HOOK(target, detour, trampoline) \
             GW::Hook::CreateHook(target, detour, trampoline)
 #endif
-        GWCA_API void RemoveHook(HookTarget target);
+        void RemoveHook(HookTarget target);
 
-        GWCA_API void EnterHook();
-        GWCA_API void LeaveHook();
-        GWCA_API int  GetInHookCount();
+        void EnterHook();
+        void LeaveHook();
+        int  GetInHookCount();
     }
 }
+
+namespace GW::Hook {
+#if (GWCA_WASM)
+    extern "C" GWCA_API size_t __cdecl GW_Hook_TableBytes(uint32_t first_func, uint32_t func_count) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_Hook_InitializeWasm(void* memory, uint32_t first_func, uint32_t func_count) noexcept;
+    extern "C" GWCA_API uint32_t __cdecl GW_Hook_PublishFuncref(HookTarget local) noexcept;
+    extern "C" GWCA_API uint32_t __cdecl GW_Hook_AdoptFuncref(uint32_t game_slot) noexcept;
+    extern "C" GWCA_API uintptr_t __cdecl GW_Hook_CallableFromScan(uintptr_t scan_result) noexcept;
+#endif
+#if (!((GWCA_WASM)))
+    extern "C" GWCA_API void __cdecl GW_Hook_Initialize() noexcept;
+#endif
+    extern "C" GWCA_API void __cdecl GW_Hook_Deinitialize() noexcept;
+    extern "C" GWCA_API void __cdecl GW_Hook_EnableHooks(HookTarget target) noexcept;
+    extern "C" GWCA_API void __cdecl GW_Hook_DisableHooks(HookTarget target) noexcept;
+#if (GWCA_WASM)
+    extern "C" GWCA_API uint32_t __cdecl GW_Hook_GwcaTableAdopt(uint32_t game_slot) noexcept;
+    extern "C" GWCA_API int __cdecl GW_Hook_CreateHookWasm(void** target, HookTarget detour, void** trampoline, TableAdoptFn caller_table_adopt) noexcept;
+#endif
+#if (!((GWCA_WASM)))
+    extern "C" GWCA_API int __cdecl GW_Hook_CreateHook(void** target, HookTarget detour, void** trampoline) noexcept;
+#endif
+    extern "C" GWCA_API void __cdecl GW_Hook_RemoveHook(HookTarget target) noexcept;
+    extern "C" GWCA_API void __cdecl GW_Hook_EnterHook() noexcept;
+    extern "C" GWCA_API void __cdecl GW_Hook_LeaveHook() noexcept;
+    extern "C" GWCA_API int __cdecl GW_Hook_GetInHookCount() noexcept;
+}
+
+#if !defined(GWCA_BUILD_EXPORTS)
+namespace GW::Hook {
+#if (GWCA_WASM)
+    inline size_t TableBytes(uint32_t first_func, uint32_t func_count)
+    {
+        return GWCA_CALL_C(GW_Hook_TableBytes, first_func, func_count);
+    }
+
+    inline bool InitializeWasm(void* memory, uint32_t first_func, uint32_t func_count)
+    {
+        return GWCA_CALL_C(GW_Hook_InitializeWasm, memory, first_func, func_count);
+    }
+
+    inline uint32_t PublishFuncref(HookTarget local)
+    {
+        return GWCA_CALL_C(GW_Hook_PublishFuncref, local);
+    }
+
+    inline uint32_t AdoptFuncref(uint32_t game_slot)
+    {
+        return GWCA_CALL_C(GW_Hook_AdoptFuncref, game_slot);
+    }
+
+    inline uintptr_t CallableFromScan(uintptr_t scan_result)
+    {
+        return GWCA_CALL_C(GW_Hook_CallableFromScan, scan_result);
+    }
+#endif
+#if (!((GWCA_WASM)))
+    inline void Initialize()
+    {
+        return GWCA_CALL_C(GW_Hook_Initialize);
+    }
+#endif
+    inline void Deinitialize()
+    {
+        return GWCA_CALL_C(GW_Hook_Deinitialize);
+    }
+
+    inline void EnableHooks(HookTarget target)
+    {
+        return GWCA_CALL_C(GW_Hook_EnableHooks, target);
+    }
+
+    inline void DisableHooks(HookTarget target)
+    {
+        return GWCA_CALL_C(GW_Hook_DisableHooks, target);
+    }
+#if (GWCA_WASM)
+    inline uint32_t GwcaTableAdopt(uint32_t game_slot)
+    {
+        return GWCA_CALL_C(GW_Hook_GwcaTableAdopt, game_slot);
+    }
+
+    inline int CreateHookWasm(void** target, HookTarget detour, void** trampoline, TableAdoptFn caller_table_adopt)
+    {
+        return GWCA_CALL_C(GW_Hook_CreateHookWasm, target, detour, trampoline, caller_table_adopt);
+    }
+#endif
+#if (!((GWCA_WASM)))
+    inline int CreateHook(void** target, HookTarget detour, void** trampoline)
+    {
+        return GWCA_CALL_C(GW_Hook_CreateHook, target, detour, trampoline);
+    }
+#endif
+    inline void RemoveHook(HookTarget target)
+    {
+        return GWCA_CALL_C(GW_Hook_RemoveHook, target);
+    }
+
+    inline void EnterHook()
+    {
+        return GWCA_CALL_C(GW_Hook_EnterHook);
+    }
+
+    inline void LeaveHook()
+    {
+        return GWCA_CALL_C(GW_Hook_LeaveHook);
+    }
+
+    inline int GetInHookCount()
+    {
+        return GWCA_CALL_C(GW_Hook_GetInHookCount);
+    }
+}
+#endif

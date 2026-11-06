@@ -7,6 +7,10 @@
 
 #include <GWCA/stdafx.h>
 
+#ifndef __EMSCRIPTEN__
+#include <Utils/GWCAClient.h>
+#endif
+
 // c++ style c headers
 #include <cctype>
 #include <cmath>

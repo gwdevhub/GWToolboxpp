@@ -1,4 +1,5 @@
 #pragma once
+#include <GWCA/Runtime.h>
 
 #include <GWCA/Utilities/Hook.h>
 #include <GWCA/Utilities/Export.h>
@@ -13,7 +14,7 @@ namespace GW {
         // Names below are read off Gw.exe: EvtOs.cpp translates each window message into one of these,
         // EvtQueue.cpp drains them into the dispatcher, and every id the game itself registers a handler
         // for was matched to that handler. Ids absent here are dispatched by the game but not yet identified.
-        enum class EventID {
+        enum class EventID : uint32_t {
             kAppActivated = 0x0,        // WM_ACTIVATEAPP; packet is one dword, non-zero when activated
             kFrameTick = 0x1,           // once per frame from the pump, packet is the elapsed milliseconds
             kRenderFinished = 0x2,      // once per frame after the render, packet is one dword
@@ -59,26 +60,55 @@ namespace GW {
 
         // First dword of a kFriend packet, which is what the game's own handler switches over.
         // These are the message ids FriendApi.cpp sends to the login frame, so they share that numbering.
-        enum class FriendEventType {
+        enum class FriendEventType : uint32_t {
             kStatusChanged = 0x26,
             kLocationChanged = 0x28,
             kFriendAddedOrRemoved = 0x2c
         };
 
         // (status, event_id, packet_bytes, packet_bytes_len). Altitude <= 0 runs before the game handles it, > 0 after.
-        typedef HookCallback<EventID, void*,uint32_t> EventCallback;
+        using NativeEventCallback = void (__cdecl *)(HookStatus* status, EventID event_id, void* packet, uint32_t length, void* context);
 
-        GWCA_API void RegisterEventCallback(
+        bool RegisterEventCallback(
             HookEntry *entry,
             EventID event_id,
-            const EventCallback& callback,
-            int altitude = -0x8000);
+            NativeEventCallback callback,
+            void* context = nullptr,
+            int32_t altitude = -0x8000);
 
-        GWCA_API void RemoveEventCallback(
+        void RemoveEventCallbackNative(
             HookEntry *entry,
             EventID event_id = EventID::kNone);
+#if !defined(GWCA_STDLIB)
+        inline void RemoveEventCallback(HookEntry* entry, EventID event = EventID::kNone) { RemoveEventCallbackNative(entry, event); }
+#endif
 
         // Took a length all along; the two-parameter declaration this replaces never had a definition to link against.
-        GWCA_API bool SendEventMessage(EventID event_id, void* packet_bytes, uint32_t packet_bytes_len);
+        bool SendEventMessage(EventID event_id, void* packet_bytes, uint32_t packet_bytes_len);
     };
 }
+
+namespace GW::EventMgr {
+    extern "C" GWCA_API bool __cdecl GW_EventMgr_RegisterEventCallback(HookEntry* entry, EventID event_id, NativeEventCallback callback, void* context, int32_t altitude) noexcept;
+    extern "C" GWCA_API void __cdecl GW_EventMgr_RemoveEventCallbackNative(HookEntry* entry, EventID event_id) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_EventMgr_SendEventMessage(EventID event_id, void* packet_bytes, uint32_t packet_bytes_len) noexcept;
+}
+
+#if !defined(GWCA_BUILD_EXPORTS)
+namespace GW::EventMgr {
+    inline bool RegisterEventCallback(HookEntry* entry, EventID event_id, NativeEventCallback callback, void* context, int32_t altitude)
+    {
+        return GWCA_CALL_C(GW_EventMgr_RegisterEventCallback, entry, event_id, callback, context, altitude);
+    }
+
+    inline void RemoveEventCallbackNative(HookEntry* entry, EventID event_id)
+    {
+        return GWCA_CALL_C(GW_EventMgr_RemoveEventCallbackNative, entry, event_id);
+    }
+
+    inline bool SendEventMessage(EventID event_id, void* packet_bytes, uint32_t packet_bytes_len)
+    {
+        return GWCA_CALL_C(GW_EventMgr_SendEventMessage, event_id, packet_bytes, packet_bytes_len);
+    }
+}
+#endif

@@ -1,11 +1,12 @@
 #pragma once
+#include <GWCA/Runtime.h>
 
 #include <GWCA/GameContainers/Array.h>
 #include <GWCA/Utilities/Export.h>
 
 namespace GW {
     struct AgentContext;
-    GWCA_API AgentContext* GetAgentContext();
+    AgentContext* GetAgentContext();
 
     struct AgentMovement;
     struct Agent;
@@ -57,3 +58,16 @@ namespace GW {
         //... more but meh
     };
 }
+
+namespace GW {
+    extern "C" GWCA_API AgentContext* __cdecl GW_GetAgentContext() noexcept;
+}
+
+#if !defined(GWCA_BUILD_EXPORTS)
+namespace GW {
+    inline AgentContext* GetAgentContext()
+    {
+        return GWCA_CALL_C(GW_GetAgentContext);
+    }
+}
+#endif

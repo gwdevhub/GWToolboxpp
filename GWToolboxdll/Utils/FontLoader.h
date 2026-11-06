@@ -1,7 +1,7 @@
 #pragma once
 
 #ifndef DLLAPI
-#ifdef GWCA_IMPORT
+#ifdef GWToolboxdll_EXPORTS
 #define DLLAPI
 #else
 #define DLLAPI extern "C" __declspec(dllexport)
@@ -34,7 +34,6 @@ namespace FontLoader {
     bool FontsLoaded();
     void LoadFonts(bool force = false);
 
-    // Returns the loaded font (or the default ImGui font if not yet loaded).
     DLLAPI ImFont* GetFont();
 
     void Terminate();

@@ -74,6 +74,11 @@ def native_build(repo_root: Path, dest_dir: Path, config: str) -> int:
         print("[sync_gwmod] EMSDK not set, skipping wasm build")
         return 0
 
+    gwca_file = "gwcad.wasm" if config == "Debug" else "gwca.wasm"
+    if not (repo_root / "Dependencies/GWCA/wasm" / gwca_file).is_file():
+        print(f"[sync_gwmod] {gwca_file} not supplied by the pinned native GWCA release, skipping wasm build")
+        return 0
+
     rc = _build_wasm(repo_root, config == "Debug")
     if rc:
         return rc

@@ -1,6 +1,8 @@
 #pragma once
+#include <GWCA/Runtime.h>
 
 #include <GWCA/Utilities/Hook.h>
+#include <GWCA/Utilities/Macros.h>
 #include <GWCA/Utilities/Export.h>
 #include <GWCA/GameContainers/Array.h>
 #include <GWCA/GameContainers/List.h>
@@ -80,8 +82,8 @@ namespace GW {
 			uint32_t frame_hash_id;
 			TList<FrameRelation> children;
 			TList<FrameRelation> siblings;
-			GWCA_API Frame* GetFrame();
-			GWCA_API Frame* GetParent() const;
+			Frame* GetFrame();
+			Frame* GetParent() const;
 		};
 
 		static_assert(sizeof(FrameRelation) == 0x28);
@@ -108,12 +110,18 @@ namespace GW {
 			float screen_right;
 			float screen_top;
 
-			[[nodiscard]] GWCA_API GW::Vec2f GetTopLeftOnScreen(const Frame* frame = nullptr) const;
-			[[nodiscard]] GWCA_API GW::Vec2f GetBottomRightOnScreen(const Frame* frame = nullptr) const;
-			[[nodiscard]] GWCA_API GW::Vec2f GetContentTopLeft(const Frame* frame = nullptr) const;
-			[[nodiscard]] GWCA_API GW::Vec2f GetContentBottomRight(const Frame* frame = nullptr) const;
-			[[nodiscard]] GWCA_API GW::Vec2f GetSizeOnScreen(const Frame* frame = nullptr) const;
-			[[nodiscard]] GWCA_API GW::Vec2f GetViewportScale(const Frame* frame = nullptr) const;
+			void GetTopLeftOnScreenNative(GW::Vec2f* result, const Frame* frame = nullptr) const;
+			void GetBottomRightOnScreenNative(GW::Vec2f* result, const Frame* frame = nullptr) const;
+			void GetContentTopLeftNative(GW::Vec2f* result, const Frame* frame = nullptr) const;
+			void GetContentBottomRightNative(GW::Vec2f* result, const Frame* frame = nullptr) const;
+			void GetSizeOnScreenNative(GW::Vec2f* result, const Frame* frame = nullptr) const;
+			void GetViewportScaleNative(GW::Vec2f* result, const Frame* frame = nullptr) const;
+			Vec2f GetTopLeftOnScreen(const Frame* frame = nullptr) const { Vec2f result; GetTopLeftOnScreenNative(&result, frame); return result; }
+			Vec2f GetBottomRightOnScreen(const Frame* frame = nullptr) const { Vec2f result; GetBottomRightOnScreenNative(&result, frame); return result; }
+			Vec2f GetContentTopLeft(const Frame* frame = nullptr) const { Vec2f result; GetContentTopLeftNative(&result, frame); return result; }
+			Vec2f GetContentBottomRight(const Frame* frame = nullptr) const { Vec2f result; GetContentBottomRightNative(&result, frame); return result; }
+			Vec2f GetSizeOnScreen(const Frame* frame = nullptr) const { Vec2f result; GetSizeOnScreenNative(&result, frame); return result; }
+			Vec2f GetViewportScale(const Frame* frame = nullptr) const { Vec2f result; GetViewportScaleNative(&result, frame); return result; }
 		};
 
 		struct FrameInteractionCallback {
@@ -225,7 +233,7 @@ namespace GW {
 		};
 		static_assert(sizeof(Frame) == 0x1c8);
 
-		static_assert(offsetof(Frame, relation) == 0x128);
+		static_assert(GWCA_OFFSETOF(Frame, relation) == 0x128);
 
 		struct AgentNameTagInfo {
 			/* +h0000 */ uint32_t agent_id;
@@ -254,9 +262,11 @@ namespace GW {
 			Vec2f p2;
 			bool visible() const { return (state & 0x1) != 0; }
 			// Returns vector of from X coord, to X coord.
-			GWCA_API Vec2f xAxis(float multiplier = 1.f, bool clamp_position = true) const;
+			void xAxisNative(Vec2f* result, float multiplier = 1.f, bool clamp_position = true) const;
 			// Returns vector of from Y coord, to Y coord.
-			GWCA_API Vec2f yAxis(float multiplier = 1.f, bool clamp_position = true) const;
+			void yAxisNative(Vec2f* result, float multiplier = 1.f, bool clamp_position = true) const;
+			Vec2f xAxis(float multiplier = 1.f, bool clamp_position = true) const { Vec2f result; xAxisNative(&result, multiplier, clamp_position); return result; }
+			Vec2f yAxis(float multiplier = 1.f, bool clamp_position = true) const { Vec2f result; yAxisNative(&result, multiplier, clamp_position); return result; }
 			float left(float multiplier = 1.f, bool clamp_position = true) const { return xAxis(multiplier, clamp_position).x; }
 			float right(float multiplier = 1.f, bool clamp_position = true) const { return xAxis(multiplier, clamp_position).y; }
 			float top(float multiplier = 1.f, bool clamp_position = true) const { return yAxis(multiplier, clamp_position).x; }
@@ -763,20 +773,21 @@ namespace GW {
 			void* wparam;
 			wchar_t* component_label;
 		};
+		static_assert(sizeof(CreateUIComponentPacket) == 0x18);
 
-		GWCA_API GW::Constants::Language GetTextLanguage();
+		GW::Constants::Language GetTextLanguage();
 
-		GWCA_API bool ButtonClick(Frame* btn_frame);
+		bool ButtonClick(Frame* btn_frame);
 
-		GWCA_API GW::MultiLineTextLabelFrame* GetMultilineTextFrameByEncodedString(const wchar_t* encoded_string, const bool partial_match = true);
+		GW::MultiLineTextLabelFrame* GetMultilineTextFrameByEncodedString(const wchar_t* encoded_string, const bool partial_match = true);
 
-		GWCA_API GW::ButtonFrame* GetButtonFrameByEncodedString(const wchar_t* encoded_string, const bool partial_match = true);
+		GW::ButtonFrame* GetButtonFrameByEncodedString(const wchar_t* encoded_string, const bool partial_match = true);
 
-		GWCA_API GW::TextLabelFrame* GetTextFrameByEncodedString(const wchar_t* encoded_string, const bool partial_match = true);
+		GW::TextLabelFrame* GetTextFrameByEncodedString(const wchar_t* encoded_string, const bool partial_match = true);
 
-		GWCA_API uint32_t CreateUIComponent(uint32_t parent_frame_id, uint32_t component_flags, uint32_t tab_index, UIInteractionCallback event_callback, void* wparam, const wchar_t* component_label);
+		uint32_t CreateUIComponent(uint32_t parent_frame_id, uint32_t component_flags, uint32_t tab_index, UIInteractionCallback event_callback, void* wparam, const wchar_t* component_label);
 
-		GWCA_API bool DestroyUIComponent(Frame* frame);
+		bool DestroyUIComponent(Frame* frame);
 
 		// Bitfield accepted by Frame::SetBounds/SetPositionInternal
 		enum FrameLayoutMode : uint32_t {
@@ -802,21 +813,21 @@ namespace GW {
 		}
 
 		// Frame layout primitives (GW's Frame::SetBounds/SetPosition) for a container's kMeasureContent/kSetLayout handler.
-		GWCA_API void SetFrameBounds(Frame* frame, FrameLayoutMode mode, float* rect, float* size_out);
-		GWCA_API void SetFramePosition(Frame* frame, FrameLayoutMode mode, float* rect);
+		void SetFrameBounds(Frame* frame, FrameLayoutMode mode, float* rect, float* size_out);
+		void SetFramePosition(Frame* frame, FrameLayoutMode mode, float* rect);
 
 		// Appends an additional handler onto frame->frame_callbacks
-		GWCA_API bool AddFrameCallback(Frame* frame, UIInteractionCallback callback, void* uictl_context = nullptr);
+		bool AddFrameCallback(Frame* frame, UIInteractionCallback callback, void* uictl_context = nullptr);
 
-		GWCA_API bool SelectDropdownOption(Frame* frame, uint32_t value);
+		bool SelectDropdownOption(Frame* frame, uint32_t value);
 
-		GWCA_API void* GetFrameContext(GW::UI::Frame* frame);
+		void* GetFrameContext(GW::UI::Frame* frame);
 
-		GWCA_API void* GetLastFrameContext(GW::UI::Frame* frame);
+		void* GetLastFrameContext(GW::UI::Frame* frame);
 
-		GWCA_API Frame* GetRootFrame();
+		Frame* GetRootFrame();
 
-		GWCA_API Frame* GetChildFrame(Frame* parent, uint32_t child_offset);
+		Frame* GetChildFrame(Frame* parent, uint32_t child_offset);
 		template<typename First, typename... Rest>
 			requires (std::integral<First> && (std::integral<Rest> && ...))
 		Frame* GetChildFrame(Frame* parent, First first, Rest... rest) {
@@ -829,166 +840,630 @@ namespace GW {
 			}
 		}
 
-		GWCA_API bool SetFrameTitle(GW::UI::Frame*, const wchar_t* title);
+		bool SetFrameTitle(GW::UI::Frame*, const wchar_t* title);
 
-		GWCA_API Frame* GetParentFrame(Frame* frame);
-		GWCA_API Frame* GetFrameById(uint32_t frame_id);
-		GWCA_API Frame* GetFrameByLabel(const wchar_t* frame_label);
-		GWCA_API bool Default_UICallback(InteractionMessage* interaction, void* wparam, void* lparam);
+		Frame* GetParentFrame(Frame* frame);
+		Frame* GetFrameById(uint32_t frame_id);
+		Frame* GetFrameByLabel(const wchar_t* frame_label);
+		bool Default_UICallback(InteractionMessage* interaction, void* wparam, void* lparam);
 
-		GWCA_API bool SendFrameUIMessage(UI::Frame* frame, UI::UIMessage message_id, void* wParam, void* lParam = nullptr);
+		bool SendFrameUIMessage(UI::Frame* frame, UI::UIMessage message_id, void* wParam, void* lParam = nullptr);
 
 		// SendMessage for Guild Wars UI messages, most UI interactions will use this. Returns true if not blocked
-		GWCA_API bool SendUIMessage(UI::UIMessage msgid, void* wParam = nullptr, void* lParam = nullptr);
+		bool SendUIMessage(UI::UIMessage msgid, void* wParam = nullptr, void* lParam = nullptr);
 
-		GWCA_API bool Keydown(ControlAction key, Frame* target = nullptr);
-		GWCA_API bool Keyup(ControlAction key, Frame* target = nullptr);
-		GWCA_API bool Keypress(ControlAction key, Frame* target = nullptr);
+		bool Keydown(ControlAction key, Frame* target = nullptr);
+		bool Keyup(ControlAction key, Frame* target = nullptr);
+		bool Keypress(ControlAction key, Frame* target = nullptr);
 
-		GWCA_API UI::WindowPosition* GetWindowPosition(UI::WindowID window_id);
-		GWCA_API bool SetWindowVisible(UI::WindowID window_id, bool is_visible);
-		GWCA_API bool SetWindowPosition(UI::WindowID window_id, UI::WindowPosition* info);
+		UI::WindowPosition* GetWindowPosition(UI::WindowID window_id);
+		bool SetWindowVisible(UI::WindowID window_id, bool is_visible);
+		bool SetWindowPosition(UI::WindowID window_id, UI::WindowPosition* info);
 
-		GWCA_API bool DrawOnCompass(unsigned session_id, unsigned pt_count, CompassPoint* pts);
+		bool DrawOnCompass(unsigned session_id, unsigned pt_count, CompassPoint* pts);
 
 		// Call from GameThread to be safe
-		GWCA_API ArrayByte* GetSettings();
+		ArrayByte* GetSettings();
 
-		GWCA_API bool GetIsUIDrawn();
-		GWCA_API bool GetIsShiftScreenShot();
-		GWCA_API bool GetIsWorldMapShowing();
+		bool GetIsUIDrawn();
+		bool GetIsShiftScreenShot();
+		bool GetIsWorldMapShowing();
 
-		GWCA_API void AsyncDecodeStr(const wchar_t* enc_str, wchar_t* buffer, size_t size);
-		GWCA_API void AsyncDecodeStr(const wchar_t* enc_str, DecodeStr_Callback callback, void* callback_param = 0, GW::Constants::Language language_id = (GW::Constants::Language)0xff);
+		void AsyncDecodeStrToBuffer(const wchar_t* enc_str, wchar_t* buffer, size_t size);
+		void AsyncDecodeStrWithCallback(const wchar_t* enc_str, DecodeStr_Callback callback, void* callback_param = 0, GW::Constants::Language language_id = (GW::Constants::Language)0xff);
+        inline void AsyncDecodeStr(const wchar_t* text, wchar_t* buffer, size_t size) { AsyncDecodeStrToBuffer(text, buffer, size); }
+        inline void AsyncDecodeStr(const wchar_t* text, DecodeStr_Callback callback, void* context = nullptr, GW::Constants::Language language = (GW::Constants::Language)0xff) { AsyncDecodeStrWithCallback(text, callback, context, language); }
 
-		GWCA_API bool IsValidEncStr(const wchar_t* enc_str);
+		bool IsValidEncStr(const wchar_t* enc_str);
 
-		GWCA_API bool UInt32ToEncStr(uint32_t value, wchar_t* buffer, size_t count);
-		GWCA_API uint32_t EncStrToUInt32(const wchar_t* enc_str);
+		bool UInt32ToEncStr(uint32_t value, wchar_t* buffer, size_t count);
+		uint32_t EncStrToUInt32(const wchar_t* enc_str);
 
-		GWCA_API void SetOpenLinks(bool toggle);
+		void SetOpenLinks(bool toggle);
 
-		GWCA_API uint32_t GetPreference(EnumPreference pref);
-		GWCA_API uint32_t GetPreferenceOptions(EnumPreference pref, uint32_t** options_out = 0);
-		GWCA_API uint32_t GetPreference(NumberPreference pref);
-		GWCA_API bool GetPreference(FlagPreference pref);
-		GWCA_API wchar_t* GetPreference(StringPreference pref);
-		GWCA_API bool SetPreference(EnumPreference pref, uint32_t value);
-		GWCA_API bool SetPreference(NumberPreference pref, uint32_t value);
-		GWCA_API bool SetPreference(FlagPreference pref, bool value);
-		GWCA_API bool SetPreference(StringPreference pref, wchar_t* value);
+		uint32_t GetEnumPreference(EnumPreference pref);
+		uint32_t GetPreferenceOptions(EnumPreference pref, uint32_t** options_out = 0);
+		uint32_t GetNumberPreference(NumberPreference pref);
+		bool GetFlagPreference(FlagPreference pref);
+		wchar_t* GetStringPreference(StringPreference pref);
+		bool SetEnumPreference(EnumPreference pref, uint32_t value);
+		bool SetNumberPreference(NumberPreference pref, uint32_t value);
+		bool SetFlagPreference(FlagPreference pref, bool value);
+		bool SetStringPreference(StringPreference pref, wchar_t* value);
+        inline uint32_t GetPreference(EnumPreference pref) { return GetEnumPreference(pref); }
+        inline uint32_t GetPreference(NumberPreference pref) { return GetNumberPreference(pref); }
+        inline bool GetPreference(FlagPreference pref) { return GetFlagPreference(pref); }
+        inline wchar_t* GetPreference(StringPreference pref) { return GetStringPreference(pref); }
+        inline bool SetPreference(EnumPreference pref, uint32_t value) { return SetEnumPreference(pref, value); }
+        inline bool SetPreference(NumberPreference pref, uint32_t value) { return SetNumberPreference(pref, value); }
+        inline bool SetPreference(FlagPreference pref, bool value) { return SetFlagPreference(pref, value); }
+        inline bool SetPreference(StringPreference pref, wchar_t* value) { return SetStringPreference(pref, value); }
 
-		GWCA_API bool GetCommandLinePref(const wchar_t* label, wchar_t** out);
-		GWCA_API bool GetCommandLinePref(const wchar_t* label, uint32_t* out);
-		GWCA_API bool SetCommandLinePref(const wchar_t* label, wchar_t* value);
-		GWCA_API bool SetCommandLinePref(const wchar_t* label, uint32_t value);
+		bool GetCommandLinePrefString(const wchar_t* label, wchar_t** out);
+		bool GetCommandLinePrefNumber(const wchar_t* label, uint32_t* out);
+		bool SetCommandLinePrefString(const wchar_t* label, wchar_t* value);
+		bool SetCommandLinePrefNumber(const wchar_t* label, uint32_t value);
+        inline bool GetCommandLinePref(const wchar_t* label, wchar_t** out) { return GetCommandLinePrefString(label, out); }
+        inline bool GetCommandLinePref(const wchar_t* label, uint32_t* out) { return GetCommandLinePrefNumber(label, out); }
+        inline bool SetCommandLinePref(const wchar_t* label, wchar_t* value) { return SetCommandLinePrefString(label, value); }
+        inline bool SetCommandLinePref(const wchar_t* label, uint32_t value) { return SetCommandLinePrefNumber(label, value); }
 
 		//GWCA_API void SetPreference(Preference pref, uint32_t value);
-		GWCA_API bool SetFrameVisible(UI::Frame* frame, bool flag);
-		GWCA_API bool SetFrameDisabled(UI::Frame* frame, bool flag);
+		bool SetFrameVisible(UI::Frame* frame, bool flag);
+		bool SetFrameDisabled(UI::Frame* frame, bool flag);
 
 		// Stubbed: always returns false. The underlying game function is not scanned for.
-		GWCA_API bool AddFrameUIInteractionCallback(GW::UI::Frame*, UI::UIInteractionCallback callback, void* wparam);
+		bool AddFrameUIInteractionCallback(GW::UI::Frame*, UI::UIInteractionCallback callback, void* wparam);
 
-		GWCA_API bool TriggerFrameRedraw(UI::Frame* frame);
+		bool TriggerFrameRedraw(UI::Frame* frame);
 
 		// When the player is actively using a game controller
-		GWCA_API bool IsInControllerMode();
+		bool IsInControllerMode();
 
 		// When the GW interface is in mobile layout
-		GWCA_API bool IsInMobileMode();
+		bool IsInMobileMode();
 
 		// When the player is using a game controller and is in cursor mode
-		GWCA_API bool IsInControllerCursorMode();
+		bool IsInControllerCursorMode();
 
-		typedef HookCallback<uint32_t> KeyCallback;
-		// Listen for a gw hotkey press
-		GWCA_API void RegisterKeydownCallback(
-			HookEntry* entry,
-			const KeyCallback& callback);
-		GWCA_API void RemoveKeydownCallback(
+		using NativeKeyCallback = void (__cdecl *)(HookStatus* status, uint32_t key, void* context);
+		bool RegisterKeydownCallback(HookEntry* entry, NativeKeyCallback callback, void* context = nullptr);
+		void RemoveKeydownCallbackNative(
 			HookEntry* entry);
-		// Listen for a gw hotkey release
-		GWCA_API void RegisterKeyupCallback(
-			HookEntry* entry,
-			const KeyCallback& callback);
-		GWCA_API void RemoveKeyupCallback(
+		bool RegisterKeyupCallback(HookEntry* entry, NativeKeyCallback callback, void* context = nullptr);
+		void RemoveKeyupCallbackNative(
 			HookEntry* entry);
 
-		typedef HookCallback<UIMessage, void*, void*> UIMessageCallback;
+		using NativeUIMessageCallback = void (__cdecl *)(HookStatus* status, UIMessage message_id, void* wParam, void* lParam, void* context);
 
 		// Add a listener for a broadcasted UI message. If blocked here, will not cascade to individual listening frames.
-		GWCA_API void RegisterUIMessageCallback(
+		bool RegisterUIMessageCallback(
 			HookEntry* entry,
 			UIMessage message_id,
-			const UIMessageCallback& callback,
-			int altitude = -0x8000);
+			NativeUIMessageCallback callback,
+			void* context = nullptr,
+			int32_t altitude = -0x8000);
 
-		GWCA_API void RemoveUIMessageCallback(
+		void RemoveUIMessageCallbackNative(
 			HookEntry* entry, UIMessage message_id = UIMessage::kNone);
 
-		typedef HookCallback<const Frame*, UIMessage, void*, void*> FrameUIMessageCallback;
+		using NativeFrameUIMessageCallback = void (__cdecl *)(HookStatus* status, const Frame* frame, UIMessage message_id,
+		                                               void* wParam, void* lParam, void* context);
 
 		// Add a listener for every frame that receives a UI message. Triggered onces for every frame that is listening for this message id.
-		GWCA_API void RegisterFrameUIMessageCallback(
+		bool RegisterFrameUIMessageCallback(
 			HookEntry* entry,
 			UIMessage message_id,
-			const FrameUIMessageCallback& callback,
-			int altitude = -0x8000);
+			NativeFrameUIMessageCallback callback,
+			void* context = nullptr,
+			int32_t altitude = -0x8000);
 
-		GWCA_API void RemoveFrameUIMessageCallback(
+		bool RemoveFrameUIMessageCallbackNative(
 			HookEntry* entry);
 
 
 
-		GWCA_API TooltipInfo* GetCurrentTooltip();
+		TooltipInfo* GetCurrentTooltip();
 
-		typedef std::function<void(CreateUIComponentPacket*)> CreateUIComponentCallback;
-		GWCA_API void RegisterCreateUIComponentCallback(
-			HookEntry* entry,
-			const CreateUIComponentCallback& callback,
-			int altitude = -0x8000);
+		using NativeCreateUIComponentCallback = void (__cdecl *)(CreateUIComponentPacket* packet, void* context);
+		bool RegisterCreateUIComponentCallback(HookEntry* entry, NativeCreateUIComponentCallback callback,
+		                                               void* context = nullptr, int32_t altitude = -0x8000);
 
-		GWCA_API void RemoveCreateUIComponentCallback(
-			HookEntry* entry);
+		bool RemoveCreateUIComponentCallbackNative(HookEntry* entry);
+#if !defined(GWCA_STDLIB)
+		inline void RemoveKeydownCallback(HookEntry* entry) { RemoveKeydownCallbackNative(entry); }
+		inline void RemoveKeyupCallback(HookEntry* entry) { RemoveKeyupCallbackNative(entry); }
+		inline void RemoveUIMessageCallback(HookEntry* entry, UIMessage message = UIMessage::kNone) { RemoveUIMessageCallbackNative(entry, message); }
+		inline bool RemoveFrameUIMessageCallback(HookEntry* entry) { return RemoveFrameUIMessageCallbackNative(entry); }
+		inline bool RemoveCreateUIComponentCallback(HookEntry* entry) { return RemoveCreateUIComponentCallbackNative(entry); }
+#endif
 
 	}
 }
-extern "C" {
-	GWCA_API uint32_t GetTextLanguage(void);
-	GWCA_API bool ButtonClick(void* btn_frame);
-	GWCA_API bool SelectDropdownOption(void* frame, uint32_t value);
-	GWCA_API void* GetFrameContext(void* frame);
-	GWCA_API void* GetRootFrame(void);
-	GWCA_API void* GetChildFrame(void* parent, uint32_t child_offset);
-	GWCA_API bool SetFrameTitle(void* frame, const wchar_t* title);
-	GWCA_API void* GetParentFrame(void* frame);
-	GWCA_API void* GetFrameById(uint32_t frame_id);
-	GWCA_API void* GetFrameByLabel(const wchar_t* frame_label);
-	GWCA_API bool SendUIMessage(uint32_t msgid, void* wParam, void* lParam);
-	GWCA_API void* GetWindowPosition(uint32_t window_id);
-	GWCA_API bool SetWindowVisible(uint32_t window_id, bool is_visible);
-	GWCA_API bool SetWindowPosition(uint32_t window_id, void* info);
-	GWCA_API bool GetIsUIDrawn();
-	GWCA_API bool GetIsShiftScreenShot();
-	GWCA_API bool GetIsWorldMapShowing();
-	GWCA_API bool IsValidEncStr(const wchar_t* enc_str);
-	GWCA_API bool UInt32ToEncStr(uint32_t value, wchar_t* buffer, size_t count);
-	GWCA_API uint32_t EncStrToUInt32(const wchar_t* enc_str);
-	GWCA_API uint32_t GetPreference_Enum(uint32_t pref);
-	GWCA_API uint32_t GetPreference_Number(uint32_t pref);
-	GWCA_API bool     GetPreference_Flag(uint32_t pref);
-	GWCA_API wchar_t* GetPreference_String(uint32_t pref);
-	GWCA_API bool SetPreference_Enum(uint32_t pref, uint32_t value);
-	GWCA_API bool SetPreference_Number(uint32_t pref, uint32_t value);
-	GWCA_API bool SetPreference_Flag(uint32_t pref, bool value);
-	GWCA_API bool SetPreference_String(uint32_t pref, wchar_t* value);
-	GWCA_API bool GetCommandLinePref_String(const wchar_t* label, wchar_t** out);
-	GWCA_API bool GetCommandLinePref_UInt(const wchar_t* label, uint32_t* out);
-	GWCA_API bool SetCommandLinePref_String(const wchar_t* label, wchar_t* value);
-	GWCA_API bool SetCommandLinePref_UInt(const wchar_t* label, uint32_t value);
-	GWCA_API bool SetFrameVisible(void* frame, bool flag);
-	GWCA_API bool SetFrameDisabled(void* frame, bool flag);
-	GWCA_API bool IsInControllerMode();
-	GWCA_API bool IsInControllerCursorMode();
+
+namespace GW::UI {
+    extern "C" GWCA_API Frame* __cdecl GW_UI_FrameRelation_GetFrame(FrameRelation* self) noexcept;
+    extern "C" GWCA_API Frame* __cdecl GW_UI_FrameRelation_GetParent(const FrameRelation* self) noexcept;
+    extern "C" GWCA_API void __cdecl GW_UI_FramePosition_GetTopLeftOnScreenNative(const FramePosition* self, GW::Vec2f* result, const Frame* frame) noexcept;
+    extern "C" GWCA_API void __cdecl GW_UI_FramePosition_GetBottomRightOnScreenNative(const FramePosition* self, GW::Vec2f* result, const Frame* frame) noexcept;
+    extern "C" GWCA_API void __cdecl GW_UI_FramePosition_GetContentTopLeftNative(const FramePosition* self, GW::Vec2f* result, const Frame* frame) noexcept;
+    extern "C" GWCA_API void __cdecl GW_UI_FramePosition_GetContentBottomRightNative(const FramePosition* self, GW::Vec2f* result, const Frame* frame) noexcept;
+    extern "C" GWCA_API void __cdecl GW_UI_FramePosition_GetSizeOnScreenNative(const FramePosition* self, GW::Vec2f* result, const Frame* frame) noexcept;
+    extern "C" GWCA_API void __cdecl GW_UI_FramePosition_GetViewportScaleNative(const FramePosition* self, GW::Vec2f* result, const Frame* frame) noexcept;
+    extern "C" GWCA_API void __cdecl GW_UI_WindowPosition_xAxisNative(const WindowPosition* self, Vec2f* result, float multiplier, bool clamp_position) noexcept;
+    extern "C" GWCA_API void __cdecl GW_UI_WindowPosition_yAxisNative(const WindowPosition* self, Vec2f* result, float multiplier, bool clamp_position) noexcept;
+    extern "C" GWCA_API GW::Constants::Language __cdecl GW_UI_GetTextLanguage() noexcept;
+    extern "C" GWCA_API bool __cdecl GW_UI_ButtonClick(Frame* btn_frame) noexcept;
+    extern "C" GWCA_API GW::MultiLineTextLabelFrame* __cdecl GW_UI_GetMultilineTextFrameByEncodedString(const wchar_t* encoded_string, const bool partial_match) noexcept;
+    extern "C" GWCA_API GW::ButtonFrame* __cdecl GW_UI_GetButtonFrameByEncodedString(const wchar_t* encoded_string, const bool partial_match) noexcept;
+    extern "C" GWCA_API GW::TextLabelFrame* __cdecl GW_UI_GetTextFrameByEncodedString(const wchar_t* encoded_string, const bool partial_match) noexcept;
+    extern "C" GWCA_API uint32_t __cdecl GW_UI_CreateUIComponent(uint32_t parent_frame_id, uint32_t component_flags, uint32_t tab_index, UIInteractionCallback event_callback, void* wparam, const wchar_t* component_label) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_UI_DestroyUIComponent(Frame* frame) noexcept;
+    extern "C" GWCA_API void __cdecl GW_UI_SetFrameBounds(Frame* frame, FrameLayoutMode mode, float* rect, float* size_out) noexcept;
+    extern "C" GWCA_API void __cdecl GW_UI_SetFramePosition(Frame* frame, FrameLayoutMode mode, float* rect) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_UI_AddFrameCallback(Frame* frame, UIInteractionCallback callback, void* uictl_context) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_UI_SelectDropdownOption(Frame* frame, uint32_t value) noexcept;
+    extern "C" GWCA_API void* __cdecl GW_UI_GetFrameContext(GW::UI::Frame* frame) noexcept;
+    extern "C" GWCA_API void* __cdecl GW_UI_GetLastFrameContext(GW::UI::Frame* frame) noexcept;
+    extern "C" GWCA_API Frame* __cdecl GW_UI_GetRootFrame() noexcept;
+    extern "C" GWCA_API Frame* __cdecl GW_UI_GetChildFrame(Frame* parent, uint32_t child_offset) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_UI_SetFrameTitle(GW::UI::Frame* gwca_arg0, const wchar_t* title) noexcept;
+    extern "C" GWCA_API Frame* __cdecl GW_UI_GetParentFrame(Frame* frame) noexcept;
+    extern "C" GWCA_API Frame* __cdecl GW_UI_GetFrameById(uint32_t frame_id) noexcept;
+    extern "C" GWCA_API Frame* __cdecl GW_UI_GetFrameByLabel(const wchar_t* frame_label) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_UI_Default_UICallback(InteractionMessage* interaction, void* wparam, void* lparam) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_UI_SendFrameUIMessage(UI::Frame* frame, UI::UIMessage message_id, void* wParam, void* lParam) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_UI_SendUIMessage(UI::UIMessage msgid, void* wParam, void* lParam) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_UI_Keydown(ControlAction key, Frame* target) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_UI_Keyup(ControlAction key, Frame* target) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_UI_Keypress(ControlAction key, Frame* target) noexcept;
+    extern "C" GWCA_API UI::WindowPosition* __cdecl GW_UI_GetWindowPosition(UI::WindowID window_id) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_UI_SetWindowVisible(UI::WindowID window_id, bool is_visible) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_UI_SetWindowPosition(UI::WindowID window_id, UI::WindowPosition* info) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_UI_DrawOnCompass(unsigned session_id, unsigned pt_count, CompassPoint* pts) noexcept;
+    extern "C" GWCA_API ArrayByte* __cdecl GW_UI_GetSettings() noexcept;
+    extern "C" GWCA_API bool __cdecl GW_UI_GetIsUIDrawn() noexcept;
+    extern "C" GWCA_API bool __cdecl GW_UI_GetIsShiftScreenShot() noexcept;
+    extern "C" GWCA_API bool __cdecl GW_UI_GetIsWorldMapShowing() noexcept;
+    extern "C" GWCA_API void __cdecl GW_UI_AsyncDecodeStrToBuffer(const wchar_t* enc_str, wchar_t* buffer, size_t size) noexcept;
+    extern "C" GWCA_API void __cdecl GW_UI_AsyncDecodeStrWithCallback(const wchar_t* enc_str, DecodeStr_Callback callback, void* callback_param, GW::Constants::Language language_id) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_UI_IsValidEncStr(const wchar_t* enc_str) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_UI_UInt32ToEncStr(uint32_t value, wchar_t* buffer, size_t count) noexcept;
+    extern "C" GWCA_API uint32_t __cdecl GW_UI_EncStrToUInt32(const wchar_t* enc_str) noexcept;
+    extern "C" GWCA_API void __cdecl GW_UI_SetOpenLinks(bool toggle) noexcept;
+    extern "C" GWCA_API uint32_t __cdecl GW_UI_GetEnumPreference(EnumPreference pref) noexcept;
+    extern "C" GWCA_API uint32_t __cdecl GW_UI_GetPreferenceOptions(EnumPreference pref, uint32_t** options_out) noexcept;
+    extern "C" GWCA_API uint32_t __cdecl GW_UI_GetNumberPreference(NumberPreference pref) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_UI_GetFlagPreference(FlagPreference pref) noexcept;
+    extern "C" GWCA_API wchar_t* __cdecl GW_UI_GetStringPreference(StringPreference pref) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_UI_SetEnumPreference(EnumPreference pref, uint32_t value) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_UI_SetNumberPreference(NumberPreference pref, uint32_t value) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_UI_SetFlagPreference(FlagPreference pref, bool value) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_UI_SetStringPreference(StringPreference pref, wchar_t* value) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_UI_GetCommandLinePrefString(const wchar_t* label, wchar_t** out) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_UI_GetCommandLinePrefNumber(const wchar_t* label, uint32_t* out) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_UI_SetCommandLinePrefString(const wchar_t* label, wchar_t* value) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_UI_SetCommandLinePrefNumber(const wchar_t* label, uint32_t value) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_UI_SetFrameVisible(UI::Frame* frame, bool flag) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_UI_SetFrameDisabled(UI::Frame* frame, bool flag) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_UI_AddFrameUIInteractionCallback(GW::UI::Frame* gwca_arg0, UI::UIInteractionCallback callback, void* wparam) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_UI_TriggerFrameRedraw(UI::Frame* frame) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_UI_IsInControllerMode() noexcept;
+    extern "C" GWCA_API bool __cdecl GW_UI_IsInMobileMode() noexcept;
+    extern "C" GWCA_API bool __cdecl GW_UI_IsInControllerCursorMode() noexcept;
+    extern "C" GWCA_API bool __cdecl GW_UI_RegisterKeydownCallback(HookEntry* entry, NativeKeyCallback callback, void* context) noexcept;
+    extern "C" GWCA_API void __cdecl GW_UI_RemoveKeydownCallbackNative(HookEntry* entry) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_UI_RegisterKeyupCallback(HookEntry* entry, NativeKeyCallback callback, void* context) noexcept;
+    extern "C" GWCA_API void __cdecl GW_UI_RemoveKeyupCallbackNative(HookEntry* entry) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_UI_RegisterUIMessageCallback(HookEntry* entry, UIMessage message_id, NativeUIMessageCallback callback, void* context, int32_t altitude) noexcept;
+    extern "C" GWCA_API void __cdecl GW_UI_RemoveUIMessageCallbackNative(HookEntry* entry, UIMessage message_id) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_UI_RegisterFrameUIMessageCallback(HookEntry* entry, UIMessage message_id, NativeFrameUIMessageCallback callback, void* context, int32_t altitude) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_UI_RemoveFrameUIMessageCallbackNative(HookEntry* entry) noexcept;
+    extern "C" GWCA_API TooltipInfo* __cdecl GW_UI_GetCurrentTooltip() noexcept;
+    extern "C" GWCA_API bool __cdecl GW_UI_RegisterCreateUIComponentCallback(HookEntry* entry, NativeCreateUIComponentCallback callback, void* context, int32_t altitude) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_UI_RemoveCreateUIComponentCallbackNative(HookEntry* entry) noexcept;
 }
+
+#if !defined(GWCA_BUILD_EXPORTS)
+namespace GW::UI {
+    inline Frame* FrameRelation::GetFrame()
+    {
+        return GWCA_CALL_C(GW_UI_FrameRelation_GetFrame, this);
+    }
+
+    inline Frame* FrameRelation::GetParent() const
+    {
+        return GWCA_CALL_C(GW_UI_FrameRelation_GetParent, this);
+    }
+
+    inline void FramePosition::GetTopLeftOnScreenNative(GW::Vec2f* result, const Frame* frame) const
+    {
+        return GWCA_CALL_C(GW_UI_FramePosition_GetTopLeftOnScreenNative, this, result, frame);
+    }
+
+    inline void FramePosition::GetBottomRightOnScreenNative(GW::Vec2f* result, const Frame* frame) const
+    {
+        return GWCA_CALL_C(GW_UI_FramePosition_GetBottomRightOnScreenNative, this, result, frame);
+    }
+
+    inline void FramePosition::GetContentTopLeftNative(GW::Vec2f* result, const Frame* frame) const
+    {
+        return GWCA_CALL_C(GW_UI_FramePosition_GetContentTopLeftNative, this, result, frame);
+    }
+
+    inline void FramePosition::GetContentBottomRightNative(GW::Vec2f* result, const Frame* frame) const
+    {
+        return GWCA_CALL_C(GW_UI_FramePosition_GetContentBottomRightNative, this, result, frame);
+    }
+
+    inline void FramePosition::GetSizeOnScreenNative(GW::Vec2f* result, const Frame* frame) const
+    {
+        return GWCA_CALL_C(GW_UI_FramePosition_GetSizeOnScreenNative, this, result, frame);
+    }
+
+    inline void FramePosition::GetViewportScaleNative(GW::Vec2f* result, const Frame* frame) const
+    {
+        return GWCA_CALL_C(GW_UI_FramePosition_GetViewportScaleNative, this, result, frame);
+    }
+
+    inline void WindowPosition::xAxisNative(Vec2f* result, float multiplier, bool clamp_position) const
+    {
+        return GWCA_CALL_C(GW_UI_WindowPosition_xAxisNative, this, result, multiplier, clamp_position);
+    }
+
+    inline void WindowPosition::yAxisNative(Vec2f* result, float multiplier, bool clamp_position) const
+    {
+        return GWCA_CALL_C(GW_UI_WindowPosition_yAxisNative, this, result, multiplier, clamp_position);
+    }
+
+    inline GW::Constants::Language GetTextLanguage()
+    {
+        return GWCA_CALL_C(GW_UI_GetTextLanguage);
+    }
+
+    inline bool ButtonClick(Frame* btn_frame)
+    {
+        return GWCA_CALL_C(GW_UI_ButtonClick, btn_frame);
+    }
+
+    inline GW::MultiLineTextLabelFrame* GetMultilineTextFrameByEncodedString(const wchar_t* encoded_string, const bool partial_match)
+    {
+        return GWCA_CALL_C(GW_UI_GetMultilineTextFrameByEncodedString, encoded_string, partial_match);
+    }
+
+    inline GW::ButtonFrame* GetButtonFrameByEncodedString(const wchar_t* encoded_string, const bool partial_match)
+    {
+        return GWCA_CALL_C(GW_UI_GetButtonFrameByEncodedString, encoded_string, partial_match);
+    }
+
+    inline GW::TextLabelFrame* GetTextFrameByEncodedString(const wchar_t* encoded_string, const bool partial_match)
+    {
+        return GWCA_CALL_C(GW_UI_GetTextFrameByEncodedString, encoded_string, partial_match);
+    }
+
+    inline uint32_t CreateUIComponent(uint32_t parent_frame_id, uint32_t component_flags, uint32_t tab_index, UIInteractionCallback event_callback, void* wparam, const wchar_t* component_label)
+    {
+        return GWCA_CALL_C(GW_UI_CreateUIComponent, parent_frame_id, component_flags, tab_index, event_callback, wparam, component_label);
+    }
+
+    inline bool DestroyUIComponent(Frame* frame)
+    {
+        return GWCA_CALL_C(GW_UI_DestroyUIComponent, frame);
+    }
+
+    inline void SetFrameBounds(Frame* frame, FrameLayoutMode mode, float* rect, float* size_out)
+    {
+        return GWCA_CALL_C(GW_UI_SetFrameBounds, frame, mode, rect, size_out);
+    }
+
+    inline void SetFramePosition(Frame* frame, FrameLayoutMode mode, float* rect)
+    {
+        return GWCA_CALL_C(GW_UI_SetFramePosition, frame, mode, rect);
+    }
+
+    inline bool AddFrameCallback(Frame* frame, UIInteractionCallback callback, void* uictl_context)
+    {
+        return GWCA_CALL_C(GW_UI_AddFrameCallback, frame, callback, uictl_context);
+    }
+
+    inline bool SelectDropdownOption(Frame* frame, uint32_t value)
+    {
+        return GWCA_CALL_C(GW_UI_SelectDropdownOption, frame, value);
+    }
+
+    inline void* GetFrameContext(GW::UI::Frame* frame)
+    {
+        return GWCA_CALL_C(GW_UI_GetFrameContext, frame);
+    }
+
+    inline void* GetLastFrameContext(GW::UI::Frame* frame)
+    {
+        return GWCA_CALL_C(GW_UI_GetLastFrameContext, frame);
+    }
+
+    inline Frame* GetRootFrame()
+    {
+        return GWCA_CALL_C(GW_UI_GetRootFrame);
+    }
+
+    inline Frame* GetChildFrame(Frame* parent, uint32_t child_offset)
+    {
+        return GWCA_CALL_C(GW_UI_GetChildFrame, parent, child_offset);
+    }
+
+    inline bool SetFrameTitle(GW::UI::Frame* gwca_arg0, const wchar_t* title)
+    {
+        return GWCA_CALL_C(GW_UI_SetFrameTitle, gwca_arg0, title);
+    }
+
+    inline Frame* GetParentFrame(Frame* frame)
+    {
+        return GWCA_CALL_C(GW_UI_GetParentFrame, frame);
+    }
+
+    inline Frame* GetFrameById(uint32_t frame_id)
+    {
+        return GWCA_CALL_C(GW_UI_GetFrameById, frame_id);
+    }
+
+    inline Frame* GetFrameByLabel(const wchar_t* frame_label)
+    {
+        return GWCA_CALL_C(GW_UI_GetFrameByLabel, frame_label);
+    }
+
+    inline bool Default_UICallback(InteractionMessage* interaction, void* wparam, void* lparam)
+    {
+        return GWCA_CALL_C(GW_UI_Default_UICallback, interaction, wparam, lparam);
+    }
+
+    inline bool SendFrameUIMessage(UI::Frame* frame, UI::UIMessage message_id, void* wParam, void* lParam)
+    {
+        return GWCA_CALL_C(GW_UI_SendFrameUIMessage, frame, message_id, wParam, lParam);
+    }
+
+    inline bool SendUIMessage(UI::UIMessage msgid, void* wParam, void* lParam)
+    {
+        return GWCA_CALL_C(GW_UI_SendUIMessage, msgid, wParam, lParam);
+    }
+
+    inline bool Keydown(ControlAction key, Frame* target)
+    {
+        return GWCA_CALL_C(GW_UI_Keydown, key, target);
+    }
+
+    inline bool Keyup(ControlAction key, Frame* target)
+    {
+        return GWCA_CALL_C(GW_UI_Keyup, key, target);
+    }
+
+    inline bool Keypress(ControlAction key, Frame* target)
+    {
+        return GWCA_CALL_C(GW_UI_Keypress, key, target);
+    }
+
+    inline UI::WindowPosition* GetWindowPosition(UI::WindowID window_id)
+    {
+        return GWCA_CALL_C(GW_UI_GetWindowPosition, window_id);
+    }
+
+    inline bool SetWindowVisible(UI::WindowID window_id, bool is_visible)
+    {
+        return GWCA_CALL_C(GW_UI_SetWindowVisible, window_id, is_visible);
+    }
+
+    inline bool SetWindowPosition(UI::WindowID window_id, UI::WindowPosition* info)
+    {
+        return GWCA_CALL_C(GW_UI_SetWindowPosition, window_id, info);
+    }
+
+    inline bool DrawOnCompass(unsigned session_id, unsigned pt_count, CompassPoint* pts)
+    {
+        return GWCA_CALL_C(GW_UI_DrawOnCompass, session_id, pt_count, pts);
+    }
+
+    inline ArrayByte* GetSettings()
+    {
+        return GWCA_CALL_C(GW_UI_GetSettings);
+    }
+
+    inline bool GetIsUIDrawn()
+    {
+        return GWCA_CALL_C(GW_UI_GetIsUIDrawn);
+    }
+
+    inline bool GetIsShiftScreenShot()
+    {
+        return GWCA_CALL_C(GW_UI_GetIsShiftScreenShot);
+    }
+
+    inline bool GetIsWorldMapShowing()
+    {
+        return GWCA_CALL_C(GW_UI_GetIsWorldMapShowing);
+    }
+
+    inline void AsyncDecodeStrToBuffer(const wchar_t* enc_str, wchar_t* buffer, size_t size)
+    {
+        return GWCA_CALL_C(GW_UI_AsyncDecodeStrToBuffer, enc_str, buffer, size);
+    }
+
+    inline void AsyncDecodeStrWithCallback(const wchar_t* enc_str, DecodeStr_Callback callback, void* callback_param, GW::Constants::Language language_id)
+    {
+        return GWCA_CALL_C(GW_UI_AsyncDecodeStrWithCallback, enc_str, callback, callback_param, language_id);
+    }
+
+    inline bool IsValidEncStr(const wchar_t* enc_str)
+    {
+        return GWCA_CALL_C(GW_UI_IsValidEncStr, enc_str);
+    }
+
+    inline bool UInt32ToEncStr(uint32_t value, wchar_t* buffer, size_t count)
+    {
+        return GWCA_CALL_C(GW_UI_UInt32ToEncStr, value, buffer, count);
+    }
+
+    inline uint32_t EncStrToUInt32(const wchar_t* enc_str)
+    {
+        return GWCA_CALL_C(GW_UI_EncStrToUInt32, enc_str);
+    }
+
+    inline void SetOpenLinks(bool toggle)
+    {
+        return GWCA_CALL_C(GW_UI_SetOpenLinks, toggle);
+    }
+
+    inline uint32_t GetEnumPreference(EnumPreference pref)
+    {
+        return GWCA_CALL_C(GW_UI_GetEnumPreference, pref);
+    }
+
+    inline uint32_t GetPreferenceOptions(EnumPreference pref, uint32_t** options_out)
+    {
+        return GWCA_CALL_C(GW_UI_GetPreferenceOptions, pref, options_out);
+    }
+
+    inline uint32_t GetNumberPreference(NumberPreference pref)
+    {
+        return GWCA_CALL_C(GW_UI_GetNumberPreference, pref);
+    }
+
+    inline bool GetFlagPreference(FlagPreference pref)
+    {
+        return GWCA_CALL_C(GW_UI_GetFlagPreference, pref);
+    }
+
+    inline wchar_t* GetStringPreference(StringPreference pref)
+    {
+        return GWCA_CALL_C(GW_UI_GetStringPreference, pref);
+    }
+
+    inline bool SetEnumPreference(EnumPreference pref, uint32_t value)
+    {
+        return GWCA_CALL_C(GW_UI_SetEnumPreference, pref, value);
+    }
+
+    inline bool SetNumberPreference(NumberPreference pref, uint32_t value)
+    {
+        return GWCA_CALL_C(GW_UI_SetNumberPreference, pref, value);
+    }
+
+    inline bool SetFlagPreference(FlagPreference pref, bool value)
+    {
+        return GWCA_CALL_C(GW_UI_SetFlagPreference, pref, value);
+    }
+
+    inline bool SetStringPreference(StringPreference pref, wchar_t* value)
+    {
+        return GWCA_CALL_C(GW_UI_SetStringPreference, pref, value);
+    }
+
+    inline bool GetCommandLinePrefString(const wchar_t* label, wchar_t** out)
+    {
+        return GWCA_CALL_C(GW_UI_GetCommandLinePrefString, label, out);
+    }
+
+    inline bool GetCommandLinePrefNumber(const wchar_t* label, uint32_t* out)
+    {
+        return GWCA_CALL_C(GW_UI_GetCommandLinePrefNumber, label, out);
+    }
+
+    inline bool SetCommandLinePrefString(const wchar_t* label, wchar_t* value)
+    {
+        return GWCA_CALL_C(GW_UI_SetCommandLinePrefString, label, value);
+    }
+
+    inline bool SetCommandLinePrefNumber(const wchar_t* label, uint32_t value)
+    {
+        return GWCA_CALL_C(GW_UI_SetCommandLinePrefNumber, label, value);
+    }
+
+    inline bool SetFrameVisible(UI::Frame* frame, bool flag)
+    {
+        return GWCA_CALL_C(GW_UI_SetFrameVisible, frame, flag);
+    }
+
+    inline bool SetFrameDisabled(UI::Frame* frame, bool flag)
+    {
+        return GWCA_CALL_C(GW_UI_SetFrameDisabled, frame, flag);
+    }
+
+    inline bool AddFrameUIInteractionCallback(GW::UI::Frame* gwca_arg0, UI::UIInteractionCallback callback, void* wparam)
+    {
+        return GWCA_CALL_C(GW_UI_AddFrameUIInteractionCallback, gwca_arg0, callback, wparam);
+    }
+
+    inline bool TriggerFrameRedraw(UI::Frame* frame)
+    {
+        return GWCA_CALL_C(GW_UI_TriggerFrameRedraw, frame);
+    }
+
+    inline bool IsInControllerMode()
+    {
+        return GWCA_CALL_C(GW_UI_IsInControllerMode);
+    }
+
+    inline bool IsInMobileMode()
+    {
+        return GWCA_CALL_C(GW_UI_IsInMobileMode);
+    }
+
+    inline bool IsInControllerCursorMode()
+    {
+        return GWCA_CALL_C(GW_UI_IsInControllerCursorMode);
+    }
+
+    inline bool RegisterKeydownCallback(HookEntry* entry, NativeKeyCallback callback, void* context)
+    {
+        return GWCA_CALL_C(GW_UI_RegisterKeydownCallback, entry, callback, context);
+    }
+
+    inline void RemoveKeydownCallbackNative(HookEntry* entry)
+    {
+        return GWCA_CALL_C(GW_UI_RemoveKeydownCallbackNative, entry);
+    }
+
+    inline bool RegisterKeyupCallback(HookEntry* entry, NativeKeyCallback callback, void* context)
+    {
+        return GWCA_CALL_C(GW_UI_RegisterKeyupCallback, entry, callback, context);
+    }
+
+    inline void RemoveKeyupCallbackNative(HookEntry* entry)
+    {
+        return GWCA_CALL_C(GW_UI_RemoveKeyupCallbackNative, entry);
+    }
+
+    inline bool RegisterUIMessageCallback(HookEntry* entry, UIMessage message_id, NativeUIMessageCallback callback, void* context, int32_t altitude)
+    {
+        return GWCA_CALL_C(GW_UI_RegisterUIMessageCallback, entry, message_id, callback, context, altitude);
+    }
+
+    inline void RemoveUIMessageCallbackNative(HookEntry* entry, UIMessage message_id)
+    {
+        return GWCA_CALL_C(GW_UI_RemoveUIMessageCallbackNative, entry, message_id);
+    }
+
+    inline bool RegisterFrameUIMessageCallback(HookEntry* entry, UIMessage message_id, NativeFrameUIMessageCallback callback, void* context, int32_t altitude)
+    {
+        return GWCA_CALL_C(GW_UI_RegisterFrameUIMessageCallback, entry, message_id, callback, context, altitude);
+    }
+
+    inline bool RemoveFrameUIMessageCallbackNative(HookEntry* entry)
+    {
+        return GWCA_CALL_C(GW_UI_RemoveFrameUIMessageCallbackNative, entry);
+    }
+
+    inline TooltipInfo* GetCurrentTooltip()
+    {
+        return GWCA_CALL_C(GW_UI_GetCurrentTooltip);
+    }
+
+    inline bool RegisterCreateUIComponentCallback(HookEntry* entry, NativeCreateUIComponentCallback callback, void* context, int32_t altitude)
+    {
+        return GWCA_CALL_C(GW_UI_RegisterCreateUIComponentCallback, entry, callback, context, altitude);
+    }
+
+    inline bool RemoveCreateUIComponentCallbackNative(HookEntry* entry)
+    {
+        return GWCA_CALL_C(GW_UI_RemoveCreateUIComponentCallbackNative, entry);
+    }
+}
+#endif

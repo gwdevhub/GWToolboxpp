@@ -1,4 +1,5 @@
 #pragma once
+#include <GWCA/Runtime.h>
 
 #include <GWCA/GameContainers/List.h>
 #include <GWCA/GameContainers/Array.h>
@@ -6,7 +7,7 @@
 
 namespace GW {
     struct PartyContext;
-    GWCA_API PartyContext* GetPartyContext();
+    PartyContext* GetPartyContext();
 
     struct PartyInfo;
     struct PartySearch;
@@ -42,3 +43,16 @@ namespace GW {
         bool IsPartyLeader() const { return (flag >> 0x7) & 1; }
     };
 }
+
+namespace GW {
+    extern "C" GWCA_API PartyContext* __cdecl GW_GetPartyContext() noexcept;
+}
+
+#if !defined(GWCA_BUILD_EXPORTS)
+namespace GW {
+    inline PartyContext* GetPartyContext()
+    {
+        return GWCA_CALL_C(GW_GetPartyContext);
+    }
+}
+#endif

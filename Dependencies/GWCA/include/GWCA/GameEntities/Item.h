@@ -1,6 +1,8 @@
 #pragma once
+#include <GWCA/Runtime.h>
 
 #include <GWCA/GameContainers/Array.h>
+#include <GWCA/GameContainers/Hash.h>
 #include <GWCA/Constants/ItemIDs.h>
 
 namespace GW {
@@ -150,8 +152,8 @@ namespace GW {
             return (interaction & 0x08000000) != 0;
         }
 
-        GWCA_API bool GetIsMaterial() const;
-        GWCA_API bool GetIsZcoin() const;
+        bool GetIsMaterial() const;
+        bool GetIsZcoin() const;
         GW::ItemModifier* GetModifier(const uint32_t identifier) const;
     };
     static_assert(sizeof(Item) == 84, "struct Item has incorrect size");
@@ -210,16 +212,14 @@ namespace GW {
         /* +h0088 */ uint32_t h0088[2];
         /* +h0090 */ uint32_t gold_character;
         /* +h0094 */ uint32_t gold_storage;
-        /* +0x098 */ uint32_t cached_hash;  // at m_slotSize offset
-        /* +0x09C */ uint32_t next_offset;  // = 0x9c
-        /* +0x0A0 */ Inventory* next;       // chain pointer
+        /* +h0098 */ THashLink<Inventory> next; // ItemContext::inventory_table
 
         [[nodiscard]] uint32_t inventory_id() const
         {
             return (uint32_t)unused_bag; // Fucked ourselves with this one; bag ids depend on the array starting at the inventory id...
         }
     };
-    static_assert(sizeof(Inventory) == 0xa4, "struct Inventory has incorrect size");
+    static_assert(sizeof(Inventory) == 0xac, "struct Inventory has incorrect size");
 
     // Static struct for info about available item upgrade info, used for PvP Equipment window
     struct PvPItemUpgradeInfo {
@@ -293,3 +293,22 @@ namespace GW {
             return find1(item->model_id, pos);
     }
 }
+
+namespace GW {
+    extern "C" GWCA_API bool __cdecl GW_Item_GetIsMaterial(const Item* self) noexcept;
+    extern "C" GWCA_API bool __cdecl GW_Item_GetIsZcoin(const Item* self) noexcept;
+}
+
+#if !defined(GWCA_BUILD_EXPORTS)
+namespace GW {
+    inline bool Item::GetIsMaterial() const
+    {
+        return GWCA_CALL_C(GW_Item_GetIsMaterial, this);
+    }
+
+    inline bool Item::GetIsZcoin() const
+    {
+        return GWCA_CALL_C(GW_Item_GetIsZcoin, this);
+    }
+}
+#endif

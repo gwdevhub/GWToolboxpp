@@ -1,4 +1,5 @@
 #pragma once
+#include <GWCA/Runtime.h>
 
 #include <GWCA/GameContainers/Array.h>
 #include <GWCA/Utilities/Export.h>
@@ -6,8 +7,8 @@
 namespace GW {
     struct PreGameContext;
     struct CharacterInformation;
-    GWCA_API PreGameContext* GetPreGameContext();
-    GWCA_API Array<CharacterInformation>* GetAvailableChars();
+    PreGameContext* GetPreGameContext();
+    Array<CharacterInformation>* GetAvailableChars();
 
     struct LoginCharacter {
         uint32_t unk0; // Some kind of function call
@@ -39,6 +40,22 @@ namespace GW {
     };
 }
 // C Interop API
-extern "C" {
-    GWCA_API void* GetAvailableChars();
+
+namespace GW {
+    extern "C" GWCA_API PreGameContext* __cdecl GW_GetPreGameContext() noexcept;
+    extern "C" GWCA_API Array < CharacterInformation >* __cdecl GW_GetAvailableChars() noexcept;
 }
+
+#if !defined(GWCA_BUILD_EXPORTS)
+namespace GW {
+    inline PreGameContext* GetPreGameContext()
+    {
+        return GWCA_CALL_C(GW_GetPreGameContext);
+    }
+
+    inline Array < CharacterInformation >* GetAvailableChars()
+    {
+        return GWCA_CALL_C(GW_GetAvailableChars);
+    }
+}
+#endif

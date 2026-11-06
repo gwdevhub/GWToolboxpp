@@ -1,4 +1,5 @@
 #pragma once
+#include <GWCA/Runtime.h>
 
 #include <GWCA/GameContainers/Array.h>
 #include <GWCA/Utilities/Export.h>
@@ -6,7 +7,7 @@
 
 namespace GW {
     struct ItemContext;
-    GWCA_API ItemContext* GetItemContext();
+    ItemContext* GetItemContext();
 
     struct Bag;
     struct Item;
@@ -60,3 +61,16 @@ namespace GW {
     };
     static_assert(sizeof(ItemContext) == 0x10C, "struct ItemContext has incorrect size");
 }
+
+namespace GW {
+    extern "C" GWCA_API ItemContext* __cdecl GW_GetItemContext() noexcept;
+}
+
+#if !defined(GWCA_BUILD_EXPORTS)
+namespace GW {
+    inline ItemContext* GetItemContext()
+    {
+        return GWCA_CALL_C(GW_GetItemContext);
+    }
+}
+#endif

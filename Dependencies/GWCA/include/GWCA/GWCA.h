@@ -1,4 +1,5 @@
 #pragma once
+#include <GWCA/Runtime.h>
 #include "Utilities/Export.h"
 
 /**********************************************************************************\
@@ -39,8 +40,42 @@ Packaging for distribution, cmake
 \**********************************************************************************/
 
 namespace GW {
-    GWCA_API bool Initialize();
-    GWCA_API void DisableHooks();
-    GWCA_API void EnableHooks();
-    GWCA_API void Terminate();
+    bool Initialize();
+    void DisableHooks();
+    void EnableHooks();
+    void TerminateNative();
+#if !defined(GWCA_STDLIB)
+    inline void Terminate() { TerminateNative(); }
+#endif
 }
+
+namespace GW {
+    extern "C" GWCA_API bool __cdecl GW_Initialize() noexcept;
+    extern "C" GWCA_API void __cdecl GW_DisableHooks() noexcept;
+    extern "C" GWCA_API void __cdecl GW_EnableHooks() noexcept;
+    extern "C" GWCA_API void __cdecl GW_TerminateNative() noexcept;
+}
+
+#if !defined(GWCA_BUILD_EXPORTS)
+namespace GW {
+    inline bool Initialize()
+    {
+        return GWCA_CALL_C(GW_Initialize);
+    }
+
+    inline void DisableHooks()
+    {
+        return GWCA_CALL_C(GW_DisableHooks);
+    }
+
+    inline void EnableHooks()
+    {
+        return GWCA_CALL_C(GW_EnableHooks);
+    }
+
+    inline void TerminateNative()
+    {
+        return GWCA_CALL_C(GW_TerminateNative);
+    }
+}
+#endif
