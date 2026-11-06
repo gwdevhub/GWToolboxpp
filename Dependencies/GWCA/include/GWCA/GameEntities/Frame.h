@@ -27,12 +27,12 @@ namespace GW {
     };
 
     struct TabsFrame : UI::Frame {
-        GW::UI::Frame* AddTab(const wchar_t* tab_name_enc, uint32_t flags, uint32_t child_offset_id, GW::UI::UIInteractionCallback callback, void* wparam = 0);
+        GW::UI::Frame* AddTab(const wchar_t* tab_name_enc, uint32_t flags, uint32_t tab_child_offset_id, GW::UI::UIInteractionCallback callback, void* wparam = 0);
         bool DisableTab(uint32_t tab_id);
         bool EnableTab(uint32_t tab_id);
         bool RemoveTab(uint32_t tab_id);
         bool GetCurrentTabIndex(uint32_t* tab_id);
-        bool GetTabFrameId(uint32_t tab_id, uint32_t* frame_id);
+        bool GetTabFrameId(uint32_t tab_id, uint32_t* out_frame_id);
         bool GetIsTabEnabled(uint32_t tab_id, uint32_t* is_enabled);
 		GW::UI::Frame* GetTabByLabel(const wchar_t* label);
         GW::UI::Frame* GetCurrentTab();
@@ -65,10 +65,10 @@ namespace GW {
         bool SetSortHandler(SortHandler_pt sortHandler);
         SortHandler_pt GetSortHandler();
         bool ClearItems();
-        bool RemoveItem(uint32_t child_offset_id);
+        bool RemoveItem(uint32_t item_child_offset_id);
         // Returns the frame_id of the added item's frame, or 0 on failure.
-        uint32_t AddItem(uint32_t flags, uint32_t child_offset_id, GW::UI::UIInteractionCallback callback);
-        uint32_t GetItemFrameId(uint32_t child_offset_id);
+        uint32_t AddItem(uint32_t flags, uint32_t item_child_offset_id, GW::UI::UIInteractionCallback callback);
+        uint32_t GetItemFrameId(uint32_t item_child_offset_id);
         bool GetSelectedValue(uint32_t* selected_value);
 
         // This is actually the child_frame_id of the last child in the list - things that use sorting, or the child id to identify the frame, will not represent the size.
@@ -272,9 +272,9 @@ namespace GW {
         return GWCA_CALL_C(GW_ButtonFrame_DoubleClick, this);
     }
 
-    inline GW::UI::Frame* TabsFrame::AddTab(const wchar_t* tab_name_enc, uint32_t flags, uint32_t child_offset_id, GW::UI::UIInteractionCallback callback, void* wparam)
+    inline GW::UI::Frame* TabsFrame::AddTab(const wchar_t* tab_name_enc, uint32_t flags, uint32_t tab_child_offset_id, GW::UI::UIInteractionCallback callback, void* wparam)
     {
-        return GWCA_CALL_C(GW_TabsFrame_AddTab, this, tab_name_enc, flags, child_offset_id, callback, wparam);
+        return GWCA_CALL_C(GW_TabsFrame_AddTab, this, tab_name_enc, flags, tab_child_offset_id, callback, wparam);
     }
 
     inline bool TabsFrame::DisableTab(uint32_t tab_id)
@@ -297,9 +297,9 @@ namespace GW {
         return GWCA_CALL_C(GW_TabsFrame_GetCurrentTabIndex, this, tab_id);
     }
 
-    inline bool TabsFrame::GetTabFrameId(uint32_t tab_id, uint32_t* frame_id)
+    inline bool TabsFrame::GetTabFrameId(uint32_t tab_id, uint32_t* out_frame_id)
     {
-        return GWCA_CALL_C(GW_TabsFrame_GetTabFrameId, this, tab_id, frame_id);
+        return GWCA_CALL_C(GW_TabsFrame_GetTabFrameId, this, tab_id, out_frame_id);
     }
 
     inline bool TabsFrame::GetIsTabEnabled(uint32_t tab_id, uint32_t* is_enabled)
@@ -362,19 +362,19 @@ namespace GW {
         return GWCA_CALL_C(GW_ScrollableFrame_ClearItems, this);
     }
 
-    inline bool ScrollableFrame::RemoveItem(uint32_t child_offset_id)
+    inline bool ScrollableFrame::RemoveItem(uint32_t item_child_offset_id)
     {
-        return GWCA_CALL_C(GW_ScrollableFrame_RemoveItem, this, child_offset_id);
+        return GWCA_CALL_C(GW_ScrollableFrame_RemoveItem, this, item_child_offset_id);
     }
 
-    inline uint32_t ScrollableFrame::AddItem(uint32_t flags, uint32_t child_offset_id, GW::UI::UIInteractionCallback callback)
+    inline uint32_t ScrollableFrame::AddItem(uint32_t flags, uint32_t item_child_offset_id, GW::UI::UIInteractionCallback callback)
     {
-        return GWCA_CALL_C(GW_ScrollableFrame_AddItem, this, flags, child_offset_id, callback);
+        return GWCA_CALL_C(GW_ScrollableFrame_AddItem, this, flags, item_child_offset_id, callback);
     }
 
-    inline uint32_t ScrollableFrame::GetItemFrameId(uint32_t child_offset_id)
+    inline uint32_t ScrollableFrame::GetItemFrameId(uint32_t item_child_offset_id)
     {
-        return GWCA_CALL_C(GW_ScrollableFrame_GetItemFrameId, this, child_offset_id);
+        return GWCA_CALL_C(GW_ScrollableFrame_GetItemFrameId, this, item_child_offset_id);
     }
 
     inline bool ScrollableFrame::GetSelectedValue(uint32_t* selected_value)
