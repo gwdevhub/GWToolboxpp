@@ -5,12 +5,12 @@
   "abi": "0x040C0000",
   "assets": {
     "gwca.dll": {
-      "size": 534030,
-      "sha256": "2ba4923dba192e94d43b53539603580482957d38bd1d94437c11f6933e1c8962"
+      "size": 535054,
+      "sha256": "8d5db98ea7ab75e8eebda577fec4054e99042c10bf7b40547f96d3ed6203ca80"
     },
     "GWCA-headers.zip": {
-      "size": 213998,
-      "sha256": "86e6f6cd43d24e1215538e9f15224fb073f3d877f03396c91f0f0c103039e4e3"
+      "size": 213983,
+      "sha256": "d547b773017bf52a5274cf96b8212cf3232150150ba554c1c892e54aa87d018b"
     }
   }
 }

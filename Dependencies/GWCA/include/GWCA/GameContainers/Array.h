@@ -92,7 +92,7 @@ namespace GW {
 	// Use for arrays that are sorted on an integer key
 	// Examples are skillbars, questlog, etc. A lot of WorldContext arrays are bsearchable
 	// Key is the field that the array is sorted/indexed on.
-	//
+	// 
 	// ex  typedef ArraySorted<Quest,&Quest::quest_id> QuestLog;
 	//	   QuestLog& log = GetQuestLogOrWhatever();
 	//	   Quest* q = log.find(QUEST_ID_MALLYX_THE_UNYIELDING);

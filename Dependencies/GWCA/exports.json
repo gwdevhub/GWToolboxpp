@@ -1,6 +1,6 @@
 {
   "abi": "0x040C0000u",
-  "schema": "d4e37a92919f9e8a",
+  "schema": "f84bbdbff525d558",
   "validation_export": "GWCA_ValidateApi",
   "exports": [
     {

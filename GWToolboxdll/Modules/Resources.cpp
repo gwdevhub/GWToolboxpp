@@ -680,8 +680,8 @@ bool Resources::WriteFile(const std::filesystem::path& path_to_file, const std::
     std::ofstream f(path_to_file, flags);
     if (!f) return false;
     f.write(content.data(), static_cast<std::streamsize>(content.size()));
-    if (!f) return false;
-    return true;
+    f.close();
+    return !f.fail();
 }
 
 bool Resources::Download(const std::string& url, std::string& response)

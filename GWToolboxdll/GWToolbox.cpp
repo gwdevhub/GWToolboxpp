@@ -297,9 +297,9 @@ namespace {
         if (!version_info_size) return false;
         std::vector<BYTE> version_data(version_info_size);
         if (!GetFileVersionInfoW(dll_path_str.c_str(), handle, version_info_size, version_data.data())) return false;
-        VS_FIXEDFILEINFO* file_info;
-        UINT len;
-        if (!VerQueryValueA(version_data.data(), "\\", (LPVOID*)&file_info, &len)) return false;
+        VS_FIXEDFILEINFO* file_info = nullptr;
+        UINT len = 0;
+        if (!VerQueryValueA(version_data.data(), "\\", (LPVOID*)&file_info, &len) || !file_info || len < sizeof(*file_info)) return false;
         WORD file_version_major = HIWORD(file_info->dwFileVersionMS);
         WORD file_version_minor = LOWORD(file_info->dwFileVersionMS);
         WORD file_version_patch = HIWORD(file_info->dwFileVersionLS);
