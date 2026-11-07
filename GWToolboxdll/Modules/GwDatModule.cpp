@@ -6,7 +6,6 @@
 #include <map>
 #include <memory>
 #include <mutex>
-#include <stdexcept>
 #include <utility>
 
 #include <Logger.h>
@@ -28,6 +27,7 @@ namespace {
 
     namespace Downloads {
         using State = GwDatModule::DownloadState;
+        using Status = GwDatModule::DownloadStatus;
         using File = GwDatModule::DownloadedFile;
         using FilePtr = GwDatModule::DownloadedFilePtr;
         using Callback = GwDatModule::DownloadCallback;
@@ -35,7 +35,7 @@ namespace {
         struct Request {
             State state = State::Pending;
             FilePtr file;
-            std::string error;
+            Status status = Status::Success;
             std::vector<Callback> callbacks;
             uint64_t last_used = 0;
         };
@@ -43,7 +43,7 @@ namespace {
         struct Completion {
             Callback callback;
             FilePtr file;
-            std::string error;
+            Status status;
         };
 
         constexpr size_t maximum_cache_bytes = 128 * 1024 * 1024;
@@ -65,6 +65,22 @@ namespace {
         SubmitFiles submit_files = nullptr;
         const uint32_t* downloads_disabled = nullptr;
 
+        bool EvictCachedFile(uint32_t keep = 0)
+        {
+            auto oldest = requests.end();
+            for (auto it = requests.begin(); it != requests.end(); ++it) {
+                if (it->first != keep && it->second.state != State::Pending &&
+                    (oldest == requests.end() || it->second.last_used < oldest->second.last_used))
+                    oldest = it;
+            }
+            if (oldest == requests.end())
+                return false;
+            if (oldest->second.file)
+                cache_bytes -= oldest->second.file->data.size();
+            requests.erase(oldest);
+            return true;
+        }
+
         void RunWorker(std::stop_token stop)
         {
             WSADATA winsock{};
@@ -81,60 +97,45 @@ namespace {
                     pending.pop_front();
                 }
                 FilePtr file;
-                std::string error;
-                try {
-                    if (!network_started)
-                        throw std::runtime_error("Could not initialize Winsock");
-                    if (revisions.empty()) {
-                        std::vector<uint8_t> manifest;
-                        // The client's reserved dependency-table alias pins downloads to its own asset revision.
-                        if (!GwDatModule::ReadFile(0x1001, manifest))
-                            throw std::runtime_error("The client's asset manifest is not available in Gw.dat");
-                        revisions = GuildWarsFileServer::ParseManifest(manifest);
-                    }
+                auto status = network_started ? Status::Success : Status::NetworkError;
+                if (status == Status::Success && revisions.empty()) {
+                    std::vector<uint8_t> manifest;
+                    // The client's reserved dependency-table alias pins downloads to its own asset revision.
+                    status = GwDatModule::ReadFile(0x1001, manifest)
+                        ? GuildWarsFileServer::ParseManifest(manifest, revisions) : Status::ManifestUnavailable;
+                }
+                if (status == Status::Success) {
                     const auto found = revisions.find(base_id);
                     const auto file_id = found == revisions.end() ? base_id : found->second;
                     file = downloaded[file_id].lock();
                     if (!file) {
                         auto result = std::make_shared<File>();
                         result->file_id = file_id;
-                        result->data = GuildWarsFileServer::Download(file_id, stop);
-                        file = std::move(result);
-                        downloaded[file_id] = file;
+                        status = GuildWarsFileServer::Download(file_id, result->data, stop);
+                        if (status == Status::Success) {
+                            file = std::move(result);
+                            downloaded[file_id] = file;
+                        }
                     }
-                }
-                catch (const std::exception& exception) {
-                    error = exception.what();
                 }
                 {
                     const auto lock = std::scoped_lock(mutex);
                     if (stop.stop_requested())
                         break;
-                    auto& request = requests.at(base_id);
+                    auto& request = requests.find(base_id)->second;
                     request.file = file;
-                    request.error = error;
+                    request.status = status;
                     request.state = file ? State::Ready : State::Failed;
                     request.last_used = ++usage_clock;
                     if (file)
                         cache_bytes += file->data.size();
                     for (auto& callback : request.callbacks)
-                        completions.push_back({std::move(callback), file, error});
+                        completions.push_back({std::move(callback), file, status});
                     request.callbacks.clear();
-                    while (cache_bytes > maximum_cache_bytes) {
-                        auto oldest = requests.end();
-                        for (auto it = requests.begin(); it != requests.end(); ++it) {
-                            if (it->first != base_id && it->second.state == State::Ready &&
-                                (oldest == requests.end() || it->second.last_used < oldest->second.last_used))
-                                oldest = it;
-                        }
-                        if (oldest == requests.end())
-                            break;
-                        cache_bytes -= oldest->second.file->data.size();
-                        requests.erase(oldest);
-                    }
+                    while (cache_bytes > maximum_cache_bytes && EvictCachedFile(base_id)) {}
                 }
-                if (!error.empty())
-                    Log::Log("[file-server] File %u: %s", base_id, error.c_str());
+                if (status != Status::Success)
+                    Log::Log("[file-server] File %u: %s", base_id, GuildWarsFileServer::StatusMessage(status));
             }
             if (network_started)
                 WSACleanup();
@@ -423,19 +424,8 @@ bool GwDatModule::FetchFile(uint32_t base_file_id, DownloadCallback callback)
         return false;
     auto found = requests.find(base_file_id);
     if (found == requests.end()) {
-        if (requests.size() >= maximum_requests) {
-            auto oldest = requests.end();
-            for (auto it = requests.begin(); it != requests.end(); ++it) {
-                if (it->second.state != State::Pending &&
-                    (oldest == requests.end() || it->second.last_used < oldest->second.last_used))
-                    oldest = it;
-            }
-            if (oldest == requests.end())
-                return false;
-            if (oldest->second.file)
-                cache_bytes -= oldest->second.file->data.size();
-            requests.erase(oldest);
-        }
+        if (requests.size() >= maximum_requests && !EvictCachedFile())
+            return false;
         found = requests.emplace(base_file_id, Request{}).first;
         pending.push_back(base_file_id);
         if (native_requested.insert(base_file_id).second)
@@ -448,7 +438,7 @@ bool GwDatModule::FetchFile(uint32_t base_file_id, DownloadCallback callback)
         if (request.state == State::Pending)
             request.callbacks.push_back(std::move(callback));
         else
-            completions.push_back({std::move(callback), request.file, request.error});
+            completions.push_back({std::move(callback), request.file, request.status});
     }
     return true;
 }
@@ -758,7 +748,7 @@ void GwDatModule::Update(float)
         if (!client_files.empty())
             submit_files(static_cast<uint32_t>(client_files.size()), client_files.data(), 0);
         for (auto& completion : ready)
-            completion.callback(std::move(completion.file), completion.error);
+            completion.callback(std::move(completion.file), completion.status);
     }
     if (stopping.load(std::memory_order_acquire) || !deferred_count.load(std::memory_order_acquire))
         return;

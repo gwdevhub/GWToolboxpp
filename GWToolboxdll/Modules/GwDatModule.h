@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ToolboxModule.h>
+#include <Utils/GuildWarsFileServer.h>
 
 #include <atomic>
 #include <cstdint>
@@ -8,7 +9,6 @@
 #include <functional>
 #include <memory>
 #include <mutex>
-#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -38,8 +38,9 @@ public:
         std::vector<uint8_t> data;
     };
 
+    using DownloadStatus = GuildWarsFileServer::Status;
     using DownloadedFilePtr = std::shared_ptr<const DownloadedFile>;
-    using DownloadCallback = std::function<void(DownloadedFilePtr file, const std::string& error)>;
+    using DownloadCallback = std::function<void(DownloadedFilePtr file, DownloadStatus status)>;
 
     static bool FetchFile(uint32_t base_file_id, DownloadCallback callback = nullptr);
     static DownloadState GetDownloadedFile(uint32_t base_file_id, DownloadedFilePtr& file);
