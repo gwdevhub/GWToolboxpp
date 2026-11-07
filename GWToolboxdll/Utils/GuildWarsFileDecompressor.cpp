@@ -198,7 +198,7 @@ namespace {
                     const auto index = group.last - ((bits - group.first) >> (32 - group.length));
                     if (index < 0 || index >= std::ssize(large_values))
                         Corrupt();
-                    value = large_values[index];
+                    value = large_values[static_cast<size_t>(index)];
                     length = group.length;
                     found = true;
                     break;
