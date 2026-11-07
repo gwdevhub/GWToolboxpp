@@ -4,14 +4,14 @@
 
 #include <Modules/Resources.h>
 #include <Modules/ToolboxTheme.h>
+#include <Windows/SettingsWindow.h>
 
 #include "GWToolbox.h"
 #include <ImGuiAddons.h>
 
-constexpr auto IniFilename = L"Theme.ini"; // legacy, read-only fallback
+constexpr auto IniFilename = L"Theme.ini";
 constexpr auto ThemeJsonFilename = L"Theme.json";
-// @Enhancement: Allow users to save different layouts by changing this variable in settings
-constexpr auto WindowPositionsFilename = L"Layout.ini"; // legacy, read-only fallback
+constexpr auto WindowPositionsFilename = L"Layout.ini";
 constexpr auto LayoutJsonFilename = L"Layout.json";
 constexpr auto IniSection = "Theme";
 
@@ -31,7 +31,6 @@ namespace {
             *out = new ToolboxIni(false, false, false);
             reload_from_disk = true;
         }
-        // Theme.ini / Layout.ini are read-only legacy fallbacks; they only exist in the old layout
         const auto path = Resources::GetLegacySettingFile(filename);
         if (!reload_from_disk && !GWToolbox::SettingsFolderChanged()) {
             return *out;
@@ -138,7 +137,6 @@ ImGuiStyle ToolboxTheme::DefaultTheme()
     style.ScrollbarRounding = 4.0f;
     style.GrabMinSize = 17.0f;
     style.GrabRounding = 2.0f;
-    // fixme: rewrite the colors to remove the need for SwapRB
     style.Colors[ImGuiCol_WindowBg] = ImColor(0xD0000000);
     style.Colors[ImGuiCol_TitleBg] = ImColor(0xD7282828);
     style.Colors[ImGuiCol_TitleBgCollapsed] = ImColor(0x82282828);
@@ -158,6 +156,22 @@ ImGuiStyle ToolboxTheme::DefaultTheme()
     return style;
 }
 
+void ToolboxTheme::Initialize()
+{
+    ToolboxUIElement::Initialize();
+    for (const auto* label : {
+             "Restore Default", "Global Alpha", "Global Font Scale",
+             "Window Padding", "Window Rounding", "Frame Padding", "Frame Rounding",
+             "Item Spacing", "Item InnerSpacing", "Indent Spacing",
+             "Scrollbar Size", "Scrollbar Rounding", "Grab MinSize", "Grab Rounding",
+             "Window Title Align", "Button Text Align"}) {
+        SettingsWindow::RegisterSearchLabel(SettingsName(), label);
+    }
+    for (auto i = 0; i < ImGuiCol_COUNT; i++) {
+        SettingsWindow::RegisterSearchLabel(SettingsName(), ImGui::GetStyleColorName(i));
+    }
+}
+
 void ToolboxTheme::Terminate()
 {
     ToolboxUIElement::Terminate();
@@ -166,19 +180,17 @@ void ToolboxTheme::Terminate()
     layout_ini = theme_ini = nullptr;
 }
 
-// Theme values live in Theme.json (a separate, shareable file), not in the SettingsDoc
 void ToolboxTheme::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
     ToolboxUIElement::LoadSettings(doc, legacy);
 
     const auto json_path = Resources::GetSettingFile(ThemeJsonFilename);
     if (std::filesystem::exists(json_path)) {
-        // Seed from the current style so keys missing from the file keep their values
         auto theme = ThemeFromStyle(ini_style, font_scale_main);
         if (ReadJsonFile(json_path, theme)) {
             font_scale_main = theme.FontGlobalScale;
             ApplyThemeToStyle(theme, ini_style);
-            ini_style.Alpha = std::min(std::max(ini_style.Alpha, 0.2f), 1.0f); // clamp to [0.2, 1.0]
+            ini_style.Alpha = std::min(std::max(ini_style.Alpha, 0.2f), 1.0f);
             layout_dirty = true;
             return;
         }
@@ -193,7 +205,7 @@ void ToolboxTheme::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
     font_scale_main = static_cast<float>(inifile->GetDoubleValue(IniSection, "FontGlobalScale", font_scale_main));
 
     ini_style.Alpha = static_cast<float>(inifile->GetDoubleValue(IniSection, "GlobalAlpha", ini_style.Alpha));
-    ini_style.Alpha = std::min(std::max(ini_style.Alpha, 0.2f), 1.0f); // clamp to [0.2, 1.0]
+    ini_style.Alpha = std::min(std::max(ini_style.Alpha, 0.2f), 1.0f);
     ini_style.WindowPadding.x = static_cast<float>(inifile->GetDoubleValue(IniSection, "WindowPaddingX", ini_style.WindowPadding.x));
     ini_style.WindowPadding.y = static_cast<float>(inifile->GetDoubleValue(IniSection, "WindowPaddingY", ini_style.WindowPadding.y));
     ini_style.WindowRounding = static_cast<float>(inifile->GetDoubleValue(IniSection, "WindowRounding", ini_style.WindowRounding));
@@ -228,7 +240,6 @@ void ToolboxTheme::SaveUILayout()
         return;
     }
 
-    // Flags that mark windows not worth persisting (child widgets, popups, tooltips, etc.)
     constexpr ImGuiWindowFlags skip_flags =
         ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Popup |
         ImGuiWindowFlags_Modal | ImGuiWindowFlags_Tooltip |
@@ -241,8 +252,6 @@ void ToolboxTheme::SaveUILayout()
         if (window->Flags & skip_flags)
             continue;
 
-        // Use only the stable ID (part after ### or ##) so renaming a window doesn't
-        // orphan old entries. E.g. "My Build###teambuild_1" → key "teambuild_1".
         const char* save_id = GetWindowSaveId(window->Name);
 
         layout[save_id] = {
@@ -276,7 +285,6 @@ void ToolboxTheme::LoadUILayout()
     const auto json_path = Resources::GetSettingFile(LayoutJsonFilename);
     const bool json_loaded = std::filesystem::exists(json_path) && ReadJsonFile(json_path, layout);
     if (json_loaded) {
-        // Repair entries an earlier fallback keyed by full window name; stable-id entries are newer and win
         std::map<std::string, WindowLayout> normalized;
         for (const auto& [name, entry] : layout) {
             if (GetWindowSaveId(name.c_str()) == name) {
@@ -292,8 +300,6 @@ void ToolboxTheme::LoadUILayout()
         layout = std::move(normalized);
     }
     if (!json_loaded) {
-        // Legacy fallback: convert Layout.ini's _<save_id>_X/_Y/_W/_H/_Collapsed keys.
-        // save_id is the stable identifier (part after ### or ## in the window name, or the full name).
         const auto ini = GetLayoutIni();
         const auto window_ini_section = "Windows";
 
@@ -304,16 +310,12 @@ void ToolboxTheme::LoadUILayout()
             const char* k = key.pItem;
             if (k[0] != '_') continue;
 
-            // Only process _X keys to avoid visiting each window 5 times.
             const size_t klen = strlen(k);
             if (klen < 3 || k[klen - 2] != '_' || k[klen - 1] != 'X') continue;
 
-            // Extract window name: strip leading _ and trailing _X
             const std::string window_name(k + 1, klen - 3);
             if (window_name.empty()) continue;
 
-            // Old versions keyed entries by full window name (e.g. "My Build###teambuild_1");
-            // normalise to the stable save id so lookups and re-saves use the same key.
             const std::string save_id = GetWindowSaveId(window_name.c_str());
             if (save_id.empty()) continue;
 
@@ -334,7 +336,6 @@ void ToolboxTheme::LoadUILayout()
         }
     }
 
-    // First, handle existing windows
     ImVector<ImGuiWindow*>& windows = ImGui::GetCurrentContext()->Windows;
     for (ImGuiWindow* window : windows) {
         if (!window) {
@@ -343,9 +344,7 @@ void ToolboxTheme::LoadUILayout()
         ApplyWindowSettings(window);
     }
 
-    // Second, pre-populate ImGui's internal settings for windows not yet open.
     for (const auto& [save_id, entry] : layout) {
-        // Check if a window with this stable ID already exists (handled above).
         bool exists = false;
         for (ImGuiWindow* window : windows) {
             if (window && strcmp(GetWindowSaveId(window->Name), save_id.c_str()) == 0) {
@@ -393,7 +392,7 @@ void ToolboxTheme::SaveSettings(SettingsDoc& doc)
     ToolboxUIElement::SaveSettings(doc);
 
     if (!ImGui::GetCurrentContext() || !imgui_style_loaded) {
-        return; // Imgui not initialised, can happen if destructing before first draw
+        return;
     }
 
     const ImGuiStyle& style = ImGui::GetStyle();

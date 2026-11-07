@@ -28,9 +28,7 @@ namespace {
         int score = 0;
     };
 
-    // Settings sub-headers (ImGui::TreeNodeEx within a section's draw) declared via RegisterSubSection,
-    // so search can surface them even while the parent section is collapsed.
-    std::vector<std::pair<std::string, std::string>> sub_sections; // {section, label}
+    std::vector<std::pair<std::string, std::string>> search_labels;
 
     // -1 = no match; lower is better: exact prefix > word prefix > substring
     int MatchScore(const std::string& text_lower, const std::string& query_lower)
@@ -216,7 +214,7 @@ namespace {
                 results.push_back({.nav_section = nav_section, .label = e.label, .score = best});
             }
         }
-        for (const auto& [section, label] : sub_sections) {
+        for (const auto& [section, label] : search_labels) {
             const auto score = MatchScore(CachedToLower(label), query_lower);
             if (score >= 0) {
                 results.push_back({.nav_section = section, .label = label, .score = score});
@@ -313,11 +311,16 @@ void SettingsWindow::NavigateToSection(const char* section, const bool expand_su
 
 void SettingsWindow::RegisterSubSection(const char* section, const char* label)
 {
-    const auto exists = std::ranges::any_of(sub_sections, [&](const auto& e) {
+    RegisterSearchLabel(section, label);
+}
+
+void SettingsWindow::RegisterSearchLabel(const char* section, const char* label)
+{
+    const auto exists = std::ranges::any_of(search_labels, [&](const auto& e) {
         return e.first == section && e.second == label;
     });
     if (!exists) {
-        sub_sections.emplace_back(section, label);
+        search_labels.emplace_back(section, label);
     }
 }
 
