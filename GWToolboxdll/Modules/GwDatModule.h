@@ -5,6 +5,8 @@
 #include <atomic>
 #include <cstdint>
 #include <filesystem>
+#include <functional>
+#include <memory>
 #include <mutex>
 #include <string>
 #include <unordered_map>
@@ -26,7 +28,21 @@ public:
     void Initialize() override;
     void Update(float) override;
     void SignalTerminate() override;
+    bool CanTerminate() override;
     void Terminate() override;
+
+    enum class DownloadState { NotRequested, Pending, Ready, Failed };
+
+    struct DownloadedFile {
+        uint32_t file_id = 0;
+        std::vector<uint8_t> data;
+    };
+
+    using DownloadedFilePtr = std::shared_ptr<const DownloadedFile>;
+    using DownloadCallback = std::function<void(DownloadedFilePtr file, const std::string& error)>;
+
+    static bool FetchFile(uint32_t base_file_id, DownloadCallback callback = nullptr);
+    static DownloadState GetDownloadedFile(uint32_t base_file_id, DownloadedFilePtr& file);
 
     // True once the client's Gw.dat has been located and its index parsed (no load attempt of its own).
     static bool IsLoaded();

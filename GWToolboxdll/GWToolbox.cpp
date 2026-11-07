@@ -38,7 +38,6 @@
 #include <Modules/DialogModule.h>
 #include <Modules/GameSettings.h>
 #include <Modules/GwDatModule.h>
-#include <Modules/GuildWarsFileServerModule.h>
 #include <Modules/HallOfMonumentsModule.h>
 #include <Modules/InventoryManager.h>
 #include <Modules/ItemDescriptionHandler.h>
@@ -1258,7 +1257,6 @@ void GWToolbox::UpdateInitialising(float)
     ToggleModule(MainWindow::Instance());
     ToggleModule(DialogModule::Instance());
 
-    ToggleModule(GuildWarsFileServerModule::Instance());
     ToggleModule(GwDatModule::Instance());
     ToggleModule(Updater::Instance());
     ToggleModule(ChatCommands::Instance());
