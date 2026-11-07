@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <span>
 #include <vector>
 
 // ArenaNet File Format (FFNA) Parser
@@ -257,6 +258,7 @@ enum class ChunkType : uint32_t {
 
         const bool isValid() override;
         const Chunk* FindChunk(ChunkType chunk_type);
+        static const Chunk* FindChunk(std::span<const uint8_t> bytes, ChunkType chunk_type);
     };
 
     struct ATexFile : GameAssetFile {

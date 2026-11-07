@@ -315,6 +315,7 @@ target_link_libraries(GWToolboxdll PRIVATE
     # libs:
     dbghelp.lib # for MiniDump
     bcrypt.lib  # for SHA256 (Resources.cpp)
+    ws2_32.lib
     )
 
 # Only 1.19 has actually been validated against these shaders; 1.6 (the version most
