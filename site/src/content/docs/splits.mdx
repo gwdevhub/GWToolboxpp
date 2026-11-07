@@ -1,0 +1,79 @@
+---
+title: "Splits"
+description: "A speedrun timer that splits automatically on in-game goals, with Manual, Running and Speed Clear profiles, PB/Average/Sum of Best comparisons, run history and LiveSplit output."
+section: windows
+---
+
+import ToolboxPath from '../../components/ToolboxPath.astro';
+
+The Splits window is a speedrun timer. You build a list of goals (missions, zones, dungeons, quests, titles and more) and Splits marks each one done the moment it happens in game, comparing every split against your previous runs.
+
+Open it from the Toolbox window, and set it up under <ToolboxPath steps={['Settings', 'Splits']} />.
+
+## Profiles
+
+Splits has three profiles, switched at the top of its settings. Each keeps its own goal lists, run history and display options.
+
+* **Manual** — build any list of goals in any order. The clock starts when you start working on the first goal (for example on entering the mission for a Mission goal), or when you press Start.
+* **Running** — a route of zones. Each leg is timed from entering a zone to leaving it. The clock starts on your first movement or shadow step in the first explorable area, pauses while you're in towns, and a wrong turn fails the run.
+* **SC (Speed Clear)** — dungeons and elite areas. Entering a supported area loads its preset list automatically, rows show Start, End and Duration, and once a run has finished or failed, entering the area again resets it for the next attempt. Supported areas are the 20 dungeons in the preset list (the Eye of the North dungeons, Secret Lair of the Snowmen and both versions of the Forsaken Tunnels), the Fissure of Woe, the Underworld, Urgoz's Warren, the Deep, the Domain of Anguish and the Tomb of the Primeval Kings.
+
+## Goals
+
+In the Manual and Running profiles, add goals from the goal list section of the settings:
+
+* **Missions** and **Mission Bonus** (optionally Hard Mode), **Vanquishes**
+* **Explorable areas** and **Towns** — entering or leaving them
+* **Dungeons** and **Elite areas** — the same checkpoints the SC presets use
+* **Quests** — picking up or completing a quest by its ID
+* **Skills** learned, **Titles** reaching a rank, **Levels** reached
+* **Mob kills** — a monster by name, with a kill count
+* **Manual** — a split you trigger yourself with the Split button or `/splits split`
+
+Headers group goals and can be collapsed. Lists are saved per profile and the last one you used loads when you next start the game.
+
+## Time
+
+The clock can show **Real** time, **Game** time or **Both**. Game time leaves out loading screens, cinematics and the wait in the Vizunah Square, Unwaking Waters and Ascalon Academy (pre-Searing Ascalon City) mission queues. In the Domain of Anguish it also pauses while you're between zones, so game time there is time spent clearing zones; real time keeps counting the full clear.
+
+## Comparisons and history
+
+Each split is compared against your choice of **PB** (your fastest completed run), **Average** or **Sum of Best** (your best time for each goal added together). Ahead and behind are coloured, and the colours are adjustable.
+
+Every finished or failed run is saved. **Recent Runs** in the window lists the latest ones, and **Run History...** in the settings opens the full history, with:
+
+* PB, Average and Sum of Best breakdowns per goal
+* **Zone times** — your best and average time for each group of goals under a header (for example each Domain of Anguish zone), counted from that zone's own start, so the order you cleared them in doesn't matter
+* each run's goals with its gold (best) segments and deltas
+* deleting single runs or clearing the whole history
+
+## Failing a run
+
+A run fails, and is saved as failed, when:
+
+* your party is defeated (**Stop on party wipe**, on by default)
+* you leave the area of the goal you're working on before finishing it (**Auto-fail on leaving a zone early**, on by default)
+* you take a wrong turn on a Running route
+
+## Pause and resume
+
+Pausing a Manual or Running run saves a checkpoint. If you close the game while paused, Splits asks when you next start it whether to resume. The run comes back paused, and the time you were away isn't counted.
+
+## Chat commands and hotkeys
+
+* `/splits start` — start the run, or pause and unpause it once it's running
+* `/splits split` — complete the next Manual goal
+* `/splits reset` — reset the run
+
+To bind them to keys, add a **Send Chat** hotkey in the [Hotkeys](/docs/hotkeys/) window for each command.
+
+## LiveSplit
+
+Splits can send start, split, reset, pause and resume to [LiveSplit](https://livesplit.org/) over its own websocket server, with one split for every goal completed, so LiveSplit's splits and real time stay in step with Splits. Enable **Enable LiveSplit websocket server** in the Splits settings, and pick the format for LiveSplit One or the LiveSplit Server. It uses port 9002 by default, separate from the Objective Timer's server, so both can run at once. Connecting LiveSplit works the same way as in [Integrations](/docs/integrations/#livesplit-integration), using the Splits port.
+
+## Nuzlocke
+
+The Manual profile has two optional challenge modes:
+
+* **Death Tracker** — heroes, henchmen and players get a set number of lives. Each death in an explorable area costs one, and anyone out of lives is shown in red. A `/resign` doesn't count as a death.
+* **Points** — each completed goal scores points by type. Leave a type at 0 to not score it.
