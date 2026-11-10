@@ -67,6 +67,9 @@ You can customize the background color of the monitor in [Settings](/docs/settin
 ## Clock
 The clock simply shows your local time of day. You can choose 12 or 24-hour clock.
 
+## Skillbar
+The [Skillbar widget](/docs/misc_widgets/#skillbar-widget) shows skill cooldown and recharge timers over your skill icons. Enable it with `/show skillbar`, and adjust the numbers in Settings under **Skillbar → Skill overlay settings**.
+
 ## Vanquish
 The vanquish monitor shows how many enemies are in a zone, and how many have already been killed. This updates whenever you spawn additional enemies e.g. from quests or pop-ups.
 
