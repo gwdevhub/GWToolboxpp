@@ -1,6 +1,7 @@
 #include "stdafx.h"
 
 #include <cstring>
+#include <condition_variable>
 #include <functional>
 #include <map>
 #include <memory>
@@ -12,13 +13,135 @@
 #include "GwDatModule.h"
 
 #include "Resources.h"
+#include <GWCA/Context/GameContext.h>
+#include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Utilities/Scanner.h>
 #include <Utils/ArenaNetFileParser.h>
+#include <Utils/GuildWarsFileServer.h>
 #include <Utils/GwDat/AtexReader.h>
 #include <Utils/GwDat/xentax.h>
 
 #include <DirectXTex.h>
 
 namespace {
+
+    namespace Downloads {
+        using State = GwDatModule::DownloadState;
+        using Status = GwDatModule::DownloadStatus;
+        using File = GwDatModule::DownloadedFile;
+        using FilePtr = GwDatModule::DownloadedFilePtr;
+        using Callback = GwDatModule::DownloadCallback;
+
+        struct Request {
+            State state = State::Pending;
+            FilePtr file;
+            Status status = Status::Success;
+            std::vector<Callback> callbacks;
+            uint64_t last_used = 0;
+        };
+
+        struct Completion {
+            Callback callback;
+            FilePtr file;
+            Status status;
+        };
+
+        constexpr size_t maximum_cache_bytes = 128 * 1024 * 1024;
+        constexpr size_t maximum_requests = 4096;
+        std::mutex mutex;
+        std::condition_variable_any wake;
+        std::unordered_map<uint32_t, Request> requests;
+        std::deque<uint32_t> pending;
+        std::deque<uint32_t> native_pending;
+        std::unordered_set<uint32_t> native_requested;
+        std::deque<Completion> completions;
+        std::jthread worker;
+        std::atomic<bool> finished = true;
+        bool accepting = false;
+        size_t cache_bytes = 0;
+        uint64_t usage_clock = 0;
+
+        using SubmitFiles = uint32_t(__cdecl*)(uint32_t, const uint32_t*, uint32_t);
+        SubmitFiles submit_files = nullptr;
+        const uint32_t* downloads_disabled = nullptr;
+
+        bool EvictCachedFile(uint32_t keep = 0)
+        {
+            auto oldest = requests.end();
+            for (auto it = requests.begin(); it != requests.end(); ++it) {
+                if (it->first != keep && it->second.state != State::Pending &&
+                    (oldest == requests.end() || it->second.last_used < oldest->second.last_used))
+                    oldest = it;
+            }
+            if (oldest == requests.end())
+                return false;
+            if (oldest->second.file)
+                cache_bytes -= oldest->second.file->data.size();
+            requests.erase(oldest);
+            return true;
+        }
+
+        void RunWorker(std::stop_token stop)
+        {
+            WSADATA winsock{};
+            const auto network_started = WSAStartup(MAKEWORD(2, 2), &winsock) == 0;
+            auto revisions = std::unordered_map<uint32_t, uint32_t>{};
+            auto downloaded = std::unordered_map<uint32_t, std::weak_ptr<const File>>{};
+            while (!stop.stop_requested()) {
+                uint32_t base_id;
+                {
+                    auto lock = std::unique_lock(mutex);
+                    if (!wake.wait(lock, stop, [] { return !pending.empty(); }))
+                        break;
+                    base_id = pending.front();
+                    pending.pop_front();
+                }
+                FilePtr file;
+                auto status = network_started ? Status::Success : Status::NetworkError;
+                if (status == Status::Success && revisions.empty()) {
+                    std::vector<uint8_t> manifest;
+                    // The client's reserved dependency-table alias pins downloads to its own asset revision.
+                    status = GwDatModule::ReadFile(0x1001, manifest)
+                        ? GuildWarsFileServer::ParseManifest(manifest, revisions) : Status::ManifestUnavailable;
+                }
+                if (status == Status::Success) {
+                    const auto found = revisions.find(base_id);
+                    const auto file_id = found == revisions.end() ? base_id : found->second;
+                    file = downloaded[file_id].lock();
+                    if (!file) {
+                        auto result = std::make_shared<File>();
+                        result->file_id = file_id;
+                        status = GuildWarsFileServer::Download(file_id, result->data, stop);
+                        if (status == Status::Success) {
+                            file = std::move(result);
+                            downloaded[file_id] = file;
+                        }
+                    }
+                }
+                {
+                    const auto lock = std::scoped_lock(mutex);
+                    if (stop.stop_requested())
+                        break;
+                    auto& request = requests.find(base_id)->second;
+                    request.file = file;
+                    request.status = status;
+                    request.state = file ? State::Ready : State::Failed;
+                    request.last_used = ++usage_clock;
+                    if (file)
+                        cache_bytes += file->data.size();
+                    for (auto& callback : request.callbacks)
+                        completions.push_back({std::move(callback), file, status});
+                    request.callbacks.clear();
+                    while (cache_bytes > maximum_cache_bytes && EvictCachedFile(base_id)) {}
+                }
+                if (status != Status::Success)
+                    Log::Log("[file-server] File %u: %s", base_id, GuildWarsFileServer::StatusMessage(status));
+            }
+            if (network_started)
+                WSACleanup();
+            finished.store(true, std::memory_order_release);
+        }
+    }
 
     struct Vec2i {
         int x = 0;
@@ -67,17 +190,13 @@ namespace {
         if (image_size < 4)
             return false;
 
-        // Model files (ffna) carry the texture as an inline DXT3 chunk - confirmed to be a real icon, not a skin texture.
         if (memcmp(image_bytes, "ffna", 4) == 0) {
-            const auto anet_file = reinterpret_cast<ArenaNetFileParser::ArenaNetFile*>(&asset);
-            if (!anet_file->isValid())
+            std::vector<uint8_t> icon;
+            if (!GuildWarsFileServer::ReadStream(asset.data, 1, icon))
                 return false;
-            const auto found = anet_file->FindChunk(ArenaNetFileParser::ChunkType::FA3_InlineTextureDXT3);
-            if (!found)
-                return false;
-            const auto chunk = reinterpret_cast<const ArenaNetFileParser::UnknownChunk*>(found);
-            image_bytes = const_cast<uint8_t*>(chunk->data);
-            image_size = chunk->chunk_size;
+            asset.data = std::move(icon);
+            image_bytes = asset.data.data();
+            image_size = asset.data.size();
             if (image_size < 4)
                 return false;
         }
@@ -214,8 +333,8 @@ namespace {
     struct GwImg {
         Vec2i m_dims;
         IDirect3DTexture9* m_tex = nullptr;
-        bool m_pending = false;   // a decode has been dispatched; don't dispatch twice
-        bool m_completed = false; // the dispatched decode has run (success or failure)
+        bool m_pending = false;
+        bool m_completed = false;
         ~GwImg()
         {
             if (m_tex)
@@ -223,36 +342,47 @@ namespace {
         }
     };
 
-    // Dispatch once. On failure (file not in the dat) m_tex stays null - a placeholder - and m_pending stays
-    // set, so we don't re-decode the same missing file every frame.
     bool WantsDecode(const GwImg* img) { return !img->m_tex && !img->m_pending; }
 
-    // True once the dispatched decode has actually run and produced no texture - i.e. a genuine, permanent
-    // failure (missing dat data) rather than merely not-yet-decoded.
     bool HasFailed(const GwImg* img) { return img->m_completed && !img->m_tex; }
 
     using DecodeFn = std::function<bool(std::vector<uint32_t>&, Vec2i&)>;
 
-    // Decodes dispatched before the client opened Gw.dat (e.g. injected at process start): parked here and
-    // retried from Update() once the dat appears, instead of caching the failure for the whole session.
+    struct DeferredDecode {
+        std::shared_ptr<GwImg> image;
+        DecodeFn decode;
+        uint32_t file_id;
+        bool awaiting_file;
+    };
+
+    thread_local bool awaiting_download = false;
+    std::atomic<bool> stopping = false;
     std::mutex deferred_mutex;
-    std::vector<std::pair<std::shared_ptr<GwImg>, DecodeFn>> deferred_decodes;
+    std::vector<DeferredDecode> deferred_decodes;
     std::atomic<size_t> deferred_count{0};
     std::atomic<bool> deferred_retry_in_flight{false};
 
-    void RunDecode(const std::shared_ptr<GwImg>& img, const DecodeFn& decode)
+    void RunDecode(const std::shared_ptr<GwImg>& img, const DecodeFn& decode, uint32_t file_id)
     {
+        if (stopping.load(std::memory_order_acquire))
+            return;
         std::vector<uint32_t> argb;
         Vec2i dims;
+        awaiting_download = false;
         const bool ok = decode(argb, dims) && dims.x > 0 && dims.y > 0;
-        if (!ok && !GwDatModule::IsLoaded()) {
+        if (stopping.load(std::memory_order_acquire))
+            return;
+        if (awaiting_download || (!ok && !GwDatModule::IsLoaded())) {
             std::scoped_lock lock(deferred_mutex);
-            deferred_decodes.emplace_back(img, decode);
+            if (stopping.load(std::memory_order_acquire))
+                return;
+            deferred_decodes.push_back({img, decode, file_id, awaiting_download});
             deferred_count.store(deferred_decodes.size(), std::memory_order_release);
-            Log::Log("[dat] decode deferred until Gw.dat is mapped (%u parked)", static_cast<unsigned>(deferred_decodes.size()));
             return;
         }
         Resources::Instance().EnqueueDxTask([img, argb, dims, ok](IDirect3DDevice9* device) {
+            if (stopping.load(std::memory_order_acquire))
+                return;
             if (ok)
                 img->m_tex = MakeTextureFromArgb(device, argb, dims);
             img->m_dims = dims;
@@ -260,12 +390,11 @@ namespace {
         });
     }
 
-    // Reads/decodes on a worker thread (was inline on the render thread, stalling the game); only the GPU upload needs the DX thread.
-    void QueueDecode(std::shared_ptr<GwImg> img, DecodeFn decode)
+    void QueueDecode(std::shared_ptr<GwImg> img, DecodeFn decode, uint32_t file_id)
     {
         img->m_pending = true;
-        Resources::Instance().EnqueueWorkerTask([img = std::move(img), decode = std::move(decode)] {
-            RunDecode(img, decode);
+        Resources::Instance().EnqueueWorkerTask([img = std::move(img), decode = std::move(decode), file_id] {
+            RunDecode(img, decode, file_id);
         });
     }
 
@@ -287,13 +416,55 @@ namespace {
     }
 } // namespace
 
+bool GwDatModule::FetchFile(uint32_t base_file_id, DownloadCallback callback)
+{
+    using namespace Downloads;
+    const auto lock = std::scoped_lock(mutex);
+    if (!accepting || base_file_id <= 0x1fff || base_file_id >= 0x80000000)
+        return false;
+    auto found = requests.find(base_file_id);
+    if (found == requests.end()) {
+        if (requests.size() >= maximum_requests && !EvictCachedFile())
+            return false;
+        found = requests.emplace(base_file_id, Request{}).first;
+        pending.push_back(base_file_id);
+        if (native_requested.insert(base_file_id).second)
+            native_pending.push_back(base_file_id);
+        wake.notify_one();
+    }
+    auto& request = found->second;
+    request.last_used = ++usage_clock;
+    if (callback) {
+        if (request.state == State::Pending)
+            request.callbacks.push_back(std::move(callback));
+        else
+            completions.push_back({std::move(callback), request.file, request.status});
+    }
+    return true;
+}
+
+GwDatModule::DownloadState GwDatModule::GetDownloadedFile(uint32_t base_file_id, DownloadedFilePtr& file)
+{
+    using namespace Downloads;
+    const auto lock = std::scoped_lock(mutex);
+    file.reset();
+    if (!accepting)
+        return State::Failed;
+    const auto found = requests.find(base_file_id);
+    if (found == requests.end())
+        return State::NotRequested;
+    found->second.last_used = ++usage_clock;
+    file = found->second.file;
+    return found->second.state;
+}
+
 IDirect3DTexture9** GwDatModule::LoadGreyscaleTextureFromFileId(uint32_t file_id)
 {
     const auto& img = GetOrCreate(greyscale_textures_by_file_id, file_id);
     if (WantsDecode(img.get()))
         QueueDecode(img, [file_id](std::vector<uint32_t>& argb, Vec2i& dims) {
             return DecodeGreyscaleToArgb(file_id, argb, dims);
-        });
+        }, file_id);
     return &img->m_tex;
 }
 
@@ -303,7 +474,7 @@ IDirect3DTexture9** GwDatModule::LoadTextureFromFileId(uint32_t file_id, uint32_
     if (WantsDecode(img.get()))
         QueueDecode(img, [file_id, stream_id](std::vector<uint32_t>& argb, Vec2i& dims) {
             return DecodeTextureToArgb(file_id, argb, dims, stream_id);
-        });
+        }, file_id);
     return &img->m_tex;
 }
 
@@ -314,7 +485,7 @@ IDirect3DTexture9** GwDatModule::LoadItemImage(uint32_t model_file_id, uint32_t 
     if (WantsDecode(img.get()))
         QueueDecode(img, [model_file_id, dyes](std::vector<uint32_t>& argb, Vec2i& dims) {
             return DecodeItemToArgb(model_file_id, dyes, argb, dims);
-        });
+        }, model_file_id);
     if (failed_out)
         *failed_out = HasFailed(img.get());
     return &img->m_tex;
@@ -356,16 +527,74 @@ bool GwDatModule::ReadDatFile(const wchar_t* file_name, std::vector<uint8_t>* by
     return file_id && ReadFile(file_id, *bytes_out, stream_id);
 }
 
-void GwDatModule::Terminate()
+void GwDatModule::Initialize()
 {
+    using namespace Downloads;
+    ToolboxModule::Initialize();
+    stopping.store(false, std::memory_order_release);
+    const auto assertion = GW::Scanner::FindAssertion("DnApi.cpp", "count && DownloadIsEnabled()", 0, 0);
+    const auto function = assertion ? GW::Scanner::ToFunctionStart(assertion) : 0;
+    const auto guard = function ? GW::Scanner::FindInRange("\x83\x3d????\x00", "xx????x", 2, function, function + 0x30) : 0;
+    if (guard) {
+        uintptr_t address = 0;
+        memcpy(&address, reinterpret_cast<const void*>(guard), sizeof(address));
+        if (GW::Scanner::IsValidPtr(address)) {
+            downloads_disabled = reinterpret_cast<const uint32_t*>(address);
+            submit_files = reinterpret_cast<SubmitFiles>(function);
+        }
+    }
+    if (!submit_files)
+        Log::Log("[file-server] Client download submission unavailable; standalone downloads remain enabled");
+    {
+        const auto lock = std::scoped_lock(mutex);
+        accepting = true;
+        finished.store(false, std::memory_order_release);
+        worker = std::jthread(RunWorker);
+    }
+}
+
+void GwDatModule::SignalTerminate()
+{
+    stopping.store(true, std::memory_order_release);
+    {
+        using namespace Downloads;
+        const auto lock = std::scoped_lock(mutex);
+        accepting = false;
+        worker.request_stop();
+        wake.notify_all();
+        pending.clear();
+        native_pending.clear();
+        completions.clear();
+    }
     {
         std::scoped_lock lock(deferred_mutex);
         deferred_decodes.clear();
         deferred_count.store(0, std::memory_order_release);
     }
+}
+
+bool GwDatModule::CanTerminate()
+{
+    return Downloads::finished.load(std::memory_order_acquire);
+}
+
+void GwDatModule::Terminate()
+{
+    using namespace Downloads;
+    if (worker.joinable())
+        worker.join();
+    {
+        const auto lock = std::scoped_lock(mutex);
+        requests.clear();
+        native_requested.clear();
+        cache_bytes = 0;
+    }
+    submit_files = nullptr;
+    downloads_disabled = nullptr;
     textures_by_file_id.clear();
     greyscale_textures_by_file_id.clear();
     item_images_by_file_id.clear();
+    ToolboxModule::Terminate();
 }
 
 // ============================================================================
@@ -497,7 +726,31 @@ bool GwDatModule::IsLoaded()
 
 void GwDatModule::Update(float)
 {
-    if (!deferred_count.load(std::memory_order_acquire))
+    {
+        using namespace Downloads;
+        std::deque<Completion> ready;
+        std::vector<uint32_t> client_files;
+        {
+            const auto lock = std::scoped_lock(mutex);
+            if (!accepting)
+                return;
+            for (size_t i = 0; i < 32 && !completions.empty(); ++i) {
+                ready.push_back(std::move(completions.front()));
+                completions.pop_front();
+            }
+            if (submit_files && downloads_disabled && !*downloads_disabled && GW::GetGameContext() && GW::Map::GetIsMapLoaded()) {
+                for (size_t i = 0; i < 16 && !native_pending.empty(); ++i) {
+                    client_files.push_back(native_pending.front());
+                    native_pending.pop_front();
+                }
+            }
+        }
+        if (!client_files.empty())
+            submit_files(static_cast<uint32_t>(client_files.size()), client_files.data(), 0);
+        for (auto& completion : ready)
+            completion.callback(std::move(completion.file), completion.status);
+    }
+    if (stopping.load(std::memory_order_acquire) || !deferred_count.load(std::memory_order_acquire))
         return;
     if (deferred_retry_in_flight.load(std::memory_order_acquire))
         return;
@@ -505,21 +758,29 @@ void GwDatModule::Update(float)
     const ULONGLONG now = GetTickCount64();
     if (now < next_retry_ms)
         return;
-    next_retry_ms = now + 2000;
+    next_retry_ms = now + (IsLoaded() ? 200 : 2000);
     deferred_retry_in_flight.store(true, std::memory_order_release);
-    // EnsureLoaded's handle scan blocks, so the retry itself runs on a worker, never the game thread.
     Resources::Instance().EnqueueWorkerTask([this] {
-        if (EnsureLoaded()) {
-            std::vector<std::pair<std::shared_ptr<GwImg>, DecodeFn>> retry;
+        if (!stopping.load(std::memory_order_acquire) && EnsureLoaded()) {
+            std::vector<DeferredDecode> retry;
             {
                 std::scoped_lock lock(deferred_mutex);
                 retry.swap(deferred_decodes);
                 deferred_count.store(0, std::memory_order_release);
             }
-            if (!retry.empty())
-                Log::Log("[dat] Gw.dat mapped, retrying %u deferred decodes", static_cast<unsigned>(retry.size()));
-            for (const auto& [img, decode] : retry)
-                RunDecode(img, decode);
+            for (auto& entry : retry) {
+                DownloadedFilePtr file;
+                if (entry.awaiting_file && GetDownloadedFile(entry.file_id, file) == DownloadState::Pending) {
+                    const auto lock = std::scoped_lock(deferred_mutex);
+                    if (!stopping.load(std::memory_order_acquire)) {
+                        deferred_decodes.push_back(std::move(entry));
+                        deferred_count.store(deferred_decodes.size(), std::memory_order_release);
+                    }
+                }
+                else {
+                    RunDecode(entry.image, entry.decode, entry.file_id);
+                }
+            }
         }
         deferred_retry_in_flight.store(false, std::memory_order_release);
     });
@@ -633,16 +894,14 @@ bool GwDatModule::ParseIndex()
     return true;
 }
 
-// Copies the raw (still-compressed) bytes for file_id/stream_id. The index is immutable after EnsureLoaded().
-// file_known is set true once file_id itself is found, so callers can tell "no such file" apart from "file exists, just not this stream".
-bool GwDatModule::ReadRaw(uint32_t file_id, uint32_t stream_id, std::vector<uint8_t>& input, bool& compressed, bool& file_known)
+bool GwDatModule::ReadRaw(uint32_t file_id, uint32_t stream_id, std::vector<uint8_t>& input, bool& compressed, bool& file_known, bool& payload_missing)
 {
     file_known = false;
+    payload_missing = false;
     const auto found = m_fileid_to_slot.find(file_id);
     if (found == m_fileid_to_slot.end())
         return false;
     file_known = true;
-    // A file's streams are a linked list: `c` is the stream number, `id` the next stream's slot.
     int idx = found->second;
     const MftEntry* e = nullptr;
     for (int guard = 0; guard < 256; ++guard) {
@@ -653,16 +912,23 @@ bool GwDatModule::ReadRaw(uint32_t file_id, uint32_t stream_id, std::vector<uint
             e = &candidate;
             break;
         }
-        idx = candidate.id; // follow the chain to the next stream
+        idx = candidate.id;
         if (idx <= 0)
             return false;
     }
-    if (!e || !e->b || e->size <= 0) // b == 0 marks an empty/base slot with no payload
+    if (!e)
         return false;
+    if (!e->b || e->size <= 0) {
+        payload_missing = true;
+        return false;
+    }
 
     input.resize(static_cast<size_t>(e->size));
     compressed = e->a != 0;
-    return ReadAt(reinterpret_cast<HANDLE>(m_mapping), e->offset, input.data(), static_cast<size_t>(e->size));
+    if (ReadAt(reinterpret_cast<HANDLE>(m_mapping), e->offset, input.data(), static_cast<size_t>(e->size)))
+        return true;
+    payload_missing = true;
+    return false;
 }
 
 bool GwDatModule::MissingDatData()
@@ -691,17 +957,34 @@ bool GwDatModule::ReadFile(uint32_t file_id, std::vector<uint8_t>& out, uint32_t
     std::vector<uint8_t> input;
     bool compressed = false;
     bool file_known = false;
-    if (!self.ReadRaw(file_id, stream_id, input, compressed, file_known)) {
-        if (!file_known) {
-            // The dat doesn't have this file at all - likely an incomplete Steam/streaming install; a missing stream on a file that does exist doesn't count (routine - several icon streams are speculatively probed).
+    bool payload_missing = false;
+    if (!self.ReadRaw(file_id, stream_id, input, compressed, file_known, payload_missing)) {
+        if (stream_id && file_known && !payload_missing) {
+            std::vector<uint8_t> source;
+            if (ReadFile(file_id, source, 0))
+                return GuildWarsFileServer::ReadStream(source, stream_id, out);
+        }
+        if (file_id <= 0x1fff || (stream_id != 0 && stream_id != 1 && stream_id != 0xc))
+            return false;
+        DownloadedFilePtr file;
+        auto state = GetDownloadedFile(file_id, file);
+        if (state == DownloadState::NotRequested) {
+            if (!FetchFile(file_id))
+                return false;
+            state = GetDownloadedFile(file_id, file);
+        }
+        if (state == DownloadState::Ready)
+            return GuildWarsFileServer::ReadStream(file->data, stream_id, out);
+        if (state == DownloadState::Pending) {
+            awaiting_download = true;
+            return false;
+        }
+        if (!file_known || !stream_id || payload_missing) {
             self.m_missing_data.store(true, std::memory_order_relaxed);
             static std::once_flag warned;
-            std::call_once(warned, [file_id] {
-                Log::Warning("GWToolbox couldn't find some image data in your Gw.dat - your local game data looks "
-                             "incomplete (Steam downloads it on demand). Run Guild Wars once with the -image "
-                             "command-line option to download all game data, then restart. file_id %d. Setup steps: "
-                             "https://gwtoolbox.com/docs/troubleshooting/#missing-images-in-toolbox",
-                             file_id);
+            std::call_once(warned, [] {
+                Log::Warning("GWToolbox couldn't download missing Gw.dat assets. Check your connection, or run Guild Wars with -image and restart. "
+                             "https://gwtoolbox.com/docs/troubleshooting/#missing-images-in-toolbox");
             });
         }
         return false;

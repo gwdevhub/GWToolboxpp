@@ -94,10 +94,10 @@ namespace {
 
 }
 
-uint32_t CodeOptimiserModule::Crc32(const void* data, size_t bytes)
+uint32_t CodeOptimiserModule::Crc32(const void* data, size_t bytes, uint32_t seed)
 {
     ensure_crc32_tables();
-    return ~crc32_process(~0u, data, static_cast<uint32_t>(bytes));
+    return ~crc32_process(~seed, data, static_cast<uint32_t>(bytes));
 }
 
 void CodeOptimiserModule::Initialize() {

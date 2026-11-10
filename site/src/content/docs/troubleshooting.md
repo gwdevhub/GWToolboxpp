@@ -1,6 +1,6 @@
 ---
 title: "Troubleshooting"
-description: "Fixing security software that blocks GWToolbox++, covering antivirus, Controlled Folder Access, Smart App Control, crash dumps, and missing images (the -image download)."
+description: "Fixing security software that blocks GWToolbox++, covering antivirus, Controlled Folder Access, Smart App Control, crash dumps, and missing images (background downloads and -image)."
 section: meta
 ---
 
@@ -153,9 +153,13 @@ This is a workaround, not a fix — the underlying rendering bug with non-defaul
 
 If item, armor, skill, or map images show up **blank** in Toolbox — for example in the Armory, the skills list, or item tooltips — and Toolbox logs a message about not finding image data in `Gw.dat`, the cause is almost always an **incomplete local game install**, not a Toolbox bug.
 
-Guild Wars can run from a partial `Gw.dat` and **stream** the rest of its data from ArenaNet's servers on demand as you play — the **Steam** release does this by default, so a fresh install only has the data you have actually seen in-game. Toolbox reads images straight from that `Gw.dat` on disk: whatever the game hasn't downloaded yet simply isn't there for Toolbox to load, which is why images you own or have seen appear while others stay blank.
+Guild Wars can run from a partial `Gw.dat` and **stream** the rest of its data from ArenaNet's servers on demand as you play — the **Steam** release does this by default, so a fresh install only has the data you have actually seen in-game.
 
-The fix is to download **all** game data once, with the `-image` command-line option. Guild Wars will fetch the complete `Gw.dat` (several GB — it can take a while), after which every image is available to both the game and Toolbox.
+Toolbox first reads images from your local `Gw.dat`. When an asset is missing, it requests a background download from ArenaNet and keeps the image pending until that download finishes. It also asks Guild Wars to download the asset through the game's own archive system, so the game can retain it in `Gw.dat` for future sessions. Toolbox's immediate fallback is kept in memory for the current session; Toolbox does not write to `Gw.dat` itself.
+
+If the background download fails, check that your connection allows access to ArenaNet's file servers on TCP port **6112**, then restart Guild Wars and Toolbox to retry. Toolbox needs to read the running client's asset manifest from `Gw.dat` to select the correct file revisions.
+
+You can also download **all** game data once with the `-image` command-line option. Guild Wars will fetch the complete `Gw.dat` (several GB — it can take a while), after which every image is available to both the game and Toolbox.
 
 **Steam:**
 
