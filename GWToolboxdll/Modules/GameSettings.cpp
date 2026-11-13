@@ -2360,18 +2360,32 @@ void GameSettings::OnAgentStartCast(GW::HookStatus*, GW::UI::UIMessage, void* wP
     }
 };
 
-// Redirect /wiki commands to go to useful pages
 void GameSettings::OnOpenWiki(GW::HookStatus* status, const GW::UI::UIMessage message_id, void* wParam, void*)
 {
+    static constexpr ctll::fixed_string game_link_regex = R"([Gg]ame_link(?:%3[Aa]|:)(\w+))";
     const std::string url = TextUtils::ToLower(static_cast<char*>(wParam));
-    if (strstr(url.c_str(), "/wiki/main_page")) {
-        // Redirect /wiki to /wiki <current map name>
+    if (const auto game_link = ctre::search<game_link_regex>(std::string_view(static_cast<const char*>(wParam)))) {
+        // The wiki's own Game_link redirect appends an rdfrom query that its firewall rejects with a 403
+        status->blocked = true;
+        const auto game_link_title = std::format("Game_link:{}", game_link.get<1>().to_view());
+        Resources::Download(GuiUtils::WikiTemplateUrlFromTitle(game_link_title), [message_id, game_link_title](const bool ok, const std::string& wikitext, void*) {
+            static constexpr ctll::fixed_string redirect_target_regex = R"(\[\[(?:ingame-help:)?([^\]\|#]+))";
+            const auto redirect_target = ctre::search<redirect_target_regex>(wikitext);
+            if (!(ok && redirect_target)) {
+                Log::Error("Failed to find the wiki page for %s", game_link_title.c_str());
+                return;
+            }
+            GW::GameThread::Enqueue([message_id, resolved_url = GuiUtils::WikiUrl(redirect_target.get<1>().to_string())] {
+                SendUIMessage(message_id, (void*)resolved_url.c_str());
+            });
+        });
+    }
+    else if (strstr(url.c_str(), "/wiki/main_page")) {
         status->blocked = true;
         const GW::AreaInfo* map = GW::Map::GetCurrentMapInfo();
         pending_wiki_search_term = std::make_unique<EncString>(map->name_id);
     }
     else if (strstr(url.c_str(), "?search=quest")) {
-        // Redirect /wiki quest to /wiki <current quest name>
         status->blocked = true;
         const auto* quest = GW::QuestMgr::GetActiveQuest();
         if (quest) {
@@ -2384,7 +2398,6 @@ void GameSettings::OnOpenWiki(GW::HookStatus* status, const GW::UI::UIMessage me
         }
     }
     else if (strstr(url.c_str(), "?search=target")) {
-        // Redirect /wiki target to /wiki <current target name>
         status->blocked = true;
         const GW::Agent* a = GW::Agents::GetTarget();
         if (a) {
