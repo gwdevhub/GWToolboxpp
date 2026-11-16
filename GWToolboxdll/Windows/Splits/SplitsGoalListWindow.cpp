@@ -32,18 +32,19 @@
 #include <Windows/SplitsWindow.h>
 
 #include <algorithm>
+#include <array>
 #include <functional>
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
 #include <span>
 #include <utility>
 #include <vector>
 
-// Editor/picker state for the settings UI; lives here rather than in the class, like other toolbox windows.
 namespace {
     char edit_label[128] = {};
-    int edit_trigger_type = 0; // -1 = Header, -2 = Quest pair
+    int edit_trigger_type = 0;
     int edit_level = 1;
     char list_name_buf[64] = {};
 
@@ -74,7 +75,7 @@ namespace {
     std::set<int> batch_deep_checked;
 
     int edit_title_id = 0xff;
-    int edit_title_rank = -1; // 1-based rank; -1 = unset (max)
+    int edit_title_rank = -1;
     char title_filter_buf[128] = {};
 
     int edit_quest_id = 0;
@@ -83,7 +84,6 @@ namespace {
     char edit_mob_name[128] = {};
     int edit_mob_kill_count = 1;
 
-    // Area MapID as int; -1 = closed.
     int sc_creating_new_area = -1;
     char sc_create_new_name_buf[64] = {};
 
@@ -92,266 +92,285 @@ namespace {
     std::vector<RecentRun> run_history_cache;
     bool run_history_cache_dirty = true;
     std::set<int> run_history_selected_attempts;
-} // namespace
 
-static void FormatTime(char* buf, int bufsz, double seconds)
-{
-    const int h = static_cast<int>(seconds) / 3600;
-    const int m = (static_cast<int>(seconds) % 3600) / 60;
-    const int s = static_cast<int>(seconds) % 60;
-    const int cs = static_cast<int>(seconds * 100.0) % 100;
-    if (h > 0)
-        snprintf(buf, bufsz, "%d:%02d:%02d.%02d", h, m, s, cs);
-    else
-        snprintf(buf, bufsz, "%02d:%02d.%02d", m, s, cs);
-}
-
-// Empty for runs saved without a start time (TimeToString(0) would print "now").
-static void FormatDate(char* buf, size_t bufsz, int64_t utc)
-{
-    const std::string s = utc > 0 ? TextUtils::TimeToString(static_cast<time_t>(utc)) : std::string{};
-    snprintf(buf, bufsz, "%s", s.c_str());
-}
-
-// Measure once per tier; widen only when clock need the digit.
-static float TimeColumnWidth(int tier, bool with_sign)
-{
-    static float w[2][3] = {{-1.f, -1.f, -1.f}, {-1.f, -1.f, -1.f}};
-    float& slot = w[with_sign ? 1 : 0][tier];
-    if (slot < 0.f) {
-        static const char* plain[3] = {"88:88.88", "8:88:88.88", "88:88:88.88"};
-        static const char* signed_[3] = {"+88:88.88", "+8:88:88.88", "+88:88:88.88"};
-        slot = ImGui::CalcTextSize(with_sign ? signed_[tier] : plain[tier]).x + 12.f * ImGui::FontScale();
-    }
-    return slot;
-}
-
-static void DrawPBDelta(double actual, double pb_split, ImVec4 col_ahead, ImVec4 col_behind)
-{
-    if (std::isnan(pb_split) || std::isnan(actual)) return;
-    const double delta = actual - pb_split;
-    char dbuf[32];
-    FormatTime(dbuf, sizeof(dbuf), std::abs(delta));
-    ImGui::TextColored(delta < 0.0 ? col_ahead : col_behind, delta < 0.0 ? "-%s" : "+%s", dbuf);
-}
-
-static double SegmentAt(const std::vector<double>& cumulative, int idx)
-{
-    const auto nan = std::numeric_limits<double>::quiet_NaN();
-    if (idx < 0 || idx >= static_cast<int>(cumulative.size())) return nan;
-    const double cur = cumulative[static_cast<size_t>(idx)];
-    if (std::isnan(cur)) return nan;
-    if (idx == 0) return cur;
-    const double prev = cumulative[static_cast<size_t>(idx - 1)];
-    return std::isnan(prev) ? nan : cur - prev;
-}
-
-
-// A goal's own duration when its start is known (parallel/out-of-order lists), else the relay gap.
-static double DurationAt(const ComparisonSplits& cmp, bool gt, int idx)
-{
-    const auto& ends = gt ? cmp.game : cmp.real;
-    const auto& starts = gt ? cmp.start_game : cmp.start_real;
-    if (idx >= 0 && idx < static_cast<int>(ends.size()) && idx < static_cast<int>(starts.size())) {
-        const double end = ends[static_cast<size_t>(idx)], start = starts[static_cast<size_t>(idx)];
-        if (!std::isnan(end) && !std::isnan(start)) return end - start;
-    }
-    return SegmentAt(ends, idx);
-}
-
-// attempt_real/attempt_game only for Sum of Best; else nullptr.
-static void DrawSplitsBreakdownRows(const GoalList& list, bool gt, const ComparisonSplits& cmp, const std::vector<int>* attempt_real, const std::vector<int>* attempt_game)
-{
-    int idx = 0;
-    for (const auto& g : list.goals) {
-        if (g.is_header) continue;
-        if (idx >= static_cast<int>(cmp.real.size())) break;
-        const double seg_real = DurationAt(cmp, false, idx);
-        if (std::isnan(seg_real)) {
-            ImGui::TextDisabled("%s: never reached", g.label.c_str());
-            ++idx;
-            continue;
-        }
-        const double seg_game = DurationAt(cmp, true, idx);
-        const bool have_game = !std::isnan(seg_game);
-        char tbuf[32];
-        FormatTime(tbuf, sizeof(tbuf), (gt && have_game) ? seg_game : seg_real);
-        int attempt = 0;
-        if (gt && attempt_game && idx < static_cast<int>(attempt_game->size()))
-            attempt = (*attempt_game)[static_cast<size_t>(idx)];
-        else if (attempt_real && idx < static_cast<int>(attempt_real->size()))
-            attempt = (*attempt_real)[static_cast<size_t>(idx)];
-        if (attempt > 0)
-            ImGui::Text("%s: %s (Attempt #%d)", g.label.c_str(), tbuf, attempt);
-        else
-            ImGui::Text("%s: %s", g.label.c_str(), tbuf);
-        ++idx;
-    }
-}
-
-// Per-zone time = latest end - earliest start of the goals directly under a header, so it doesn't
-// depend on run order (DoA rotations). Failed runs count for any zone they fully completed.
-static void DrawZoneTimes(const GoalList& list, const std::vector<RecentRun>& runs, const bool gt)
-{
-    struct Zone {
-        std::string label;
-        int first = 0;
-        int count = 0;
+    // An expanded attempt drawn like the live list. Built on first expand, dropped when the history reloads.
+    struct AttemptView {
+        GoalList list;
+        GoalClock clock;
+        bool matches_list = false;
+        std::array<std::optional<ComparisonSplits>, 3> cmp;
     };
-    std::vector<Zone> zones;
-    int idx = 0;
-    for (const auto& g : list.goals) {
-        if (g.is_header) {
-            zones.push_back({g.label, idx, 0});
-            continue;
-        }
-        if (!zones.empty()) ++zones.back().count;
-        ++idx;
-    }
-    std::erase_if(zones, [](const Zone& z) {
-        return z.count == 0;
-    });
-    if (zones.empty() || !ImGui::TreeNode("zone_times", "Zone times")) return;
+    // Keyed with the start time too: the 200-run cap shifts attempt numbers onto other runs.
+    std::map<std::pair<int, int64_t>, AttemptView> attempt_views;
+    int attempt_views_generation = -1;
+    bool run_was_started = false;
+    int history_cmp_mode = -1;
 
-    if (ImGui::BeginTable("##zonetimes", 4, ImGuiTableFlags_None)) {
-        ImGui::TableSetupColumn("zone", ImGuiTableColumnFlags_WidthStretch);
-        ImGui::TableSetupColumn("best", ImGuiTableColumnFlags_WidthFixed, 80.f * ImGui::FontScale());
-        ImGui::TableSetupColumn("avg", ImGuiTableColumnFlags_WidthFixed, 80.f * ImGui::FontScale());
-        ImGui::TableSetupColumn("runs", ImGuiTableColumnFlags_WidthFixed, 50.f * ImGui::FontScale());
-        ImGui::TableHeadersRow();
-        for (const auto& z : zones) {
-            double best = std::numeric_limits<double>::infinity(), sum = 0.0;
-            int n = 0;
-            for (const auto& run : runs) {
-                if (z.first + z.count > static_cast<int>(run.goals.size())) continue;
-                double start = std::numeric_limits<double>::infinity(), end = 0.0;
-                bool complete = true;
-                for (int i = z.first; i < z.first + z.count; ++i) {
-                    const auto& rg = run.goals[static_cast<size_t>(i)];
-                    const double s = gt ? rg.start_game_time : rg.start_real_time;
-                    if (!rg.completed || s < 0.0) {
-                        complete = false;
-                        break;
-                    }
-                    start = std::min(start, s);
-                    end = std::max(end, gt ? rg.game_time : rg.real_time);
-                }
-                if (!complete) continue;
-                best = std::min(best, end - start);
-                sum += end - start;
-                ++n;
-            }
-            ImGui::TableNextRow();
-            ImGui::TableSetColumnIndex(0);
-            ImGui::TextUnformatted(z.label.c_str());
-            if (n == 0) {
-                ImGui::TableSetColumnIndex(1);
-                ImGui::TextDisabled("no full clear yet");
+    // No ColorGold() setting yet; same gold as GWChrono.
+    constexpr ImVec4 kGoldColor = {1.0f, 0.85f, 0.0f, 1.0f};
+
+    void FormatTime(char* buf, int bufsz, double seconds)
+    {
+        const int h = static_cast<int>(seconds) / 3600;
+        const int m = (static_cast<int>(seconds) % 3600) / 60;
+        const int s = static_cast<int>(seconds) % 60;
+        const int cs = static_cast<int>(seconds * 100.0) % 100;
+        if (h > 0)
+            snprintf(buf, bufsz, "%d:%02d:%02d.%02d", h, m, s, cs);
+        else
+            snprintf(buf, bufsz, "%02d:%02d.%02d", m, s, cs);
+    }
+
+    // Empty for runs saved without a start time (TimeToString(0) would print "now").
+    void FormatDate(char* buf, size_t bufsz, int64_t utc)
+    {
+        const std::string s = utc > 0 ? TextUtils::TimeToString(static_cast<time_t>(utc)) : std::string{};
+        snprintf(buf, bufsz, "%s", s.c_str());
+    }
+
+    // Measure once per tier; widen only when clock need the digit.
+    float TimeColumnWidth(int tier, bool with_sign)
+    {
+        static float w[2][3] = {{-1.f, -1.f, -1.f}, {-1.f, -1.f, -1.f}};
+        float& slot = w[with_sign ? 1 : 0][tier];
+        if (slot < 0.f) {
+            static const char* plain[3] = {"88:88.88", "8:88:88.88", "88:88:88.88"};
+            static const char* signed_[3] = {"+88:88.88", "+8:88:88.88", "+88:88:88.88"};
+            slot = ImGui::CalcTextSize(with_sign ? signed_[tier] : plain[tier]).x + 12.f * ImGui::FontScale();
+        }
+        return slot;
+    }
+
+    void DrawPBDelta(double actual, double pb_split, ImVec4 col_ahead, ImVec4 col_behind)
+    {
+        if (std::isnan(pb_split) || std::isnan(actual)) return;
+        const double delta = actual - pb_split;
+        char dbuf[32];
+        FormatTime(dbuf, sizeof(dbuf), std::abs(delta));
+        ImGui::TextColored(delta < 0.0 ? col_ahead : col_behind, delta < 0.0 ? "-%s" : "+%s", dbuf);
+    }
+
+    double SegmentAt(const std::vector<double>& cumulative, int idx)
+    {
+        const auto nan = std::numeric_limits<double>::quiet_NaN();
+        if (idx < 0 || idx >= static_cast<int>(cumulative.size())) return nan;
+        const double cur = cumulative[static_cast<size_t>(idx)];
+        if (std::isnan(cur)) return nan;
+        if (idx == 0) return cur;
+        const double prev = cumulative[static_cast<size_t>(idx - 1)];
+        return std::isnan(prev) ? nan : cur - prev;
+    }
+
+
+    // A goal's own duration when its start is known (parallel/out-of-order lists), else the relay gap.
+    double DurationAt(const ComparisonSplits& cmp, bool gt, int idx)
+    {
+        const auto& ends = gt ? cmp.game : cmp.real;
+        const auto& starts = gt ? cmp.start_game : cmp.start_real;
+        if (idx >= 0 && idx < static_cast<int>(ends.size()) && idx < static_cast<int>(starts.size())) {
+            const double end = ends[static_cast<size_t>(idx)], start = starts[static_cast<size_t>(idx)];
+            if (!std::isnan(end) && !std::isnan(start)) return end - start;
+        }
+        return SegmentAt(ends, idx);
+    }
+
+    void DrawSplitsBreakdownRows(const GoalList& list, bool gt, const ComparisonSplits& cmp, const std::vector<int>* attempt_real, const std::vector<int>* attempt_game)
+    {
+        int idx = 0;
+        for (const auto& g : list.goals) {
+            if (g.is_header) continue;
+            if (idx >= static_cast<int>(cmp.real.size())) break;
+            const double seg_real = DurationAt(cmp, false, idx);
+            if (std::isnan(seg_real)) {
+                ImGui::TextDisabled("%s: never reached", g.label.c_str());
+                ++idx;
                 continue;
             }
-            char buf[32];
-            FormatTime(buf, sizeof(buf), best);
+            const double seg_game = DurationAt(cmp, true, idx);
+            const bool have_game = !std::isnan(seg_game);
+            char tbuf[32];
+            FormatTime(tbuf, sizeof(tbuf), (gt && have_game) ? seg_game : seg_real);
+            int attempt = 0;
+            if (gt && attempt_game && idx < static_cast<int>(attempt_game->size()))
+                attempt = (*attempt_game)[static_cast<size_t>(idx)];
+            else if (attempt_real && idx < static_cast<int>(attempt_real->size()))
+                attempt = (*attempt_real)[static_cast<size_t>(idx)];
+            if (attempt > 0)
+                ImGui::Text("%s: %s (Attempt #%d)", g.label.c_str(), tbuf, attempt);
+            else
+                ImGui::Text("%s: %s", g.label.c_str(), tbuf);
+            ++idx;
+        }
+    }
+
+    // Per-zone time = latest end - earliest start of the goals directly under a header, so it doesn't
+    // depend on run order (DoA rotations). Failed runs count for any zone they fully completed.
+    void DrawZoneTimes(const GoalList& list, const std::vector<RecentRun>& runs, const bool gt)
+    {
+        struct Zone {
+            std::string label;
+            int first = 0;
+            int count = 0;
+        };
+        std::vector<Zone> zones;
+        int idx = 0;
+        for (const auto& g : list.goals) {
+            if (g.is_header) {
+                zones.push_back({g.label, idx, 0});
+                continue;
+            }
+            if (!zones.empty()) ++zones.back().count;
+            ++idx;
+        }
+        std::erase_if(zones, [](const Zone& z) {
+            return z.count == 0;
+        });
+        if (zones.empty() || !ImGui::TreeNode("zone_times", "Zone times")) return;
+
+        if (ImGui::BeginTable("##zonetimes", 4, ImGuiTableFlags_None)) {
+            ImGui::TableSetupColumn("zone", ImGuiTableColumnFlags_WidthStretch);
+            ImGui::TableSetupColumn("best", ImGuiTableColumnFlags_WidthFixed, 80.f * ImGui::FontScale());
+            ImGui::TableSetupColumn("avg", ImGuiTableColumnFlags_WidthFixed, 80.f * ImGui::FontScale());
+            ImGui::TableSetupColumn("runs", ImGuiTableColumnFlags_WidthFixed, 50.f * ImGui::FontScale());
+            ImGui::TableHeadersRow();
+            for (const auto& z : zones) {
+                double best = std::numeric_limits<double>::infinity(), sum = 0.0;
+                int n = 0;
+                for (const auto& run : runs) {
+                    if (z.first + z.count > static_cast<int>(run.goals.size())) continue;
+                    double start = std::numeric_limits<double>::infinity(), end = 0.0;
+                    bool complete = true;
+                    for (int i = z.first; i < z.first + z.count; ++i) {
+                        const auto& rg = run.goals[static_cast<size_t>(i)];
+                        const double s = gt ? rg.start_game_time : rg.start_real_time;
+                        if (!rg.completed || s < 0.0) {
+                            complete = false;
+                            break;
+                        }
+                        start = std::min(start, s);
+                        end = std::max(end, gt ? rg.game_time : rg.real_time);
+                    }
+                    if (!complete) continue;
+                    best = std::min(best, end - start);
+                    sum += end - start;
+                    ++n;
+                }
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                ImGui::TextUnformatted(z.label.c_str());
+                if (n == 0) {
+                    ImGui::TableSetColumnIndex(1);
+                    ImGui::TextDisabled("no full clear yet");
+                    continue;
+                }
+                char buf[32];
+                FormatTime(buf, sizeof(buf), best);
+                ImGui::TableSetColumnIndex(1);
+                ImGui::TextUnformatted(buf);
+                FormatTime(buf, sizeof(buf), sum / n);
+                ImGui::TableSetColumnIndex(2);
+                ImGui::TextUnformatted(buf);
+                ImGui::TableSetColumnIndex(3);
+                ImGui::Text("%d", n);
+            }
+            ImGui::EndTable();
+        }
+        ImGui::TreePop();
+    }
+
+    void DrawAttemptGoalsTable(SplitsWindow& splits, const RecentRun& run, bool gt)
+    {
+        if (!ImGui::BeginTable("##attemptgoals", 2, ImGuiTableFlags_None)) return;
+        ImGui::TableSetupColumn("name", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn("time", ImGuiTableColumnFlags_WidthFixed, 80.f * ImGui::FontScale());
+        for (const auto& g : run.goals) {
+            const double cur = gt ? g.game_time : g.real_time;
+            const ImVec4 col = g.completed ? ImGui::ColorConvertU32ToFloat4(splits.ColorCompleted()) : ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled);
+            char gbuf[32];
+            // Never reached: the run stored no time, so don't print a fake 00:00.00.
+            if (!g.completed && cur <= 0.0)
+                snprintf(gbuf, sizeof(gbuf), "--:--");
+            else
+                FormatTime(gbuf, sizeof(gbuf), cur);
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            ImGui::TextColored(col, "%s", g.label.c_str());
             ImGui::TableSetColumnIndex(1);
-            ImGui::TextUnformatted(buf);
-            FormatTime(buf, sizeof(buf), sum / n);
-            ImGui::TableSetColumnIndex(2);
-            ImGui::TextUnformatted(buf);
-            ImGui::TableSetColumnIndex(3);
-            ImGui::Text("%d", n);
+            ImGui::TextColored(col, "%s", gbuf);
         }
         ImGui::EndTable();
     }
-    ImGui::TreePop();
-}
 
-// sob/pb needed only when show_gold_delta.
-static void DrawAttemptGoalsTable(SplitsWindow& splits, const RecentRun& run, bool gt, bool show_gold_delta, const std::vector<double>* sob, const ComparisonSplits* pb, ImVec4 gold_col, ImVec4 ahead_col, ImVec4 behind_col)
-{
-    const int col_count = show_gold_delta ? 4 : 2;
-    if (!ImGui::BeginTable("##attemptgoals", col_count, ImGuiTableFlags_None)) return;
-    ImGui::TableSetupColumn("name", ImGuiTableColumnFlags_WidthStretch);
-    ImGui::TableSetupColumn("time", ImGuiTableColumnFlags_WidthFixed, 80.f * ImGui::FontScale());
-    if (show_gold_delta) {
-        ImGui::TableSetupColumn("gold", ImGuiTableColumnFlags_WidthFixed, 90.f * ImGui::FontScale());
-        ImGui::TableSetupColumn("delta", ImGuiTableColumnFlags_WidthFixed, 80.f * ImGui::FontScale());
+    AttemptView BuildAttemptView(const GoalList& list, const RecentRun& run)
+    {
+        AttemptView view;
+        view.list = list;
+        view.list.ResetRunState();
+        view.clock.Restore(run.total_real, run.total_game);
+        const auto goal_count = std::ranges::count_if(list.goals, [](const GoalEntry& g) {
+            return !g.is_header;
+        });
+        view.matches_list = static_cast<size_t>(goal_count) == run.goals.size();
+        if (!view.matches_list) return view;
+
+        // Segment = since the latest earlier finish, as the engine measures it when goals fire.
+        double last_real = 0.0, last_game = 0.0;
+        size_t idx = 0;
+        for (auto& g : view.list.goals) {
+            if (g.is_header) continue;
+            const RecentRunGoal& rg = run.goals[idx++];
+            g.status = rg.status;
+            g.start_real_time = rg.start_real_time;
+            g.start_game_time = rg.start_game_time;
+            if (rg.status != GoalStatus::Completed && rg.status != GoalStatus::Failed) continue;
+            g.split.real_time = rg.real_time;
+            g.split.game_time = rg.game_time;
+            g.split.segment_real = rg.real_time - last_real;
+            g.split.segment_game = rg.game_time - last_game;
+            last_real = std::max(last_real, rg.real_time);
+            last_game = std::max(last_game, rg.game_time);
+        }
+        return view;
     }
-    double prev = 0.0;
-    int idx = 0;
-    for (const auto& g : run.goals) {
-        const double cur = gt ? g.game_time : g.real_time;
-        const ImVec4 col = g.completed ? ImGui::ColorConvertU32ToFloat4(splits.ColorCompleted()) : ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled);
-        char gbuf[32];
-        // Never reached: the run stored no time, so don't print a fake 00:00.00.
-        if (!g.completed && cur <= 0.0)
-            snprintf(gbuf, sizeof(gbuf), "--:--");
+
+    void SetCheckbox(const char* label, std::set<int>& set, int id)
+    {
+        bool on = set.contains(id);
+        if (!ImGui::Checkbox(label, &on)) return;
+        if (on)
+            set.insert(id);
         else
-            FormatTime(gbuf, sizeof(gbuf), cur);
-        ImGui::TableNextRow();
-        ImGui::TableSetColumnIndex(0);
-        ImGui::TextColored(col, "%s", g.label.c_str());
-        ImGui::TableSetColumnIndex(1);
-        ImGui::TextColored(col, "%s", gbuf);
+            set.erase(id);
+    }
 
-        if (show_gold_delta && g.completed && sob && pb) {
-            const double own_start = gt ? g.start_game_time : g.start_real_time;
-            const double seg = cur - (own_start >= 0.0 ? own_start : prev);
-            const double gold_seg = SegmentAt(*sob, idx);
-            const double pb_seg = DurationAt(*pb, gt, idx);
-            if (!std::isnan(gold_seg)) {
-                char goldbuf[32];
-                FormatTime(goldbuf, sizeof(goldbuf), gold_seg);
-                ImGui::TableSetColumnIndex(2);
-                ImGui::TextColored(gold_col, "Gold %s", goldbuf);
-            }
-            if (!std::isnan(pb_seg)) {
-                ImGui::TableSetColumnIndex(3);
-                DrawPBDelta(seg, pb_seg, ahead_col, behind_col);
-            }
+    struct SearchComboEntry {
+        std::string label;
+        bool selected = false;
+    };
+
+    void SearchableCombo(const char* combo_id, const char* preview, char* filter_buf, size_t filter_buf_size, const std::vector<SearchComboEntry>& entries, const std::function<void(size_t)>& on_select)
+    {
+        ImGui::SetNextItemWidth(-1.f);
+        if (!ImGui::BeginCombo(combo_id, preview)) {
+            filter_buf[0] = '\0';
+            return;
         }
-        prev = cur;
-        ++idx;
-    }
-    ImGui::EndTable();
-}
-
-static void SetCheckbox(const char* label, std::set<int>& set, int id)
-{
-    bool on = set.contains(id);
-    if (!ImGui::Checkbox(label, &on)) return;
-    if (on)
-        set.insert(id);
-    else
-        set.erase(id);
-}
-
-struct SearchComboEntry {
-    std::string label;
-    bool selected = false;
-};
-
-// filter_buf caller-owned; cleared when popup closes.
-static void SearchableCombo(const char* combo_id, const char* preview, char* filter_buf, size_t filter_buf_size, const std::vector<SearchComboEntry>& entries, const std::function<void(size_t)>& on_select)
-{
-    ImGui::SetNextItemWidth(-1.f);
-    if (!ImGui::BeginCombo(combo_id, preview)) {
-        filter_buf[0] = '\0';
-        return;
-    }
-    if (ImGui::IsWindowAppearing()) ImGui::SetKeyboardFocusHere();
-    ImGui::SetNextItemWidth(-1.f);
-    ImGui::InputTextWithHint("##filter", "Search...", filter_buf, filter_buf_size);
-    ImGui::Separator();
-    for (size_t i = 0; i < entries.size(); ++i) {
-        const auto& e = entries[i];
-        if (filter_buf[0] != '\0' && !TextUtils::CaseInsensitiveContains(e.label, filter_buf)) continue;
-        if (ImGui::Selectable(e.label.c_str(), e.selected)) {
-            on_select(i);
-            ImGui::CloseCurrentPopup();
+        if (ImGui::IsWindowAppearing()) ImGui::SetKeyboardFocusHere();
+        ImGui::SetNextItemWidth(-1.f);
+        ImGui::InputTextWithHint("##filter", "Search...", filter_buf, filter_buf_size);
+        ImGui::Separator();
+        for (size_t i = 0; i < entries.size(); ++i) {
+            const auto& e = entries[i];
+            if (filter_buf[0] != '\0' && !TextUtils::CaseInsensitiveContains(e.label, filter_buf)) continue;
+            if (ImGui::Selectable(e.label.c_str(), e.selected)) {
+                on_select(i);
+                ImGui::CloseCurrentPopup();
+            }
+            if (e.selected) ImGui::SetItemDefaultFocus();
         }
-        if (e.selected) ImGui::SetItemDefaultFocus();
+        ImGui::EndCombo();
     }
-    ImGui::EndCombo();
-}
+} // namespace
 
 // =============================================================================
 // LIVE WINDOW DRAW
@@ -369,8 +388,13 @@ void SplitsGoalListWindow::Draw(SplitsWindow& splits)
         return;
     }
 
-    const GoalClock& clock = splits.Clock();
-    const GoalList* list = splits.List();
+    const GoalList* last_run = splits.LastRunList();
+    const GoalClock& clock = last_run ? splits.LastRunClock() : splits.Clock();
+    const GoalList* list = last_run ? last_run : splits.List();
+    // A new run starts at the first goal; without this the view stays wherever the last run ended.
+    const bool run_started = splits.Clock().IsRunning() || splits.Clock().RealTime() > 0.0;
+    if (run_started && !run_was_started) ImGui::SetScrollY(0.f);
+    run_was_started = run_started;
 
     {
         const SplitsProfile& hp = splits.ActiveProfile();
@@ -385,11 +409,11 @@ void SplitsGoalListWindow::Draw(SplitsWindow& splits)
 
         float total_w;
         if (td == TD::Both) {
-            total_w = ImGui::CalcTextSize("Real: ").x + ImGui::CalcTextSize(tbuf_r).x + ImGui::CalcTextSize("  Game: ").x + ImGui::CalcTextSize(tbuf_g).x;
+            total_w = ImGui::CalcTextSize("RTA: ").x + ImGui::CalcTextSize(tbuf_r).x + ImGui::CalcTextSize("  Game: ").x + ImGui::CalcTextSize(tbuf_g).x;
         }
         else {
             const bool gt = (td == TD::Game);
-            const char* lbl = gt ? "Game: " : "Real: ";
+            const char* lbl = gt ? "Game: " : "RTA: ";
             total_w = ImGui::CalcTextSize(lbl).x + ImGui::CalcTextSize(gt ? tbuf_g : tbuf_r).x;
         }
 
@@ -407,7 +431,6 @@ void SplitsGoalListWindow::Draw(SplitsWindow& splits)
 
         const float start_x = min_x + (avail - total_w) * 0.5f;
         float clamped_start_x = start_x < min_x ? min_x : start_x;
-        // Keep clock text off buttons when window narrow.
         const float max_start_x = button_x - total_w - sp;
         if (clamped_start_x > max_start_x) clamped_start_x = max_start_x;
         if (clamped_start_x < min_x) clamped_start_x = min_x;
@@ -434,21 +457,29 @@ void SplitsGoalListWindow::Draw(SplitsWindow& splits)
         const ImVec4 game_col = ImGui::ColorConvertU32ToFloat4(splits.ColorGameTime());
         ImGui::SetCursorPosX(clamped_start_x);
         if (td == TD::Both) {
-            ImGui::TextColored(real_col, "Real: %s", tbuf_r);
+            ImGui::TextColored(real_col, "RTA: %s", tbuf_r);
             ImGui::SameLine(0, 0);
             ImGui::TextColored(game_col, "  Game: %s", tbuf_g);
         }
         else {
             const bool gt = (td == TD::Game);
-            ImGui::TextColored(gt ? game_col : real_col, gt ? "Game: %s" : "Real: %s", gt ? tbuf_g : tbuf_r);
+            ImGui::TextColored(gt ? game_col : real_col, gt ? "Game: %s" : "RTA: %s", gt ? tbuf_g : tbuf_r);
         }
 
+        // Greyed (not hidden) when a press would do nothing, so the buttons never shift; the tooltip says why.
+        auto control_button = [](const char* label, const float width, const char* disabled_reason) {
+            ImGui::BeginDisabled(disabled_reason != nullptr);
+            const bool pressed = ImGui::Button(label, {width, 0});
+            ImGui::EndDisabled();
+            if (disabled_reason && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("%s", disabled_reason);
+            return pressed;
+        };
         ImGui::SameLine(button_x);
-        if (ImGui::Button(lbl0, {bw0, 0})) splits.StartRun();
+        if (control_button(lbl0, bw0, splits.StartDisabledReason())) splits.StartRun();
         ImGui::SameLine(0, sp);
         if (ImGui::Button("Reset", {bw1, 0})) splits.ResetRun();
         ImGui::SameLine(0, sp);
-        if (ImGui::Button("Split", {bw2, 0})) splits.TriggerManualSplit();
+        if (control_button("Split", bw2, splits.SplitDisabledReason())) splits.TriggerManualSplit();
         ImGui::SameLine(0, sp);
         if (ImGui::Button(ICON_FA_COGS, {bwg, 0})) SettingsWindow::Instance().NavigateToSection(splits.SettingsName());
     }
@@ -461,11 +492,29 @@ void SplitsGoalListWindow::Draw(SplitsWindow& splits)
         ImGui::TextColored(col, "%s", msg);
         ImGui::Separator();
     };
-    if (splits.RunComplete()) status_banner("Run complete!", {0.4f, 1.f, 0.4f, 1.f});
-    if (splits.RunFailed()) status_banner("Run failed", ImGui::ColorConvertU32ToFloat4(splits.ColorPbBehind()));
+    if (last_run) {
+        if (splits.LastRunFailed())
+            status_banner("Run failed", ImGui::ColorConvertU32ToFloat4(splits.ColorPbBehind()));
+        else
+            status_banner("Run complete!", {0.4f, 1.f, 0.4f, 1.f});
+    }
 
     // Only before run starts: no list switch mid-run.
     if (splits.Clock().RealTime() == 0.0) {
+        if (const char* paused = splits.PausedRunName()) {
+            char tbuf[32];
+            FormatTime(tbuf, sizeof(tbuf), splits.PausedRunTime());
+            char resume_label[160];
+            snprintf(resume_label, sizeof(resume_label), "Resume paused run: %s (%s)", paused, tbuf);
+            if (ImGui::Button(resume_label)) splits.ResumePausedRun();
+            ImGui::SameLine();
+            if (ImGui::Button(ICON_FA_TRASH "##discard_paused")) {
+                ImGui::ConfirmDialog("Discard the paused run? It can't be resumed afterwards.", [](const bool confirmed, void*) {
+                    if (confirmed) SplitsWindow::Instance().DiscardPausedRun();
+                });
+            }
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("Discard the paused run");
+        }
         if (splits.ActiveProfile().dynamic_by_default) {
             DrawSCLoadCombo(splits);
             DrawSCCreateVariantModal(splits);
@@ -492,19 +541,30 @@ void SplitsGoalListWindow::Draw(SplitsWindow& splits)
         return;
     }
 
+    // -1: a held finished run draws like history (no live reads, no current goal), without gold.
+    DrawGoalRows(*list, clock, last_run ? splits.LastRunComparison() : splits.ActiveComparison(), splits.ActiveProfile(), splits, last_run ? -1 : 0);
+
+    ImGui::Separator();
+    splits.DrawNuzlockeSection();
+    DrawRecentRunsSection(splits);
+
+    ImGui::End();
+}
+
+void SplitsGoalListWindow::DrawGoalRows(const GoalList& list, const GoalClock& clock, const ComparisonSplits& cmp, const SplitsProfile& profile, SplitsWindow& splits, const int attempt_number)
+{
+    // History has no current goal: an unfinished one there was simply never reached.
+    const bool live = attempt_number == 0;
     int current_idx = -1;
-    for (int i = 0; i < static_cast<int>(list->goals.size()); ++i) {
-        if (list->goals[i].is_header) continue;
-        const GoalStatus s = list->goals[i].status;
+    for (int i = 0; live && i < static_cast<int>(list.goals.size()); ++i) {
+        if (list.goals[i].is_header) continue;
+        const GoalStatus s = list.goals[i].status;
         if (s != GoalStatus::Completed && s != GoalStatus::Failed) {
             current_idx = i;
             break;
         }
     }
 
-    // Start column only differs for SC parallel starts.
-    const SplitsProfile& profile = splits.ActiveProfile();
-    const ComparisonSplits& cmp = splits.ActiveComparison();
     const auto nan = std::numeric_limits<double>::quiet_NaN();
 
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
@@ -515,16 +575,16 @@ void SplitsGoalListWindow::Draw(SplitsWindow& splits)
 
     int pb_idx = 0;
 
-    for (int i = 0; i < static_cast<int>(list->goals.size());) {
-        const auto& g = list->goals[i];
+    for (int i = 0; i < static_cast<int>(list.goals.size());) {
+        const auto& g = list.goals[i];
 
         if (g.is_header) {
-            const bool hdr_open = DrawHeaderRow(*list, i, profile);
+            const bool hdr_open = DrawHeaderRow(list, i, profile);
             ++i;
             if (!hdr_open) {
                 // Collapsed: skip children, keep pb_idx aligned.
-                while (i < static_cast<int>(list->goals.size())) {
-                    const auto& child = list->goals[i];
+                while (i < static_cast<int>(list.goals.size())) {
+                    const auto& child = list.goals[i];
                     if (child.is_header && child.indent <= g.indent) break;
                     if (!child.is_header) ++pb_idx;
                     ++i;
@@ -548,23 +608,27 @@ void SplitsGoalListWindow::Draw(SplitsWindow& splits)
 
         const float row_y0 = ImGui::GetCursorScreenPos().y - pad_y;
 
-        DrawGoalRow(g, clock, i == current_idx, pb_at_v(cmp.real), pb_seg_v(cmp.real), pb_at_v(cmp.game), pb_seg_v(cmp.game), pb_at_v(cmp.start_real), pb_at_v(cmp.start_game), profile, splits);
+        GoalRowOptions opts;
+        opts.live = live;
+        if (!live) {
+            const auto holds = [&](const std::vector<int>& v) {
+                return pb_idx < static_cast<int>(v.size()) && v[static_cast<size_t>(pb_idx)] == attempt_number;
+            };
+            opts.gold_real = holds(splits.BestSegRealAttempt());
+            opts.gold_game = holds(splits.BestSegGameAttempt());
+        }
+        DrawGoalRow(g, clock, i == current_idx, pb_at_v(cmp.real), pb_seg_v(cmp.real), pb_at_v(cmp.game), pb_seg_v(cmp.game), pb_at_v(cmp.start_real), pb_at_v(cmp.start_game), profile, splits, opts);
         ++pb_idx;
         ++i;
 
         const float row_y1 = ImGui::GetCursorScreenPos().y + pad_y;
         draw_list->AddRect({win_x + pad_x, row_y0}, {win_x + avail_w - pad_x, row_y1}, IM_COL32(80, 80, 80, 140), 2.f);
     }
-
-    ImGui::Separator();
-    splits.DrawNuzlockeSection();
-    DrawRecentRunsSection(splits);
-
-    ImGui::End();
 }
 
 void SplitsGoalListWindow::DrawGoalRow(
-    const GoalEntry& g, const GoalClock& clock, bool is_current, double pb_split_real, double pb_seg_real, double pb_split_game, double pb_seg_game, double pb_start_real, double pb_start_game, const SplitsProfile& profile, SplitsWindow& splits
+    const GoalEntry& g, const GoalClock& clock, bool is_current, double pb_split_real, double pb_seg_real, double pb_split_game, double pb_seg_game, double pb_start_real, double pb_start_game, const SplitsProfile& profile, SplitsWindow& splits,
+    const GoalRowOptions& opts
 )
 {
     const bool done = (g.status == GoalStatus::Completed || g.status == GoalStatus::Failed);
@@ -582,7 +646,7 @@ void SplitsGoalListWindow::DrawGoalRow(
 
     using TD = SplitsProfile::TimeDisplay;
     const auto td = profile.time_display;
-    const bool show_real = (td != TD::Game) && !(td == TD::Both && profile.both_header_only);
+    const bool show_real = (td != TD::Game);
     const bool show_game = (td != TD::Real);
 
     const ImVec4 real_col = ImGui::ColorConvertU32ToFloat4(splits.ColorRealTime());
@@ -593,8 +657,9 @@ void SplitsGoalListWindow::DrawGoalRow(
         return ImVec4{c.x, c.y, c.z, c.w * 0.55f};
     };
 
-    auto time_cell = [&](double real_v, double game_v, bool valid, double pb_real, double pb_game, bool with_delta, bool as_segment) {
-        auto line = [&](double v, ImVec4 col, double pb) {
+    // gold: this attempt's best-ever segment, coloured like LiveSplit's gold split.
+    auto time_cell = [&](double real_v, double game_v, bool valid, double pb_real, double pb_game, bool with_delta, bool as_segment, bool gold_r = false, bool gold_g = false) {
+        auto line = [&](double v, ImVec4 col, double pb, bool gold) {
             char buf[32];
             if (valid)
                 FormatTime(buf, sizeof(buf), v);
@@ -604,17 +669,17 @@ void SplitsGoalListWindow::DrawGoalRow(
                 ImGui::TextColored(muted(col), "+%s", buf);
             else
                 ImGui::TextColored(col, "%s", buf);
-            if (valid && with_delta) DrawPBDelta(v, pb, ahead_col, behind_col);
+            if (valid && with_delta) DrawPBDelta(v, pb, gold ? kGoldColor : ahead_col, gold ? kGoldColor : behind_col);
         };
-        if (show_real) line(real_v, real_col, pb_real);
-        if (show_game) line(game_v, game_col, pb_game);
+        if (show_real) line(real_v, real_col, pb_real, gold_r);
+        if (show_game) line(game_v, game_col, pb_game, gold_g);
     };
 
     if (g.display_style == GoalEntry::DisplayStyle::Dynamic || profile.dynamic_by_default) {
         const bool started = g.start_real_time >= 0.0;
 
         const int hours = static_cast<int>(std::max(clock.RealTime(), clock.GameTime())) / 3600;
-        const int tier = hours >= 10 ? 2 : (hours >= 1 ? 1 : 0); // MM:SS.CC / H:MM:SS.CC / HH:MM:SS.CC
+        const int tier = hours >= 10 ? 2 : (hours >= 1 ? 1 : 0);
         const float time_w = TimeColumnWidth(tier, /*with_sign=*/false);
         const float dur_w = TimeColumnWidth(tier, /*with_sign=*/true);
 
@@ -642,7 +707,10 @@ void SplitsGoalListWindow::DrawGoalRow(
             return std::isnan(pb_end) || std::isnan(pb_start) ? pb_seg : pb_end - pb_start;
         };
         ImGui::TableSetColumnIndex(3);
-        time_cell(g.split.real_time - g.start_real_time, g.split.game_time - g.start_game_time, started && done, pb_duration(pb_split_real, pb_start_real, pb_seg_real), pb_duration(pb_split_game, pb_start_game, pb_seg_game), profile.show_segment_pb, false);
+        time_cell(
+            g.split.real_time - g.start_real_time, g.split.game_time - g.start_game_time, started && done, pb_duration(pb_split_real, pb_start_real, pb_seg_real), pb_duration(pb_split_game, pb_start_game, pb_seg_game), profile.show_segment_pb, false,
+            opts.gold_real, opts.gold_game
+        );
 
         ImGui::EndTable();
         return;
@@ -658,7 +726,7 @@ void SplitsGoalListWindow::DrawGoalRow(
     if (g.indent > 0) ImGui::SetCursorPosX(ImGui::GetCursorPosX() + g.indent * 12.f * ImGui::FontScale());
     ImGui::TextColored(color, "%s", g.label.c_str());
 
-    if (g.trigger.type == GoalTrigger::Type::ReachTitleRank) {
+    if (opts.live && g.trigger.type == GoalTrigger::Type::ReachTitleRank) {
         auto* title = GW::PlayerMgr::GetTitleTrack(g.trigger.title_id);
         if (title) {
             if (title->current_points == 0) {
@@ -691,7 +759,7 @@ void SplitsGoalListWindow::DrawGoalRow(
         }
     }
 
-    if (g.trigger.type == GoalTrigger::Type::MobKill) {
+    if (opts.live && g.trigger.type == GoalTrigger::Type::MobKill) {
         const uint32_t target = g.trigger.param2 > 0 ? g.trigger.param2 : 1;
         ImGui::TextDisabled("kills: %d / %u", g.trigger_progress, target);
     }
@@ -712,7 +780,7 @@ void SplitsGoalListWindow::DrawGoalRow(
 
     if (profile.show_segment && done) {
         ImGui::TableSetColumnIndex(2);
-        time_cell(g.split.segment_real, g.split.segment_game, true, pb_seg_real, pb_seg_game, profile.show_segment_pb, true);
+        time_cell(g.split.segment_real, g.split.segment_game, true, pb_seg_real, pb_seg_game, profile.show_segment_pb, true, opts.gold_real, opts.gold_game);
     }
 
     ImGui::EndTable();
@@ -723,7 +791,7 @@ bool SplitsGoalListWindow::DrawHeaderRow(const GoalList& list, int header_idx, c
     const GoalEntry& h = list.goals[header_idx];
 
     using TD = SplitsProfile::TimeDisplay;
-    const bool gt = (profile.time_display == TD::Game) || (profile.time_display == TD::Both && profile.both_header_only);
+    const bool gt = (profile.time_display == TD::Game);
 
     double start_t = -1.0, end_t = -1.0;
     bool any_started = false, any_failed = false, all_done = true, has_any = false;
@@ -784,6 +852,28 @@ bool SplitsGoalListWindow::DrawHeaderRow(const GoalList& list, int header_idx, c
     return is_open;
 }
 
+void SplitsGoalListWindow::DrawAttempt(SplitsWindow& splits, const RecentRun& run, const SplitsProfile::ComparisonMode mode)
+{
+    if (attempt_views_generation != splits.HistoryGeneration()) {
+        attempt_views.clear();
+        attempt_views_generation = splits.HistoryGeneration();
+    }
+    const GoalList* list = splits.List();
+    const auto key = std::pair{run.attempt_number, run.utc_start};
+    auto it = attempt_views.find(key);
+    if (it == attempt_views.end() && list) it = attempt_views.emplace(key, BuildAttemptView(*list, run)).first;
+    if (it == attempt_views.end() || !it->second.matches_list) {
+        // Goals added or removed since this run: its times no longer line up with the rows.
+        ImGui::TextDisabled("The list has changed since this run; showing its saved times.");
+        DrawAttemptGoalsTable(splits, run, splits.ActiveProfile().time_display == SplitsProfile::TimeDisplay::Game);
+        return;
+    }
+    AttemptView& view = it->second;
+    auto& cmp = view.cmp[static_cast<size_t>(mode)];
+    if (!cmp) cmp = splits.ComparisonFor(view.list, mode);
+    DrawGoalRows(view.list, view.clock, *cmp, splits.ActiveProfile(), splits, run.attempt_number);
+}
+
 void SplitsGoalListWindow::DrawRecentRunsSection(SplitsWindow& splits)
 {
     const SplitsProfile& profile = splits.ActiveProfile();
@@ -798,13 +888,13 @@ void SplitsGoalListWindow::DrawRecentRunsSection(SplitsWindow& splits)
         ImGui::PushID(static_cast<int>(i));
 
         char tbuf[32];
-        FormatTime(tbuf, sizeof(tbuf), run.total_real);
+        FormatTime(tbuf, sizeof(tbuf), gt ? run.total_game : run.total_real);
         char dbuf[32];
         FormatDate(dbuf, sizeof(dbuf), run.utc_start);
         char label[96];
         snprintf(label, sizeof(label), "%s  %s%s%s%s", tbuf, dbuf, run.start_zone.empty() ? "" : "  ", run.start_zone.c_str(), run.failed ? "  [Failed]" : "");
 
-        if (ImGui::CollapsingHeader(label)) DrawAttemptGoalsTable(splits, run, gt, false, nullptr, nullptr, {}, {}, {});
+        if (ImGui::CollapsingHeader(label)) DrawAttempt(splits, run, profile.comparison_mode);
         ImGui::PopID();
     }
 }
@@ -829,9 +919,6 @@ void SplitsGoalListWindow::DrawRunHistoryViewer(SplitsWindow& splits)
     }
 
     const bool gt = (splits.ActiveProfile().time_display == SplitsProfile::TimeDisplay::Game);
-    const ImVec4 ahead_col = ImGui::ColorConvertU32ToFloat4(splits.ColorPbAhead());
-    const ImVec4 behind_col = ImGui::ColorConvertU32ToFloat4(splits.ColorPbBehind());
-    const ImVec4 gold_col = {1.0f, 0.85f, 0.0f, 1.0f}; // no ColorGold() setting yet; same gold as GWChrono
 
     auto request_delete = [this](const char* label, std::function<void()> action) {
         ImGui::ConfirmDialog(label, [this, action = std::move(action)](const bool confirmed, void*) {
@@ -841,10 +928,10 @@ void SplitsGoalListWindow::DrawRunHistoryViewer(SplitsWindow& splits)
         });
     };
 
-    if (splits.PBAttemptNumber() > 0 && !std::isnan(splits.PBTotalReal())) {
+    if (splits.PBAttemptNumber(gt) > 0 && !std::isnan(splits.PBTotal(gt))) {
         char tbuf[32];
-        FormatTime(tbuf, sizeof(tbuf), splits.PBTotalReal());
-        if (list && ImGui::TreeNode("pb_breakdown", "PB \xe2\x80\x94 %s (Attempt #%d)", tbuf, splits.PBAttemptNumber())) {
+        FormatTime(tbuf, sizeof(tbuf), splits.PBTotal(gt));
+        if (list && ImGui::TreeNode("pb_breakdown", "PB \xe2\x80\x94 %s (Attempt #%d)", tbuf, splits.PBAttemptNumber(gt))) {
             const auto& pb = splits.Comparison(SplitsProfile::ComparisonMode::PB);
             DrawSplitsBreakdownRows(*list, gt, pb, nullptr, nullptr);
             ImGui::TreePop();
@@ -905,6 +992,14 @@ void SplitsGoalListWindow::DrawRunHistoryViewer(SplitsWindow& splits)
 
 
     ImGui::Separator();
+    using CM = SplitsProfile::ComparisonMode;
+    const CM cmp_mode = history_cmp_mode < 0 ? splits.ActiveProfile().comparison_mode : static_cast<CM>(history_cmp_mode);
+    ImGui::TextUnformatted("Compare attempts vs:");
+    for (const auto& [mode, name] : {std::pair{CM::PB, "PB"}, std::pair{CM::Average, "Average"}, std::pair{CM::SumOfBest, "Sum of Best"}}) {
+        ImGui::SameLine();
+        if (ImGui::RadioButton(name, cmp_mode == mode)) history_cmp_mode = static_cast<int>(mode);
+    }
+
     ImGui::BeginChild("##runhistlist", {0.f, 0.f}, true);
     for (const auto& run : run_history_cache) {
         ImGui::PushID(run.attempt_number);
@@ -913,18 +1008,24 @@ void SplitsGoalListWindow::DrawRunHistoryViewer(SplitsWindow& splits)
         ImGui::SameLine();
 
         char tbuf[32];
-        FormatTime(tbuf, sizeof(tbuf), run.total_real); // real only: no per-run game total
+        // Same timing as the [PB] tag, so the tagged run is visibly the fastest.
+        FormatTime(tbuf, sizeof(tbuf), gt ? run.total_game : run.total_real);
         char dbuf[32];
         FormatDate(dbuf, sizeof(dbuf), run.utc_start);
-        const bool is_pb = (run.attempt_number == splits.PBAttemptNumber());
+        const bool is_pb = (run.attempt_number == splits.PBAttemptNumber(gt));
         char label[128];
         snprintf(label, sizeof(label), "#%d  %s  %s%s%s%s%s", run.attempt_number, tbuf, dbuf, run.start_zone.empty() ? "" : "  ", run.start_zone.c_str(), run.failed ? "  [Failed]" : "", is_pb ? "  [PB]" : "");
 
         if (ImGui::CollapsingHeader(label)) {
-            const auto& sob_cmp = splits.Comparison(SplitsProfile::ComparisonMode::SumOfBest);
-            const auto& pb_cmp = splits.Comparison(SplitsProfile::ComparisonMode::PB);
-            const auto& sob = gt ? sob_cmp.game : sob_cmp.real;
-            DrawAttemptGoalsTable(splits, run, gt, true, &sob, &pb_cmp, gold_col, ahead_col, behind_col);
+            // Wall clock, start to end: breaks and time with the game closed included. Information only, never compared.
+            if (run.utc_end > 0) {
+                char sbuf[32], ebuf[32], wbuf[32];
+                FormatDate(sbuf, sizeof(sbuf), run.utc_start);
+                FormatDate(ebuf, sizeof(ebuf), run.utc_end);
+                FormatTime(wbuf, sizeof(wbuf), static_cast<double>(run.utc_end - run.utc_start));
+                ImGui::TextDisabled("Real time: %s  (%s to %s)", wbuf, sbuf, ebuf);
+            }
+            DrawAttempt(splits, run, cmp_mode);
         }
         ImGui::PopID();
     }
@@ -998,13 +1099,9 @@ void SplitsGoalListWindow::DrawTimeAndBehaviorColumn(SplitsWindow& splits)
     ImGui::SameLine();
     if (ImGui::RadioButton("Game", p.time_display == TD::Game)) p.time_display = TD::Game;
     ImGui::SameLine();
-    if (ImGui::RadioButton("Real", p.time_display == TD::Real)) p.time_display = TD::Real;
+    if (ImGui::RadioButton("RTA", p.time_display == TD::Real)) p.time_display = TD::Real;
     ImGui::SameLine();
     if (ImGui::RadioButton("Both", p.time_display == TD::Both)) p.time_display = TD::Both;
-    if (p.time_display == TD::Both) {
-        ImGui::SameLine(0, 12.f * ImGui::FontScale());
-        ImGui::CheckboxWithHelp("Clock only", &p.both_header_only, "Show Real+Game in the header clock only;\ngoal rows display game time.");
-    }
     ImGui::TextUnformatted("Compare vs:");
     ImGui::SameLine();
     ImGui::SetNextItemWidth(110.f * ImGui::FontScale());
@@ -1052,9 +1149,9 @@ void SplitsGoalListWindow::DrawKeybindsAndColorsColumn(SplitsWindow& splits)
     ImGui::ColorButtonPicker("Current color", &splits.ColorActive());
     ImGui::SameLine();
     ImGui::TextUnformatted("Current");
-    ImGui::ColorButtonPicker("Real time color", &splits.ColorRealTime());
+    ImGui::ColorButtonPicker("RTA color", &splits.ColorRealTime());
     ImGui::SameLine();
-    ImGui::TextUnformatted("Real");
+    ImGui::TextUnformatted("RTA");
     ImGui::SameLine(0, 12.f * ImGui::FontScale());
     ImGui::ColorButtonPicker("Game time color", &splits.ColorGameTime());
     ImGui::SameLine();
@@ -1244,7 +1341,6 @@ void SplitsGoalListWindow::DrawSCCreateVariantModal(SplitsWindow& splits)
         }
     }
     if (!target) {
-        // Stale: nothing to clone.
         sc_creating_new_area = -1;
         ImGui::CloseCurrentPopup();
     }
@@ -1364,7 +1460,6 @@ void SplitsGoalListWindow::DrawEditableGoalsList(SplitsWindow& splits)
             ImGui::TextDisabled("[%s]", tname);
         }
         ImGui::SameLine();
-        // No nested headers.
         if (!g.is_header && g.indent > 0) {
             ImGui::TextDisabled("|");
             ImGui::SameLine(0, 2.f * ImGui::FontScale());
@@ -1635,7 +1730,7 @@ void SplitsGoalListWindow::DrawTitlePicker(SplitsWindow& splits)
             if (!data) {
                 s_titles.clear();
                 break;
-            } // title data not loaded: retry next frame
+            }
             TitleEntry e;
             e.id = id;
             e.enc = std::make_unique<GuiUtils::EncString>(data->name_id);
@@ -2049,7 +2144,6 @@ void SplitsGoalListWindow::DrawTownBatchPicker(SplitsWindow& splits)
         {1, GoalTrigger::Type::EnterOutpost, "Enter", "En", "Enter "},
         {2, GoalTrigger::Type::ExitOutpost, "Leave", "Lv", "Leave "},
     };
-    // Running: one box = one start/trigger pair goal.
     static const BatchColumn kColumnsRunning[] = {
         {1, GoalTrigger::Type::EnterOutpost, "Add", "Add", ""},
     };
@@ -2070,7 +2164,6 @@ void SplitsGoalListWindow::DrawExplorableBatchPicker(SplitsWindow& splits)
         {2, GoalTrigger::Type::VanquishComplete, "VQ", "VQ", "VQ "},
         {4, GoalTrigger::Type::ExitExplorable, "Leave", "Lv", "Leave "},
     };
-    // Running: no VQ; one box = one pass-through leg.
     static const BatchColumn kColumnsRunning[] = {
         {1, GoalTrigger::Type::EnterExplorable, "Add", "Add", ""},
     };

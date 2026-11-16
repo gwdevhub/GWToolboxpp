@@ -23,7 +23,6 @@ inline constexpr int kProfileManual = 0;
 inline constexpr int kProfileRunning = 1;
 inline constexpr int kProfileSC = 2;
 
-// State lives in SplitsWindow.cpp's anonymous namespace, like other toolbox windows; this header is the interface.
 class SplitsWindow : public ToolboxWindow {
     SplitsWindow() = default;
     ~SplitsWindow() override = default;
@@ -54,6 +53,13 @@ public:
     void ResetRun();
     void TriggerManualSplit();
     void SwitchProfile(int idx);
+    // Last session's paused run, offered in this profile until resumed, discarded or replaced by a new run. nullptr = none.
+    [[nodiscard]] const char* PausedRunName() const;
+    [[nodiscard]] double PausedRunTime() const;
+    void ResumePausedRun();
+    void DiscardPausedRun();
+    [[nodiscard]] const char* StartDisabledReason() const;
+    [[nodiscard]] const char* SplitDisabledReason() const;
 
     // Shared by all profiles on purpose.
     Color& ColorCompleted();
@@ -70,9 +76,11 @@ public:
 
     [[nodiscard]] const GoalClock& Clock() const;
     [[nodiscard]] GoalList* List();
-    [[nodiscard]] bool RunComplete() const;
-    [[nodiscard]] bool RunFailed() const;
-    // Include current pause so display tick live.
+    // Auto-reset profiles: the finished run as it looked at its end, shown until the next attempt starts. nullptr otherwise.
+    [[nodiscard]] const GoalList* LastRunList() const;
+    [[nodiscard]] const GoalClock& LastRunClock() const;
+    [[nodiscard]] const ComparisonSplits& LastRunComparison() const;
+    [[nodiscard]] bool LastRunFailed() const;
     [[nodiscard]] double TotalPausedReal() const;
 
     void NewActiveList(const char* name);
@@ -81,18 +89,18 @@ public:
     void LoadActiveList(const std::wstring& path);
     // keep_preset: SC auto-detect only. Set before LoadPB so history read from Defaults\.
     void SetActiveList(GoalList list, bool keep_preset = false);
-    // Cached: real disk scan. Valid till next rebuild.
     [[nodiscard]] const std::vector<std::pair<std::string, std::wstring>>& GetSavedLists() const;
-    // SC Load combo. Cached apart: grouping read each file.
     [[nodiscard]] const std::unordered_map<GW::Constants::MapID, std::vector<std::pair<std::string, std::wstring>>>& GetSavedListsByArea() const;
 
     [[nodiscard]] const ComparisonSplits& ActiveComparison() const;
-    // Any mode, not just active: Run History shows all.
+    // For an attempt shown in Run History: DoA's PB is laid out in that attempt's own rotation.
+    [[nodiscard]] ComparisonSplits ComparisonFor(const GoalList& list, SplitsProfile::ComparisonMode mode) const;
     [[nodiscard]] const ComparisonSplits& Comparison(SplitsProfile::ComparisonMode mode) const;
 
     [[nodiscard]] const std::vector<RecentRun>& RecentRuns() const;
-    [[nodiscard]] int PBAttemptNumber() const;
-    [[nodiscard]] double PBTotalReal() const;
+    [[nodiscard]] int HistoryGeneration() const;
+    [[nodiscard]] int PBAttemptNumber(bool game) const;
+    [[nodiscard]] double PBTotal(bool game) const;
     [[nodiscard]] const std::vector<int>& BestSegRealAttempt() const;
     [[nodiscard]] const std::vector<int>& BestSegGameAttempt() const;
 
@@ -101,7 +109,6 @@ public:
     void DeleteRunsFromHistory(const std::vector<int>& attempt_numbers);
     void ClearRunHistory();
 
-    // Nuzlocke runtime Manual-only; settings stay editable.
     void DrawNuzlockeSection();
     [[nodiscard]] bool NuzlockePointsEnabled() const;
     [[nodiscard]] int NuzlockeTotalPoints() const;
@@ -118,7 +125,6 @@ private:
     [[nodiscard]] int CompletedGoalCount() const;
 
     void SaveResumeState();
-    void ApplyResume();
     void DeleteResumeState();
     void SaveCompletedRun();
     void FailRun();
@@ -126,7 +132,10 @@ private:
     void LoadPB(bool refresh_comparisons = true);
     void UpdateReferenceIfPB();
     void ResetRunFlags();
-    void BeginRun();
+    // ResetRun minus LiveSplit, Nuzlocke and the held finished run: after a finish those stay until the next attempt.
+    void ClearRun();
+    // by_hand: the Start button, so RTA counts from the press rather than the instance's creation.
+    void BeginRun(bool by_hand);
     // Order matter: Attach setup (starts_immediately) need list filled.
     void ReplaceActiveList(const std::function<void()>& populate);
     void LoadProfileLastList();
@@ -136,8 +145,9 @@ private:
     // Never mid-run. Swaps to the entered area's list; a list for the same area is kept. DoA first: rotation not map-driven.
     void ApplySCAutoLoadPreset(bool just_entered_map);
     void StartDoAZone();
-    // Between zones (one done, none in progress, some left): game time pauses, real time keeps the full clear time.
     [[nodiscard]] bool InDoAHub() const;
+    // A Running attempt only begins in the route's first area: elsewhere a step would start a run that fails on a wrong turn.
+    [[nodiscard]] bool AtRouteStart() const;
     // Skip unless list has MobKill: full agent walk not free.
     void RefreshMobNameCache();
 

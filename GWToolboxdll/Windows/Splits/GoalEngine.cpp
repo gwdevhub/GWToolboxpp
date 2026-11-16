@@ -9,6 +9,7 @@
 
 #include <GWCA/GameEntities/Title.h>
 
+#include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
 #include <GWCA/Managers/PlayerMgr.h>
 #include <GWCA/Managers/SkillbarMgr.h>
@@ -45,6 +46,7 @@ void GoalEngine::Reset()
     prev_map_ = GW::Constants::MapID::None;
     last_real_ = 0.0;
     last_game_ = 0.0;
+    baselines_taken_ = false;
     mission_complete_map_ = GW::Constants::MapID::None;
     mission_bonus_map_ = GW::Constants::MapID::None;
     vanquish_complete_map_ = GW::Constants::MapID::None;
@@ -172,6 +174,9 @@ int GoalEngine::Update(const GoalClock& clock, GW::Constants::MapID current_map,
     }
 
     if (!started_ && just_entered_map) started_ = true;
+    // Before the run starts a map load can be a character switch, which the old baselines don't describe.
+    if (just_entered_map && !clock.IsRunning() && clock.RealTime() <= 0.0) baselines_taken_ = false;
+    if (!baselines_taken_ && player_level > 0 && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading) TakeArmBaselines(player_level);
 
     int fired = 0;
 
@@ -349,8 +354,9 @@ int GoalEngine::Update(const GoalClock& clock, GW::Constants::MapID current_map,
                     break;
                 }
 
+                // Level 1 can't be reached during a run, so being at it counts: "Reach level 1" starts a run on a new character.
                 case GoalTrigger::Type::ReachLevel:
-                    fire = (player_level >= t.level);
+                    fire = baselines_taken_ && player_level >= t.level && (arm_level_ < t.level || (t.level == 1 && arm_level_ == 1));
                     break;
 
                 case GoalTrigger::Type::ExitOutpost:
@@ -363,7 +369,7 @@ int GoalEngine::Update(const GoalClock& clock, GW::Constants::MapID current_map,
                     const GW::Title* title = GW::PlayerMgr::GetTitleTrack(t.title_id);
                     if (title && t.level > 0 && title->current_title_tier_index != 0) {
                         const uint32_t target_tier_idx = title->max_title_tier_index + static_cast<uint32_t>(t.level - 1);
-                        fire = title->current_title_tier_index >= target_tier_idx;
+                        fire = title->current_title_tier_index >= target_tier_idx && static_cast<uint32_t>(g.trigger_progress) < target_tier_idx;
                     }
                     break;
                 }
@@ -391,9 +397,8 @@ int GoalEngine::Update(const GoalClock& clock, GW::Constants::MapID current_map,
                     break;
                 }
 
-                // No event: poll.
                 case GoalTrigger::Type::SkillLearnt:
-                    fire = GW::SkillbarMgr::GetIsSkillLearnt(static_cast<GW::Constants::SkillID>(t.param1));
+                    fire = g.trigger_progress == 0 && GW::SkillbarMgr::GetIsSkillLearnt(static_cast<GW::Constants::SkillID>(t.param1));
                     break;
 
                 // Count, not first match: AoE wipe queue many kills in one tick. param1 = old lists only.
@@ -553,6 +558,22 @@ void GoalEngine::FireGoal(int index, const GoalClock& clock)
             nxt.start_real_time = g.split.real_time;
             nxt.start_game_time = g.split.game_time;
             if (nxt.status == GoalStatus::NotStarted) nxt.status = GoalStatus::Started;
+        }
+    }
+}
+
+void GoalEngine::TakeArmBaselines(const int player_level)
+{
+    baselines_taken_ = true;
+    arm_level_ = player_level;
+    // On the goal itself, so list edits after arming can't hand a goal another goal's baseline; resume saves it too.
+    for (auto& g : list_->goals) {
+        if (g.status == GoalStatus::Completed) continue;
+        if (g.trigger.type == GoalTrigger::Type::SkillLearnt) {
+            g.trigger_progress = GW::SkillbarMgr::GetIsSkillLearnt(static_cast<GW::Constants::SkillID>(g.trigger.param1)) ? 1 : 0;
+        }
+        else if (g.trigger.type == GoalTrigger::Type::ReachTitleRank) {
+            if (const GW::Title* title = GW::PlayerMgr::GetTitleTrack(g.trigger.title_id)) g.trigger_progress = static_cast<int>(title->current_title_tier_index);
         }
     }
 }

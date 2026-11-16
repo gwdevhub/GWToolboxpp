@@ -15,8 +15,10 @@ Open it from the Toolbox window, and set it up under <ToolboxPath steps={['Setti
 Splits has three profiles, switched at the top of its settings. Each keeps its own goal lists, run history and display options.
 
 * **Manual** — build any list of goals in any order. The clock starts when you start working on the first goal (for example on entering the mission for a Mission goal), or when you press Start.
-* **Running** — a route of zones. Each leg is timed from entering a zone to leaving it. The clock starts on your first movement or shadow step in the first explorable area, pauses while you're in towns, and a wrong turn fails the run.
-* **SC (Speed Clear)** — dungeons and elite areas. Entering a supported area loads its preset list automatically, rows show Start, End and Duration, the clock pauses while you're in a town (if leaving didn't fail the run) and resumes when you move again in an explorable area, and once a run has finished or failed, entering the area again resets it for the next attempt. Supported areas are the 20 dungeons in the preset list (the Eye of the North dungeons, Secret Lair of the Snowmen and both versions of the Forsaken Tunnels), the Fissure of Woe, the Underworld, Urgoz's Warren, the Deep, the Domain of Anguish and the Tomb of the Primeval Kings.
+* **Running** — a route of zones. Each leg is timed from entering a zone to leaving it. The clock starts on your first movement or shadow step in the first explorable area, game time pauses while you're in towns, and a wrong turn fails the run.
+* **SC (Speed Clear)** — dungeons and elite areas. Entering a supported area loads its preset list automatically, rows show Start, End and Duration, game time pauses while you're in a town (if leaving didn't fail the run) and resumes when you move again in an explorable area, and once a run has finished or failed, entering the area again resets it for the next attempt. Supported areas are the 20 dungeons in the preset list (the Eye of the North dungeons, Secret Lair of the Snowmen and both versions of the Forsaken Tunnels), the Fissure of Woe, the Underworld, Urgoz's Warren, the Deep, the Domain of Anguish and the Tomb of the Primeval Kings.
+
+When a run finishes or fails, it stays on screen until the next attempt starts by itself, or until you press Reset or Start. A Running attempt only starts in the route's first area, so walking somewhere else after a finish doesn't start one.
 
 ## Goals
 
@@ -26,7 +28,7 @@ In the Manual and Running profiles, add goals from the goal list section of the 
 * **Explorable areas** and **Towns** — entering or leaving them
 * **Dungeons** and **Elite areas** — the same checkpoints the SC presets use
 * **Quests** — picking up or completing a quest by its ID
-* **Skills** learned, **Titles** reaching a rank, **Levels** reached
+* **Skills** learned, **Titles** reaching a rank, **Levels** reached — these only count progress made during the run, so a skill you already know doesn't complete straight away. A level goal also counts if you're exactly at that level when the run is ready, so a list starting with *Reach level 1* starts on a new character.
 * **Mob kills** — a monster by name, with a kill count
 * **Manual** — a split you trigger yourself with the Split button or `/splits split`
 
@@ -34,7 +36,13 @@ Headers group goals and can be collapsed. Lists are saved per profile and the la
 
 ## Time
 
-The clock can show **Real** time, **Game** time or **Both**. Game time leaves out loading screens, cinematics and the wait in the Vizunah Square, Unwaking Waters and Ascalon Academy (pre-Searing Ascalon City) mission queues. In the Domain of Anguish it also pauses while you're between zones, so game time there is time spent clearing zones; real time keeps counting the full clear.
+The clock can show **RTA**, **Game** time or **Both**.
+
+**RTA** (real time attack) is timed the way speed clear records are. When a run starts by itself, for example on entering an area or on your first step, it counts from when the instance opened, so the loading screen into the area is included. When you press Start, it counts from the press. It keeps counting through loading screens, cutscenes and towns; only Pause stops it.
+
+**Game** time leaves out loading screens, cinematics and the wait in the Vizunah Square, Unwaking Waters and Ascalon Academy (pre-Searing Ascalon City) mission queues. In the Domain of Anguish it also pauses while you're between zones, so game time there is time spent clearing zones; RTA keeps counting the full clear.
+
+Opening a run in **Run History...** also shows its **Real time**: the plain clock time from the run's start to its end, including breaks and any time the game was closed. It's for reference only and isn't used in comparisons.
 
 ## Comparisons and history
 
@@ -57,7 +65,7 @@ A run fails, and is saved as failed, when:
 
 ## Pause and resume
 
-Pausing a Manual or Running run saves a checkpoint. If you close the game while paused, Splits asks when you next start it whether to resume. The run comes back paused, and the time you were away isn't counted.
+Pausing a Manual or Running run saves a checkpoint. If you close the game while paused, the Splits window shows a **Resume paused run** button next time, until you resume it, discard it with the bin button, or start a new run. The run comes back paused, and the time you were away isn't counted.
 
 ## Chat commands and hotkeys
 
@@ -69,7 +77,7 @@ To bind them to keys, add a **Send Chat** hotkey in the [Hotkeys](/docs/hotkeys/
 
 ## LiveSplit
 
-Splits can send start, split, reset, pause and resume to [LiveSplit](https://livesplit.org/) over its own websocket server, with one split for every goal completed, so LiveSplit's splits and real time stay in step with Splits. Enable **Enable LiveSplit websocket server** in the Splits settings, and pick the format for LiveSplit One or the LiveSplit Server. It uses port 9002 by default, separate from the Objective Timer's server, so both can run at once. Connecting LiveSplit works the same way as in [Integrations](/docs/integrations/#livesplit-integration), using the Splits port.
+Splits can send start, split, reset, pause and resume to [LiveSplit](https://livesplit.org/) over its own websocket server, with one split for every goal completed, so LiveSplit's splits and real time stay in step with Splits' RTA. Enable **Enable LiveSplit websocket server** in the Splits settings, and pick the format for LiveSplit One or the LiveSplit Server. It uses port 9002 by default, separate from the Objective Timer's server, so both can run at once. Connecting LiveSplit works the same way as in [Integrations](/docs/integrations/#livesplit-integration), using the Splits port.
 
 ## Nuzlocke
 

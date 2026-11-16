@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Windows/Splits/GoalEntry.h>
 #include <Windows/Splits/SplitsProfile.h>
 
 #include <cstdint>
@@ -15,16 +16,19 @@ struct RecentRunGoal {
     double real_time = 0.0;
     double game_time = 0.0;
     bool completed = false;
-    double start_real_time = -1.0; // -1 = not recorded
+    GoalStatus status = GoalStatus::NotStarted;
+    double start_real_time = -1.0;
     double start_game_time = -1.0;
 };
 struct RecentRun {
     double total_real = 0.0;
+    // Only the real total is saved; this is the latest game split, worked out once at load.
+    double total_game = 0.0;
     bool failed = false;
     int64_t utc_start = 0;
-    std::string start_zone; // DoA rotation, "" otherwise
+    int64_t utc_end = 0;
+    std::string start_zone;
     std::vector<RecentRunGoal> goals;
-    // 1-based file position (oldest = 1). Shift on delete / 200 cap.
     int attempt_number = 0;
 };
 
@@ -32,7 +36,6 @@ struct RecentRun {
 struct ComparisonSplits {
     std::vector<double> real;
     std::vector<double> game;
-    // SC own starts only. SumOfBest has none: empty.
     std::vector<double> start_real;
     std::vector<double> start_game;
 };
@@ -42,16 +45,16 @@ public:
     // refresh_comparisons=false: PB only, so "Run complete!" compare against pre-run history.
     void Load(const std::filesystem::path& runs_path, int goal_count, bool refresh_comparisons = true);
 
-    // Cap 200, oldest out first, protected runs stay. No reload.
     void Save(const std::filesystem::path& runs_path, const GoalList& active_list, bool failed, double total_real, int64_t run_start_unix, const std::string& run_char_name, double total_paused, const std::string& start_zone);
 
     [[nodiscard]] const ComparisonSplits& Comparison(SplitsProfile::ComparisonMode mode) const;
 
     [[nodiscard]] const std::vector<RecentRun>& RecentRuns() const { return recent_runs_; }
-    // 0 = no PB.
-    [[nodiscard]] int PBAttemptNumber() const { return pb_attempt_number_; }
-    [[nodiscard]] double PBTotalReal() const { return pb_total_real_; } // NaN = no PB
-    // Attempt that set each leg best (0 = never). Real/game separate.
+    // Bumped on every load, so cached attempt views know their comparisons are stale.
+    [[nodiscard]] int Generation() const { return generation_; }
+    // Real and game PBs can be different runs, like LiveSplit's per-timing-method PB. 0 = no PB.
+    [[nodiscard]] int PBAttemptNumber(const bool game) const { return game ? pb_game_attempt_number_ : pb_real_attempt_number_; }
+    [[nodiscard]] double PBTotal(const bool game) const { return game ? pb_total_game_ : pb_total_real_; }
     [[nodiscard]] const std::vector<int>& BestSegRealAttempt() const { return best_seg_real_attempt_; }
     [[nodiscard]] const std::vector<int>& BestSegGameAttempt() const { return best_seg_game_attempt_; }
 
@@ -61,10 +64,11 @@ public:
     void Clear(const std::filesystem::path& runs_path, int goal_count);
 
 private:
-    // Old runs store -1.0 start: treat as missing.
     ComparisonSplits pb_;
     double pb_total_real_ = std::numeric_limits<double>::quiet_NaN();
-    int pb_attempt_number_ = 0;
+    double pb_total_game_ = std::numeric_limits<double>::quiet_NaN();
+    int pb_real_attempt_number_ = 0;
+    int pb_game_attempt_number_ = 0;
 
     // Partial non-failed runs still count for legs they reached.
     ComparisonSplits avg_;
@@ -74,4 +78,5 @@ private:
     std::vector<int> best_seg_game_attempt_;
 
     std::vector<RecentRun> recent_runs_;
+    int generation_ = 0;
 };

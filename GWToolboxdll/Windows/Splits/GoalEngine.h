@@ -26,7 +26,6 @@ public:
     // Primary objective (no BULLET bit). Its ObjectiveDone give real map_id.
     void NotifyObjectiveAdd(uint32_t obj_id, uint32_t type_flags);
 
-    // str only for ServerMessage/DisplayDialogue. Copied.
     void NotifyEvent(GoalTrigger::Type type, uint32_t id1 = 0, uint32_t id2 = 0, const wchar_t* str = nullptr, size_t str_len = 0);
 
     void Reset();
@@ -40,7 +39,6 @@ public:
 
     void FailRun(const GoalClock& clock);
 
-    // Started VQ/Mission/Bonus map left unfinished. Caller pick policy. Clear on read.
     [[nodiscard]] bool ConsumeIncompleteRezone();
 
     [[nodiscard]] bool ConsumeWrongMapEntered();
@@ -54,6 +52,8 @@ private:
     void CheckPendingCompletions(float delta, GW::Constants::MapID current_map);
     bool TrustedCompletionCheck(int goal_index, const wchar_t* player_name, const GoalTrigger& t);
     void CompletePreviousGoals(int index, const GoalClock& clock);
+    // Level, skill and title goals only count progress made after the list was armed, so an old state never starts or finishes a run.
+    void TakeArmBaselines(int player_level);
 
     struct PendingEvent {
         GoalTrigger::Type type;
@@ -69,6 +69,9 @@ private:
 
     double last_real_ = 0.0;
     double last_game_ = 0.0;
+
+    bool baselines_taken_ = false;
+    int arm_level_ = 0;
 
     GW::Constants::MapID mission_complete_map_ = GW::Constants::MapID::None;
     GW::Constants::MapID mission_bonus_map_ = GW::Constants::MapID::None;

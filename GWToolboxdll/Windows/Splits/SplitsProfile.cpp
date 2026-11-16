@@ -22,6 +22,5 @@ SplitsProfile MakeSCProfile()
     SplitsProfile p;
     p.name = "SC";
     p.dynamic_by_default = true;
-    p.auto_reset_on_complete = true;
     return p;
 }

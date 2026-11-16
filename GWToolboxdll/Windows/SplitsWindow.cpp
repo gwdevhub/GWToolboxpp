@@ -38,11 +38,10 @@
 #include <cctype>
 #include <cwchar>
 #include <functional>
+#include <optional>
 #include <tuple>
 
-// glaze reflection need external linkage.
 namespace SplitsWindowJson {
-    // Registered with SettingsRegistry; per-profile settings live on SplitsProfile, Nuzlocke's on NuzlockeSettings.
     struct Settings {
         Colors::SettingColor color_completed = Colors::RGB(0, 255, 0);
         Colors::SettingColor color_active = Colors::RGB(255, 255, 255);
@@ -60,11 +59,10 @@ namespace SplitsWindowJson {
         double game_time = 0.0;
         double segment_real = 0.0;
         double segment_game = 0.0;
-        // Only used when status == "Started".
         double start_real_time = 0.0;
         double start_game_time = 0.0;
         int trigger_progress = 0;
-        std::string status; // NotStarted = nullopt
+        std::string status;
     };
 
     struct SerializedResume {
@@ -157,7 +155,6 @@ namespace {
     std::array<SplitsProfile, kProfileCount> profiles = {MakeManualProfile(), MakeRunningProfile(), MakeSCProfile()};
     int active_profile_idx = 0;
 
-    // Dirty on SaveActiveList (only list writer) or folder change.
     std::vector<std::pair<std::string, std::wstring>> cached_saved_lists;
     std::wstring cached_saved_lists_folder;
     bool cached_saved_lists_dirty = true;
@@ -171,11 +168,11 @@ namespace {
 
     GW::Constants::MapID last_map = GW::Constants::MapID::None;
     bool last_was_explorable = false;
-    // 0 = unknown. Reset on zone load so char switch re-seed.
     int player_level = 0;
-    // Also "seen alive" for MobKill death check. Clear on zone load.
     std::unordered_map<uint32_t, std::unique_ptr<GuiUtils::EncString>> mob_name_cache;
     bool pending_map_enter = false;
+    // Cleared on server transfer until the new instance's timer packet: GetInstanceTime is stale in between.
+    bool instance_timer_valid = true;
     bool pending_came_from_explorable = false;
     bool pending_party_defeated = false;
     // Resign seen, wait kPartyDefeated confirm. Clear on zone load so stale resign not blame later wipe.
@@ -183,7 +180,6 @@ namespace {
     // Own latch: InstanceLoadFile may land other tick than InstanceLoadInfo.
     uint32_t pending_doa_file_id = 0;
     GW::Vec2f pending_doa_spawn = {};
-    // Detected rotation (0-3 = Foundry/City/Veil/Gloom, -1 none); saved with the run for order analysis.
     int doa_start_zone = -1;
     // Applied after ApplyTimerPolicy: an auto-reset in the same tick would wipe a zone start set earlier.
     bool doa_zone_start_pending = false;
@@ -193,7 +189,7 @@ namespace {
     int livesplit_applied_port = 0;
     int livesplit_splits_sent = 0;
     bool livesplit_paused = false;
-    // Set by ApplyResume: LiveSplit lost the run with the restart, so the unpause re-sends start plus the completed splits.
+    // Set by ResumePausedRun: LiveSplit lost the run with the restart, so the unpause re-sends start plus the completed splits.
     bool livesplit_resync_pending = false;
     // Port field edits a copy, committed when the field loses focus, so typing doesn't restart the server per digit.
     int livesplit_port_edit = 0;
@@ -202,13 +198,12 @@ namespace {
     uint32_t pending_skill_id = 0;
     bool running_awaiting_movement = false;
     bool town_paused = false;
-    // Mission ready-check up; game time not count.
     bool in_mission_queue = false;
     // Manual pause freeze real time too: track apart.
     bool manually_paused = false;
     double manual_pause_accum = 0.0;
     double total_paused_real = 0.0;
-    int64_t title_start_points = -1; // -1 = not read
+    int64_t title_start_points = -1;
 
     bool run_complete = false;
     bool run_failed = false;
@@ -217,10 +212,101 @@ namespace {
 
     bool pending_resume = false;
     std::string pending_resume_data;
+    std::string pending_resume_name;
+    double pending_resume_time = 0.0;
+    int pending_resume_profile = -1;
+
+    struct FinishedRun {
+        GoalList list;
+        GoalClock clock;
+        ComparisonSplits cmp;
+        bool failed = false;
+    };
+    std::optional<FinishedRun> last_run;
 
     GW::HookEntry ui_hooks;
     GW::HookEntry stoc_hooks;
     GW::HookEntry chat_cmd_hook;
+
+    // Rebuilt per frame: the current rotation's order is only known as the run goes.
+    ComparisonSplits pb_zone_ordered;
+
+    // DoA's list order is fixed but the clear order isn't, so the PB run's zones are shifted into this run's order;
+    // each zone keeps its own times, and the hub gap at each position comes from the PB run.
+    ComparisonSplits PBInRunZoneOrder(const ComparisonSplits& pb, const GoalList& list, const int start_zone_first_goal)
+    {
+        struct Zone {
+            int first = 0;
+            int count = 0;
+            int first_list_idx = 0;
+            double run_start = std::numeric_limits<double>::infinity();
+        };
+        std::vector<Zone> zones;
+        int idx = 0;
+        for (int li = 0; li < static_cast<int>(list.goals.size()); ++li) {
+            const auto& g = list.goals[static_cast<size_t>(li)];
+            if (g.is_header) {
+                zones.push_back({idx, 0});
+                continue;
+            }
+            if (zones.empty()) return pb; // goals outside any zone: nothing safe to reorder
+            Zone& z = zones.back();
+            if (z.count++ == 0) z.first_list_idx = li;
+            if (g.start_real_time >= 0.0) z.run_start = std::min(z.run_start, g.start_real_time);
+            ++idx;
+        }
+        std::erase_if(zones, [](const Zone& z) {
+            return z.count == 0;
+        });
+        const auto n = static_cast<size_t>(idx);
+        if (zones.size() < 2 || pb.real.size() < n || pb.game.size() < n || pb.start_real.size() < n || pb.start_game.size() < n) return pb;
+        // Started by StartDoAZone on entry, before any of its goals record a start.
+        for (auto& z : zones)
+            if (z.first_list_idx == start_zone_first_goal && std::isinf(z.run_start)) z.run_start = -1.0;
+
+        // Real and game PBs can be different runs with different rotations, so each is reordered on its own.
+        auto reorder = [&](std::vector<double>& ends, std::vector<double>& starts) {
+            std::vector<double> pb_start(zones.size(), std::numeric_limits<double>::infinity()), pb_end(zones.size(), 0.0);
+            for (size_t zi = 0; zi < zones.size(); ++zi) {
+                for (int i = zones[zi].first; i < zones[zi].first + zones[zi].count; ++i) {
+                    const auto u = static_cast<size_t>(i);
+                    if (std::isnan(starts[u]) || std::isnan(ends[u])) return; // old run without starts
+                    pb_start[zi] = std::min(pb_start[zi], starts[u]);
+                    pb_end[zi] = std::max(pb_end[zi], ends[u]);
+                }
+            }
+            std::vector<size_t> pb_order(zones.size());
+            for (size_t i = 0; i < pb_order.size(); ++i)
+                pb_order[i] = i;
+            std::ranges::stable_sort(pb_order, {}, [&](const size_t i) {
+                return pb_start[i];
+            });
+            // Zones this run has reached, in the order reached; the rest keep the PB run's order.
+            std::vector<size_t> run_order = pb_order;
+            std::ranges::stable_sort(run_order, {}, [&](const size_t i) {
+                return zones[i].run_start;
+            });
+            if (run_order == pb_order) return;
+
+            const std::vector<double> src_ends = ends, src_starts = starts;
+            double end = 0.0;
+            for (size_t pos = 0; pos < run_order.size(); ++pos) {
+                const double gap = pos == 0 ? pb_start[pb_order[0]] : pb_start[pb_order[pos]] - pb_end[pb_order[pos - 1]];
+                const size_t zi = run_order[pos];
+                const double shift = end + gap - pb_start[zi];
+                for (int i = zones[zi].first; i < zones[zi].first + zones[zi].count; ++i) {
+                    const auto u = static_cast<size_t>(i);
+                    ends[u] = src_ends[u] + shift;
+                    starts[u] = src_starts[u] + shift;
+                }
+                end = pb_end[zi] + shift;
+            }
+        };
+        ComparisonSplits out = pb;
+        reorder(out.real, out.start_real);
+        reorder(out.game, out.start_game);
+        return out;
+    }
 } // namespace
 
 // =============================================================================
@@ -277,13 +363,21 @@ GoalList* SplitsWindow::List()
 {
     return &active_list;
 }
-bool SplitsWindow::RunComplete() const
+const GoalList* SplitsWindow::LastRunList() const
 {
-    return run_complete;
+    return last_run ? &last_run->list : nullptr;
 }
-bool SplitsWindow::RunFailed() const
+const GoalClock& SplitsWindow::LastRunClock() const
 {
-    return run_failed;
+    return last_run->clock;
+}
+const ComparisonSplits& SplitsWindow::LastRunComparison() const
+{
+    return last_run->cmp;
+}
+bool SplitsWindow::LastRunFailed() const
+{
+    return last_run && last_run->failed;
 }
 double SplitsWindow::TotalPausedReal() const
 {
@@ -292,7 +386,16 @@ double SplitsWindow::TotalPausedReal() const
 
 const ComparisonSplits& SplitsWindow::ActiveComparison() const
 {
-    return run_history.Comparison(ActiveProfile().comparison_mode);
+    const auto mode = ActiveProfile().comparison_mode;
+    if (mode != SplitsProfile::ComparisonMode::PB || SCPresets::AnchorMapId(active_list) != GW::Constants::MapID::Domain_of_Anguish) return run_history.Comparison(mode);
+    pb_zone_ordered = PBInRunZoneOrder(run_history.Comparison(mode), active_list, SCPresets::DoAZoneFirstGoal(active_list, doa_start_zone));
+    return pb_zone_ordered;
+}
+ComparisonSplits SplitsWindow::ComparisonFor(const GoalList& list, const SplitsProfile::ComparisonMode mode) const
+{
+    const ComparisonSplits& cmp = run_history.Comparison(mode);
+    if (mode != SplitsProfile::ComparisonMode::PB || SCPresets::AnchorMapId(list) != GW::Constants::MapID::Domain_of_Anguish) return cmp;
+    return PBInRunZoneOrder(cmp, list, -1);
 }
 const ComparisonSplits& SplitsWindow::Comparison(const SplitsProfile::ComparisonMode mode) const
 {
@@ -302,13 +405,17 @@ const std::vector<RecentRun>& SplitsWindow::RecentRuns() const
 {
     return run_history.RecentRuns();
 }
-int SplitsWindow::PBAttemptNumber() const
+int SplitsWindow::HistoryGeneration() const
 {
-    return run_history.PBAttemptNumber();
+    return run_history.Generation();
 }
-double SplitsWindow::PBTotalReal() const
+int SplitsWindow::PBAttemptNumber(const bool game) const
 {
-    return run_history.PBTotalReal();
+    return run_history.PBAttemptNumber(game);
+}
+double SplitsWindow::PBTotal(const bool game) const
+{
+    return run_history.PBTotal(game);
 }
 const std::vector<int>& SplitsWindow::BestSegRealAttempt() const
 {
@@ -350,7 +457,7 @@ void SplitsWindow::Initialize()
     static constexpr std::tuple<const char*, const char*, const char*> kSearchLabels[] = {
         {"color_completed", "Completed color", ""},
         {"color_active", "Current color", ""},
-        {"color_real_time", "Real time color", ""},
+        {"color_real_time", "RTA color", ""},
         {"color_game_time", "Game time color", ""},
         {"color_pb_ahead", "Ahead color", ""},
         {"color_pb_behind", "Behind color", ""},
@@ -500,6 +607,10 @@ void SplitsWindow::Initialize()
     // Before InstanceLoadInfo: covers district change, same map.
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&stoc_hooks, [](GW::HookStatus*, const GW::Packet::StoC::GameSrvTransfer*) {
         in_mission_queue = false;
+        instance_timer_valid = false;
+    });
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceTimer>(&stoc_hooks, [](GW::HookStatus*, GW::Packet::StoC::InstanceTimer*) {
+        instance_timer_valid = true;
     });
 
     // DoA rotation depend on spawn, not map_id.
@@ -614,15 +725,9 @@ void SplitsWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
     if (j.list_name.empty() || !std::filesystem::exists(ActiveSplitsFolder() / (GoalList::FileStem(j.list_name) + L".json"))) return;
     pending_resume_data = std::move(content);
     pending_resume = true;
-    const std::string msg = std::format(
-        "Run '{}' was paused last session.\n"
-        "Resume where you left off? It stays paused until you press Start.\n"
-        "No discards it.",
-        j.list_name
-    );
-    ImGui::ConfirmDialog(msg.c_str(), [this](const bool resume, void*) {
-        resume ? ApplyResume() : DeleteResumeState();
-    });
+    pending_resume_name = j.list_name;
+    pending_resume_time = j.real_time;
+    pending_resume_profile = active_profile_idx;
 }
 
 
@@ -665,13 +770,13 @@ void SplitsWindow::SaveActiveList(bool clear_preset)
     if (!active_list.SaveToFile(path)) Log::Error("Splits: failed to save list '%s'", active_list.name.c_str());
     cached_saved_lists_dirty = true;
     cached_saved_lists_by_area_dirty = true;
-    // Already in memory: no re-read for anchor.
     saved_list_anchor_cache[path] = SCPresets::AnchorMapId(active_list);
 }
 
 
 void SplitsWindow::ReplaceActiveList(const std::function<void()>& populate)
 {
+    last_run.reset();
     engine.Detach();
     populate();
     engine.Attach(&active_list);
@@ -798,7 +903,8 @@ void SplitsWindow::ClearRunHistory()
 
 void SplitsWindow::UpdateReferenceIfPB()
 {
-    const double pb_total = run_history.PBTotalReal();
+    // Reference splits are real time, so they follow the real PB.
+    const double pb_total = run_history.PBTotal(/*game=*/false);
     const auto& pb_splits = run_history.Comparison(SplitsProfile::ComparisonMode::PB).real;
     if (std::isnan(pb_total) || pb_splits.empty()) return;
 
@@ -883,15 +989,31 @@ void SplitsWindow::SaveResumeState()
 
 void SplitsWindow::DeleteResumeState()
 {
-    pending_resume = false;
-    pending_resume_data.clear();
-    if (splits_folder.empty()) return;
+    // Last session's paused run waits for its own Resume or Discard: list and profile changes leave it alone.
+    if (pending_resume || splits_folder.empty()) return;
     std::error_code ec;
     std::filesystem::remove(splits_folder / L"resume.json", ec);
 }
 
 
-void SplitsWindow::ApplyResume()
+const char* SplitsWindow::PausedRunName() const
+{
+    return pending_resume && pending_resume_profile == active_profile_idx ? pending_resume_name.c_str() : nullptr;
+}
+
+double SplitsWindow::PausedRunTime() const
+{
+    return pending_resume_time;
+}
+
+void SplitsWindow::DiscardPausedRun()
+{
+    pending_resume = false;
+    pending_resume_data.clear();
+    DeleteResumeState();
+}
+
+void SplitsWindow::ResumePausedRun()
 {
     if (!pending_resume) return;
     pending_resume = false;
@@ -943,7 +1065,7 @@ void SplitsWindow::ApplyResume()
     engine.RestoreLastSplit(last_split_real, last_split_game);
     total_paused_real = j.total_paused.value_or(0.0);
     livesplit_splits_sent = CompletedGoalCount();
-    livesplit_paused = true; // comes back paused
+    livesplit_paused = true;
     livesplit_resync_pending = true;
     run_start_unix = j.start_unix.value_or(0);
     run_char_name = j.char_name.value_or("");
@@ -975,8 +1097,11 @@ void SplitsWindow::ResetRunFlags()
 }
 
 
-void SplitsWindow::BeginRun()
+void SplitsWindow::BeginRun(const bool by_hand)
 {
+    if (pending_resume) DiscardPausedRun();
+    if (last_run && NuzlockeDeathTrackerEnabled()) nuzlocke.ResetProgress();
+    last_run.reset();
     run_char_name.clear();
     if (const wchar_t* wname = GW::PlayerMgr::GetPlayerName()) run_char_name = TextUtils::WStringToString(wname);
     run_start_unix = static_cast<int64_t>(time(nullptr));
@@ -985,6 +1110,10 @@ void SplitsWindow::BeginRun()
     livesplit_splits_sent = 0;
     livesplit_paused = false;
     run_clock.Start();
+    // An automatic start counts from the instance's creation (the run is the area, even when its first objective comes after walking to an NPC);
+    // pressing Start counts from the press.
+    const bool from_instance_start = !by_hand && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable && instance_timer_valid;
+    run_clock.StartReal(from_instance_start ? GW::Map::GetInstanceTime() / 1000.0 : 0.0);
 }
 
 
@@ -992,6 +1121,7 @@ void SplitsWindow::StartRun()
 {
     if (run_clock.IsRunning()) {
         run_clock.Pause();
+        run_clock.SetRealPaused(true);
         SetLiveSplitPaused(true);
         manually_paused = true;
         manual_pause_accum = 0.0;
@@ -1004,8 +1134,9 @@ void SplitsWindow::StartRun()
         total_paused_real += manual_pause_accum;
         manually_paused = false;
         run_clock.Start();
+        run_clock.SetRealPaused(false);
         if (livesplit_resync_pending) {
-            // Sent now, not in ApplyResume: at startup LiveSplit usually hasn't reconnected yet and would miss it.
+            // Sent now, not in ResumePausedRun: at startup LiveSplit usually hasn't reconnected yet and would miss it.
             livesplit_resync_pending = false;
             SendLiveSplit("reset");
             SendLiveSplit("start");
@@ -1026,28 +1157,29 @@ void SplitsWindow::StartRun()
         return;
     }
 
-    // Finished run's clock/flags still set until Reset.
-    if (run_complete || run_failed) {
-        run_clock.Reset();
-        ResetRunFlags();
-    }
     engine.Attach(&active_list);
     // Full refresh so Avg/SoB include run just finished.
     LoadPB();
-    BeginRun();
+    BeginRun(/*by_hand=*/true);
     engine.ForceStarted();
 }
 
 void SplitsWindow::ResetRun()
 {
-    if (run_clock.IsRunning() || run_complete || run_failed) SendLiveSplit("reset");
+    if (run_clock.IsRunning() || run_clock.RealTime() > 0.0 || last_run) SendLiveSplit("reset");
+    ClearRun();
+    last_run.reset();
+    if (NuzlockeDeathTrackerEnabled()) nuzlocke.ResetProgress();
+}
+
+void SplitsWindow::ClearRun()
+{
     DeleteResumeState();
     ResetRunFlags();
     engine.Reset();
     run_clock.Reset();
     // last_map kept: no fake MapEnter on reset.
     LoadPB();
-    if (NuzlockeDeathTrackerEnabled()) nuzlocke.ResetProgress();
 }
 
 void CHAT_CMD_FUNC(SplitsWindow::CmdSplits)
@@ -1062,6 +1194,27 @@ void CHAT_CMD_FUNC(SplitsWindow::CmdSplits)
         splits.ResetRun();
     else
         Log::Error("Usage: /splits start|split|reset (start also pauses/unpauses)");
+}
+
+const char* SplitsWindow::StartDisabledReason() const
+{
+    if (manually_paused) return nullptr;
+    if (town_paused) return "Resumes when you move";
+    if (active_profile_idx == kProfileSC) return "SC starts and pauses automatically";
+    // Mirrors StartRun's early return, so the button only greys when a press would really be ignored.
+    if (running_awaiting_movement) return "Starts when you move";
+    return nullptr;
+}
+
+const char* SplitsWindow::SplitDisabledReason() const
+{
+    bool any_manual = false;
+    for (const auto& g : active_list.goals) {
+        if (g.is_header || g.trigger.type != GoalTrigger::Type::Manual) continue;
+        if (g.status != GoalStatus::Completed) return nullptr;
+        any_manual = true;
+    }
+    return any_manual ? "All Manual goals done" : "No Manual goals in this list";
 }
 
 void SplitsWindow::TriggerManualSplit()
@@ -1137,20 +1290,20 @@ void SplitsWindow::Update(float delta)
 
     if (is_explorable) RefreshMobNameCache();
 
-    // Running and SC pause in towns and resume on first movement back in an explorable; the fail settings decide whether leaving ends the run.
+    // Running and SC pause Game time in towns and resume on first movement back in an explorable; RTA (and LiveSplit with it) keeps counting.
+    // The fail settings decide whether leaving ends the run.
     const bool pauses_in_town = is_running || active_profile_idx == kProfileSC;
     if (pauses_in_town) {
         if (!is_explorable && run_clock.IsRunning() && !town_paused) {
             run_clock.Pause();
-            SetLiveSplitPaused(true);
             town_paused = true;
         }
         // Arm continuously, like GWChrono, so no re-zone needed. SC only resumes; it never starts a run on movement.
         // Not during a manual pause: the next step would otherwise BeginRun and restart the run.
-        if (is_explorable && !run_clock.IsRunning() && !run_complete && !run_failed && !manually_paused && (is_running || town_paused)) running_awaiting_movement = true;
+        if (is_explorable && !run_clock.IsRunning() && !manually_paused && ((is_running && AtRouteStart()) || town_paused)) running_awaiting_movement = true;
     }
 
-    if (pauses_in_town && !run_complete && !run_failed) {
+    if (pauses_in_town) {
         if (running_awaiting_movement && is_explorable) {
             const uint32_t skill = pending_skill_id;
             pending_skill_id = 0;
@@ -1164,11 +1317,10 @@ void SplitsWindow::Update(float delta)
                 running_awaiting_movement = false;
                 if (town_paused) {
                     run_clock.Start();
-                    SetLiveSplitPaused(false);
                     town_paused = false;
                 }
                 else {
-                    BeginRun();
+                    BeginRun(/*by_hand=*/false);
                     engine.ForceStarted();
                 }
             }
@@ -1193,6 +1345,13 @@ void SplitsWindow::Update(float delta)
     if (!run_complete && !run_failed && ActiveGoalCount() > 0 && (run_clock.IsRunning() || (is_running && fired > 0))) {
         if (CompletedGoalCount() == ActiveGoalCount()) SaveCompletedRun();
     }
+
+    // Armed for the next attempt at once, so its first goal is caught whatever the trigger; the finished run stays on screen till then.
+    if (run_complete || run_failed) {
+        FinishedRun finished{active_list, run_clock, ActiveComparison(), run_failed};
+        ClearRun();
+        last_run = std::move(finished);
+    }
 }
 
 
@@ -1210,7 +1369,6 @@ void SplitsWindow::ApplyTimerPolicy(const bool just_entered_map)
     // RealTime()>0 too: same auto-pause race as FailRun.
     if (engine.ConsumeWrongMapEntered() && is_running && (run_clock.IsRunning() || run_clock.RealTime() > 0.0)) FailRun();
 
-    if (!is_running && (run_complete || run_failed) && ActiveProfile().auto_reset_on_complete && just_entered_map) ResetRun();
 
     // Start on first sign of attempt, not completion. Separate from GoalEngine on purpose.
     // New trigger with start->done gap need rule here too.
@@ -1255,7 +1413,7 @@ void SplitsWindow::ApplyTimerPolicy(const bool just_entered_map)
             }
             break;
         }
-        if (should_start) BeginRun();
+        if (should_start) BeginRun(/*by_hand=*/false);
     }
 }
 
@@ -1290,6 +1448,15 @@ void SplitsWindow::RefreshMobNameCache()
     }
 }
 
+bool SplitsWindow::AtRouteStart() const
+{
+    const auto first = std::ranges::find_if(active_list.goals, [](const GoalEntry& g) {
+        return !g.is_header;
+    });
+    if (first == active_list.goals.end() || !first->start_trigger || first->start_trigger->type != GoalTrigger::Type::EnterExplorable) return true;
+    return first->start_trigger->map_id == last_map;
+}
+
 bool SplitsWindow::InDoAHub() const
 {
     if (!run_clock.IsRunning() || SCPresets::AnchorMapId(active_list) != GW::Constants::MapID::Domain_of_Anguish) return false;
@@ -1304,8 +1471,8 @@ bool SplitsWindow::InDoAHub() const
             if (status == GoalStatus::Completed) ++completed;
             if (status == GoalStatus::Started) started = true;
         }
-        if (total == 0) continue;                                          // the root header: zones are its sub-headers
-        if (started || (completed > 0 && completed < total)) return false; // a zone is in progress
+        if (total == 0) continue;
+        if (started || (completed > 0 && completed < total)) return false;
         if (completed == total)
             any_done = true;
         else
@@ -1374,9 +1541,9 @@ void SplitsWindow::ApplySCAutoLoadPreset(const bool just_entered_map)
     // DoA: file_id 219215 (same as OT), rotation from spawn.
     if (pending_doa_file_id == 219215) {
         const GW::Vec2f spawn = pending_doa_spawn;
-        pending_doa_file_id = 0; // consume even if no swap
+        pending_doa_file_id = 0;
         const int starting_zone = SCPresets::DetectDoAStartingZone(spawn);
-        if (starting_zone == -1) return; // Mallyx
+        if (starting_zone == -1) return;
         // Any DoA list (incl. renamed variants) already fits every rotation; only a different area's list is swapped.
         if (SCPresets::AnchorMapId(active_list) != GW::Constants::MapID::Domain_of_Anguish && !run_clock.IsRunning()) SetActiveList(SCPresets::BuildDoAPresetList(), /*keep_preset=*/true);
         doa_start_zone = starting_zone;
@@ -1501,5 +1668,5 @@ void SplitsWindow::DrawNuzlockeSection()
 
 int SplitsWindow::NuzlockeTotalPoints() const
 {
-    return nuzlocke.TotalPoints(active_list);
+    return nuzlocke.TotalPoints(last_run ? last_run->list : active_list);
 }
