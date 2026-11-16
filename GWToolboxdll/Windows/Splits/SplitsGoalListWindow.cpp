@@ -47,6 +47,7 @@ namespace {
     int edit_trigger_type = 0;
     int edit_level = 1;
     char list_name_buf[64] = {};
+    std::string list_name_synced;
 
     char list_picker_filter_buf[128] = {};
     char load_list_filter_buf[128] = {};
@@ -1041,7 +1042,11 @@ void SplitsGoalListWindow::DrawRunHistoryViewer(SplitsWindow& splits)
 void SplitsGoalListWindow::DrawSettings(SplitsWindow& splits)
 {
     GoalList* list = splits.List();
-    if (list_name_buf[0] == '\0' && !list->name.empty()) snprintf(list_name_buf, sizeof(list_name_buf), "%s", list->name.c_str());
+    // Follows the list however it was loaded (main window picker, SC auto-load), so Save can't write it under another list's name.
+    if (list->name != list_name_synced) {
+        snprintf(list_name_buf, sizeof(list_name_buf), "%s", list->name.c_str());
+        list_name_synced = list->name;
+    }
 
     DrawProfileSwitcher(splits);
     ImGui::Separator();
@@ -1082,7 +1087,6 @@ void SplitsGoalListWindow::DrawProfileSwitcher(SplitsWindow& splits)
         }
         if (ImGui::Button(splits.Profiles()[i].name.c_str())) {
             splits.SwitchProfile(i);
-            list_name_buf[0] = '\0';
         }
         if (active) {
             ImGui::PopStyleColor(3);
@@ -1207,7 +1211,6 @@ void SplitsGoalListWindow::DrawPlainLoadCombo(SplitsWindow& splits)
     const char* current = list->name.empty() ? "(no list)" : list->name.c_str();
     SearchableCombo("##load_list", current, load_list_filter_buf, sizeof(load_list_filter_buf), entries, [&](const size_t i) {
         splits.LoadActiveList(saved[i].second);
-        snprintf(list_name_buf, sizeof(list_name_buf), "%s", list->name.c_str());
     });
 }
 
