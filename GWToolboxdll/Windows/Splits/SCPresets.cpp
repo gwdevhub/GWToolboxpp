@@ -374,7 +374,7 @@ namespace SCPresets {
                 starting_area = i;
             }
         }
-        return starting_area; // -1 = Mallyx, not DoA
+        return starting_area;
     }
 
     namespace {

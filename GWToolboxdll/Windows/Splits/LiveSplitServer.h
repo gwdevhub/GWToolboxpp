@@ -15,7 +15,6 @@ public:
     void Stop();
     [[nodiscard]] bool IsRunning() const;
 
-    // No-op while stopped.
     void Send(std::string_view command, Format format);
 
 private:

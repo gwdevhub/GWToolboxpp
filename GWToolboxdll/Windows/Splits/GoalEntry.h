@@ -22,7 +22,6 @@ struct GoalTrigger {
         ExitOutpost = 8,
         ReachTitleRank = 9,
 
-        // Preset only.
         ObjectiveDone = 10,         // param1 = objective_id
         DoorOpen = 11,              // param1 = object_id
         DoorClose = 12,             // param1 = object_id
@@ -34,7 +33,6 @@ struct GoalTrigger {
         CountdownStart = 18,        // param1 = map_id (ToPK arena countdown)
         ObjectiveStarted = 19,      // param1 = objective_id (kObjectiveUpdated UI message)
 
-        // User enter by ID.
         QuestPickup = 20,   // param1 = quest_id
         QuestComplete = 21, // param1 = quest_id. Abandon fire too.
         SkillLearnt = 22,   // param1 = skill_id. Polled.
@@ -45,12 +43,11 @@ struct GoalTrigger {
     };
 
     Type type = Type::Manual;
-    bool hard_mode = false; // Mission/Bonus: need HM
+    bool hard_mode = false;
     GW::Constants::MapID map_id = GW::Constants::MapID::None;
     int level = 0;
     GW::Constants::TitleID title_id = GW::Constants::TitleID::None;
 
-    // Preset only.
     uint32_t param1 = 0;
     uint32_t param2 = 0;
     std::wstring pattern;
@@ -71,7 +68,6 @@ enum class GoalStatus : uint8_t {
 };
 
 struct GoalEntry {
-    // Dynamic: Start/End/Duration, no PB compare. For goals with own start.
     enum class DisplayStyle : uint8_t { Splits = 0, Dynamic = 1 };
 
     std::string label;
@@ -80,14 +76,14 @@ struct GoalEntry {
     std::optional<GoalTrigger> start_trigger;
     // OR alternates, preset only (DoA 360: 3 doors).
     std::vector<GoalTrigger> extra_start_triggers;
-    bool starts_immediately = false; // start t=0 on attach. Not saved.
-    double start_real_time = -1.0;   // < 0 = not fired
+    bool starts_immediately = false;
+    double start_real_time = -1.0;
     double start_game_time = -1.0;
-    std::vector<GoalTrigger> extra_triggers; // OR alternates, preset only
-    int auto_complete_previous = 0;          // preset only: also finish N previous (-1 = all)
-    bool is_header = false;                  // no trigger. Status from children.
-    int indent = 0;                          // header at N owns children > N
+    std::vector<GoalTrigger> extra_triggers;
+    int auto_complete_previous = 0;
+    bool is_header = false;
+    int indent = 0;
     GoalStatus status = GoalStatus::NotStarted;
     CompletedSplit split = {};
-    int trigger_progress = 0; // MobKill kills so far. Runtime only.
+    int trigger_progress = 0;
 };

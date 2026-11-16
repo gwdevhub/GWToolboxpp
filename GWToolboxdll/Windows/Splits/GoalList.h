@@ -8,7 +8,7 @@
 #include <vector>
 
 struct GoalReference {
-    std::vector<double> splits; // cumulative real time, per non-header goal
+    std::vector<double> splits;
 };
 
 struct GoalList {
@@ -18,13 +18,11 @@ struct GoalList {
     std::optional<GoalReference> reference;
 
     void ResetRunState();
-    // Dupe labels get " (N)". Last one left lose suffix.
     void RenumberDuplicateLabels();
 
     bool SaveToFile(const std::filesystem::path& path) const;
     bool LoadFromFile(const std::filesystem::path& path);
 
     static std::vector<std::pair<std::string, std::wstring>> ListSaved(const std::filesystem::path& folder);
-    // UTF-8 decode, drop bad path chars, escape reserved device names.
     static std::wstring FileStem(std::string_view name);
 };

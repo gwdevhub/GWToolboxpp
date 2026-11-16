@@ -19,9 +19,9 @@ namespace SCPresets {
         GoalTrigger::Type type;
         uint32_t param1 = 0;
         const wchar_t* pattern = nullptr;
-        uint32_t extra_param1_a = 0;              // 0 = none
-        uint32_t extra_param1_b = 0;              // 0 = none
-        const wchar_t* extra_pattern_a = nullptr; // nullptr = none
+        uint32_t extra_param1_a = 0;
+        uint32_t extra_param1_b = 0;
+        const wchar_t* extra_pattern_a = nullptr;
         // Real MapEnter start, not starts_immediately: that fire at list load wherever player is.
         bool starts_on_area_entry = false;
         bool start_on_objective_started = false;
@@ -49,7 +49,6 @@ namespace SCPresets {
         size_t level_count;
     };
     extern const Dungeon kDungeons[20];
-    // Dungeon owning map_id (any level), or nullptr.
     [[nodiscard]] const Dungeon* FindDungeon(GW::Constants::MapID map_id);
 
     GoalEntry BuildCheckpointGoal(const EliteCheckpoint& c, GW::Constants::MapID area_map_id);
@@ -66,16 +65,13 @@ namespace SCPresets {
     int DetectDoAStartingZone(GW::Vec2f spawn);
     // Fixed zone order whatever the rotation; the starting zone is started at runtime (DoAZoneFirstGoal).
     GoalList BuildDoAPresetList();
-    // First non-header goal under that zone's header, or -1 (e.g. a variant with the zone removed).
     int DoAZoneFirstGoal(const GoalList& list, int zone);
-    // "Foundry"/"City"/"Veil"/"Gloom", or "" for -1/out of range.
     const char* DoAZoneName(int zone);
 
     // First map shared with non-ToPK outpost: EnterExplorable.
     extern const GW::Constants::MapID kToPKLevels[4];
     GoalList BuildToPKPresetList();
 
-    // Header map_id (or lone goal's). None = not preset shape.
     GW::Constants::MapID AnchorMapId(const GoalList& list);
 
 } // namespace SCPresets

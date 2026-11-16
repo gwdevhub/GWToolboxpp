@@ -46,7 +46,6 @@ void NuzlockeState::OnInstanceLoad()
     city_hench_names.clear();
     last_town_hench_ids.clear();
     town_hench_all_resolved = false;
-    // Pre-seed self at full lives. Others show only after death.
     if (const wchar_t* self_name = GW::PlayerMgr::GetPlayerName()) {
         players.try_emplace(self_name, NuzlockeMember{self_name, 0});
     }

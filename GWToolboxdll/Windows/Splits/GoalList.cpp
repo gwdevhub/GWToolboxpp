@@ -9,7 +9,6 @@
 #include <ranges>
 #include <unordered_map>
 
-// glaze reflection need external linkage.
 namespace GoalListJson {
     struct SerializedTrigger {
         std::string trigger_type = "Manual";
@@ -98,43 +97,43 @@ namespace {
         {GoalTrigger::Type::MobKill, "MobKill"},
         {GoalTrigger::Type::EnterOutpost, "EnterOutpost"},
     };
+
+    std::string TriggerTypeName(GoalTrigger::Type t)
+    {
+        for (const auto& e : kTriggerTypeNames)
+            if (e.type == t) return e.name;
+        return "Manual";
+    }
+
+    GoalTrigger::Type TriggerTypeFromString(const std::string& s)
+    {
+        for (const auto& e : kTriggerTypeNames)
+            if (s == e.name) return e.type;
+        return GoalTrigger::Type::Manual;
+    }
+
+    SerializedTrigger ToSerialized(const GoalTrigger& t)
+    {
+        SerializedTrigger jt;
+        jt.trigger_type = TriggerTypeName(t.type);
+        if (t.map_id != GW::Constants::MapID::None) jt.map_id = static_cast<int>(t.map_id);
+        if (t.param1) jt.param1 = t.param1;
+        if (t.param2) jt.param2 = t.param2;
+        if (!t.pattern.empty()) jt.pattern = EncodePattern(t.pattern);
+        return jt;
+    }
+
+    GoalTrigger FromSerialized(const SerializedTrigger& jt)
+    {
+        GoalTrigger t;
+        t.type = TriggerTypeFromString(jt.trigger_type);
+        t.map_id = static_cast<GW::Constants::MapID>(jt.map_id.value_or(0));
+        t.param1 = jt.param1.value_or(0u);
+        t.param2 = jt.param2.value_or(0u);
+        if (jt.pattern) t.pattern = DecodePattern(*jt.pattern);
+        return t;
+    }
 } // namespace
-
-static std::string TriggerTypeName(GoalTrigger::Type t)
-{
-    for (const auto& e : kTriggerTypeNames)
-        if (e.type == t) return e.name;
-    return "Manual";
-}
-
-static GoalTrigger::Type TriggerTypeFromString(const std::string& s)
-{
-    for (const auto& e : kTriggerTypeNames)
-        if (s == e.name) return e.type;
-    return GoalTrigger::Type::Manual;
-}
-
-static SerializedTrigger ToSerialized(const GoalTrigger& t)
-{
-    SerializedTrigger jt;
-    jt.trigger_type = TriggerTypeName(t.type);
-    if (t.map_id != GW::Constants::MapID::None) jt.map_id = static_cast<int>(t.map_id);
-    if (t.param1) jt.param1 = t.param1;
-    if (t.param2) jt.param2 = t.param2;
-    if (!t.pattern.empty()) jt.pattern = EncodePattern(t.pattern);
-    return jt;
-}
-
-static GoalTrigger FromSerialized(const SerializedTrigger& jt)
-{
-    GoalTrigger t;
-    t.type = TriggerTypeFromString(jt.trigger_type);
-    t.map_id = static_cast<GW::Constants::MapID>(jt.map_id.value_or(0));
-    t.param1 = jt.param1.value_or(0u);
-    t.param2 = jt.param2.value_or(0u);
-    if (jt.pattern) t.pattern = DecodePattern(*jt.pattern);
-    return t;
-}
 
 void GoalList::ResetRunState()
 {
