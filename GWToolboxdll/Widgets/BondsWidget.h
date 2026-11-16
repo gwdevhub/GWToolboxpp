@@ -33,6 +33,8 @@ public:
         // Distance away from the party window on the x axis; used with snap to party window
         int user_offset = 64;
         bool overlay_party_window = false;
+        bool show_weapon_spells = false;
+        bool show_effect_timer = true;
     };
 
     void Initialize() override;
