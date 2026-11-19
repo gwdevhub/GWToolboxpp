@@ -294,6 +294,7 @@ PconsWindow::PconsWindow()
                                  {SkillID::Armor_of_Salvation_item_effect,
                                   SkillID::Grail_of_Might_item_effect,
                                   SkillID::Essence_of_Celerity_item_effect}, 5));
+    pcons.back()->icon_file_id = 0x5EFEF;
 
     pcons.push_back(new PconGeneric("Empowering Feast", "Feast", "feast", L"Empowering Feast",
                                     ItemID::ConsEmpoweringFeast,
@@ -303,6 +304,7 @@ PconsWindow::PconsWindow()
                                      SkillID::Pie_Induced_Ecstasy,
                                      SkillID::Golden_Egg_skill,
                                      SkillID::Birthday_Cupcake_skill}, 5));
+    pcons.back()->icon_file_id = 0x5EFEE;
 
     pcons.push_back(new PconCons("Essence of Celerity", "Essence", "essence", L"Essence of Celerity",
                                   ItemID::ConsEssence, {SkillID::Essence_of_Celerity_item_effect}, 5));
