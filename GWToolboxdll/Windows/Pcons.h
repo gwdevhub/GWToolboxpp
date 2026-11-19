@@ -47,11 +47,12 @@ protected:
          const char* abbrevname,
          const char* ininame,
          const wchar_t* filename,
+         uint32_t model_file_id,
          int threshold,
          const char* desc = nullptr);
 
     Pcon(const wchar_t* file, const int threshold = 20)
-        : Pcon(nullptr, nullptr, nullptr, file, threshold) { }
+        : Pcon(nullptr, nullptr, nullptr, file, 0, threshold) { }
 
     Pcon(const Pcon&) = delete;
 
@@ -152,34 +153,16 @@ private:
 
 class PconGeneric : public Pcon {
 public:
-    struct ModelFileId {
-        uint32_t value;
-    };
-
     PconGeneric(const char* chat,
                 const char* abbrev,
                 const char* ini,
                 const wchar_t* file,
-                const DWORD item, const std::initializer_list<GW::Constants::SkillID> effects,
+                const uint32_t model_file_id, const std::initializer_list<GW::Constants::SkillID> effects,
                 const int threshold,
                 const char* desc = nullptr)
-        : Pcon(chat, abbrev, ini, file, threshold, desc),
-          itemID(item), effectIDs(effects) { }
+        : Pcon(chat, abbrev, ini, file, model_file_id, threshold, desc), effectIDs(effects) { }
 
     PconGeneric(const PconGeneric&) = delete;
-
-    PconGeneric(const char* chat,
-                const char* abbrev,
-                const char* ini,
-                const wchar_t* file,
-                const ModelFileId item, const std::initializer_list<GW::Constants::SkillID> effects,
-                const int threshold,
-                const char* desc = nullptr)
-        : Pcon(chat, abbrev, ini, file, threshold, desc),
-          itemID(0), effectIDs(effects)
-    {
-        model_file_id = item.value;
-    }
 
 protected:
     [[nodiscard]] bool CanUseByEffect() const override;
@@ -188,21 +171,19 @@ protected:
     void RecordExpectedEffects() override;
 
 private:
-    const DWORD itemID;
     const std::vector<GW::Constants::SkillID> effectIDs;
 };
 
-// Same as generic pcon, but with more restrictions on usage
 class PconCons : public PconGeneric {
 public:
     PconCons(const char* chat,
              const char* abbrev,
              const char* ini,
              const wchar_t* file,
-             const DWORD item, const std::initializer_list<GW::Constants::SkillID> effects,
+             const uint32_t model_file_id, const std::initializer_list<GW::Constants::SkillID> effects,
              const int threshold,
              const char* desc = nullptr)
-        : PconGeneric(chat, abbrev, ini, file, item, effects, threshold, desc) { }
+        : PconGeneric(chat, abbrev, ini, file, model_file_id, effects, threshold, desc) { }
 
     PconCons(const PconCons&) = delete;
 
@@ -215,9 +196,10 @@ public:
              const char* abbrev,
              const char* ini,
              const wchar_t* file,
+             const uint32_t model_file_id,
              const int threshold,
              const char* desc = nullptr)
-        : Pcon(chat, abbrev, ini, file, threshold, desc) { }
+        : Pcon(chat, abbrev, ini, file, model_file_id, threshold, desc) { }
 
     PconCity(const PconCity&) = delete;
 
@@ -243,7 +225,7 @@ public:
                  const DWORD item,
                  const int threshold,
                  const char* desc_ = nullptr)
-        : PconCity(chat, abbrev, ini, file, threshold, desc_), itemID(item)
+        : PconCity(chat, abbrev, ini, file, 0, threshold, desc_), itemID(item)
     {
         if (!desc.empty()) {
             desc += "\n";
@@ -272,9 +254,10 @@ public:
                 const char* abbrev,
                 const char* ini,
                 const wchar_t* file,
+                const uint32_t model_file_id,
                 const int threshold,
                 const char* desc = nullptr)
-        : Pcon(chat, abbrev, ini, file, threshold, desc) { }
+        : Pcon(chat, abbrev, ini, file, model_file_id, threshold, desc) { }
 
     PconAlcohol(const PconAlcohol&) = delete;
 
@@ -289,9 +272,10 @@ public:
               const char* abbrev,
               const char* ini,
               const wchar_t* file,
+              const uint32_t model_file_id,
               const int threshold,
               const char* desc = nullptr)
-        : Pcon(chat, abbrev, ini, file, threshold, desc) { }
+        : Pcon(chat, abbrev, ini, file, model_file_id, threshold, desc) { }
 
     PconLunar(const PconLunar&) = delete;
 
@@ -306,9 +290,10 @@ public:
              const char* abbrev,
              const char* ini,
              const wchar_t* file,
+             const uint32_t model_file_id,
              const int threshold,
              const char* desc = nullptr)
-        : Pcon(chat, abbrev, ini, file, threshold, desc) { }
+        : Pcon(chat, abbrev, ini, file, model_file_id, threshold, desc) { }
 
     PconScroll(const PconCity&) = delete;
 
