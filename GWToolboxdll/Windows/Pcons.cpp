@@ -118,7 +118,8 @@ wchar_t* Pcon::SetPlayerName()
 IDirect3DTexture9** Pcon::GetTexture()
 {
     if (!texture) {
-        texture = model_file_id ? Resources::GetItemImage(model_file_id, 0, 0, false) : Resources::GetItemImage(filename);
+        const auto file_id = icon_file_id ? icon_file_id : model_file_id;
+        texture = file_id ? Resources::GetItemImage(file_id, 0, 0, false) : Resources::GetItemImage(filename);
     }
     return texture;
 }

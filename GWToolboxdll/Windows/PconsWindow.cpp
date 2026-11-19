@@ -306,57 +306,75 @@ PconsWindow::PconsWindow()
 
     pcons.push_back(new PconCons("Essence of Celerity", "Essence", "essence", L"Essence of Celerity",
                                   ItemID::ConsEssence, {SkillID::Essence_of_Celerity_item_effect}, 5));
+    pcons.back()->icon_file_id = 0x458A7;
 
     pcons.push_back(new PconCons("Grail of Might", "Grail", "grail", L"Grail of Might",
                                   ItemID::ConsGrail, {SkillID::Grail_of_Might_item_effect}, 5));
+    pcons.back()->icon_file_id = 0x24BB;
 
     pcons.push_back(new PconCons("Armor of Salvation", "Armor", "armor", L"Armor of Salvation",
                                   ItemID::ConsArmor, {SkillID::Armor_of_Salvation_item_effect}, 5));
+    pcons.back()->icon_file_id = 0x458A4;
 
     pcons.push_back(new PconGeneric("Red Rock Candy", "Red Rock", "redrock", L"Red Rock Candy",
                                      ItemID::RRC, {SkillID::Red_Rock_Candy_Rush}, 5));
+    pcons.back()->icon_file_id = 0x45999;
 
     pcons.push_back(new PconGeneric("Blue Rock Candy", "Blue Rock", "bluerock", L"Blue Rock Candy",
                                      ItemID::BRC, {SkillID::Blue_Rock_Candy_Rush}, 10));
+    pcons.back()->icon_file_id = 0x45998;
 
     pcons.push_back(new PconGeneric("Green Rock Candy", "Green Rock", "greenrock", L"Green Rock Candy",
                                      ItemID::GRC, {SkillID::Green_Rock_Candy_Rush}, 15));
+    pcons.back()->icon_file_id = 0x499ED;
 
     pcons.push_back(new PconGeneric("Golden Egg", "Egg", "egg", L"Golden Egg",
                                      ItemID::Eggs, {SkillID::Golden_Egg_skill}, 20));
+    pcons.back()->icon_file_id = 0x458D4;
 
     pcons.push_back(new PconGeneric("Candy Apple", "Apple", "apple", L"Candy Apple",
                                      ItemID::Apples, {SkillID::Candy_Apple_skill}, 10));
+    pcons.back()->icon_file_id = 0x52193;
 
     pcons.push_back(new PconGeneric("Candy Corn", "Corn", "corn", L"Candy Corn",
                                      ItemID::Corns, {SkillID::Candy_Corn_skill}, 10));
+    pcons.back()->icon_file_id = 0x52196;
 
     pcons.push_back(new PconGeneric("Birthday Cupcake", "Cupcake", "cupcake", L"Birthday Cupcake",
                                      ItemID::Cupcakes, {SkillID::Birthday_Cupcake_skill}, 10));
+    pcons.back()->icon_file_id = 0x47C34;
 
     pcons.push_back(new PconGeneric("Slice of Pumpkin Pie", "Pie", "pie", L"Slice of Pumpkin Pie",
                                      ItemID::Pies, {SkillID::Pie_Induced_Ecstasy}, 10));
+    pcons.back()->icon_file_id = 0x521AE;
 
     pcons.push_back(new PconGeneric("War Supplies", "War Supply", "warsupply", L"War Supplies",
                                      ItemID::Warsupplies, {SkillID::Well_Supplied}, 20));
+    pcons.back()->icon_file_id = 0x577B3;
 
     pcons.push_back(pcon_alcohol = new PconAlcohol("Alcohol", "Alcohol", "alcohol", L"Dwarven Ale",
                                                    10));
+    pcons.back()->icon_file_id = 0x252BD;
 
     pcons.push_back(new PconLunar("Lunar Fortunes", "Lunars", "lunars", L"Lunar Fortune",
                                   10));
+    pcons.back()->icon_file_id = 0x44C96;
 
     pcons.push_back(new PconCity("City speedboost", "City IMS", "city", L"Sugary Blue Drink",
                                  20));
+    pcons.back()->icon_file_id = 0x44CA0;
 
     pcons.push_back(new PconGeneric("Drake Kabob", "Kabob", "kabob", L"Drake Kabob",
                                      ItemID::Kabobs, {SkillID::Drake_Skin}, 10));
+    pcons.back()->icon_file_id = 0x38467;
 
     pcons.push_back(new PconGeneric("Bowl of Skalefin Soup", "Soup", "soup", L"Bowl of Skalefin Soup",
                                      ItemID::SkalefinSoup, {SkillID::Skale_Vigor}, 10));
+    pcons.back()->icon_file_id = 0x3846A;
 
     pcons.push_back(new PconGeneric("Pahnai Salad", "Salad", "salad", L"Pahnai Salad",
                                      ItemID::PahnaiSalad, {SkillID::Pahnai_Salad_item_effect}, 10));
+    pcons.back()->icon_file_id = 0x3846D;
 
     pcons.push_back(new PconGeneric("Stalker's Ration", "Stalker", "stalker", L"Stalker's Ration",
                                      stalkers_ration_model_file_id, {SkillID::Seek_and_Destroy}, 5));
@@ -366,6 +384,7 @@ PconsWindow::PconsWindow()
 
     pcons.push_back(new PconScroll("XP scroll", "XP scroll", "scroll", L"Scroll of Hunter's Insight",
                                    20));
+    pcons.back()->icon_file_id = 0x25970;
 
     // Refillers
 

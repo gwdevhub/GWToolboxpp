@@ -110,6 +110,7 @@ public:
     bool visible = true;
     int quantity = 0;
     std::wstring filename;
+    uint32_t icon_file_id = 0;
     int quantity_storage = 0;
 
     clock_t timer = 0;
