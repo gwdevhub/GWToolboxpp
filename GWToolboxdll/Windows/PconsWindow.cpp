@@ -28,8 +28,14 @@ using namespace GW::Constants;
 bool Pcon::map_has_effects_array = false;
 
 namespace {
-    constexpr PconGeneric::ModelFileId stalkers_ration_model_file_id{0x5EFED};
-    constexpr PconGeneric::ModelFileId birds_eye_compass_model_file_id{0x2595C};
+    class PconWarSupplies : public PconGeneric {
+    public:
+        using PconGeneric::PconGeneric;
+        size_t PointsPerUse(const GW::Item* item) const override
+        {
+            return item->model_id == ItemID::Warsupplies ? 1u : 0u;
+        }
+    };
 
     GW::HookEntry ChatCmd_HookEntry;
 
@@ -290,103 +296,82 @@ namespace {
 PconsWindow::PconsWindow()
 {
     pcons.push_back(new PconCons("Heroes' Trifecta", "Trifecta", "trifecta", L"Heroes' Trifecta",
-                                 ItemID::ConsTrifecta,
+                                 0x5EFEF,
                                  {SkillID::Armor_of_Salvation_item_effect,
                                   SkillID::Grail_of_Might_item_effect,
                                   SkillID::Essence_of_Celerity_item_effect}, 5));
-    pcons.back()->icon_file_id = 0x5EFEF;
 
     pcons.push_back(new PconGeneric("Empowering Feast", "Feast", "feast", L"Empowering Feast",
-                                    ItemID::ConsEmpoweringFeast,
+                                    0x5EFEE,
                                     {SkillID::Well_Supplied,
                                      SkillID::Candy_Apple_skill,
                                      SkillID::Candy_Corn_skill,
                                      SkillID::Pie_Induced_Ecstasy,
                                      SkillID::Golden_Egg_skill,
                                      SkillID::Birthday_Cupcake_skill}, 5));
-    pcons.back()->icon_file_id = 0x5EFEE;
 
     pcons.push_back(new PconCons("Essence of Celerity", "Essence", "essence", L"Essence of Celerity",
-                                  ItemID::ConsEssence, {SkillID::Essence_of_Celerity_item_effect}, 5));
-    pcons.back()->icon_file_id = 0x458A7;
+                                  0x458A7, {SkillID::Essence_of_Celerity_item_effect}, 5));
 
     pcons.push_back(new PconCons("Grail of Might", "Grail", "grail", L"Grail of Might",
-                                  ItemID::ConsGrail, {SkillID::Grail_of_Might_item_effect}, 5));
-    pcons.back()->icon_file_id = 0x24BB;
+                                  0x24BB, {SkillID::Grail_of_Might_item_effect}, 5));
 
     pcons.push_back(new PconCons("Armor of Salvation", "Armor", "armor", L"Armor of Salvation",
-                                  ItemID::ConsArmor, {SkillID::Armor_of_Salvation_item_effect}, 5));
-    pcons.back()->icon_file_id = 0x458A4;
+                                  0x458A4, {SkillID::Armor_of_Salvation_item_effect}, 5));
 
     pcons.push_back(new PconGeneric("Red Rock Candy", "Red Rock", "redrock", L"Red Rock Candy",
-                                     ItemID::RRC, {SkillID::Red_Rock_Candy_Rush}, 5));
-    pcons.back()->icon_file_id = 0x45999;
+                                     0x45999, {SkillID::Red_Rock_Candy_Rush}, 5));
 
     pcons.push_back(new PconGeneric("Blue Rock Candy", "Blue Rock", "bluerock", L"Blue Rock Candy",
-                                     ItemID::BRC, {SkillID::Blue_Rock_Candy_Rush}, 10));
-    pcons.back()->icon_file_id = 0x45998;
+                                     0x45998, {SkillID::Blue_Rock_Candy_Rush}, 10));
 
     pcons.push_back(new PconGeneric("Green Rock Candy", "Green Rock", "greenrock", L"Green Rock Candy",
-                                     ItemID::GRC, {SkillID::Green_Rock_Candy_Rush}, 15));
-    pcons.back()->icon_file_id = 0x499ED;
+                                     0x499ED, {SkillID::Green_Rock_Candy_Rush}, 15));
 
     pcons.push_back(new PconGeneric("Golden Egg", "Egg", "egg", L"Golden Egg",
-                                     ItemID::Eggs, {SkillID::Golden_Egg_skill}, 20));
-    pcons.back()->icon_file_id = 0x458D4;
+                                     0x458D4, {SkillID::Golden_Egg_skill}, 20));
 
     pcons.push_back(new PconGeneric("Candy Apple", "Apple", "apple", L"Candy Apple",
-                                     ItemID::Apples, {SkillID::Candy_Apple_skill}, 10));
-    pcons.back()->icon_file_id = 0x52193;
+                                     0x52193, {SkillID::Candy_Apple_skill}, 10));
 
     pcons.push_back(new PconGeneric("Candy Corn", "Corn", "corn", L"Candy Corn",
-                                     ItemID::Corns, {SkillID::Candy_Corn_skill}, 10));
-    pcons.back()->icon_file_id = 0x52196;
+                                     0x52196, {SkillID::Candy_Corn_skill}, 10));
 
     pcons.push_back(new PconGeneric("Birthday Cupcake", "Cupcake", "cupcake", L"Birthday Cupcake",
-                                     ItemID::Cupcakes, {SkillID::Birthday_Cupcake_skill}, 10));
-    pcons.back()->icon_file_id = 0x47C34;
+                                     0x47C34, {SkillID::Birthday_Cupcake_skill}, 10));
 
     pcons.push_back(new PconGeneric("Slice of Pumpkin Pie", "Pie", "pie", L"Slice of Pumpkin Pie",
-                                     ItemID::Pies, {SkillID::Pie_Induced_Ecstasy}, 10));
-    pcons.back()->icon_file_id = 0x521AE;
+                                     0x521AE, {SkillID::Pie_Induced_Ecstasy}, 10));
 
-    pcons.push_back(new PconGeneric("War Supplies", "War Supply", "warsupply", L"War Supplies",
-                                     ItemID::Warsupplies, {SkillID::Well_Supplied}, 20));
-    pcons.back()->icon_file_id = 0x577B3;
+    pcons.push_back(new PconWarSupplies("War Supplies", "War Supply", "warsupply", L"War Supplies",
+                                      0x577B3, {SkillID::Well_Supplied}, 20));
 
     pcons.push_back(pcon_alcohol = new PconAlcohol("Alcohol", "Alcohol", "alcohol", L"Dwarven Ale",
-                                                   10));
-    pcons.back()->icon_file_id = 0x252BD;
+                                                   0x252BD, 10));
 
     pcons.push_back(new PconLunar("Lunar Fortunes", "Lunars", "lunars", L"Lunar Fortune",
-                                  10));
-    pcons.back()->icon_file_id = 0x44C96;
+                                  0x44C96, 10));
 
     pcons.push_back(new PconCity("City speedboost", "City IMS", "city", L"Sugary Blue Drink",
-                                 20));
-    pcons.back()->icon_file_id = 0x44CA0;
+                                 0x44CA0, 20));
 
     pcons.push_back(new PconGeneric("Drake Kabob", "Kabob", "kabob", L"Drake Kabob",
-                                     ItemID::Kabobs, {SkillID::Drake_Skin}, 10));
-    pcons.back()->icon_file_id = 0x38467;
+                                     0x38467, {SkillID::Drake_Skin}, 10));
 
     pcons.push_back(new PconGeneric("Bowl of Skalefin Soup", "Soup", "soup", L"Bowl of Skalefin Soup",
-                                     ItemID::SkalefinSoup, {SkillID::Skale_Vigor}, 10));
-    pcons.back()->icon_file_id = 0x3846A;
+                                     0x3846A, {SkillID::Skale_Vigor}, 10));
 
     pcons.push_back(new PconGeneric("Pahnai Salad", "Salad", "salad", L"Pahnai Salad",
-                                     ItemID::PahnaiSalad, {SkillID::Pahnai_Salad_item_effect}, 10));
-    pcons.back()->icon_file_id = 0x3846D;
+                                     0x3846D, {SkillID::Pahnai_Salad_item_effect}, 10));
 
     pcons.push_back(new PconGeneric("Stalker's Ration", "Stalker", "stalker", L"Stalker's Ration",
-                                     stalkers_ration_model_file_id, {SkillID::Seek_and_Destroy}, 5));
+                                     0x5EFED, {SkillID::Seek_and_Destroy}, 5));
 
     pcons.push_back(new PconGeneric("Bird's Eye Compass", "Bird's Eye", "birdseye", L"Bird's Eye Compass",
-                                     birds_eye_compass_model_file_id, {SkillID::Birds_Eye_View}, 5));
+                                     0x2595C, {SkillID::Birds_Eye_View}, 5));
 
     pcons.push_back(new PconScroll("XP scroll", "XP scroll", "scroll", L"Scroll of Hunter's Insight",
-                                   20));
-    pcons.back()->icon_file_id = 0x25970;
+                                   0x25970, 20));
 
     // Refillers
 
