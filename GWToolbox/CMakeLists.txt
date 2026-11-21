@@ -8,6 +8,8 @@ add_executable(GWToolbox)
 target_sources(GWToolbox PRIVATE ${SOURCES})
 target_precompile_headers(GWToolbox PRIVATE "stdafx.h")
 target_include_directories(GWToolbox PRIVATE "${GWTOOLBOX_RESOURCE_INCLUDE_DIR}")
+webview_window_embed_loader(GWToolbox)
+target_compile_options(GWToolbox PRIVATE ${GWTB_EXCEPTIONS})
 
 set_target_properties(GWToolbox PROPERTIES
     WIN32_EXECUTABLE $<NOT:$<CONFIG:Debug>>
@@ -21,6 +23,7 @@ target_link_libraries(GWToolbox PRIVATE
     Core
     RestClient
     glaze::glaze
+    webview_window
 
     version # for GetFileVersionInfo
     bcrypt # for sha256 of the launcher exe

@@ -4,7 +4,7 @@
 
 #include <RestClient.h>
 
-#include "Window.h"
+#include "LauncherWindow.h"
 
 struct Asset {
     std::string name{};
@@ -15,27 +15,24 @@ struct Asset {
 
 struct Release {
     std::string tag_name{};
-    std::optional<std::string> body{}; // Github sends null when a release has no description text
+    std::optional<std::string> body{};
     std::vector<Asset> assets{};
 };
 
-// Result of comparing the installed/running exe(s) against the latest release; asset is null when up to date.
 struct ExeUpdateInfo {
     const Asset* asset = nullptr;
     std::string tag_name;
-    std::vector<std::filesystem::path> targets; // installed copy and/or the running exe, whichever are stale
+    std::vector<std::filesystem::path> targets;
 };
 
-// Result of comparing the installed dll against the latest release.
 struct DllUpdateInfo {
-    bool asset_found = false; // false if no release ships a matching dll asset at all
+    bool asset_found = false;
     bool up_to_date = false;
     const Asset* asset = nullptr;
     std::string tag_name;
     std::filesystem::path dll_path;
 };
 
-// Result of comparing the installed gwtoolbox.gwmod against the latest release; asset_found stays false until some release ships one (see WasmInject.h/WASM_GWMOD_FILENAME).
 struct GwmodUpdateInfo {
     bool asset_found = false;
     bool up_to_date = false;
@@ -44,54 +41,42 @@ struct GwmodUpdateInfo {
     std::filesystem::path gwmod_path;
 };
 
-// The "version" package.py stamps into a .gwmod's manifest.json (see tools/package.py --version) - the wasm build's equivalent of GetDllRelease's PE version read; empty on any read/parse failure.
 std::string GetGwmodVersion(const std::filesystem::path& gwmod_path);
 
-class DownloadWindow : public Window {
+class DownloadWindow : public LauncherWindow {
 public:
-    DownloadWindow() = default;
+    DownloadWindow();
     DownloadWindow(const DownloadWindow&) = delete;
+    DownloadWindow(DownloadWindow&&) = delete;
     ~DownloadWindow() override = default;
 
     DownloadWindow& operator=(const DownloadWindow&) = delete;
+    DownloadWindow& operator=(DownloadWindow&&) = delete;
 
-    bool Create() override;
-    // dll-only update, fetching its own release list; used by the installer.
     static bool DownloadDll(std::wstring& error);
-    // Downloads and installs whichever of exe/dll/gwmod are due for an update, sharing one progress window; the exe replacement takes effect on next launch, no restart.
     static bool ApplyUpdates(const std::vector<Release>& releases, const ExeUpdateInfo& exe_info, const DllUpdateInfo& dll_info, const GwmodUpdateInfo& gwmod_info, std::wstring& error);
-    void SetChangelog(const char* str, size_t length) const;
+
+    void Show(const std::string& changelog);
+    void SetStatus(const std::wstring& text);
+    void SetProgress(size_t percent);
 
 private:
     static bool DownloadDll(const std::vector<Release>& releases, std::wstring& error);
     static bool DownloadAssetWithProgress(DownloadWindow& window, const Asset& asset, std::string& out_content, std::wstring& error);
-
-    LRESULT WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) override;
-
-    void OnCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
-
-    HWND m_hProgressBar = nullptr;
-    HWND m_hCloseButton = nullptr;
-    HWND m_hChangelog = nullptr;
-    HWND m_hStatusLabel = nullptr;
 };
 
-// Background-checks Github for exe/dll updates and, on request, installs whichever are stale via DownloadWindow; owned by InjectWindow.
 class UpdateChecker {
 public:
-    // AsyncRestClient asserts it isn't mid-request when destroyed, so this aborts a still-pending check (e.g. the user launched before it finished).
     ~UpdateChecker();
 
     void Start(bool check_exe, bool check_dll);
 
     bool IsChecking() const { return m_Started && !m_Completed; }
 
-    // Advances the async releases fetch; returns true only on the tick it finishes (successfully or not).
     bool Poll();
 
     bool IsExeUpdateAvailable() const { return m_ExeInfo.asset != nullptr; }
     bool IsDllUpdateAvailable() const { return m_DllInfo.asset != nullptr && !m_DllInfo.up_to_date; }
-    // Only ever true once some release actually ships a gwtoolbox.gwmod asset - see GwmodUpdateInfo.
     bool IsGwmodUpdateAvailable() const { return m_GwmodInfo.asset != nullptr && !m_GwmodInfo.up_to_date; }
     bool IsAnyUpdateAvailable() const { return IsExeUpdateAvailable() || IsDllUpdateAvailable() || IsGwmodUpdateAvailable(); }
 
@@ -107,5 +92,5 @@ private:
     std::vector<Release> m_Releases;
     ExeUpdateInfo m_ExeInfo;
     DllUpdateInfo m_DllInfo;
-    GwmodUpdateInfo m_GwmodInfo; // checked alongside the dll, gated by the same m_CheckDll
+    GwmodUpdateInfo m_GwmodInfo;
 };

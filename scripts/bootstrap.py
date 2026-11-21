@@ -3,13 +3,14 @@
 native bootstrap.sh / bootstrap.bat check and install the prerequisites, then run this. It opens and
 builds nothing; the last lines say how. Re-running is cheap: each step is skipped when its output is current.
 
-  1. Copies the IDE settings in bootstrap/ into .idea/ (and on Linux .vscode/), backing up what they replace.
-  2. Installs the pinned llvm-mingw into .toolchain/ (on Linux also the header links and vkd3d-compiler).
-  3. Checks vcpkg out at the registry baseline into .vcpkg/, unless VCPKG_ROOT already points at a checkout.
-  4. Linux: sets the CLion and Rider Flatpaks up to reach the host's CMake through a wrapper.
-  5. Configures the relwithdebinfo preset into build/<host>/relwithdebinfo/ and enables the relwithdebinfo, debug and
+  1. Checks out the submodules in Dependencies/ (WebViewWindow), when this is a git checkout.
+  2. Copies the IDE settings in bootstrap/ into .idea/ (and on Linux .vscode/), backing up what they replace.
+  3. Installs the pinned llvm-mingw into .toolchain/ (on Linux also the header links and vkd3d-compiler).
+  4. Checks vcpkg out at the registry baseline into .vcpkg/, unless VCPKG_ROOT already points at a checkout.
+  5. Linux: sets the CLion and Rider Flatpaks up to reach the host's CMake through a wrapper.
+  6. Configures the relwithdebinfo preset into build/<host>/relwithdebinfo/ and enables the relwithdebinfo, debug and
      release CMake profiles for the JetBrains IDEs.
-  6. Windows: writes GWToolbox.slnx for Visual Studio and Rider. Linux: installs the VS Code extensions.
+  7. Windows: writes GWToolbox.slnx for Visual Studio and Rider. Linux: installs the VS Code extensions.
 """
 
 import require_python  # noqa: F401  (first: stops an old Python before anything else runs)
@@ -24,6 +25,13 @@ import toolchain
 from common import IS_WINDOWS, LOG_DIR, PRESET_BUILD_DIRS, REPO_ROOT, Failure, Log, capture, find_tool, main_guard, run, timestamp
 
 LOCAL_VCPKG = os.path.join(REPO_ROOT, ".vcpkg")
+
+
+def ensure_submodules(log):
+    if not os.path.exists(os.path.join(REPO_ROOT, ".git")):
+        return
+    log.step("checking out the submodules in Dependencies/")
+    run(log, ["git", "-C", REPO_ROOT, "submodule", "update", "--init", "--recursive"])
 
 
 # vcpkg's helper scripts are part of each package's ABI hash, so checking it out at the registry baseline gives every
@@ -76,6 +84,7 @@ def main():
     log = open_log(parser.parse_args().log)
     log.line("bootstrap log: " + log.path)
 
+    ensure_submodules(log)
     ide_setup.copy_clion_settings(log)
     if not IS_WINDOWS:
         ide_setup.copy_vscode_settings(log)

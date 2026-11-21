@@ -93,6 +93,12 @@ END
 // remains consistent on all systems.
 IDI_ICON1               ICON                    "../resources/gwtoolbox.ico"
 
+IDR_LAUNCHER_CSS        RCDATA                  "ui/launcher.css"
+IDR_LAUNCHER_JS         RCDATA                  "ui/launcher.js"
+IDR_INJECT_PAGE         RCDATA                  "ui/inject.html"
+IDR_SETTINGS_PAGE       RCDATA                  "ui/settings.html"
+IDR_DOWNLOAD_PAGE       RCDATA                  "ui/download.html"
+
 #ifdef __GNUC__
 CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST "GWToolbox.manifest"
 #endif

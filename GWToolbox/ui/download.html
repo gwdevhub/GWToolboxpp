@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GWToolbox - Download</title>
+<style><!--launcher.css--></style>
+</head>
+<body>
+<div class="titlebar" id="titlebar">
+    <span class="title">GWToolbox - Download</span>
+    <button id="close" aria-label="Close">&#x2715;</button>
+</div>
+<main>
+    <div class="changelog selectable" id="changelog" aria-label="Release notes"></div>
+    <progress id="progress" max="100" value="0"></progress>
+    <div class="row">
+        <span class="grow" id="status">Downloading...</span>
+        <button id="close-button" class="primary">Close</button>
+    </div>
+</main>
+<script><!--launcher.js--></script>
+<script>
+const $ = (id) => document.getElementById(id);
+
+launcher.on('changelog', (text) => $('changelog').textContent = text);
+launcher.on('status', (text) => $('status').textContent = text);
+launcher.on('progress', (percent) => $('progress').value = percent);
+
+const close = () => launcher.call('close');
+$('close-button').addEventListener('click', close);
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' || event.key === 'Enter') {
+        close();
+    }
+});
+
+launcher.wireTitleBar();
+launcher.call('ready');
+</script>
+</body>
+</html>

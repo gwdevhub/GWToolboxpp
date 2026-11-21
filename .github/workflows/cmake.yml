@@ -58,6 +58,8 @@ jobs:
 
     - name: Checkout repository
       uses: actions/checkout@v4
+      with:
+        submodules: recursive
 
     - name: Cache vcpkg toolchain
       id: cache-vcpkg-tool

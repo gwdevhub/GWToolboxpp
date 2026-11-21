@@ -1,4 +1,9 @@
 #define IDI_ICON1                       101
+#define IDR_LAUNCHER_CSS                201
+#define IDR_LAUNCHER_JS                 202
+#define IDR_INJECT_PAGE                 203
+#define IDR_SETTINGS_PAGE               204
+#define IDR_DOWNLOAD_PAGE               205
 
 // Next default values for new objects
 // 

@@ -188,6 +188,7 @@ include(easywsclient)
 include(imgui)
 include(gwtoolboxdll_plugins)
 include(nativefiledialog)
+include(webviewwindow)
 include(steamworks_sdk)
 
 find_path(EARCUT_HPP_INCLUDE_DIRS "mapbox/earcut.hpp")

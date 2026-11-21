@@ -30,14 +30,12 @@ static bool FindTopMostProcess(const std::vector<InjectProcess>& processes, size
     while (hWndIt != nullptr) {
         DWORD WindowPid;
         if (GetWindowThreadProcessId(hWndIt, &WindowPid) == 0) {
-            // @Cleanup:
-            // Not clear whether this is the return value hold an error, so we just log.
             fprintf(stderr, "GetWindowThreadProcessId returned 0\n");
             continue;
         }
 
         for (size_t i = 0; i < processes.size(); ++i) {
-            if (processes[i].IsWasm()) continue; // never opened (no HWND/PID) - GetProcessId() would assert on its unset rights
+            if (processes[i].IsWasm()) continue;
             if (processes[i].m_Process.GetProcessId() == WindowPid) {
                 *top_most_index = i;
                 return true;
@@ -80,7 +78,6 @@ std::vector<std::filesystem::path> GetGuildWarsExecutablePaths()
     return paths;
 }
 
-// Appends every reachable gw_in_browser session as an InjectProcess; an unanswering session file (stale, or gw.py closed uncleanly) is skipped, not reported as an error - same treatment as a failed native process below.
 static void ScanWasmSessions(std::vector<InjectProcess>& inject_processes)
 {
     for (WasmSession& session : GetWasmSessions()) {
@@ -90,7 +87,6 @@ static void ScanWasmSessions(std::vector<InjectProcess>& inject_processes)
             continue;
         }
         const bool injected = WasmModIsLoaded(status.mods, WASM_GWMOD_FILENAME_A);
-        // The port stands in for a character name (unreadable from a sandboxed browser page) - same purpose as native's charname, telling instances apart.
         std::wstring label = std::format(L"WASM client (port {})", session.port);
         if (!status.page) {
             label += L" - waiting for game window";
@@ -99,13 +95,12 @@ static void ScanWasmSessions(std::vector<InjectProcess>& inject_processes)
     }
 }
 
-// Scans for injectable Guild Wars processes (native and wasm alike); callable repeatedly (initial load, and every Retry click).
 static InjectScanResult RunScan()
 {
     InjectScanResult result;
     std::vector<InjectProcess> inject_processes;
 
-    std::wstring native_error; // set on any native-side failure, shown if wasm also comes up empty; overwritten only by a more specific native failure
+    std::wstring native_error;
     const wchar_t* native_troubleshooting_url = nullptr;
 
     std::vector<Process> processes = GetGuildWarsProcesses();
@@ -126,7 +121,6 @@ static InjectScanResult RunScan()
         for (int i = 0; i < processes.size(); i++) {
             const ProcessScanner scanner(&processes[i]);
             if (!scanner.IsValid()) {
-                // Couldn't read the GW image to scan it - almost always AV/anti-tamper stripping our access.
                 read_blocked = true;
                 read_error = scanner.GetError();
                 continue;
@@ -230,7 +224,6 @@ static InjectScanResult RunScan()
         return result;
     }
 
-    // Sort by name (native's character name, wasm's "WASM client (port N)" label alike)
     std::ranges::sort(inject_processes, [](const InjectProcess& proc1, const InjectProcess& proc2) {
         return proc1.m_Charname < proc2.m_Charname;
     });
@@ -254,23 +247,21 @@ InjectReply InjectWindow::AskInjectProcess(InjectSelection* selection)
             else {
                 selection->process = std::move(only.m_Process);
             }
-            return InjectReply_Inject; // Inject if 1 process found
+            return InjectReply_Inject;
         }
         if (!scan.m_Found) {
             fprintf(stderr, "%ls\n", scan.m_ErrorMessage.c_str());
             return InjectReply_Cancel;
         }
-        // Multiple candidates with no way to pick one non-interactively: fall through and show the window anyway.
     }
 
-    InjectWindow inject;
-    inject.SetInitialScanResult(std::move(scan));
-    inject.Create();
-
-    while (!inject.ShouldClose()) {
-        inject.PollMessages(16);
-        inject.Tick();
+    if (!StartLauncherWindowing()) {
+        return InjectReply_Cancel;
     }
+
+    InjectWindow inject(std::move(scan));
+    inject.open();
+    PumpMessagesUntil([&inject] { return inject.Finished(); });
 
     size_t index;
     if (!inject.GetSelected(&index)) {
@@ -282,47 +273,31 @@ InjectReply InjectWindow::AskInjectProcess(InjectSelection* selection)
     return InjectReply_Inject;
 }
 
-InjectWindow::InjectWindow()
-    : m_hCharacters(nullptr)
-    , m_hLaunchButton(nullptr)
-    , m_hErrorText(nullptr)
-    , m_hRetryButton(nullptr)
-    , m_hTroubleshootingLink(nullptr)
-    , m_hRestartAsAdmin(nullptr)
-    , m_hSettings(nullptr)
-    , m_hUpdateStatus(nullptr)
-    , m_hUpdateButton(nullptr)
-    , m_hErrorBrush(CreateSolidBrush(RGB(255, 214, 224)))
-    , m_Selected(-1)
+InjectWindow::InjectWindow(InjectScanResult scan)
+    : LauncherWindow("GWToolbox - Launch", 305, 200, IDR_INJECT_PAGE)
 {
+    ResetScan(std::move(scan));
+    m_UpdateChecker.Start(!settings.noexecheck, !settings.noupdate);
+    RegisterMethods();
 }
 
-InjectWindow::~InjectWindow()
+bool InjectWindow::Finished() const
 {
-    if (m_hErrorBrush) {
-        DeleteObject(m_hErrorBrush);
+    return closed() && (!m_SettingsWindow || m_SettingsWindow->closed());
+}
+
+void InjectWindow::onClosed()
+{
+    LauncherWindow::onClosed();
+    if (m_SettingsWindow) {
+        m_SettingsWindow->close();
     }
-}
-
-void InjectWindow::SetInitialScanResult(InjectScanResult result)
-{
-    m_PendingScanResult = std::move(result);
-}
-
-bool InjectWindow::Create()
-{
-    if (!m_PendingScanResult) {
-        m_PendingScanResult = RunScan();
-    }
-    SetWindowName(L"GWToolbox - Launch");
-    SetWindowDimension(305, 165);
-    return Window::Create();
 }
 
 bool InjectWindow::GetSelected(size_t* index) const
 {
-    if (m_Selected >= 0) {
-        *index = static_cast<size_t>(m_Selected);
+    if (m_Selected) {
+        *index = *m_Selected;
         return true;
     }
     return false;
@@ -342,223 +317,93 @@ InjectSelection InjectWindow::TakeSelected(const size_t index)
     return selection;
 }
 
-LRESULT InjectWindow::WndProc(HWND hWnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam)
+void InjectWindow::RegisterMethods()
 {
-    switch (uMsg) {
-        case WM_CREATE:
-            OnCreate(hWnd, uMsg, wParam, lParam);
-            break;
-
-        case WM_CLOSE:
-            DestroyWindow(hWnd);
-            break;
-
-        case WM_DESTROY:
-            SignalStop();
-            break;
-
-        case WM_COMMAND:
-            OnCommand(reinterpret_cast<HWND>(lParam), LOWORD(wParam), HIWORD(wParam));
-            break;
-
-        case WM_CTLCOLORSTATIC:
-            if (reinterpret_cast<HWND>(lParam) == m_hErrorText) {
-                const auto hDc = reinterpret_cast<HDC>(wParam);
-                SetBkColor(hDc, RGB(255, 214, 224));
-                SetTextColor(hDc, RGB(120, 0, 20));
-                return reinterpret_cast<LRESULT>(m_hErrorBrush);
-            }
-            break;
-
-        case WM_KEYUP:
-            if (wParam == VK_ESCAPE) {
-                DestroyWindow(hWnd);
-            }
-            else if (wParam == VK_RETURN) {
-                if (m_ScanResult.m_Found) {
-                    m_Selected = SendMessageW(m_hCharacters, CB_GETCURSEL, 0, 0);
-                    DestroyWindow(hWnd);
-                }
-                else {
-                    Rescan();
-                }
-            }
-            break;
-
-        case WM_DPICHANGED:
-            OnDpiChanged(wParam, lParam);
-            break;
-    }
-
-    return DefWindowProcW(hWnd, uMsg, wParam, lParam);
-}
-
-void InjectWindow::OnCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
-{
-    ApplyDpiScaling(hWnd);
-
-    if (m_PendingScanResult) {
-        m_ScanResult = std::move(*m_PendingScanResult);
-        m_PendingScanResult.reset();
-    }
-
-    m_UpdateChecker.Start(!settings.noexecheck, !settings.noupdate);
-
-    BuildControls(hWnd);
-}
-
-void InjectWindow::BuildControls(HWND hWnd)
-{
-    // A Retry rebuild starts from a blank slate rather than patching the previous state in place.
-    for (const auto handle :
-         {&m_hCharacters, &m_hLaunchButton, &m_hErrorText, &m_hRetryButton, &m_hTroubleshootingLink, &m_hRestartAsAdmin, &m_hSettings, &m_hUpdateStatus, &m_hUpdateButton}) {
-        if (*handle) {
-            DestroyWindow(*handle);
-            *handle = nullptr;
+    handler().on("getState", [this](WebViewWindow&, const Json&, const Reply& reply) {
+        m_UpdateChecker.Poll();
+        reply.result(State());
+    });
+    handler().on("launch", [this](WebViewWindow& window, const Json& args, const Reply& reply) {
+        const auto index = args.at(0).get<size_t>();
+        if (!m_ScanResult.m_Found || index >= m_ScanResult.m_Processes.size()) {
+            throw std::out_of_range("There's no character to launch.");
         }
-    }
-
-    if (m_ScanResult.m_Found) {
-        const HWND hGroupBox = CreateWindowW(WC_BUTTONW, L"Select Character", WS_VISIBLE | WS_CHILD | BS_GROUPBOX, Scale(10), Scale(5), Scale(270), Scale(55), hWnd, nullptr, m_hInstance, nullptr);
-        SendMessageW(hGroupBox, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
-
-        m_hCharacters = CreateWindowW(
-            WC_COMBOBOXW, L"", WS_VISIBLE | WS_CHILD | WS_VSCROLL | WS_TABSTOP | CBS_DROPDOWNLIST,
-            Scale(20),  // x
-            Scale(25),  // y
-            Scale(155), // width
-            Scale(25),  // height when dropped only - Windows fixes the closed-box height from the font, ignoring this
-            hWnd, nullptr, m_hInstance, nullptr
-        );
-        SendMessageW(m_hCharacters, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
-
-        // Read back the combo box's real rendered rect so the button matches it exactly, since its closed height isn't the one requested above.
-        RECT comboRect;
-        GetWindowRect(m_hCharacters, &comboRect);
-        MapWindowPoints(nullptr, hWnd, reinterpret_cast<LPPOINT>(&comboRect), 2);
-
-        m_hLaunchButton = CreateWindowW(
-            WC_BUTTONW, L"Launch", WS_VISIBLE | WS_CHILD | WS_TABSTOP | BS_DEFPUSHBUTTON,
-            Scale(180),                       // x
-            comboRect.top,                    // y
-            Scale(90),                        // width
-            comboRect.bottom - comboRect.top, // height
-            hWnd, nullptr, m_hInstance, nullptr
-        );
-        SendMessageW(m_hLaunchButton, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
-
-        for (size_t i = 0; i < m_ScanResult.m_Processes.size(); i++) {
-            const InjectProcess& process = m_ScanResult.m_Processes[i];
-
-            wchar_t buffer[128];
-            StrCopyW(buffer, _countof(buffer), process.m_Charname.c_str());
-            if (process.m_Injected) {
-                StrAppendW(buffer, _countof(buffer), L" (injected)");
-            }
-
-            SendMessageW(m_hCharacters, CB_ADDSTRING, 0, (LPARAM)buffer);
+        m_Selected = index;
+        window.close();
+        reply.result(nullptr);
+    });
+    handler().on("retry", [this](WebViewWindow&, const Json&, const Reply& reply) {
+        ResetScan(RunScan());
+        reply.result(State());
+    });
+    handler().on("troubleshooting", [this](WebViewWindow&, const Json&, const Reply& reply) {
+        if (m_ScanResult.m_TroubleshootingUrl) {
+            ShellExecuteW(nullptr, L"open", m_ScanResult.m_TroubleshootingUrl, nullptr, nullptr, SW_SHOWNORMAL);
         }
-
-        size_t top_most_index;
-        if (FindTopMostProcess(m_ScanResult.m_Processes, &top_most_index)) {
-            SendMessageW(m_hCharacters, CB_SETCURSEL, top_most_index, 0);
-        }
-        else {
-            SendMessageW(m_hCharacters, CB_SETCURSEL, 0, 0);
-        }
-    }
-    else {
-        m_hErrorText = CreateWindowW(WC_STATICW, m_ScanResult.m_ErrorMessage.c_str(), WS_VISIBLE | WS_CHILD | SS_LEFT, Scale(10), Scale(5), Scale(165), Scale(55), hWnd, nullptr, m_hInstance, nullptr);
-        SendMessageW(m_hErrorText, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
-
-        m_hRetryButton = CreateWindowW(WC_BUTTONW, L"Retry", WS_VISIBLE | WS_CHILD | WS_TABSTOP | BS_DEFPUSHBUTTON, Scale(190), Scale(15), Scale(90), Scale(35), hWnd, nullptr, m_hInstance, nullptr);
-        SendMessageW(m_hRetryButton, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
-    }
-
-    if (m_ScanResult.m_TroubleshootingUrl) {
-        m_hTroubleshootingLink = CreateWindowW(WC_BUTTONW, L"Open troubleshooting guide", WS_VISIBLE | WS_CHILD | WS_TABSTOP, Scale(10), Scale(95), Scale(165), Scale(25), hWnd, nullptr, m_hInstance, nullptr);
-        SendMessageW(m_hTroubleshootingLink, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
-    }
-    else if (!IsRunningAsAdmin()) {
-        m_hRestartAsAdmin = CreateWindowW(WC_BUTTONW, L"Can't find your character?", WS_VISIBLE | WS_CHILD | WS_TABSTOP, Scale(10), Scale(95), Scale(165), Scale(25), hWnd, nullptr, m_hInstance, nullptr);
-        SendMessageW(m_hRestartAsAdmin, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
-        Button_SetElevationRequiredState(m_hRestartAsAdmin, TRUE);
-    }
-
-    // Update status row: status text and (when available) an Update button, both to the left of Settings.
-    m_hUpdateStatus = CreateWindowW(WC_STATICW, L"", WS_VISIBLE | WS_CHILD | SS_LEFT, Scale(10), Scale(65), Scale(115), Scale(25), hWnd, nullptr, m_hInstance, nullptr);
-    SendMessageW(m_hUpdateStatus, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
-
-    m_hUpdateButton = CreateWindowW(WC_BUTTONW, L"Update", WS_CHILD | WS_TABSTOP, Scale(130), Scale(65), Scale(60), Scale(25), hWnd, nullptr, m_hInstance, nullptr);
-    SendMessageW(m_hUpdateButton, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
-
-    m_hSettings = CreateWindowW(WC_BUTTONW, L"Settings...", WS_VISIBLE | WS_CHILD | WS_TABSTOP, Scale(200), Scale(65), Scale(80), Scale(25), hWnd, nullptr, m_hInstance, nullptr);
-    SendMessageW(m_hSettings, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
-
-    RefreshUpdateStatus();
-}
-
-void InjectWindow::Rescan()
-{
-    m_ScanResult = RunScan();
-    BuildControls(m_hWnd);
-}
-
-void InjectWindow::Tick()
-{
-    if (m_UpdateChecker.Poll()) {
-        RefreshUpdateStatus();
-    }
-}
-
-void InjectWindow::RefreshUpdateStatus()
-{
-    if (!m_hUpdateStatus) return; // controls not built yet
-
-    if (m_UpdateChecker.IsAnyUpdateAvailable()) {
-        SetWindowTextW(m_hUpdateStatus, L"Updates available!");
-        ShowWindow(m_hUpdateButton, SW_SHOW);
-        return;
-    }
-
-    ShowWindow(m_hUpdateButton, SW_HIDE);
-    SetWindowTextW(m_hUpdateStatus, m_UpdateChecker.IsChecking() ? L"Checking..." : L"");
-}
-
-void InjectWindow::SetControlsEnabled(const bool enabled)
-{
-    for (const HWND handle : {m_hCharacters, m_hLaunchButton, m_hRetryButton, m_hTroubleshootingLink, m_hRestartAsAdmin, m_hSettings, m_hUpdateButton}) {
-        if (handle) EnableWindow(handle, enabled);
-    }
-}
-
-void InjectWindow::OnCommand(HWND hWnd, const LONG ControlId, LONG NotificationCode)
-{
-    if (hWnd == m_hLaunchButton && ControlId == STN_CLICKED) {
-        m_Selected = SendMessageW(m_hCharacters, CB_GETCURSEL, 0, 0);
-        DestroyWindow(m_hWnd);
-    }
-    else if (hWnd == m_hRetryButton && ControlId == STN_CLICKED) {
-        Rescan();
-    }
-    else if (hWnd == m_hRestartAsAdmin && ControlId == STN_CLICKED) {
+        reply.result(nullptr);
+    });
+    handler().on("restartAsAdmin", [](WebViewWindow&, const Json&, const Reply& reply) {
         RestartWithSameArgs(true);
-    }
-    else if (hWnd == m_hTroubleshootingLink && ControlId == STN_CLICKED) {
-        ShellExecuteW(nullptr, L"open", m_ScanResult.m_TroubleshootingUrl, nullptr, nullptr, SW_SHOWNORMAL);
-    }
-    else if (hWnd == m_hUpdateButton && ControlId == STN_CLICKED) {
-        SetControlsEnabled(false);
+        reply.result(nullptr);
+    });
+    handler().on("update", [this](WebViewWindow&, const Json&, const Reply& reply) {
         std::wstring error;
         if (!m_UpdateChecker.ApplyUpdates(error)) {
             fprintf(stderr, "ApplyUpdates failed: %ls\n", error.c_str());
         }
-        SetControlsEnabled(true);
-        RefreshUpdateStatus();
+        reply.result(State());
+    });
+    handler().on("settings", [this](WebViewWindow&, const Json&, const Reply& reply) {
+        OpenSettings();
+        reply.result(nullptr);
+    });
+}
+
+Json InjectWindow::State() const
+{
+    Json characters = Json::array();
+    for (const InjectProcess& process : m_ScanResult.m_Processes) {
+        characters.push_back(ToUtf8(process.m_Charname) + (process.m_Injected ? " (injected)" : ""));
     }
-    else if (hWnd == m_hSettings && ControlId == STN_CLICKED) {
-        m_SettingsWindow.Create();
+
+    const bool troubleshooting = m_ScanResult.m_TroubleshootingUrl != nullptr;
+    const char* update_status = "";
+    if (m_UpdateChecker.IsAnyUpdateAvailable()) {
+        update_status = "Updates available!";
     }
+    else if (m_UpdateChecker.IsChecking()) {
+        update_status = "Checking...";
+    }
+
+    return Json{
+        {"found", m_ScanResult.m_Found},
+        {"error", ToUtf8(m_ScanResult.m_ErrorMessage)},
+        {"characters", characters},
+        {"selected", m_Preselected},
+        {"troubleshooting", troubleshooting},
+        {"canRestartAsAdmin", !troubleshooting && !IsRunningAsAdmin()},
+        {"updateAvailable", m_UpdateChecker.IsAnyUpdateAvailable()},
+        {"updateStatus", update_status},
+    };
+}
+
+void InjectWindow::ResetScan(InjectScanResult scan)
+{
+    m_ScanResult = std::move(scan);
+    m_Selected.reset();
+    size_t top_most = 0;
+    FindTopMostProcess(m_ScanResult.m_Processes, &top_most);
+    m_Preselected = top_most;
+}
+
+void InjectWindow::OpenSettings()
+{
+    if (m_SettingsWindow && !m_SettingsWindow->closed()) {
+        m_SettingsWindow->present();
+        return;
+    }
+    m_SettingsWindow = std::make_unique<SettingsWindow>();
+    m_SettingsWindow->open();
 }
 
 bool InjectRemoteThread(const Process* process, const LPCWSTR ImagePath, LPDWORD lpExitCode)

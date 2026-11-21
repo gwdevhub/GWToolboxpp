@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Window.h"
+#include "LauncherWindow.h"
 
 struct Settings {
     bool help = false;
@@ -30,24 +30,13 @@ bool RestartAsAdmin(const wchar_t* args);
 void RestartWithSameArgs(bool force_admin = false);
 bool EnableDebugPrivilege();
 
-class SettingsWindow : public Window {
+class SettingsWindow : public LauncherWindow {
 public:
-    SettingsWindow() = default;
+    SettingsWindow();
     SettingsWindow(const SettingsWindow&) = delete;
     SettingsWindow(SettingsWindow&&) = delete;
     ~SettingsWindow() override = default;
 
     SettingsWindow& operator=(const SettingsWindow&) = delete;
-
-    bool Create() override;
-
-private:
-    LRESULT WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) override;
-
-    void OnCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
-    void OnCommand(HWND hwnd, LONG ControlId, LONG NotificateCode) const;
-
-private:
-    HWND m_hNoUpdate = nullptr;
-    HWND m_hStartAsAdmin = nullptr;
+    SettingsWindow& operator=(SettingsWindow&&) = delete;
 };
