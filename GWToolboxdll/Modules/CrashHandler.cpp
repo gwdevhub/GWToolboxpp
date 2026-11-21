@@ -21,6 +21,16 @@
 #include <Utils/TextUtils.h>
 #include <Utils/TextUtils_Time.h>
 
+#if defined(__MINGW32__) && defined(_LIBCPP_VERSION)
+// libc++abi's default terminate handler demangles the exception's type name for stderr, which a game has no console
+// for, and OnTerminate below replaces it anyway. Defining this keeps libc++abi's 100 KB demangler out of the dll.
+extern "C" char* __cxa_demangle(const char*, char*, size_t*, int* status)
+{
+    if (status) *status = -2; // "not a valid mangled name"
+    return nullptr;
+}
+#endif
+
 namespace {
     char* tb_exception_message = nullptr;
 
@@ -123,7 +133,7 @@ namespace {
         swprintf(error_info, _countof(error_info),
                  L"Guild Wars crashed!\n\n"
                  "GWToolbox tried to create a crash dump, but failed\n\n"
-                 "%S\n"
+                 "%hs\n"
                  "GetLastError code: %d\n\n"
                  "I don't really know what to do, sorry, contact the developers.\n",
                  failure_message, GetLastError());
@@ -135,6 +145,7 @@ namespace {
     // The CRT kills the process for these without ever raising an SEH exception, so they never reach
     // TopLevelExceptionFilter. Route them into Crash() with a context captured at the point of failure.
     constexpr DWORD EXCEPTION_TOOLBOX_CRT_FAILURE = 0xE0435254;
+    constexpr DWORD EXCEPTION_TOOLBOX_ASSERTION_FAILURE = 0xE0415354;
 
     _invalid_parameter_handler previous_invalid_parameter_handler = nullptr;
     _purecall_handler previous_purecall_handler = nullptr;
@@ -142,32 +153,37 @@ namespace {
     void(__cdecl* previous_sigabrt_handler)(int) = SIG_DFL;
     bool crt_handlers_installed = false;
 
-    void CrashFromCrtHandler(const char* message)
+    [[noreturn]] void CrashAtCurrentContext(const DWORD exception_code, const char* message)
     {
-        // Crash() keeps this pointer for the dump's comment stream, and the process dies before it could be reused.
-        static char crt_failure_message[512];
-        strncpy_s(crt_failure_message, message && *message ? message : "Unknown CRT failure", _TRUNCATE);
-
         CONTEXT context{};
         RtlCaptureContext(&context);
 
         EXCEPTION_RECORD record{};
-        record.ExceptionCode = EXCEPTION_TOOLBOX_CRT_FAILURE;
+        record.ExceptionCode = exception_code;
         record.ExceptionFlags = EXCEPTION_NONCONTINUABLE;
         record.ExceptionAddress = reinterpret_cast<PVOID>(context.Eip);
 
         EXCEPTION_POINTERS pointers{&record, &context};
-        CrashHandler::Crash(&pointers, crt_failure_message);
+        CrashHandler::Crash(&pointers, message);
 
-        // Crash() doesn't return, but don't let the CRT carry on if it somehow did.
+        // Crash() doesn't return, but don't let the caller carry on if it somehow did.
         TerminateProcess(GetCurrentProcess(), 1);
+        std::abort();
+    }
+
+    void CrashFromCrtHandler(const char* message)
+    {
+        // Crash() keeps this pointer for the dump's comment stream, and the process dies before it could be reused.
+        static char crt_failure_message[512];
+        strncpy_s(crt_failure_message, _countof(crt_failure_message), message && *message ? message : "Unknown CRT failure", _TRUNCATE);
+        CrashAtCurrentContext(EXCEPTION_TOOLBOX_CRT_FAILURE, crt_failure_message);
     }
 
     // Release CRTs pass null for everything but the line number, hence the placeholders.
     void __cdecl OnInvalidParameter(const wchar_t* expression, const wchar_t* function, const wchar_t* file, const unsigned int line, uintptr_t)
     {
         char message[512];
-        snprintf(message, _countof(message), "Invalid parameter: '%S' in '%S', '%S' line %u",
+        snprintf(message, _countof(message), "Invalid parameter: '%ls' in '%ls', '%ls' line %u",
                  expression ? expression : L"<no expression>",
                  function ? function : L"<unknown function>",
                  file ? file : L"<unknown file>",
@@ -215,8 +231,10 @@ namespace {
         previous_purecall_handler = _set_purecall_handler(OnPureCall);
         previous_terminate_handler = std::set_terminate(OnTerminate);
         previous_sigabrt_handler = signal(SIGABRT, OnAbortSignal);
+#ifdef _MSC_VER
         // Stop the CRT showing its own abort dialog or handing the fault to WER if our handler ever returns.
         _set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
+#endif
     }
 
     void RemoveCrtHandlers()
@@ -262,20 +280,16 @@ void CrashHandler::GWCAPanicHandler(
 
 void CrashHandler::FatalAssert(const char* expr, const char* file, const unsigned line)
 {
-    __try {
-        auto fmt = "Assertion Error: '%s' in '%s' line %u";
-        const size_t len = snprintf(nullptr, 0, fmt, expr, file, line);
-        tb_exception_message = new char[len + 1];
-        snprintf(tb_exception_message, len + 1, fmt, expr, file, line);
+    const auto fmt = "Assertion Error: '%s' in '%s' line %u";
+    const size_t len = snprintf(nullptr, 0, fmt, expr, file, line);
+    tb_exception_message = new char[len + 1];
+    snprintf(tb_exception_message, len + 1, fmt, expr, file, line);
+    CrashAtCurrentContext(EXCEPTION_TOOLBOX_ASSERTION_FAILURE, nullptr);
+}
 
-        throw std::runtime_error(tb_exception_message);
-    } __except (EXCEPT_EXPRESSION_ENTRY) {
-        // Crash() should already have terminated the process; force it if not.
-        TerminateProcess(GetCurrentProcess(), 1);
-    }
-
-    // Should never reach here
-    TerminateProcess(GetCurrentProcess(), 1);
+LONG __cdecl CrashHandler::CrashFilter(EXCEPTION_POINTERS* pExceptionPointers)
+{
+    return Crash(pExceptionPointers);
 }
 
 LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const char* extra_info)
@@ -358,7 +372,7 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const ch
     const auto stLocalTime = TextUtils::Time::GetCurrentSystemTime();
     wchar_t szFileName[MAX_PATH];
     const auto fn_print = swprintf(
-        szFileName, MAX_PATH, L"%s\\%S%S-%04d%02d%02d-%02d%02d%02d-%ld-%ld.dmp", crash_folder.c_str(), GWTOOLBOXDLL_VERSION, GWTOOLBOXDLL_VERSION_BETA, stLocalTime.year, stLocalTime.month, stLocalTime.day, stLocalTime.hour, stLocalTime.minute,
+        szFileName, MAX_PATH, L"%ls\\%hs%hs-%04d%02d%02d-%02d%02d%02d-%ld-%ld.dmp", crash_folder.c_str(), GWTOOLBOXDLL_VERSION, GWTOOLBOXDLL_VERSION_BETA, stLocalTime.year, stLocalTime.month, stLocalTime.day, stLocalTime.hour, stLocalTime.minute,
         stLocalTime.second, ProcessId, ThreadId
     );
 

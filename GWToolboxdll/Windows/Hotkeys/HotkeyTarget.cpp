@@ -80,13 +80,13 @@ void HotkeyTarget::Execute()
     message[0] = 0;
     switch (type) {
         case Item:
-            swprintf(message, len, L"target item %S", id);
+            swprintf(message, len, L"target item %hs", id);
             break;
         case NPC:
-            swprintf(message, len, L"target npc %S", id);
+            swprintf(message, len, L"target npc %hs", id);
             break;
         case Signpost:
-            swprintf(message, len, L"target gadget %S", id);
+            swprintf(message, len, L"target gadget %hs", id);
             break;
         default:
             Log::ErrorW(L"Unknown target type %d", type);

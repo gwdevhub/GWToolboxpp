@@ -128,7 +128,7 @@ namespace Pathing {
             const size_t written = arr.size();
             j["connections"] = std::move(arr);
 
-            auto str = glz::write<glz::opts{.prettify = true}>(j).value_or(std::string{});
+            auto str = glz::write<SizeOptimisedJson{{.prettify = true}}>(j).value_or(std::string{});
             std::ofstream f(path);
             if (!f.is_open()) return false;
             f << str;
@@ -161,7 +161,7 @@ namespace Pathing {
             const std::string buf(data, size);
 
             glz::generic j;
-            if (auto ec = glz::read_json(j, buf); ec) {
+            if (auto ec = glz::read<SizeOptimisedJson{}>(j, buf); ec) {
                 PATH_LOG_ERROR("Failed to parse portal connections JSON (%s)", source.c_str());
                 return false;
             }

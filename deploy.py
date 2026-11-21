@@ -4,8 +4,6 @@
 Usage:
   python deploy.py                 - bump CMakeLists.txt to the next minor version, open history.md, then release
   python deploy.py 8.20            - bump CMakeLists.txt to 8.20, open history.md, then release
-  python deploy.py 8.20 --clang    - same, but build with the clang preset
-  python deploy.py --clang         - release current version using clang preset
   python deploy.py --draft         - create the GitHub release as a draft
   python deploy.py --yes           - skip the interactive "Build and release?" confirmation
 
@@ -213,43 +211,6 @@ def open_editor(path: Path) -> None:
 
 # --- build helpers ----------------------------------------------------------
 
-def load_vcvars() -> None:
-    """Mirror deploy.bat: if inside a VS install, import the vcvars32 environment.
-
-    Running a .bat does not persist env into later subprocesses, so we capture
-    the environment it produces and merge it into os.environ.
-    """
-    vc = os.environ.get("VCINSTALLDIR")
-    if not vc or os.name != "nt":
-        return
-    vcvars = Path(vc) / "Auxiliary" / "Build" / "vcvars32.bat"
-    if not vcvars.exists():
-        log(f"VCINSTALLDIR set but {vcvars} not found - skipping vcvars import.")
-        return
-    log("Importing vcvars32 environment...")
-    # Pass the command as a single string with shell=True rather than an argv
-    # list. The VS install path always contains spaces ("Program Files"), so the
-    # quoted '"<path>" >nul && set' list element would be re-quoted by
-    # subprocess.list2cmdline into  cmd /c "\"<path>\" >nul && set"  - cmd.exe
-    # does not understand the \" escapes, strips the outer quote pair, and then
-    # fails to find the batch file. shell=True hands our string to cmd /c as-is.
-    out = subprocess.run(
-        f'"{vcvars}" >nul && set',
-        capture_output=True, text=True, shell=True,
-    )
-    if out.returncode != 0:
-        detail = (out.stderr or out.stdout or "").strip()
-        if detail:
-            log(f"vcvars32.bat exited {out.returncode}. Output was:")
-            for line in detail.splitlines():
-                log(f"    {line}")
-        fail("vcvars32.bat failed")
-    for line in out.stdout.splitlines():
-        if "=" in line:
-            k, _, v = line.partition("=")
-            os.environ[k] = v
-
-
 def gzip_file(src: Path, dst: Path) -> None:
     if dst.exists():
         dst.unlink()
@@ -267,7 +228,6 @@ def parse_args() -> argparse.Namespace:
         epilog=__doc__)
     p.add_argument("version", nargs="?",
                    help="new MAJOR.MINOR version to bump to (optional)")
-    p.add_argument("--clang", action="store_true", help="build with the clang preset")
     p.add_argument("--draft", action="store_true", help="create the GitHub release as a draft")
     p.add_argument("--yes", "-y", action="store_true",
                    help="skip the interactive confirmation prompt")
@@ -359,13 +319,8 @@ def main() -> None:
             fail("Aborted by user.")
 
     # --- build ---
-    load_vcvars()
-    preset = "clang" if args.clang else "vcpkg"
-    build_dir = "build-clang" if args.clang else "build"
-    log(f"Configuring (preset {preset})...")
-    run(["cmake", "--preset", preset, "-DCMAKE_BUILD_TYPE=RelWithDebInfo"])
     log("Building RelWithDebInfo...")
-    run(["cmake", "--build", build_dir, "--config", "RelWithDebInfo",
+    run([sys.executable, str(REPO_ROOT / "scripts" / "build.py"), "--preset", "relwithdebinfo",
          "--target", "GWToolboxdll"])
 
     dll = REPO_ROOT / "bin" / "RelWithDebInfo" / "GWToolboxdll.dll"

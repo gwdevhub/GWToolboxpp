@@ -1,8 +1,9 @@
 #pragma once
 
-#define __forceinline
-#include <ctre.hpp>
+#pragma push_macro("__forceinline")
 #undef __forceinline
+#define __forceinline
+#pragma pop_macro("__forceinline")
 
 #include <cstdint>
 #include <optional>
@@ -69,9 +70,11 @@ namespace TextUtils {
             T[i] = chars[i];
 
         int bits = sizeof(CharT) * 8;
-        int val = 0, valb = -6;
+        // Unsigned: a signed char would sign-extend bytes from 0x80 up into the bits already collected.
+        unsigned val = 0;
+        int valb = -6;
         for (CharT c : decoded) {
-            val = (val << bits) + c;
+            val = (val << bits) + static_cast<std::make_unsigned_t<CharT>>(c);
             valb += bits;
             while (valb >= 0) {
                 encoded.push_back(char(T[(val >> valb) & 0x3F]));
@@ -97,6 +100,8 @@ namespace TextUtils {
     std::string GetFormattedDateTime();
 
     std::wstring StripTags(std::wstring_view str);
+    bool IsDigits(std::string_view str);
+    std::string WithoutIndexPrefix(std::string_view str);
 
     std::string GuidToString(const GUID* guid);
     bool StringToGuid(const std::string& str, GUID* guid);
@@ -230,38 +235,45 @@ namespace TextUtils {
     std::wstring GetPlayerNameFromEncodedString(const wchar_t* message, const wchar_t** start_pos_out = nullptr, const wchar_t** end_pos_out = nullptr);
     std::wstring EncodedNumericWord(uint32_t value);
 
+    // errno is cleared first, as std::stoul does, so an ERANGE left by an earlier call can't fail this one.
     template <typename CharT, typename NumT>
     bool Parse(const CharT* str, NumT* val, int base = 10);
 
     template <> inline bool Parse<char, int>(const char* str, int* val, int base) {
         char* end;
+        errno = 0;
         *val = strtol(str, &end, base);
         return *end == 0 && errno != ERANGE;
     }
     template <> inline bool Parse<wchar_t, int>(const wchar_t* str, int* val, int base) {
         wchar_t* end;
+        errno = 0;
         *val = wcstol(str, &end, base);
         return *end == 0 && errno != ERANGE;
     }
     template <> inline bool Parse<char, unsigned int>(const char* str, unsigned int* val, int base) {
         if (!str) return false;
         char* end;
+        errno = 0;
         *val = strtoul(str, &end, base);
         return str != end && errno != ERANGE;
     }
     template <> inline bool Parse<wchar_t, unsigned int>(const wchar_t* str, unsigned int* val, int base) {
         if (!str) return false;
         wchar_t* end;
+        errno = 0;
         *val = wcstoul(str, &end, base);
         return str != end && errno != ERANGE;
     }
     template <> inline bool Parse<char, float>(const char* str, float* val, int) {
         char* end;
+        errno = 0;
         *val = strtof(str, &end);
         return str != end && errno != ERANGE;
     }
     template <> inline bool Parse<wchar_t, float>(const wchar_t* str, float* val, int) {
         wchar_t* end;
+        errno = 0;
         *val = wcstof(str, &end);
         return str != end && errno != ERANGE;
     }
@@ -323,140 +335,8 @@ namespace TextUtils {
     inline std::string Join(const std::vector<std::string>& parts, std::string_view token) { return Join(parts, std::string(token)); }
     // Capitalise the first letter of each word. Replaces original.
     std::string UcWords(std::string_view input);
-
-    template <typename CharT, ctll::fixed_string Pattern, typename... Modifiers>
-    constexpr std::basic_string<CharT> ctre_simple_regex_replace(const std::basic_string_view<CharT> input, const std::basic_string_view<CharT> replacement)
-    {
-        auto r = ctre::split<Pattern, Modifiers...>(input);
-        return r | std::views::as_rvalue | std::views::join_with(replacement) | std::ranges::to<std::basic_string<CharT>>();
-    }
-
-    template <ctll::fixed_string Pattern, ctll::fixed_string Replacement, typename... Modifiers>
-    constexpr std::string ctre_regex_replace(const std::string_view subject)
-    {
-        std::string result;
-        result.reserve(subject.size() * 2);
-        auto search_start = subject.begin();
-#pragma warning(push)
-#pragma warning(disable: 4244)
-        const auto replacement = Replacement | std::ranges::to<std::string>();
-#pragma warning(pop)
-
-        for (auto match : ctre::search_all<Pattern, Modifiers...>(subject)) {
-            result.append(&*search_start, match.begin() - search_start);
-            std::string replaced_match(replacement);
-            using Pair = std::pair<std::string, std::string>;
-            std::vector<Pair> replacements;
-
-            constexpr auto cnt = decltype(match)::count();
-            static_assert(cnt < 10, "Only up to 9 capture groups are supported");
-            constexpr auto has_escaped_dollar = ctre::search<R"(\$\$)">(Replacement);
-            if constexpr (has_escaped_dollar) replacements.emplace_back("$$", "###ESCAPED_DOLLAR###");
-            if constexpr (ctre::search<R"(\$&)">(Replacement)) replacements.emplace_back("$&", match.to_string());
-            if constexpr (ctre::search<R"(\$')">(Replacement)) replacements.emplace_back("$'", std::string(match.end(), subject.end()));
-            if constexpr (ctre::search<R"(\$`)">(Replacement)) replacements.emplace_back("$`", std::string(subject.begin(), match.begin()));
-            if constexpr (ctre::search<R"(\$1)">(Replacement) && cnt > 1) replacements.emplace_back("$1", match.template get<1>().to_string());
-            if constexpr (ctre::search<R"(\$2)">(Replacement) && cnt > 2) replacements.emplace_back("$2", match.template get<2>().to_string());
-            if constexpr (ctre::search<R"(\$3)">(Replacement) && cnt > 3) replacements.emplace_back("$3", match.template get<3>().to_string());
-            if constexpr (ctre::search<R"(\$4)">(Replacement) && cnt > 4) replacements.emplace_back("$4", match.template get<4>().to_string());
-            if constexpr (ctre::search<R"(\$5)">(Replacement) && cnt > 5) replacements.emplace_back("$5", match.template get<5>().to_string());
-            if constexpr (ctre::search<R"(\$6)">(Replacement) && cnt > 6) replacements.emplace_back("$6", match.template get<6>().to_string());
-            if constexpr (ctre::search<R"(\$7)">(Replacement) && cnt > 7) replacements.emplace_back("$7", match.template get<7>().to_string());
-            if constexpr (ctre::search<R"(\$8)">(Replacement) && cnt > 8) replacements.emplace_back("$8", match.template get<8>().to_string());
-            if constexpr (ctre::search<R"(\$9)">(Replacement) && cnt > 9) replacements.emplace_back("$9", match.template get<9>().to_string());
-            if constexpr (has_escaped_dollar) replacements.emplace_back("###ESCAPED_DOLLAR###", "$");
-
-            for (const auto& [key, value] : replacements) {
-                size_t pos = 0;
-                while ((pos = replaced_match.find(key, pos)) != std::string::npos) {
-                    replaced_match.replace(pos, key.length(), value);
-                    pos += value.length();
-                }
-            }
-
-            result.append(replaced_match);
-            search_start = match.end();
-        }
-
-        if (search_start != subject.end())
-            result.append(&*search_start, std::distance(search_start, subject.end()));
-        return result;
-    }
-
-    template <ctll::fixed_string Pattern, ctll::fixed_string Replacement, typename... Modifiers>
-    constexpr std::wstring ctre_regex_replace(const std::wstring_view subject)
-    {
-        std::wstring result;
-        result.reserve(subject.size() * 2);
-        auto search_start = subject.begin();
-#pragma warning(push)
-#pragma warning(disable: 4244)
-        const auto replacement = Replacement | std::ranges::to<std::wstring>();
-#pragma warning(pop)
-
-        for (auto match : ctre::search_all<Pattern, Modifiers...>(subject)) {
-            result.append(&*search_start, match.begin() - search_start);
-            std::wstring replaced_match(replacement);
-            using Pair = std::pair<std::wstring, std::wstring>;
-            std::vector<Pair> replacements;
-
-            constexpr auto cnt = decltype(match)::count();
-            static_assert(cnt < 10, "Only up to 9 capture groups are supported");
-            constexpr auto has_escaped_dollar = ctre::search<LR"(\$\$)">(Replacement);
-            if constexpr (has_escaped_dollar) replacements.emplace_back(L"$$", L"###ESCAPED_DOLLAR###");
-            if constexpr (ctre::search<LR"(\$&)">(Replacement)) replacements.emplace_back(L"$&", match.to_string());
-            if constexpr (ctre::search<LR"(\$')">(Replacement)) replacements.emplace_back(L"$'", std::wstring(match.end(), subject.end()));
-            if constexpr (ctre::search<LR"(\$`)">(Replacement)) replacements.emplace_back(L"$`", std::wstring(subject.begin(), match.begin()));
-            if constexpr (ctre::search<LR"(\$1)">(Replacement) && cnt > 1) replacements.emplace_back(L"$1", match.template get<1>().to_string());
-            if constexpr (ctre::search<LR"(\$2)">(Replacement) && cnt > 2) replacements.emplace_back(L"$2", match.template get<2>().to_string());
-            if constexpr (ctre::search<LR"(\$3)">(Replacement) && cnt > 3) replacements.emplace_back(L"$3", match.template get<3>().to_string());
-            if constexpr (ctre::search<LR"(\$4)">(Replacement) && cnt > 4) replacements.emplace_back(L"$4", match.template get<4>().to_string());
-            if constexpr (ctre::search<LR"(\$5)">(Replacement) && cnt > 5) replacements.emplace_back(L"$5", match.template get<5>().to_string());
-            if constexpr (ctre::search<LR"(\$6)">(Replacement) && cnt > 6) replacements.emplace_back(L"$6", match.template get<6>().to_string());
-            if constexpr (ctre::search<LR"(\$7)">(Replacement) && cnt > 7) replacements.emplace_back(L"$7", match.template get<7>().to_string());
-            if constexpr (ctre::search<LR"(\$8)">(Replacement) && cnt > 8) replacements.emplace_back(L"$8", match.template get<8>().to_string());
-            if constexpr (ctre::search<LR"(\$9)">(Replacement) && cnt > 9) replacements.emplace_back(L"$9", match.template get<9>().to_string());
-            if constexpr (has_escaped_dollar) replacements.emplace_back(L"###ESCAPED_DOLLAR###", L"$");
-
-            for (const auto& [key, value] : replacements) {
-                size_t pos = 0;
-                while ((pos = replaced_match.find(key, pos)) != std::wstring::npos) {
-                    replaced_match.replace(pos, key.length(), value);
-                    pos += value.length();
-                }
-            }
-
-            result.append(replaced_match);
-            search_start = match.end();
-        }
-
-        if (search_start != subject.end())
-            result.append(&*search_start, std::distance(search_start, subject.end()));
-        return result;
-    }
-
-    template <ctll::fixed_string Pattern, typename Formatter, typename... Modifiers>
-    std::wstring ctre_regex_replace_with_formatter(std::wstring_view input, Formatter formatter)
-    {
-        std::wstring result;
-        result.reserve(input.size());
-        size_t last_pos = 0;
-
-        for (auto match : ctre::search_all<Pattern, Modifiers...>(input)) {
-            auto matched = match.template get<0>().to_view();
-            auto pos = std::distance(input.begin(), match.template get<0>().begin());
-
-            result.append(input.substr(last_pos, pos - last_pos));
-            result.append(formatter(match));
-            last_pos = pos + matched.length();
-        }
-
-        if (last_pos < input.size()) {
-            result.append(input.substr(last_pos));
-        }
-
-        return result;
-    }
+    // Lowercase hex SHA-256 of a byte buffer; empty on failure.
+    std::string Sha256Hex(const void* data, size_t size);
 
     // trim from end of string (right)
     std::string rtrim(const std::string& s, const char* t = " \t\n\r\f\v");

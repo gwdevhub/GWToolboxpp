@@ -106,8 +106,8 @@ namespace {
             DeleteFileW(file_location.c_str());
         }
 
-        std::ofstream out(file_location);
-        out << glz::write_json(output).value_or(std::string{});
+        std::ofstream out{std::filesystem::path(file_location)};
+        out << glz::write<SizeOptimisedJson{}>(output).value_or(std::string{});
         out.close();
         Log::Info("Maps exported to %ls", file_location.c_str());
     }

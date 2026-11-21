@@ -79,7 +79,7 @@ namespace {
             else {
                 strlen += 3 * sizeof(wchar_t);
                 message_encoded = new wchar_t[strlen];
-                swprintf(message_encoded, strlen, L"\x108\x107%s\x1", message);
+                swprintf(message_encoded, strlen, L"\x108\x107%ls\x1", message);
             }
             if (!_message_id) {
                 _message_id = (uint32_t)message;
@@ -145,9 +145,9 @@ namespace {
     constexpr TBHint HINT_HERO_EXP = {0x20000002, L"Heroes in your party gain experience from quests, so remember to add your low level heroes when accepting quest rewards."};
     constexpr TBHint CHEST_CMD = {0x20000003, L"Type '/chest' into chat to open your Xunlai Chest from anywhere in an outpost, so you won't have to run to the chest every time."};
     constexpr TBHint BULK_BUY = {0x20000004, L"Hold Ctrl when requesting a quote to bulk buy or sell from a trader"};
-    constexpr TBHint EMBARK_WITHOUT_HOMELAND = {0x20001000, L"To get back from Embark Beach to where you came from, talk to \x1\x2%s\x2\x108\x107 or use the '/tb travel' chat command."};
+    constexpr TBHint EMBARK_WITHOUT_HOMELAND = {0x20001000, L"To get back from Embark Beach to where you came from, talk to \x1\x2%ls\x2\x108\x107 or use the '/tb travel' chat command."};
     constexpr TBHint ENDGAME_TROPHY = {
-        0x20002000, L"Talk to \x1\x2%s\x2\x108\x107 to receive a \x1\x2%s\x2\x108\x107. Those are worth a lot of money if you sell to another player, so rather than trading it in for a weapon, search on https://kamadan.gwtoolbox.com for a buyer."};
+        0x20002000, L"Talk to \x1\x2%ls\x2\x108\x107 to receive a \x1\x2%ls\x2\x108\x107. Those are worth a lot of money if you sell to another player, so rather than trading it in for a weapon, search on https://kamadan.gwtoolbox.com for a buyer."};
     constexpr TBHint QUEST_HINT_ADVENTURE_WITH_AN_ALLY = {
         0x20000005, L"If you don't have a friend available to join you for this quest, try adding everyone in Ascalon City (America English district) to your party. Someone will surely be happy to help you."};
     constexpr TBHint NOLANI_ACADEMY_SHORTCUT = {0x20000006, L"Turn right and head south to kill Bonfaaz Burntfur.It's a quicker route to the end - Prince Rurik will be fine on his own."};

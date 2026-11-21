@@ -703,7 +703,7 @@ void PconGeneric::OnButtonClick()
         }
         const auto& category = *found;
         auto enable_if_same_category = [this, &category](Pcon* other) {
-            auto* generic = dynamic_cast<PconGeneric*>(other);
+            auto* generic = other->AsGeneric();
             if (generic == nullptr) {
                 return;
             }

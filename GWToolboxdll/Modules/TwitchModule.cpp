@@ -34,7 +34,7 @@ namespace twitch_api {
 }
 
 namespace {
-    constexpr glz::opts json_opts{.error_on_unknown_keys = false};
+    constexpr SizeOptimisedJson json_opts{{.error_on_unknown_keys = false}};
 
     TwitchModule::Settings settings;
 
@@ -224,14 +224,14 @@ namespace {
                 WriteChat(L"Connected");
                 return 0;
             }
-            swprintf(buf, 599, L"Connected to %s as %S", TextUtils::StringToWString(&params[1]).c_str(), settings.irc_username.c_str());
+            swprintf(buf, 599, L"Connected to %ls as %hs", TextUtils::StringToWString(&params[1]).c_str(), settings.irc_username.c_str());
             WriteChat(buf);
             return 0;
         }
         if (!settings.notify_on_user_join) {
             return 0;
         }
-        swprintf(buf, 599, L"%s joined the channel.", TextUtils::StringToWString(hostd->nick).c_str());
+        swprintf(buf, 599, L"%ls joined the channel.", TextUtils::StringToWString(hostd->nick).c_str());
         WriteChat(buf);
         return 0;
     }
@@ -243,7 +243,7 @@ namespace {
         }
 
         wchar_t buf[600];
-        swprintf(buf, 599, L"%s left the channel.", TextUtils::StringToWString(hostd->nick).c_str());
+        swprintf(buf, 599, L"%ls left the channel.", TextUtils::StringToWString(hostd->nick).c_str());
         WriteChat(buf);
         return 0;
     }
@@ -312,7 +312,7 @@ namespace {
             }
             wchar_t buf[128];
             const std::wstring w_alias = TextUtils::StringToWString(settings.irc_alias);
-            swprintf(buf, 128, L" @ %s", w_alias.c_str());
+            swprintf(buf, 128, L" @ %ls", w_alias.c_str());
             if (std::wstring(name).find(buf) != std::wstring::npos) {
                 wcscpy(name, w_alias.c_str());
             }

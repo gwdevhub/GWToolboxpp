@@ -7,11 +7,10 @@ FILE(GLOB SOURCES CONFIGURE_DEPENDS
 add_executable(GWToolbox)
 target_sources(GWToolbox PRIVATE ${SOURCES})
 target_precompile_headers(GWToolbox PRIVATE "stdafx.h")
+target_include_directories(GWToolbox PRIVATE "${GWTOOLBOX_RESOURCE_INCLUDE_DIR}")
 
 set_target_properties(GWToolbox PROPERTIES
-    LINK_FLAGS_RELEASE "/SUBSYSTEM:WINDOWS"
-    LINK_FLAGS_RELWITHDEBINFO "/SUBSYSTEM:WINDOWS"
-    LINK_FLAGS_MINSIZEREL "/SUBSYSTEM:WINDOWS"
+    WIN32_EXECUTABLE $<NOT:$<CONFIG:Debug>>
     VS_GLOBAL_RunCodeAnalysis false
     VS_GLOBAL_EnableMicrosoftCodeAnalysis true
     VS_GLOBAL_EnableClangTidyCodeAnalysis true
@@ -23,9 +22,9 @@ target_link_libraries(GWToolbox PRIVATE
     RestClient
     glaze::glaze
 
-    version.lib # for GetFileVersionInfo
-    bcrypt.lib # for sha256 of the launcher exe
-    comctl32.lib # for TaskDialogIndirect (Defender prompt checkbox)
+    version # for GetFileVersionInfo
+    bcrypt # for sha256 of the launcher exe
+    comctl32 # for TaskDialogIndirect (Defender prompt checkbox)
     )
 
 find_package(Python3 COMPONENTS Interpreter REQUIRED)

@@ -113,7 +113,7 @@ std::string GetDllRelease(const std::filesystem::path& dllpath)
         delete[] buf;
         return {};
     }
-    sprintf_s(buffer, "%lu.%lu.%lu.%lu", pvi->dwProductVersionMS >> 16, pvi->dwFileVersionMS & 0xFFFF, pvi->dwFileVersionLS >> 16, pvi->dwFileVersionLS & 0xFFFF);
+    sprintf_s(buffer, _countof(buffer), "%lu.%lu.%lu.%lu", pvi->dwProductVersionMS >> 16, pvi->dwFileVersionMS & 0xFFFF, pvi->dwFileVersionLS >> 16, pvi->dwFileVersionLS & 0xFFFF);
     delete[] buf;
     return {buffer};
 }

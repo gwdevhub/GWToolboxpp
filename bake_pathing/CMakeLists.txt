@@ -16,7 +16,11 @@ target_include_directories(bake_pathing PRIVATE
     "${CMAKE_CURRENT_BINARY_DIR}"
     "${PROJECT_SOURCE_DIR}/GWToolboxdll"
     "${PROJECT_SOURCE_DIR}/Dependencies/GWCA/include")
-target_compile_options(bake_pathing PRIVATE /utf-8 /W4)
+target_compile_options(bake_pathing PRIVATE -Wall -Wextra)
 set_source_files_properties("${PROJECT_SOURCE_DIR}/GWToolboxdll/Utils/GwDat/xentax.cpp"
-    PROPERTIES COMPILE_FLAGS "/W0")
+    PROPERTIES COMPILE_OPTIONS -w)
 set_target_properties(bake_pathing PROPERTIES OUTPUT_NAME "bake_pathing")
+# The entry point is wmain, which MinGW only links when told to.
+target_link_options(bake_pathing PRIVATE -municode)
+# An offline tool that reports failures by throwing.
+target_compile_options(bake_pathing PRIVATE ${GWTB_EXCEPTIONS})

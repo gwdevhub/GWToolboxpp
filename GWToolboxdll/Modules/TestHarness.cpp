@@ -82,7 +82,7 @@ namespace {
                 if (chars && chars->size()) name = (*chars)[0].player_name;
             }
             const bool ok = !name.empty() && GW::LoginMgr::SelectCharacterToPlay(name.c_str());
-            Log::Log("[harness] play '%S' ok=%d char_select_ready=%d", name.c_str(), static_cast<int>(ok),
+            Log::Log("[harness] play '%ls' ok=%d char_select_ready=%d", name.c_str(), static_cast<int>(ok),
                      static_cast<int>(GW::LoginMgr::IsCharSelectReady()));
             Log::FlushFile();
             write_status(std::format("play: ok={} name_len={}", static_cast<int>(ok), name.size()));

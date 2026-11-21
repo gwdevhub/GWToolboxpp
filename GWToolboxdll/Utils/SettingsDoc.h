@@ -6,7 +6,7 @@
 #include <map>
 #include <string>
 
-#include <glaze/glaze.hpp>
+#include <Utils/Json.h>
 
 class SettingsDoc {
 public:
@@ -23,7 +23,9 @@ public:
 
     [[nodiscard]] bool Empty() const { return sections.empty(); }
 
-    // Lenient whole-struct read: unknown keys ignored, missing keys keep current values.
+    // Lenient whole-struct read: unknown keys ignored, missing keys keep current values. Plain structs are read member
+    // by member, each in place as a whole-struct read would, so the parsing code is shared by every struct with members
+    // of the same types rather than generated for each struct (glaze made that a seventh of the dll).
     template <typename T>
     bool GetStruct(const std::string_view section, T& out) const
     {
@@ -31,28 +33,42 @@ public:
         if (!sec) {
             return false;
         }
-        const auto buffer = glz::write_json(*sec);
-        if (!buffer) {
-            return false;
+        if constexpr (glz::reflectable<T>) {
+            auto tie = glz::to_tie(out);
+            [&]<size_t... I>(std::index_sequence<I...>) {
+                (ReadInPlace(*sec, glz::reflect<T>::keys[I], glz::get<I>(tie)), ...);
+            }(std::make_index_sequence<glz::reflect<T>::size>{});
+            return true;
         }
-        return !glz::read<lenient_opts>(out, *buffer);
+        else {
+            const auto buffer = glz::write<SizeOptimisedJson{}>(*sec);
+            return buffer && !glz::read<lenient_opts>(out, *buffer);
+        }
     }
 
-    // Merges the struct's keys into the section, preserving keys it doesn't own.
+    // Merges the struct's keys into the section, preserving keys it doesn't own. Member by member, as GetStruct reads.
     template <typename T>
     void SetStruct(const std::string_view section, const T& value)
     {
-        const auto buffer = glz::write_json(value);
-        if (!buffer) {
-            return;
+        if constexpr (glz::reflectable<T>) {
+            auto tie = glz::to_tie(const_cast<T&>(value));
+            [&]<size_t... I>(std::index_sequence<I...>) {
+                (Set(section, glz::reflect<T>::keys[I], std::as_const(glz::get<I>(tie))), ...);
+            }(std::make_index_sequence<glz::reflect<T>::size>{});
         }
-        Section staged;
-        if (glz::read_json(staged, *buffer)) {
-            return;
-        }
-        auto& sec = GetOrCreateSection(section);
-        for (auto& [key, raw] : staged) {
-            sec.insert_or_assign(key, std::move(raw));
+        else {
+            const auto buffer = glz::write<SizeOptimisedJson{}>(value);
+            if (!buffer) {
+                return;
+            }
+            Section staged;
+            if (glz::read<SizeOptimisedJson{}>(staged, *buffer)) {
+                return;
+            }
+            auto& sec = GetOrCreateSection(section);
+            for (auto& [key, raw] : staged) {
+                sec.insert_or_assign(key, std::move(raw));
+            }
         }
     }
 
@@ -75,7 +91,7 @@ public:
     template <typename T>
     void Set(const std::string_view section, const std::string_view key, const T& value)
     {
-        auto buffer = glz::write_json(value);
+        auto buffer = glz::write<SizeOptimisedJson{}>(value);
         if (!buffer) {
             return;
         }
@@ -90,7 +106,15 @@ public:
     std::filesystem::path location_on_disk;
 
 private:
-    static constexpr glz::opts lenient_opts{.error_on_unknown_keys = false};
+    static constexpr SizeOptimisedJson lenient_opts{{.error_on_unknown_keys = false}};
+
+    template <typename T>
+    static void ReadInPlace(const Section& section, const std::string_view key, T& out)
+    {
+        if (const auto found = section.find(key); found != section.end()) {
+            std::ignore = glz::read<lenient_opts>(out, found->second.str);
+        }
+    }
 
     [[nodiscard]] const Section* FindSection(std::string_view section) const;
     [[nodiscard]] const glz::raw_json* FindKey(std::string_view section, std::string_view key) const;

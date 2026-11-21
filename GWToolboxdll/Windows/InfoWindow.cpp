@@ -515,9 +515,9 @@ namespace {
             case 0x20:
                 return swprintf(out, out_len, L"\x564") != -1;
             case 0x40:
-                return quest->location && swprintf(out, out_len, L"\x8102\x1978\x10A%s\x1", quest->location) != -1;
+                return quest->location && swprintf(out, out_len, L"\x8102\x1978\x10A%ls\x1", quest->location) != -1;
             case 0:
-                return quest->location && swprintf(out, out_len, L"\x565\x10A%s\x1", quest->location) != -1;
+                return quest->location && swprintf(out, out_len, L"\x565\x10A%ls\x1", quest->location) != -1;
             case 0x10:
                 // Unknown, maybe current mission quest, but this type of quest isn't in the quest log.
                 break;
@@ -578,7 +578,7 @@ namespace {
             e->cb = cb;
             e->wParam = wParam;
             enc_strings_recorded[s] = e;
-            ValidateAsyncDecodeStr_Ret(e->s.c_str(), OnRecordedAsyncDecode_Decoded, e);
+            ValidateAsyncDecodeStr_Ret(e->s.c_str(), reinterpret_cast<void*>(OnRecordedAsyncDecode_Decoded), e);
         }
 
 

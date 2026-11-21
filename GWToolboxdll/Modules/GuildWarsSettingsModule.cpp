@@ -10,7 +10,6 @@
 
 #include <GWCA/Utilities/Scanner.h>
 
-#include <d3d9on12.h>
 #include <Defines.h>
 #include <Modules/Resources.h>
 #include <Utils/GuiUtils.h>
@@ -416,7 +415,7 @@ namespace {
                 std::ifstream file(filename_cpy, std::ios::binary);
                 const std::string buffer{std::istreambuf_iterator(file), {}};
                 guild_wars_settings_json::PreferencesJson json;
-                if (!file || glz::read<glz::opts{.error_on_unknown_keys = false}>(json, buffer)) {
+                if (!file || glz::read<SizeOptimisedJson{{.error_on_unknown_keys = false}}>(json, buffer)) {
                     Log::Error("Failed to load json file %s", filename_cpy.string().c_str());
                     return;
                 }
@@ -463,7 +462,7 @@ namespace {
             guild_wars_settings_json::PreferencesJson json;
             SavePreferences(current_prefs, json);
             std::string buffer;
-            if (glz::write<glz::opts{.prettify = true}>(json, buffer)) {
+            if (glz::write<SizeOptimisedJson{{.prettify = true}}>(json, buffer)) {
                 Log::Error("Failed to serialise preferences for %s", filename_cpy.string().c_str());
                 return;
             }

@@ -55,8 +55,9 @@ function Get-GwPid { (Get-Process -Name 'Gw' -ErrorAction SilentlyContinue | Sel
 
 function Build-Dll {
   Write-Host "[harness] building $Config GWToolboxdll..." -ForegroundColor Cyan
-  & cmake --build (Join-Path $Repo 'build') --config $Config --target GWToolboxdll 2>&1 |
-    Select-String -Pattern 'error C|error LNK|GWToolboxdll.vcxproj ->|LNK1168' | ForEach-Object { $_.Line }
+  $python = (Get-Command python, py -ErrorAction SilentlyContinue | Select-Object -First 1).Source
+  & $python (Join-Path $Repo 'scripts\build.py') --preset $Config.ToLower() --target GWToolboxdll 2>&1 |
+    Select-String -Pattern ': error|error:|FAILED:|==> done|cannot open output file' | ForEach-Object { $_.Line }
   if (-not (Test-Path $Dll)) { throw "DLL not found after build: $Dll" }
 }
 

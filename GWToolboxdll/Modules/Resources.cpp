@@ -1,6 +1,7 @@
 #include "stdafx.h"
 
 #include <DirectXTex.h>
+#include <Utils/TryCatch.h>
 #include <DDSTextureLoader/DDSTextureLoader9.h>
 #include <WICTextureLoader/WICTextureLoader9.h>
 
@@ -35,8 +36,6 @@
 #include <nfd_win.cpp>
 #pragma warning(pop)
 #include <dxgiformat.h>
-#include <bcrypt.h>
-#pragma comment(lib, "bcrypt.lib")
 
 #include <Modules/GwDatModule.h>
 #include <Constants/EncStrings.h>
@@ -49,6 +48,45 @@
 #include <Modules/CodeOptimiserModule.h>
 
 
+
+namespace {
+    constexpr auto npos = std::string_view::npos;
+
+    // marker[\s\S]*?<img[^>]+src=['"]([^"']+)([.](png|jpg)): the image path and extension from the first <img after marker.
+    std::optional<std::pair<std::string, std::string>> ImageAfter(const std::string_view html, const std::string_view marker)
+    {
+        const auto marker_at = html.find(marker);
+        if (marker_at == npos) return std::nullopt;
+        for (auto img = html.find("<img", marker_at + marker.size()); img != npos; img = html.find("<img", img + 1)) {
+            const auto tag_end = std::min(html.find('>', img + 4), html.size());
+            for (auto src = html.rfind("src=", tag_end - 1); src != npos && src >= img + 5; src = src ? html.rfind("src=", src - 1) : npos) {
+                if (src + 4 >= html.size() || (html[src + 4] != '"' && html[src + 4] != '\'')) continue;
+                const auto value = src + 5;
+                const auto value_run = html.substr(0, std::min(html.find_first_of("\"'", value), html.size()));
+                auto dot = npos;
+                for (const auto extension : {".png", ".jpg"}) {
+                    if (const auto at = value_run.rfind(extension); at != npos && at > value && (dot == npos || at > dot)) dot = at;
+                }
+                if (dot != npos) return std::pair{std::string(html.substr(value, dot - value)), std::string(html.substr(dot, 4))};
+            }
+        }
+        return std::nullopt;
+    }
+
+    // class="fullMedia"[\s\S]*?href=['"]([^"']+)
+    std::optional<std::string> FullMediaUrl(const std::string_view html)
+    {
+        const auto marker_at = html.find(R"(class="fullMedia")");
+        if (marker_at == npos) return std::nullopt;
+        for (auto href = html.find("href=", marker_at); href != npos; href = html.find("href=", href + 1)) {
+            if (href + 5 >= html.size() || (html[href + 5] != '"' && html[href + 5] != '\'')) continue;
+            const auto value = href + 6;
+            const auto value_end = std::min(html.find_first_of("\"'", value), html.size());
+            if (value_end > value) return std::string(html.substr(value, value_end - value));
+        }
+        return std::nullopt;
+    }
+}
 
 namespace {
 
@@ -275,22 +313,6 @@ namespace {
         r->SetTimeoutSec(10);
     }
 
-    const std::string HashStr(const std::string& str)
-    {
-        constexpr DWORD kSha256Size = 32;
-        BYTE hash[kSha256Size] = {};
-        BCryptHash(BCRYPT_SHA256_ALG_HANDLE,
-                   nullptr, 0,
-                   reinterpret_cast<PUCHAR>(const_cast<char*>(str.data())),
-                   static_cast<ULONG>(str.size()),
-                   hash, kSha256Size);
-        std::stringstream hexstream;
-        hexstream << std::hex << std::setfill('0');
-        for (BYTE b : hash) {
-            hexstream << std::setw(2) << static_cast<unsigned>(b);
-        }
-        return hexstream.str();
-    };
 } // namespace
 
 extern "C" __declspec(dllexport) IDirect3DTexture9** __cdecl GetSkillImage(GW::Constants::SkillID skill_id)
@@ -623,10 +645,10 @@ bool Resources::Download(const std::filesystem::path& path_to_file, const std::s
 {
     std::string content;
     if (!Download(url, content)) {
-        return StrSwprintf(response, L"%S", content.c_str()), false;
+        return StrSwprintf(response, L"%hs", content.c_str()), false;
     }
     if (!content.length()) {
-        return StrSwprintf(response, L"Failed to download %S, no content length", url.c_str()), false;
+        return StrSwprintf(response, L"Failed to download %hs, no content length", url.c_str()), false;
     }
     return WriteFile(path_to_file, content);
 }
@@ -642,7 +664,7 @@ void Resources::Download(const std::filesystem::path& path_to_file, const std::s
             });
         }
         else if (!success) {
-            Log::LogW(L"Failed to download %s from %S\n%S", path_to_file.wstring().c_str(), url.c_str(), error_message.c_str());
+            Log::LogW(L"Failed to download %ls from %hs\n%hs", path_to_file.wstring().c_str(), url.c_str(), error_message.c_str());
         }
     });
 }
@@ -743,7 +765,8 @@ void Resources::Download(const std::string& url, AsyncLoadMbCallback callback, v
             }
             return url; // Return the original if no match is found
         };
-        const auto cache_path = Resources::GetPath("cache") / HashStr(remove_protocol(url));
+        const auto cache_key = remove_protocol(url);
+        const auto cache_path = Resources::GetPath("cache") / TextUtils::Sha256Hex(cache_key.data(), cache_key.size());
         const auto expiration = get_cache_modified_time(cache_path);
         if (expiration.has_value() && expiration.value() - std::chrono::file_clock::now() < cache_duration) {
             std::string response;
@@ -825,12 +848,12 @@ HRESULT Resources::TryCreateTexture(IDirect3DDevice9* device, const std::filesys
     }
     if (res != D3D_OK) {
         std::filesystem::remove(path_to_file);
-        StrSwprintf(error, L"Error loading resource from file %s - Error is %S", path_to_file.filename().wstring().c_str(), d3dErrorMessage(res));
+        StrSwprintf(error, L"Error loading resource from file %ls - Error is %hs", path_to_file.filename().wstring().c_str(), d3dErrorMessage(res));
         return res;
     }
     if (!*texture) {
         res = D3DERR_NOTFOUND;
-        StrSwprintf(error, L"Error loading resource from file %s - texture loaded is null", path_to_file.filename().wstring().c_str());
+        StrSwprintf(error, L"Error loading resource from file %ls - texture loaded is null", path_to_file.filename().wstring().c_str());
     }
     return res;
 }
@@ -852,7 +875,7 @@ HRESULT Resources::TryCreateTexture(IDirect3DDevice9* pDevice, const HMODULE hSr
         }
     }
     if (res != D3D_OK) {
-        StrSwprintf(error, L"Error loading resource for id %p, module %p - Error is %s", pSrcResource, hSrcModule, d3dErrorMessage(res));
+        StrSwprintf(error, L"Error loading resource for id %p, module %p - Error is %ls", pSrcResource, hSrcModule, d3dErrorMessage(res));
     }
     else if (!*texture) {
         res = D3DERR_NOTFOUND;
@@ -871,7 +894,7 @@ void Resources::LoadTexture(IDirect3DTexture9** texture, const std::filesystem::
             callback(success, error);
         }
         else if (!success) {
-            Log::LogW(L"Failed to load texture from file %s\n%s", TextUtils::PrintFilename(path_to_file.wstring()).c_str(), error.c_str());
+            Log::LogW(L"Failed to load texture from file %ls\n%ls", TextUtils::PrintFilename(path_to_file.wstring()).c_str(), error.c_str());
         }
     });
 }
@@ -885,7 +908,7 @@ void Resources::LoadTexture(IDirect3DTexture9** texture, WORD id, AsyncLoadCallb
             callback(success, error);
         }
         else if (!success) {
-            Log::LogW(L"Failed to load texture from id %d\n%s", id, error.c_str());
+            Log::LogW(L"Failed to load texture from id %d\n%ls", id, error.c_str());
         }
     });
 }
@@ -901,7 +924,7 @@ void Resources::LoadTexture(IDirect3DTexture9** texture, const std::filesystem::
                 callback(success, error);
             }
             else {
-                Log::LogW(L"Failed to EnsureFileExists %s\n%S", TextUtils::PrintFilename(path_to_file.wstring()).c_str(), error.c_str());
+                Log::LogW(L"Failed to EnsureFileExists %ls\n%hs", TextUtils::PrintFilename(path_to_file.wstring()).c_str(), error.c_str());
             }
         }
     });
@@ -917,16 +940,6 @@ void Resources::LoadTexture(IDirect3DTexture9** texture, const std::filesystem::
             callback(success, error);
         }
     });
-}
-
-bool Resources::ResourceToFile(const WORD id, const std::filesystem::path& path_to_file, std::wstring& error)
-{
-    const EmbeddedResource resource(id, RT_RCDATA, GWToolbox::GetDLLModule());
-    if (!resource.data()) {
-        StrSwprintf(error, L"Error calling on resource id %u - Error is %lu", id, GetLastError());
-        return false;
-    }
-    return WriteFile(path_to_file, std::string(static_cast<char*>(resource.data()), resource.size()));
 }
 
 void Resources::DxUpdate(IDirect3DDevice9* device)
@@ -971,12 +984,12 @@ IDirect3DTexture9** Resources::GetProfessionIcon(GW::Constants::Profession p)
         const auto path = GetPath(PROF_ICONS_PATH);
         EnsureFolderExists(path);
         wchar_t local_image[MAX_PATH];
-        swprintf(local_image, _countof(local_image), L"%s\\%d.png", path.c_str(), p);
+        swprintf(local_image, _countof(local_image), L"%ls\\%d.png", path.c_str(), p);
         char remote_image[128];
         snprintf(remote_image, _countof(remote_image), "https://wiki.guildwars.com/images/%s.png", profession_icon_urls[prof_id]);
         LoadTexture(texture, local_image, remote_image, [prof_id](const bool success, const std::wstring& error) {
             if (!success) {
-                Log::ErrorW(L"Failed to load icon for profession %d\n%s", prof_id, error.c_str());
+                Log::ErrorW(L"Failed to load icon for profession %d\n%ls", prof_id, error.c_str());
             }
         });
     }
@@ -1012,7 +1025,7 @@ IDirect3DTexture9** Resources::GetDamagetypeImage(std::string dmg_type)
         LoadTexture(texture, local_path, remote_path, [dmg_type](const bool success, const std::wstring& error) {
             if (!success) {
                 const auto dmg_type_wstr = TextUtils::StringToWString(dmg_type);
-                Log::ErrorW(L"Failed to load icon for %d\n%s", dmg_type_wstr.c_str(), error.c_str());
+                Log::ErrorW(L"Failed to load icon for %d\n%ls", dmg_type_wstr.c_str(), error.c_str());
             }
         });
     }
@@ -1035,10 +1048,10 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
     }
     const auto callback = [filename_sanitised](const bool success, const std::wstring& error) {
         if (!success) {
-            Log::LogW(L"Failed to load Guild Wars Wiki file%S\n%s", filename_sanitised.c_str(), error.c_str());
+            Log::LogW(L"Failed to load Guild Wars Wiki file%hs\n%ls", filename_sanitised.c_str(), error.c_str());
         }
         else {
-            Log::LogW(L"Loaded Guild Wars Wiki file %S", filename_sanitised.c_str());
+            Log::LogW(L"Loaded Guild Wars Wiki file %hs", filename_sanitised.c_str());
         }
     };
     const auto texture = new IDirect3DTexture9*;
@@ -1047,7 +1060,7 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
     static std::filesystem::path path = GetPath(GUILD_WARS_WIKI_FILES_PATH);
     std::wstring folder_error;
     if (!EnsureFolderExists(path, folder_error)) {
-        trigger_failure_callback(callback, L"%s", folder_error.c_str());
+        trigger_failure_callback(callback, L"%ls", folder_error.c_str());
         return texture;
     }
     const auto path_to_file = std::format("{}\\{}", path.string(), filename_sanitised);
@@ -1064,27 +1077,20 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
             return; // Already logged whatever errors
         }
 
-        // Find a valid png or jpg image inside the HTML response
-        static constexpr ctll::fixed_string image_pattern = R"(class="fullMedia"[\s\S]*?href=['"]([^"']+))";
-
-        if (auto m = ctre::search<image_pattern>(response)) {
-            std::string image_url = m.get<1>().to_string();
+        if (auto full_media_url = FullMediaUrl(response)) {
+            auto& image_url = *full_media_url;
             const auto path_to_file2 = std::format("{}\\{}", path.string(), filename_sanitised);
 
             if (width) {
                 // Divert to resized version using MediaWiki's method
-                static constexpr ctll::fixed_string thumb_pattern = R"(/images/(.*)/([^/]+)$)";
-
-                if (auto m2 = ctre::search<thumb_pattern>(image_url)) {
-                    image_url = std::format(
-                        "/images/thumb/{}/{}/{}px-{}",
-                        m2.get<1>().to_string(),
-                        m2.get<2>().to_string(),
-                        width,
-                        m2.get<2>().to_string());
+                const auto images = image_url.find("/images/");
+                const auto name_at = image_url.rfind('/');
+                if (images != std::string::npos && name_at >= images + 8 && name_at + 1 < image_url.size()) {
+                    const auto name = image_url.substr(name_at + 1);
+                    image_url = std::format("/images/thumb/{}/{}/{}px-{}", image_url.substr(images + 8, name_at - images - 8), name, width, name);
                 }
                 else {
-                    trigger_failure_callback(callback, L"Regex failed evaluating GWW thumbnail from %S", image_url.c_str());
+                    trigger_failure_callback(callback, L"Regex failed evaluating GWW thumbnail from %hs", image_url.c_str());
                     return;
                 }
             }
@@ -1096,7 +1102,7 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
             LoadTexture(texture, path_to_file2, image_url, callback);
         }
         else {
-            trigger_failure_callback(callback, L"Regex failed loading file %S", filename_sanitised.c_str());
+            trigger_failure_callback(callback, L"Regex failed loading file %hs", filename_sanitised.c_str());
         }
     });
     return texture;
@@ -1133,7 +1139,7 @@ IDirect3DTexture9** Resources::GetSkillImageFromGWW(GW::Constants::SkillID skill
     }
     const auto callback = [skill_id](const bool success, const std::wstring& error) {
         if (!success) {
-            Log::ErrorW(L"Failed to load skill image %d\n%s", skill_id, error.c_str());
+            Log::ErrorW(L"Failed to load skill image %d\n%ls", skill_id, error.c_str());
         }
         else {
             Log::LogW(L"Loaded skill image %d", skill_id);
@@ -1148,16 +1154,16 @@ IDirect3DTexture9** Resources::GetSkillImageFromGWW(GW::Constants::SkillID skill
     static std::filesystem::path path = GetPath(SKILL_IMAGES_PATH);
     std::wstring folder_error;
     if (!EnsureFolderExists(path, folder_error)) {
-        trigger_failure_callback(callback, L"%s", folder_error.c_str());
+        trigger_failure_callback(callback, L"%ls", folder_error.c_str());
         return texture;
     }
     wchar_t path_to_file[MAX_PATH];
-    swprintf(path_to_file, _countof(path_to_file), L"%s\\%d.jpg", path.wstring().c_str(), skill_id);
+    swprintf(path_to_file, _countof(path_to_file), L"%ls\\%d.jpg", path.wstring().c_str(), skill_id);
     if (std::filesystem::exists(path_to_file)) {
         LoadTexture(texture, path_to_file, callback);
         return texture;
     }
-    swprintf(path_to_file, _countof(path_to_file), L"%s\\%d.png", path.wstring().c_str(), skill_id);
+    swprintf(path_to_file, _countof(path_to_file), L"%ls\\%d.png", path.wstring().c_str(), skill_id);
     if (std::filesystem::exists(path_to_file)) {
         LoadTexture(texture, path_to_file, callback);
         return texture;
@@ -1171,40 +1177,18 @@ IDirect3DTexture9** Resources::GetSkillImageFromGWW(GW::Constants::SkillID skill
             return; // Already logged whatever errors
         }
 
-        static constexpr ctll::fixed_string skill_image_regex =
-            R"(class="skill-image"[\s\S]*?<img[^>]+src=['"]([^"']+)([.](png|jpg)))";
-        static constexpr ctll::fixed_string condition_image_regex =
-            R"(<blockquote[\s\S]*?<img[^>]+src=['"]([^"']+)([.](png|jpg)))";
-        static constexpr ctll::fixed_string blessing_image_regex =
-            R"(class="blessing-infobox"[\s\S]*?<img[^>]+src=['"]([^"']+)([.](png|jpg)))";
-        static constexpr ctll::fixed_string bounty_image_regex =
-            R"(class="bounty-infobox"[\s\S]*?<img[^>]+src=['"]([^"']+)([.](png|jpg)))";
-
-        std::string image_path, image_extension;
-
-        if (auto m = ctre::search<skill_image_regex>(response)) {
-            image_path = m.get<1>().to_string();
-            image_extension = m.get<2>().to_string();
+        std::optional<std::pair<std::string, std::string>> image;
+        for (const auto marker : {R"(class="skill-image")", "<blockquote", R"(class="blessing-infobox")", R"(class="bounty-infobox")"}) {
+            if ((image = ImageAfter(response, marker))) break;
         }
-        else if (auto m1 = ctre::search<condition_image_regex>(response)) {
-            image_path = m1.get<1>().to_string();
-            image_extension = m1.get<2>().to_string();
-        }
-        else if (auto m2 = ctre::search<blessing_image_regex>(response)) {
-            image_path = m2.get<1>().to_string();
-            image_extension = m2.get<2>().to_string();
-        }
-        else if (auto m3 = ctre::search<bounty_image_regex>(response)) {
-            image_path = m3.get<1>().to_string();
-            image_extension = m3.get<2>().to_string();
-        }
-        else {
+        if (!image) {
             trigger_failure_callback(callback, L"Regex failed loading skill id %d", skill_id);
             return;
         }
+        const auto& [image_path, image_extension] = *image;
 
         wchar_t path_to_file[MAX_PATH];
-        ASSERT(swprintf(path_to_file, _countof(path_to_file), L"%s\\%d%S", path.c_str(), skill_id, image_extension.c_str()) != -1);
+        ASSERT(swprintf(path_to_file, _countof(path_to_file), L"%ls\\%d%hs", path.c_str(), skill_id, image_extension.c_str()) != -1);
 
         char url[128];
 
@@ -1439,10 +1423,10 @@ IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name)
     }
     const auto callback = [item_name](const bool success, const std::wstring& error) {
         if (!success) {
-            Log::LogW(L"Error: Failed to load item image %s\n%s", item_name.c_str(), error.c_str());
+            Log::LogW(L"Error: Failed to load item image %ls\n%ls", item_name.c_str(), error.c_str());
         }
         else {
-            Log::LogW(L"Loaded item image %s", item_name.c_str());
+            Log::LogW(L"Loaded item image %ls", item_name.c_str());
         }
     };
     const auto texture = new IDirect3DTexture9*;
@@ -1452,7 +1436,7 @@ IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name)
     ASSERT(EnsureFolderExists(path));
 
     wchar_t path_to_file[MAX_PATH];
-    swprintf(path_to_file, _countof(path_to_file), L"%s\\%s.png", path.c_str(), item_name.c_str());
+    swprintf(path_to_file, _countof(path_to_file), L"%ls\\%ls.png", path.c_str(), item_name.c_str());
     if (std::filesystem::exists(path_to_file)) {
         LoadTexture(texture, path_to_file, callback);
         return texture;
@@ -1466,9 +1450,11 @@ IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name)
             return;
         }
         const std::string item_name_str = TextUtils::WStringToString(item_name);
-        // matches any characters that need to be escaped in RegEx
-        static constexpr ctll::fixed_string SPECIAL_CHARS{R"([\-\[\]{}()*+?.,\^$|#\s])"};
-        const std::string sanitized = TextUtils::ctre_regex_replace<SPECIAL_CHARS, R"(\$&)">(item_name_str);
+        std::string sanitized;
+        for (const auto c : item_name_str) {
+            if ((c && std::strchr("-[]{}()*+?.,^$|#", c)) || std::isspace(static_cast<unsigned char>(c))) sanitized += '\\';
+            sanitized += c;
+        }
         std::smatch m;
         // Find first png image that has an alt tag matching the html encoded title of the page
         char regex_str[255];
@@ -1477,20 +1463,20 @@ IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name)
             // Failed to find via item name; try via page title
             const std::regex title_finder("<title>(.*) - Guild Wars Wiki.*</title>");
             if (!std::regex_search(response, m, title_finder)) {
-                trigger_failure_callback(callback, L"Failed to find title HTML for %s from wiki", item_name.c_str());
+                trigger_failure_callback(callback, L"Failed to find title HTML for %ls from wiki", item_name.c_str());
                 return;
             }
             const std::string html_item_name = TextUtils::HtmlEncode(m[1].str());
             snprintf(regex_str, sizeof(regex_str), R"(<img[^>]+alt=['"][^>]*%s[^>]*['"][^>]+src=['"]([^"']+)([.](png)))", html_item_name.c_str());
             if (!std::regex_search(response, m, std::regex(regex_str))) {
-                trigger_failure_callback(callback, L"Failed to find image HTML for %s from wiki", item_name.c_str());
+                trigger_failure_callback(callback, L"Failed to find image HTML for %ls from wiki", item_name.c_str());
                 return;
             }
         }
         const std::string& image_path = m[1].str();
         const std::string& image_extension = m[2].str();
         wchar_t path_to_file[MAX_PATH];
-        swprintf(path_to_file, _countof(path_to_file), L"%s\\%s%S", path.c_str(), item_name.c_str(), image_extension.c_str());
+        swprintf(path_to_file, _countof(path_to_file), L"%ls\\%ls%hs", path.c_str(), item_name.c_str(), image_extension.c_str());
         char url[128];
         if (strncmp(image_path.c_str(), "http", 4) == 0) {
             snprintf(url, _countof(url), "%s%s", image_path.c_str(), image_extension.c_str());
@@ -1806,15 +1792,11 @@ static UINT DxtBlockBytes(D3DFORMAT fmt)
 
 static bool SafeCopyRows(uint8_t* dst, const uint8_t* src, size_t rows, size_t row_bytes, size_t pitch)
 {
-    __try {
+    return TryCatch([&] {
         for (size_t y = 0; y < rows; ++y) {
             memcpy(dst + y * row_bytes, src + y * pitch, row_bytes);
         }
-        return true;
-    }
-    __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
+    });
 }
 
 uint32_t Resources::GetTexmodHash(IDirect3DTexture9* texture)

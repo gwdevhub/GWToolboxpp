@@ -2,7 +2,7 @@
 
 // ReSharper disable once CppUnusedIncludeDirective
 #include <ImGuiAddons.h>
-#include <glaze/glaze.hpp>
+#include <Utils/Json.h>
 #include <ToolboxIni.h>
 #include <RectF.h>
 
@@ -58,11 +58,11 @@ namespace GuiUtils {
         using staged_map = std::map<staged_key, typename T::mapped_type>;
 
         staged_map staged;
-        if (glz::read_json(staged, map_str)) {
+        if (glz::read<SizeOptimisedJson{}>(staged, map_str)) {
             staged.clear();
             // TODO: delete this branch once pre-glaze configs are gone.
             std::vector<std::tuple<staged_key, typename T::mapped_type>> legacy;
-            if (glz::read_json(legacy, map_str)) {
+            if (glz::read<SizeOptimisedJson{}>(legacy, map_str)) {
                 return {};
             }
             for (auto& [k, v] : legacy) {

@@ -38,11 +38,11 @@ bool RunPowerShellCommand(const std::wstring& command, std::wstring& output)
     wchar_t temp_file[MAX_PATH];
 
     if (GetTempPathW(MAX_PATH, temp_path) == 0) {
-        fwprintf(stderr, L"%S: GetTempPathW failed (%lu)\n", __func__, GetLastError());
+        fwprintf(stderr, L"%hs: GetTempPathW failed (%lu)\n", __func__, GetLastError());
         return false;
     }
     if (GetTempFileNameW(temp_path, L"GWT", 0, temp_file) == 0) {
-        fwprintf(stderr, L"%S: GetTempFileNameW failed (%lu)\n", __func__, GetLastError());
+        fwprintf(stderr, L"%hs: GetTempFileNameW failed (%lu)\n", __func__, GetLastError());
         return false;
     }
 
@@ -62,7 +62,7 @@ bool RunPowerShellCommand(const std::wstring& command, std::wstring& output)
 
     const BOOL success = CreateProcessW(nullptr, cmd_buffer.data(), nullptr, nullptr, FALSE, CREATE_NO_WINDOW, nullptr, nullptr, &si, &pi);
     if (!success) {
-        fwprintf(stderr, L"%S: CreateProcessW failed (%lu)\n", __func__, GetLastError());
+        fwprintf(stderr, L"%hs: CreateProcessW failed (%lu)\n", __func__, GetLastError());
         DeleteFileW(temp_file);
         return false;
     }

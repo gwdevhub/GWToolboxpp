@@ -572,7 +572,7 @@ namespace {
         if (!data.empty()) {
             msg.get_array().push_back(data);
         }
-        return "42" + glz::write_json(msg).value_or(std::string{});
+        return "42" + glz::write<SizeOptimisedJson{}>(msg).value_or(std::string{});
     }
 
     std::string EncodeSocketIOMessage(const std::string& event, const json& data)
@@ -580,7 +580,7 @@ namespace {
         json msg = json::array_t{};
         msg.get_array().push_back(event);
         msg.get_array().push_back(data);
-        return "42" + glz::write_json(msg).value_or(std::string{});
+        return "42" + glz::write<SizeOptimisedJson{}>(msg).value_or(std::string{});
     }
 
     bool ParseSocketIOMessage(const std::string& message, std::string& event, json& data)
@@ -588,7 +588,7 @@ namespace {
         if (message.length() < 2 || message.substr(0, 2) != "42") return false;
 
         json parsed;
-        if (auto ec = glz::read_json(parsed, message.substr(2)); ec) return false;
+        if (auto ec = glz::read<SizeOptimisedJson{}>(parsed, message.substr(2)); ec) return false;
         if (parsed.is_array() && parsed.size() >= 1) {
             if (!parsed[0].is_string()) return false;
             event = parsed[0].get<std::string>();
@@ -704,7 +704,7 @@ namespace {
         if (message[0] != '0') return;
 
         json handshake;
-        if (auto ec = glz::read_json(handshake, message.substr(1)); ec) return;
+        if (auto ec = glz::read<SizeOptimisedJson{}>(handshake, message.substr(1)); ec) return;
         if (handshake.contains("pingInterval") && handshake["pingInterval"].is_number()) {
             ping_interval = static_cast<int>(handshake["pingInterval"].get<double>());
         }
@@ -1565,7 +1565,7 @@ namespace {
         payload["orderType"] = static_cast<int>(order_type);
         payload["price"] = price_json;
 
-        const auto json_str = glz::write_json(payload).value_or(std::string{});
+        const auto json_str = glz::write<SizeOptimisedJson{}>(payload).value_or(std::string{});
 
         purchase_analytics_client.SetUrl(std::format("https://{}/api/shop/purchase/", market_host).c_str());
         purchase_analytics_client.SetMethod(HttpMethod::Post);

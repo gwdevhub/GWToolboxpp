@@ -10,8 +10,11 @@ namespace GW {
     struct AgentLiving;
 }
 
+class PconGeneric;
+
 class Pcon {
 public:
+    virtual PconGeneric* AsGeneric() { return nullptr; }
     static int pcons_delay;
     static int lunar_delay;
     static bool map_has_effects_array;
@@ -153,6 +156,7 @@ private:
 
 class PconGeneric : public Pcon {
 public:
+    PconGeneric* AsGeneric() override { return this; }
     PconGeneric(const char* chat,
                 const char* abbrev,
                 const char* ini,

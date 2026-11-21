@@ -450,8 +450,8 @@ void AgentAppearanceWindow::LoadCustomAgents(SettingsDoc& doc, ToolboxIni* legac
         const std::string json_buf{std::istreambuf_iterator(file), {}};
         std::vector<CustomAgent::Settings> entries;
         std::vector<CustomAgent::LegacyFlags> flags;
-        if (!file || glz::read<glz::opts{.error_on_unknown_keys = false}>(entries, json_buf) ||
-            glz::read<glz::opts{.error_on_unknown_keys = false}>(flags, json_buf) || flags.size() != entries.size()) {
+        if (!file || glz::read<SizeOptimisedJson{{.error_on_unknown_keys = false}}>(entries, json_buf) ||
+            glz::read<SizeOptimisedJson{{.error_on_unknown_keys = false}}>(flags, json_buf) || flags.size() != entries.size()) {
             Log::Error("Failed to parse AgentColors.json");
             return;
         }

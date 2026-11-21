@@ -43,8 +43,18 @@ namespace teamspeak_invite_api {
 }
 
 namespace {
+    constexpr std::string_view server_name_key = "virtualserver_name=";
 
-    constexpr glz::opts json_opts{.error_on_unknown_keys = false};
+    // The whole of `line` as <first_key><a><second_key><b>, where <a> runs up to the first space.
+    std::optional<std::pair<std::string_view, std::string_view>> SplitFields(const std::string_view line, const std::string_view first_key, const std::string_view second_key)
+    {
+        const auto space = line.find(' ');
+        if (!line.starts_with(first_key) || space == std::string_view::npos || space == first_key.size() || !line.substr(space).starts_with(second_key)) return std::nullopt;
+        return std::pair{line.substr(first_key.size(), space - first_key.size()), line.substr(space + second_key.size())};
+    }
+
+
+    constexpr SizeOptimisedJson json_opts{{.error_on_unknown_keys = false}};
     GW::HookEntry ChatCmd_HookEntry;
 
     TeamspeakModule::Settings settings;
@@ -176,12 +186,10 @@ namespace {
         Log::Log("content: %s\n error: %s %s", response->content.c_str(), response->error_id.c_str(), response->error_text.c_str());
 
         {
-            static constexpr ctll::fixed_string server_info_pattern = R"(ip=([^ ]+) port=([0-9]+))";
-
-            if (auto m = ctre::match<server_info_pattern>(response->content)) {
+            if (const auto fields = SplitFields(response->content, "ip=", " port="); fields && TextUtils::IsDigits(fields->second)) {
                 server = new TS3Server();
-                server->host = m.get<1>().to_string();
-                server->port = m.get<2>().to_string();
+                server->host = fields->first;
+                server->port = fields->second;
             } else {
                 return;
             }
@@ -191,11 +199,9 @@ namespace {
                 goto cleanup;
             }
 
-            static constexpr ctll::fixed_string client_info_pattern = R"(clid=([0-9]+) cid=([0-9]+))";
-
-            if (auto m = ctre::match<client_info_pattern>(response->content)) {
-                server->my_channel_id = m.get<2>().to_string();
-                server->my_client_id = m.get<1>().to_string();
+            if (const auto fields = SplitFields(response->content, "clid=", " cid="); fields && TextUtils::IsDigits(fields->first) && TextUtils::IsDigits(fields->second)) {
+                server->my_channel_id = fields->second;
+                server->my_client_id = fields->first;
             } else {
                 goto cleanup;
             }
@@ -205,10 +211,8 @@ namespace {
                 goto cleanup;
             }
 
-            static constexpr ctll::fixed_string server_name_pattern = R"(virtualserver_name=([^\n]+))";
-
-            if (auto m = ctre::match<server_name_pattern>(response->content)) {
-                server->name = m.get<1>().to_string();
+            if (const std::string_view line = response->content; line.starts_with(server_name_key) && line.size() > server_name_key.size() && line.find('\n') == std::string_view::npos) {
+                server->name = line.substr(server_name_key.size());
             } else {
                 goto cleanup;
             }
@@ -371,7 +375,7 @@ namespace {
             .channel_name = channel_id,
         };
 
-        Resources::Post("https://invites.teamspeak.com/servers/create", glz::write_json(packet).value_or(std::string{}), [callback](const bool success, const std::string& response, void*) {
+        Resources::Post("https://invites.teamspeak.com/servers/create", glz::write<SizeOptimisedJson{}>(packet).value_or(std::string{}), [callback](const bool success, const std::string& response, void*) {
             if (!success) {
                 Log::Error("Failed to get teamspeak invite link (1)");
                 Log::Log("%s", response.c_str());
@@ -403,19 +407,19 @@ namespace {
             return;
         }
         wchar_t buf[120];
-        swprintf(buf, _countof(buf) - 1, L"%s (%d users)",
+        swprintf(buf, _countof(buf) - 1, L"%ls (%d users)",
                  TextUtils::StringToWString(teamspeak_server->name).c_str(),
                  teamspeak_server->user_count);
         GW::Chat::SendChat('#', buf);
 
-        swprintf(buf, _countof(buf) - 1, L"TS3: [https://invite.teamspeak.com/%S/?port=%S;xx]",
+        swprintf(buf, _countof(buf) - 1, L"TS3: [https://invite.teamspeak.com/%hs/?port=%hs;xx]",
                  teamspeak_server->host.c_str(),
                  teamspeak_server->port.c_str());
         GW::Chat::SendChat('#', buf);
 
         GetServerInviteLink(teamspeak_server, teamspeak_server->my_channel_id, [](const std::string& url) {
             wchar_t buf[120];
-            swprintf(buf, _countof(buf) - 1, L"TS5: [%S;xx]", url.c_str());
+            swprintf(buf, _countof(buf) - 1, L"TS5: [%hs;xx]", url.c_str());
             GW::Chat::SendChat('#', buf);
         });
     }

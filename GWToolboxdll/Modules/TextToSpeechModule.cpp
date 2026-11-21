@@ -701,29 +701,126 @@ Gender GetGenderByFileId(const uint32_t file_id)
         return first_sentence;
     }
 
+    // The text clean-ups below replaced compile-time regexes (ctre). Each scans as its regex did, leftmost match first
+    // and then on from the end of it; the regex is in the comment.
+
+    // "[c]{2,}" -> "c"
+    std::wstring CollapseRuns(std::wstring text, const wchar_t c)
+    {
+        text.erase(std::unique(text.begin(), text.end(), [c](const wchar_t a, const wchar_t b) { return a == c && b == c; }), text.end());
+        return text;
+    }
+
+    // "\s+" -> " ", where \s is ASCII whitespace
+    std::wstring CollapseWhitespace(const std::wstring& text)
+    {
+        constexpr std::wstring_view whitespace = L" \t\n\v\f\r";
+        std::wstring result;
+        bool in_whitespace = false;
+        for (const auto c : text) {
+            if (whitespace.find(c) == std::wstring_view::npos) {
+                result += c;
+                in_whitespace = false;
+            }
+            else if (!in_whitespace) {
+                result += L' ';
+                in_whitespace = true;
+            }
+        }
+        return result;
+    }
+
+    // "\([^)]*\)" -> "" and "\[[^\]]*\]" -> "": from an opening bracket to the first closing one after it
+    std::wstring RemoveBracketed(const std::wstring& text, const wchar_t open, const wchar_t close)
+    {
+        std::wstring result;
+        size_t copied = 0;
+        while (true) {
+            const auto start = text.find(open, copied);
+            const auto end = start == std::wstring::npos ? std::wstring::npos : text.find(close, start + 1);
+            if (end == std::wstring::npos) return result.append(text, copied);
+            result.append(text, copied, start - copied);
+            copied = end + 1;
+        }
+    }
+
+    // "<a=[^<]+[^>]+>" -> "": after "<a=", one or more characters that aren't '<', then one or more that aren't '>',
+    // then '>'. Backtracking makes that the first '>' after the longest such first part that leaves the second non-empty.
+    std::wstring RemoveLinkTags(const std::wstring& text)
+    {
+        std::wstring result;
+        size_t copied = 0;
+        for (size_t start = text.find(L"<a="); start != std::wstring::npos; start = text.find(L"<a=", start)) {
+            const auto body = start + 3;
+            size_t end = std::wstring::npos;
+            for (auto split = std::min(text.find(L'<', body), text.size()); split > body && end == std::wstring::npos; split--) {
+                const auto close = text.find(L'>', split);
+                if (close != std::wstring::npos && close > split) end = close + 1;
+            }
+            if (end == std::wstring::npos) {
+                start++;
+                continue;
+            }
+            result.append(text, copied, start - copied);
+            copied = start = end;
+        }
+        return result.append(text, copied);
+    }
+
     std::wstring PreprocessEncodedTextForTTS(const std::wstring& text)
     {
-        auto result = TextUtils::ctre_regex_replace<
-            L"\x0ba9\x0107[^\x0001]+\x0001", L"\x0ba9\x0107"
-                                             "Chosen\x0001">(text);
-        result = TextUtils::ctre_regex_replace<L"[\x0101\x102\x103\x104][\x8100-\xffff]*.", L"">(result);
+        // "\xBA9\x107[^\x1]+\x1" -> "\xBA9\x107Chosen\x1": the name argument becomes "Chosen"
+        std::wstring chosen;
+        size_t copied = 0;
+        for (auto start = text.find(L"\xBA9\x107"); start != std::wstring::npos; start = text.find(L"\xBA9\x107", start)) {
+            const auto end = text.find(L'\x1', start + 2);
+            if (end == std::wstring::npos || end == start + 2) {
+                start++;
+                continue;
+            }
+            chosen.append(text, copied, start - copied).append(L"\xBA9\x107" L"Chosen\x1");
+            copied = start = end + 1;
+        }
+        chosen.append(text, copied);
+
+        // "[\x101-\x104][\x8100-\xffff]*." -> "": a control character, the characters from 0x8100 up after it, and one
+        // more character, which is the last of that run (by backtracking) when nothing follows it
+        std::wstring result;
+        for (size_t i = 0; i < chosen.size();) {
+            if (chosen[i] < 0x101 || chosen[i] > 0x104) {
+                result += chosen[i++];
+                continue;
+            }
+            auto end = i + 1;
+            while (end < chosen.size() && chosen[end] >= 0x8100 && chosen[end] <= 0xFFFF) end++;
+            if (end < chosen.size()) {
+                end++;
+            }
+            else if (end == i + 1) {
+                result += chosen[i++];
+                continue;
+            }
+            i = end;
+        }
         return result;
     }
 
     std::wstring PreprocessTextForTTS(const std::wstring& text)
     {
         std::wstring processed = text;
-        processed = TextUtils::ctre_regex_replace<L"<a=[^<]+[^>]+>", L"">(processed);
-        processed = TextUtils::ctre_regex_replace<L"<br>|<brx>|<p>", L". ">(processed);
+        processed = RemoveLinkTags(processed);
+        for (const auto tag : {L"<br>", L"<brx>", L"<p>"}) {
+            processed = TextUtils::str_replace_all(processed, tag, L". ");
+        }
         processed = TextUtils::StripTags(processed);
         if (settings.only_use_first_sentence) processed = ExtractFirstSentence(processed);
         if (processed.empty()) return L"";
-        processed = TextUtils::ctre_regex_replace<L"[.]{2,}", L".">(processed);
-        processed = TextUtils::ctre_regex_replace<L"[!]{2,}", L"!">(processed);
-        processed = TextUtils::ctre_regex_replace<L"[?]{2,}", L"?">(processed);
-        processed = TextUtils::ctre_regex_replace<L"\\([^)]*\\)", L"">(processed);
-        processed = TextUtils::ctre_regex_replace<L"\\[[^\\]]*\\]", L"">(processed);
-        processed = TextUtils::ctre_regex_replace<L"\\s+", L" ">(processed);
+        processed = CollapseRuns(processed, L'.');
+        processed = CollapseRuns(processed, L'!');
+        processed = CollapseRuns(processed, L'?');
+        processed = RemoveBracketed(processed, L'(', L')');
+        processed = RemoveBracketed(processed, L'[', L']');
+        processed = CollapseWhitespace(processed);
         if (processed.length() > max_text_length) {
             processed = processed.substr(0, max_text_length);
             auto last_space = processed.find_last_of(L' ');
@@ -968,7 +1065,7 @@ Gender GetGenderByFileId(const uint32_t file_id)
     {
         client.SetUrl(url.c_str());
         client.SetHeader("Content-Type", "application/json");
-        client.SetPostContent(glz::write_json(request_body).value_or(std::string{}), ContentFlag::Copy);
+        client.SetPostContent(glz::write<SizeOptimisedJson{}>(request_body).value_or(std::string{}), ContentFlag::Copy);
         client.SetFollowLocation(true);
         client.SetVerifyHost(false);
         client.SetVerifyPeer(false);
@@ -1136,7 +1233,7 @@ Gender GetGenderByFileId(const uint32_t file_id)
         if (response_str.empty()) return response_str;
 
         glz::generic json_response;
-        if (auto ec = glz::read_json(json_response, response_str); ec || !json_response.contains("audioContent") || !json_response.at("audioContent").is_string()) {
+        if (auto ec = glz::read<SizeOptimisedJson{}>(json_response, response_str); ec || !json_response.contains("audioContent") || !json_response.at("audioContent").is_string()) {
             VoiceLog("Failed to parse Google TTS response JSON");
             return "";
         }
@@ -1898,13 +1995,13 @@ void TextToSpeechModule::DrawSettingsInternal()
 
         if (ImGui::Button("Add Custom Voice Assignment")) {
             if (strlen(custom_npc_id_buffer) > 0 && strlen(custom_voice_id_buffer) > 0) {
-                try {
-                    uint32_t npc_id = std::stoul(custom_npc_id_buffer);
+                uint32_t npc_id;
+                if (TextUtils::ParseUInt(custom_npc_id_buffer, &npc_id)) {
                     special_npc_voices[npc_id] = VoiceProfile(custom_voice_id_buffer, 0.5f, 0.5f, 0.5f, 1.0f, "");
                     memset(custom_npc_id_buffer, 0, sizeof(custom_npc_id_buffer));
                     memset(custom_voice_id_buffer, 0, sizeof(custom_voice_id_buffer));
                     VoiceLog("Added custom voice assignment for NPC ID %u", npc_id);
-                } catch (const std::exception&) {
+                } else {
                     VoiceLog("Invalid NPC ID entered");
                 }
             }

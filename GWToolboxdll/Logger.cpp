@@ -108,7 +108,7 @@ namespace {
                     return L"";
             }
         }(log_type);
-        Log::LogW(L"[%s] %s\n", c, message);
+        Log::LogW(L"[%ls] %ls\n", c, message);
     }
 
     void _vchatlogW(const LogType log_type, const wchar_t* format, const va_list argv)

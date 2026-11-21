@@ -237,7 +237,7 @@ namespace {
         j.parties.reserve(parties.size());
         for (const auto& p : parties) j.parties.push_back(ToJson(p));
 
-        const auto payload = glz::write_json(j).value_or(std::string{});
+        const auto payload = glz::write<SizeOptimisedJson{}>(j).value_or(std::string{});
         if (!send_payload(payload)) return false;
         last_sent_district_info = GetDistrictInfo();
 
@@ -299,7 +299,7 @@ namespace {
         j.parties.reserve(to_send.size());
         for (const auto& p : to_send) j.parties.push_back(ToJson(p));
 
-        const auto payload = glz::write_json(j).value_or(std::string{});
+        const auto payload = glz::write<SizeOptimisedJson{}>(j).value_or(std::string{});
         if (!send_payload(payload)) return false;
         last_sent_district_info = GetDistrictInfo();
         for (auto& party : to_send) {

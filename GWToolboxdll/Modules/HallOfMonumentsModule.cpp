@@ -310,10 +310,14 @@ void HallOfMonumentsModule::AsyncGetAccountAchievements(const std::wstring& char
             return;
         }
 
-        static constexpr ctll::fixed_string json_regex = "legacy_bits\":\"([^\"]+)";
-
-        if (auto m = ctre::search<json_regex>(response)) {
-            const std::string hom_code = m.get<1>().to_string();
+        constexpr std::string_view legacy_bits_key = R"(legacy_bits":")";
+        auto code_start = response.find(legacy_bits_key);
+        while (code_start != std::string::npos && (code_start + legacy_bits_key.size() >= response.size() || response[code_start + legacy_bits_key.size()] == '"')) {
+            code_start = response.find(legacy_bits_key, code_start + 1);
+        }
+        if (code_start != std::string::npos) {
+            code_start += legacy_bits_key.size();
+            const std::string hom_code = response.substr(code_start, response.find('"', code_start) - code_start);
 
             if (!Instance().DecodeHomCode(hom_code.c_str(), out)) {
                 Log::Log("Failed to DecodeHomCode from %s", hom_code.c_str());

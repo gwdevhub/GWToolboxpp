@@ -12,7 +12,7 @@ bool PathGetExeFullPath(std::filesystem::path& out)
     const auto result = GetModuleFileNameW(nullptr, path, MAX_PATH);
     if (result >= sizeof(path)) {
         path[0] = 0;
-        fwprintf(stderr, L"%S: GetModuleFileNameW failed (%lu)\n", __func__, GetLastError());
+        fwprintf(stderr, L"%hs: GetModuleFileNameW failed (%lu)\n", __func__, GetLastError());
         return false;
     }
     out.assign(path);
@@ -45,11 +45,11 @@ bool PathGetDocumentsPath(fs::path& out, const wchar_t* suffix)
     const HRESULT result = SHGetFolderPathW(nullptr, CSIDL_MYDOCUMENTS | CSIDL_FLAG_DONT_VERIFY, nullptr, 0, temp);
 
     if (FAILED(result)) {
-        fwprintf(stderr, L"%S: SHGetFolderPathW failed (HRESULT:0x%lX)\n", __func__, result);
+        fwprintf(stderr, L"%hs: SHGetFolderPathW failed (HRESULT:0x%lX)\n", __func__, result);
         return false;
     }
     if (!temp[0]) {
-        fwprintf(stderr, L"%S: SHGetFolderPathW returned empty path\n", __func__);
+        fwprintf(stderr, L"%hs: SHGetFolderPathW returned empty path\n", __func__);
         return false;
     }
     fs::path p = temp;
@@ -71,11 +71,11 @@ bool PathCreateDirectorySafe(const fs::path& path)
     }
     result = create_directories(path, errcode);
     if (errcode.value()) {
-        fwprintf(stderr, L"%S: create_directories failed for %s (%lu, %S)\n", __func__, path.wstring().c_str(), errcode.value(), errcode.message().c_str());
+        fwprintf(stderr, L"%hs: create_directories failed for %ls (%lu, %hs)\n", __func__, path.wstring().c_str(), errcode.value(), errcode.message().c_str());
         return false;
     }
     if (!result) {
-        fwprintf(stderr, L"%S: Failed to create directory %s\n", __func__, path.wstring().c_str());
+        fwprintf(stderr, L"%hs: Failed to create directory %ls\n", __func__, path.wstring().c_str());
         return false;
     }
     return true;
@@ -86,11 +86,11 @@ bool PathGetComputerName(fs::path& out)
     wchar_t temp[MAX_COMPUTERNAME_LENGTH + 1];
     int written = MAX_COMPUTERNAME_LENGTH + 1;
     if (!GetComputerNameW(temp, reinterpret_cast<DWORD*>(&written))) {
-        fwprintf(stderr, L"%S: Cannot get computer name. (%lu)\n", __func__, GetLastError());
+        fwprintf(stderr, L"%hs: Cannot get computer name. (%lu)\n", __func__, GetLastError());
         return false;
     }
     if (!temp[0]) {
-        fwprintf(stderr, L"%S: GetComputerNameW returned no valid computer name.\n", __func__);
+        fwprintf(stderr, L"%hs: GetComputerNameW returned no valid computer name.\n", __func__);
         return false;
     }
     out.assign(temp);
@@ -123,14 +123,14 @@ bool PathRecursiveRemove(const fs::path& from)
     }
     result = fs::remove(from, error_code);
     if (error_code.value()) {
-        fwprintf(stderr, L"%S: %s remove failed (%lu, %S)\n", __func__, from.wstring().c_str(), error_code.value(), error_code.message().c_str());
+        fwprintf(stderr, L"%hs: %ls remove failed (%lu, %hs)\n", __func__, from.wstring().c_str(), error_code.value(), error_code.message().c_str());
         return false;
     }
     if (!PathExistsSafe(from, &result)) {
         return false;
     }
     if (result) {
-        fwprintf(stderr, L"%S: %s exists returned true after remove\n", __func__, from.wstring().c_str());
+        fwprintf(stderr, L"%hs: %ls exists returned true after remove\n", __func__, from.wstring().c_str());
         return false;
     }
     return true;
@@ -144,7 +144,7 @@ bool PathSafeCopy(const fs::path& from, const fs::path& to, const bool copy_if_t
         return false;
     }
     if (!result) {
-        fwprintf(stderr, L"%S: from doesn't exist %s\n", __func__, from.wstring().c_str());
+        fwprintf(stderr, L"%hs: from doesn't exist %ls\n", __func__, from.wstring().c_str());
         return false;
     }
     if (!PathIsDirectorySafe(from, &result)) {
@@ -175,14 +175,14 @@ bool PathSafeCopy(const fs::path& from, const fs::path& to, const bool copy_if_t
         case 80: // Already exists
             break;
         default:
-            fwprintf(stderr, L"%S: copy %s failed (%lu, %S)\n", __func__, from.wstring().c_str(), errcode.value(), errcode.message().c_str());
+            fwprintf(stderr, L"%hs: copy %ls failed (%lu, %hs)\n", __func__, from.wstring().c_str(), errcode.value(), errcode.message().c_str());
             return false;
     }
     if (!PathExistsSafe(to, &result)) {
         return false;
     }
     if (!result) {
-        fwprintf(stderr, L"%S: to file doesn't exist after copy %s (%lu, %S)\n", __func__, from.wstring().c_str(), errcode.value(), errcode.message().c_str());
+        fwprintf(stderr, L"%hs: to file doesn't exist after copy %ls (%lu, %hs)\n", __func__, from.wstring().c_str(), errcode.value(), errcode.message().c_str());
         return false;
     }
     return true;
@@ -193,7 +193,7 @@ bool PathExistsSafe(const fs::path& path, bool* out)
     std::error_code errcode;
     *out = exists(path, errcode);
     if (errcode.value()) {
-        fwprintf(stderr, L"%S: exists failed %s (%lu, %S).\n", __func__, path.wstring().c_str(), errcode.value(), errcode.message().c_str());
+        fwprintf(stderr, L"%hs: exists failed %ls (%lu, %hs).\n", __func__, path.wstring().c_str(), errcode.value(), errcode.message().c_str());
         return false;
     }
     return true;
@@ -203,7 +203,7 @@ bool PathDirectoryIteratorSafe(const fs::path& path, fs::directory_iterator* out
 {
     *out = fs::directory_iterator(path, errcode);
     if (errcode.value()) {
-        fwprintf(stderr, L"%S: directory_iterator failed %s (%lu, %S)\n", __func__, path.wstring().c_str(), errcode.value(), errcode.message().c_str());
+        fwprintf(stderr, L"%hs: directory_iterator failed %ls (%lu, %hs)\n", __func__, path.wstring().c_str(), errcode.value(), errcode.message().c_str());
         return false;
     }
     return true;
@@ -221,7 +221,7 @@ bool PathIsDirectorySafe(const fs::path& path, bool* out)
             *out = false;
             return true; // 2 = The system cannot find the file specified
         default:
-            fwprintf(stderr, L"%S: is_directory failed %s (%lu, %S).\n", __func__, path.wstring().c_str(), errcode.value(), errcode.message().c_str());
+            fwprintf(stderr, L"%hs: is_directory failed %ls (%lu, %hs).\n", __func__, path.wstring().c_str(), errcode.value(), errcode.message().c_str());
             return false;
     }
     return true;

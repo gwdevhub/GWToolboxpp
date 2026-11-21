@@ -14,6 +14,7 @@
 #include <Windows/TargetInfoWindow.h>
 #include <Utils/GuiUtils.h>
 #include <Utils/TextUtils.h>
+#include <Utils/WikiPage.h>
 #include <Utils/FontLoader.h>
 
 namespace {
@@ -88,112 +89,42 @@ namespace {
         {
             if (state != TargetInfoState::ParsingWikiPage)
                 return;
-            static constexpr ctll::fixed_string skill_list_regex = R"(<h2><span class=\"mw-headline\" id=\"Skills\">(?:.*?)<ul.*?>(.*?)(?:<\/ul>|<h2><span class=\"mw-headline\"))";
-
-            if (const auto m = ctre::search<skill_list_regex>(wiki_content)) {
-                const auto skill_list_found = m.get<1>().to_string();
-
-                static constexpr ctll::fixed_string skill_link_regex = R"(<a href="[^"]+" title="([^"]+)\")";
-                for (const auto& skill_match : ctre::search_all<skill_link_regex>(skill_list_found)) {
-                    const auto skill_name = skill_match.get<1>().to_string();
-                    const auto skill_name_text = native_html_to_text(skill_name);
-                    if (skill_ids_by_name.contains(skill_name_text) && !std::ranges::contains(wiki_skills, skill_ids_by_name[skill_name_text])) {
-                        wiki_skills.push_back(skill_ids_by_name[skill_name_text]);
+            const auto page = WikiPage::Parse(wiki_content);
+            const auto add_skills = [](const std::vector<std::string_view>& links, std::vector<GW::Constants::SkillID>& skills) {
+                for (const auto link : links) {
+                    const auto found = skill_ids_by_name.find(native_html_to_text(std::string(link)));
+                    if (found != skill_ids_by_name.end() && !std::ranges::contains(skills, found->second)) {
+                        skills.push_back(found->second);
                     }
                 }
-            }
-            static constexpr ctll::fixed_string skill_section_regex = R"(<h2><span class="mw-headline" id="Skills">(.*?)<h2><span class="mw-headline")";
-
-            if (const auto section_match = ctre::search<skill_section_regex>(wiki_content)) {
-                const auto section_html = section_match.get<1>().to_string();
-                static constexpr ctll::fixed_string build_table_regex = R"(<table class="skill-progression" (?:.*?)>(.*?)<\/table>)";
-                for (const auto& table_match : ctre::search_all<build_table_regex>(section_html)) {
-                    const auto table_html = table_match.get<1>().to_string();
-                    static constexpr ctll::fixed_string skill_link_regex = R"(<a href="[^"]+" title="([^"]+)\")";
-                    for (const auto& skill_match : ctre::search_all<skill_link_regex>(table_html)) {
-                        std::string skill_name = skill_match.get<1>().to_string();
-                        std::string skill_name_text = native_html_to_text(skill_name);
-                        if (skill_ids_by_name.contains(skill_name_text) && !std::ranges::contains(wiki_skills, skill_ids_by_name[skill_name_text])) {
-                            wiki_skills.push_back(skill_ids_by_name[skill_name_text]);
-                        }
-                    }
-                }
-            }
-
-            static constexpr ctll::fixed_string armor_ratings_regex = R"(<h2><span class=\"mw-headline\" id=\"Armor_ratings\">(.*?)(?:<\/table>|<h2><span class=\"mw-headline\"))";
-            if (const auto m = ctre::search<armor_ratings_regex>(wiki_content)) {
-                const auto armor_table_found = m.get<1>().to_string();
-
-                static constexpr ctll::fixed_string armor_cell_regex = R"(<td>.*?title="([^"]+)\".*?<td>([0-9 \(\)]+).*?</td>)";
-                for (const auto& armor_match : ctre::search_all<armor_cell_regex>(armor_table_found)) {
-                    std::string key = armor_match.get<1>().to_string();
-                    std::string val = armor_match.get<2>().to_string();
+            };
+            const auto add_pairs = [](const std::vector<WikiPage::Pair>& pairs, std::unordered_map<std::string, std::string>& out) {
+                for (const auto& [raw_key, raw_value] : pairs) {
+                    std::string key(raw_key);
+                    std::string value(raw_value);
                     from_html(key);
-                    from_html(val);
-                    if (!key.empty() && !val.empty()) wiki_armor_ratings[key] = val;
+                    from_html(value);
+                    if (!key.empty() && !value.empty()) out[key] = value;
                 }
+            };
+
+            add_skills(page.skill_links, wiki_skills);
+            add_pairs(page.armor_ratings, wiki_armor_ratings);
+            for (const auto link : page.item_links) {
+                const auto item = native_html_to_text(std::string(link));
+                if (!std::ranges::contains(items_dropped, item)) items_dropped.push_back(item);
             }
-
-            static constexpr ctll::fixed_string items_dropped_regex = R"(<h2><span class=\"mw-headline\" id=\"Items_dropped\">(?:.*?)<ul(.*?)(?:<\/ul>|<h2><span class=\"mw-headline\"))";
-            if (const auto m = ctre::search<items_dropped_regex>(wiki_content)) {
-                const auto list_found = m.get<1>().to_string();
-
-                static constexpr ctll::fixed_string link_regex = R"(<a href="[^"]+" title="([^"]+)\")";
-                for (const auto& item_match : ctre::search_all<link_regex>(list_found)) {
-                    std::string item_dropped_html = item_match.get<1>().to_string();
-                    const auto item_dropped_text = native_html_to_text(item_dropped_html);
-                    if (!std::ranges::contains(items_dropped, item_dropped_text)) items_dropped.push_back(item_dropped_text);
-                }
+            add_skills(page.skills_offered_links, skills_offered);
+            for (const auto note : page.notes) {
+                std::string line(note);
+                from_html(line);
+                if (!line.empty()) notes.push_back(line);
             }
-
-            static constexpr ctll::fixed_string skills_offered_regex = R"(<h2><span class=\"mw-headline\" id=\"Skills_offered\">(?:.*?)<table(.*?)<\/table>)";
-
-            if (const auto m = ctre::search<skills_offered_regex>(wiki_content)) {
-                const auto skill_list_found = m.get<1>().to_string();
-
-                static constexpr ctll::fixed_string skill_link_regex = R"(<a href="[^"]+" title="([^"]+)\")";
-                for (const auto& skill_match : ctre::search_all<skill_link_regex>(skill_list_found)) {
-                    const auto skill_name = skill_match.get<1>().to_string();
-                    const auto skill_name_text = native_html_to_text(skill_name);
-                    if (skill_ids_by_name.contains(skill_name_text) && !std::ranges::contains(skills_offered, skill_ids_by_name[skill_name_text])) {
-                        skills_offered.push_back(skill_ids_by_name[skill_name_text]);
-                    }
-                }
+            if (page.infobox_image) {
+                image_url = std::string(*page.infobox_image);
+                image = Resources::GetGuildWarsWikiImage(image_url.c_str(), 0, false);
             }
-
-            static constexpr ctll::fixed_string notes_regex = R"(<h2><span class=\"mw-headline\" id=\"Notes\">(?:.*?)<ul.*?>(.*?)(?:<\/ul>|<h2><span class=\"mw-headline\"))";
-            if (const auto m = ctre::search<notes_regex>(wiki_content)) {
-                const auto list_found = m.get<1>().to_string();
-
-                static constexpr ctll::fixed_string list_item_regex = R"(<li>(.*?)</li>)";
-                for (const auto& note_match : ctre::search_all<list_item_regex>(list_found)) {
-                    auto line = note_match.get<1>().to_string();
-                    from_html(line);
-                    if (!line.empty()) {
-                        notes.push_back(line);
-                    }
-                }
-            }
-
-            static constexpr ctll::fixed_string infobox_regex = R"(<table[^>]+ class=\"[^\"]+infobox(.*?)</table>)";
-            if (const auto m = ctre::search<infobox_regex>(wiki_content)) {
-                const auto infobox_content = m.get<1>().to_string();
-
-                static constexpr ctll::fixed_string infobox_image_regex = R"(<td[^>]+class=\"[^\"]*?infobox-image.*?<a .*?href=\"[^\"]*?File:([^\"]+))";
-                if (const auto img_match = ctre::search<infobox_image_regex>(infobox_content)) {
-                    image_url = img_match.get<1>().to_string();
-                    image = Resources::GetGuildWarsWikiImage(image_url.c_str(), 0, false);
-                }
-
-                static constexpr ctll::fixed_string infobox_row_regex = R"((?:<tr>|<tr[^>]+>).*?(?:<th>|<th[^>]+>)(.*?)</th>.*?(?:<td>|<td[^>]+>)(.*?)</td>.*?</tr>)";
-                for (const auto& row_match : ctre::search_all<infobox_row_regex>(infobox_content)) {
-                    std::string key = row_match.get<1>().to_string();
-                    std::string val = row_match.get<2>().to_string();
-                    from_html(key);
-                    from_html(val);
-                    if (!key.empty() && !val.empty()) infobox_deets[key] = val;
-                }
-            }
+            add_pairs(page.infobox_rows, infobox_deets);
 
             state = AgentInfo::TargetInfoState::Done;
         }

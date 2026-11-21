@@ -20,7 +20,7 @@ CMake runs this after every build of GWToolboxdll.wasm. Standalone:
 
 Usage:
   python3 tools/package.py                          # find the build, pack it
-  python3 tools/package.py --dll build-wasm/GWToolboxdll/GWToolboxdll.wasm
+  python3 tools/package.py --dll build/Linux/wasm/GWToolboxdll/GWToolboxdll.wasm
 """
 
 import argparse
@@ -50,7 +50,7 @@ def main():
     # are right.
     ap.add_argument("--dll", type=Path, default=None,
                     help="built GWToolboxdll.wasm (default: the one under "
-                         "build-wasm/, if unambiguous)")
+                         "build/<host>/wasm/, if unambiguous)")
     ap.add_argument("--gwca", type=Path, default=None,
                     help="gwca.wasm to bundle (default: the vendored one)")
     ap.add_argument("--manifest", type=Path, default=None,
@@ -76,12 +76,12 @@ def main():
     # packaging the wrong preset's build is silent and would be found much later.
     dll = args.dll
     if dll is None:
-        found = sorted(REPO_ROOT.glob("build-wasm*/GWToolboxdll/GWToolboxdll.wasm"))
+        found = sorted(REPO_ROOT.glob("build/*/wasm*/GWToolboxdll/GWToolboxdll.wasm"))
         if len(found) == 1:
             dll = found[0]
         elif not found:
-            die("no build-wasm*/GWToolboxdll/GWToolboxdll.wasm -- build first "
-                "(cmake --preset wasm && cmake --build build-wasm), or pass --dll")
+            die("no build/*/wasm*/GWToolboxdll/GWToolboxdll.wasm -- build first "
+                "(cmake --preset wasm && cmake --build build/<host>/wasm), or pass --dll")
         else:
             die("several builds present; pass --dll to choose:\n    %s"
                 % "\n    ".join(str(f) for f in found))

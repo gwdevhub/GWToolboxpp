@@ -117,7 +117,7 @@ static void InstallLocalWasmGwmodIfPresent(const fs::path& install_path)
     const fs::path dest = install_path.parent_path() / WASM_GWMOD_FILENAME;
     if (source == dest) return;
     if (!PathSafeCopy(source, dest, true)) {
-        fprintf(stderr, "Found %S but failed to copy it to %S\n", source.c_str(), dest.c_str());
+        fprintf(stderr, "Found %ls but failed to copy it to %ls\n", source.c_str(), dest.c_str());
     }
 }
 

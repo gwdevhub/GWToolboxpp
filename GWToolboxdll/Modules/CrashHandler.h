@@ -28,4 +28,5 @@ public:
     static void FatalAssert(const char* expr, const char* file, const unsigned line);
 
     static LONG WINAPI Crash(EXCEPTION_POINTERS* pExceptionPointers, const char* extra_info = nullptr);
+    static LONG __cdecl CrashFilter(EXCEPTION_POINTERS* pExceptionPointers);
 };

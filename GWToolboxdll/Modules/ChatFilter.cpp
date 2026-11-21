@@ -117,7 +117,7 @@ namespace {
         out = ParsePatterns<wchar_t>(RemoveDiacritics(StringToWString(text)), fallback, flags);
         for (const auto& pattern : out) {
             if (!pattern.IsValid()) {
-                Log::Warning("Cannot parse regular expression '%S'", pattern.Source().c_str());
+                Log::Warning("Cannot parse regular expression '%ls'", pattern.Source().c_str());
             }
         }
     }
@@ -257,7 +257,7 @@ namespace {
                 sender_segment += 1;
                 const wchar_t* end_token = wcschr(sender_segment, 0x1);
                 if (!end_token) break;
-                const auto sender_str = std::wstring(sender_segment, end_token);
+                const auto sender_str = std::wstring(sender_segment, static_cast<size_t>(end_token - sender_segment));
                 const auto ignore_by_sender = ShouldIgnoreBySender(sender_str);
                 if (ignore_by_sender) return true;
             } break;

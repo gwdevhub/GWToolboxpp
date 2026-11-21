@@ -1100,7 +1100,7 @@ namespace GWArmory {
                 const auto filename = Resources::GetPath("weapon_snapshot.json");
                 std::ofstream file(filename);
                 if (file.is_open()) {
-                    file << glz::write<glz::opts{.prettify = true}>(output).value_or(std::string{}); // Pretty print
+                    file << glz::write<SizeOptimisedJson{{.prettify = true}}>(output).value_or(std::string{}); // Pretty print
                     file.close();
                     Log::Info("Weapon snapshot saved to %s", filename.string().c_str());
                 }

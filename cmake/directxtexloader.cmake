@@ -5,8 +5,8 @@ cmake_policy(PUSH)
 cmake_policy(SET CMP0169 OLD)
 FetchContent_Declare(
     directxtexloader
-    GIT_REPOSITORY https://github.com/microsoft/directxtex
-    GIT_TAG oct2024)
+    URL https://github.com/microsoft/DirectXTex/archive/refs/tags/oct2024.tar.gz
+    URL_HASH SHA256=0caea49c52bba24eb6025ad1f46c9aa00224e91c075b55a21b738a23ed5fedfe)
 FetchContent_GetProperties(directxtexloader)
 if (directxtexloader_POPULATED)
     return()

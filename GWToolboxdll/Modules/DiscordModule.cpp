@@ -351,7 +351,7 @@ namespace {
         }
         // In map - try to join party!
         wchar_t buf[128] = { 0 };
-        swprintf(buf, 128, L"invite %s", join_in_progress.player);
+        swprintf(buf, 128, L"invite %ls", join_in_progress.player);
         GW::Chat::SendChat('/', buf);
         const HWND hwnd = GW::MemoryMgr::GetGWWindowHandle();
         SetForegroundWindow(hwnd);
@@ -410,7 +410,7 @@ namespace {
         }
         const HINSTANCE hGetProcIDDLL = LoadLibraryW(dll_location.c_str());
         if (!hGetProcIDDLL) {
-            Log::LogW(L"Failed to LoadLibraryW %s\n", dll_location.c_str());
+            Log::LogW(L"Failed to LoadLibraryW %ls\n", dll_location.c_str());
             return false;
         }
 
@@ -582,7 +582,7 @@ namespace {
                 secret.language_id = map_language;
                 secret.district_id = map_district;
                 secret.ghkey[0] = 0;
-                swprintf(secret.player, 32, L"%s", GW::GetGameContext()->character->player_name);
+                swprintf(secret.player, 32, L"%ls", GW::GetGameContext()->character->player_name);
                 if (is_guild_hall) {
                     for (size_t i = 0; i < 4; i++) {
                         secret.ghkey[i] = g->key.k[i];
@@ -598,7 +598,7 @@ namespace {
 
             if (settings.show_character_info) {
                 sprintf(activity.assets.small_image, "profession_%d_512px", a->primary);
-                sprintf(activity.assets.small_text, "%S (%s)", GW::GetGameContext()->character->player_name, ToolboxUtils::GetProfessionName(static_cast<GW::Constants::Profession>(a->primary))->string().c_str());
+                sprintf(activity.assets.small_text, "%ls (%s)", GW::GetGameContext()->character->player_name, ToolboxUtils::GetProfessionName(static_cast<GW::Constants::Profession>(a->primary))->string().c_str());
             }
 
             if (settings.show_location_info) {
@@ -636,7 +636,7 @@ namespace {
                     sprintf(activity.state, "In Explorable");
                 }
                 if (is_guild_hall) {
-                    sprintf(activity.details, "%S [%S]", g->name, g->tag);
+                    sprintf(activity.details, "%ls [%ls]", g->name, g->tag);
                 }
                 else {
                     sprintf(activity.details, "%s", map_name_decoded.string().c_str());
@@ -723,7 +723,7 @@ void DiscordModule::Initialize()
                                 "https://raw.githubusercontent.com/gwdevhub/GWToolboxpp/master/resources/discord_game_sdk.dll",
                                 [&](const bool success, const std::wstring& error) {
                                     if (!success || !LoadDll()) {
-                                        Log::LogW(L"Failed to load discord_game_sdk.dll. To try again, please restart GWToolbox\n%s", error.c_str());
+                                        Log::LogW(L"Failed to load discord_game_sdk.dll. To try again, please restart GWToolbox\n%ls", error.c_str());
                                         return;
                                     }
                                     pending_discord_connect = pending_activity_update = settings.discord_enabled;

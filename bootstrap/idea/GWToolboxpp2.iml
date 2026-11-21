@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module classpath="CIDR" type="CPP_MODULE" version="4">
+  <component name="NewModuleRootManager">
+    <content url="file://$MODULE_DIR$">
+      <excludeFolder url="file://$MODULE_DIR$/.toolchain" />
+      <excludeFolder url="file://$MODULE_DIR$/.vs-projects" />
+      <excludeFolder url="file://$MODULE_DIR$/.mingw-toolchain" />
+      <excludeFolder url="file://$MODULE_DIR$/.vcpkg" />
+      <excludeFolder url="file://$MODULE_DIR$/.xwin-toolchain" />
+      <excludeFolder url="file://$MODULE_DIR$/build" />
+      <excludeFolder url="file://$MODULE_DIR$/build-mingw" />
+      <excludeFolder url="file://$MODULE_DIR$/build-mingw-debug" />
+      <excludeFolder url="file://$MODULE_DIR$/build-mingw-release" />
+      <excludeFolder url="file://$MODULE_DIR$/build-linux" />
+      <excludeFolder url="file://$MODULE_DIR$/build-linux-debug" />
+      <excludeFolder url="file://$MODULE_DIR$/build-linux-release" />
+      <excludeFolder url="file://$MODULE_DIR$/build-linux-minsizerel" />
+      <excludeFolder url="file://$MODULE_DIR$/build-clang" />
+      <excludeFolder url="file://$MODULE_DIR$/build-wasm" />
+      <excludeFolder url="file://$MODULE_DIR$/build-windows" />
+      <excludeFolder url="file://$MODULE_DIR$/bin" />
+      <excludeFolder url="file://$MODULE_DIR$/bin-mingw" />
+      <excludeFolder url="file://$MODULE_DIR$/logs" />
+    </content>
+  </component>
+</module>

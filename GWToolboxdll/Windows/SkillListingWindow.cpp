@@ -64,7 +64,7 @@ const wchar_t* SkillListingWindow::Skill::GWWDescription()
         while ((pos = s.find(L"993")) != std::wstring::npos) {
             s.replace(pos, 3, scale3_txt);
         }
-        wsprintfW(desc_gww, L"%s. %s", GetSkillType().c_str(), s.c_str());
+        wsprintfW(desc_gww, L"%ls. %ls", GetSkillType().c_str(), s.c_str());
     }
     return desc_gww;
 }
@@ -90,7 +90,7 @@ const wchar_t* SkillListingWindow::Skill::GWWConcise()
         while ((pos = s.find(L"993")) != std::wstring::npos) {
             s.replace(pos, 3, scale3_txt);
         }
-        wsprintfW(concise_gww, L"%s. %s", GetSkillType().c_str(), s.c_str());
+        wsprintfW(concise_gww, L"%ls. %ls", GetSkillType().c_str(), s.c_str());
     }
     return concise_gww;
 }
@@ -110,7 +110,7 @@ void SkillListingWindow::ExportToJSON() const
     }
 
     std::ofstream out(file_location);
-    out << glz::write_json(output).value_or(std::string{});
+    out << glz::write<SizeOptimisedJson{}>(output).value_or(std::string{});
     out.close();
     wchar_t file_location_wc[512];
     size_t msg_len = 0;
@@ -133,7 +133,7 @@ void SkillListingWindow::ExportToJSON() const
     }
     file_location_wc[msg_len] = 0;
     wchar_t chat_message[1024];
-    swprintf(chat_message, _countof(chat_message), L"Skills exported to <a=1>\x200C%s</a>", file_location_wc);
+    swprintf(chat_message, _countof(chat_message), L"Skills exported to <a=1>\x200C%ls</a>", file_location_wc);
     WriteChat(GW::Chat::CHANNEL_GLOBAL, chat_message);
 }
 
@@ -173,7 +173,7 @@ void SkillListingWindow::ExportHiResIconsAsDDS() const
     }
     folder_wc[msg_len] = 0;
     wchar_t chat_message[1024];
-    swprintf(chat_message, _countof(chat_message), L"<quote>Exporting %zu HD skill icons to [%s,file://%s]", count, folder_wc, folder_wc);
+    swprintf(chat_message, _countof(chat_message), L"<quote>Exporting %zu HD skill icons to [%ls,file://%ls]", count, folder_wc, folder_wc);
     WriteChat(GW::Chat::CHANNEL_GLOBAL, chat_message);
 }
 
@@ -259,9 +259,9 @@ void SkillListingWindow::Draw(IDirect3DDevice9*)
             else
                 ImGui::Dummy({icon_size, icon_size});
             ImGui::SameLine(offset += tiny_text_width);
-            ImGui::Text("%S", skills[i]->Name());
+            ImGui::Text("%ls", skills[i]->Name());
             if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip("%S,\n%S", skills[i]->GWWDescription(), "");
+                ImGui::SetTooltip("%ls,\n%ls", skills[i]->GWWDescription(), "");
             }
             ImGui::SameLine(offset += long_text_width);
             ImGui::Text("%d", skills[i]->skill->attribute);
@@ -412,7 +412,7 @@ const wchar_t* SkillListingWindow::Skill::Description()
         wchar_t buf[64] = {0};
         swprintf(
             buf, 64,
-            L"%s\x10A\x104\x101%c\x1\x10B\x104\x101%c\x1\x10C\x104\x101%c\x1",
+            L"%ls\x10A\x104\x101%lc\x1\x10B\x104\x101%lc\x1\x10C\x104\x101%lc\x1",
             desc_enc,
             0x100 + (skill->scale0 == skill->scale15 ? skill->scale0 : 991),
             0x100 + (skill->bonusScale0 == skill->bonusScale15
@@ -433,7 +433,7 @@ const wchar_t* SkillListingWindow::Skill::Concise()
         wchar_t buf[64] = {0};
         swprintf(
             buf, 64,
-            L"%s\x10A\x104\x101%c\x1\x10B\x104\x101%c\x1\x10C\x104\x101%c\x1",
+            L"%ls\x10A\x104\x101%lc\x1\x10B\x104\x101%lc\x1\x10C\x104\x101%lc\x1",
             concise_enc,
             0x100 + (skill->scale0 == skill->scale15 ? skill->scale0 : 991),
             0x100 + (skill->bonusScale0 == skill->bonusScale15

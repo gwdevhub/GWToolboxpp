@@ -33,8 +33,8 @@ static void OpenLogFile(const std::filesystem::path& exe_path)
         return;
     }
 
-    fprintf(stderr, "Couldn't open the log at '%S'; falling back to this file.\n", primary.c_str());
-    fprintf(stderr, "%S\n", PathDiagnoseWritability(exe_path.parent_path()).c_str());
+    fprintf(stderr, "Couldn't open the log at '%ls'; falling back to this file.\n", primary.c_str());
+    fprintf(stderr, "%ls\n", PathDiagnoseWritability(exe_path.parent_path()).c_str());
 }
 
 static void ShowError(const wchar_t* message)
@@ -322,7 +322,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
                 L"is provided as-is for convenience only.\n\nDetected: {}",
                 wine
             );
-            fprintf(stderr, "Wine detected: %S\n", wine.c_str());
+            fprintf(stderr, "Wine detected: %ls\n", wine.c_str());
         }
         else if (GetEmulationDiagnostics(emulation)) {
             error += std::format(
@@ -332,7 +332,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
                 L"features.\n\nDetected: {}",
                 emulation
             );
-            fprintf(stderr, "CPU emulation detected: %S\n", emulation.c_str());
+            fprintf(stderr, "CPU emulation detected: %ls\n", emulation.c_str());
         }
         ShowError(error.c_str());
         fprintf(stderr, "InjectInstalledDllInProcess failed\n");

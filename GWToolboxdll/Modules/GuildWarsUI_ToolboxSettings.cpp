@@ -42,7 +42,7 @@ void GuildWarsUI_ToolboxSettings::Initialize()
     ToolboxModule::Initialize();
     GW::UI::RegisterCreateUIComponentCallback(&create_ui_hook, [](GW::UI::CreateUIComponentPacket* packet) {
         if (!log_create_ui) return;
-        Log::LogW(L"[createui] frame_id=%u tab_index=%u flags=0x%x label=%s",
+        Log::LogW(L"[createui] frame_id=%u tab_index=%u flags=0x%x label=%ls",
                   packet->frame_id, packet->tab_index, packet->component_flags,
                   packet->component_label ? packet->component_label : L"(null)");
         Log::FlushFile();

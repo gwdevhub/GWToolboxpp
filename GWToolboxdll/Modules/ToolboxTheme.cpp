@@ -36,7 +36,7 @@ namespace {
             return *out;
         }
         if (!exists(path)) {
-            Log::LogW(L"File %s doesn't exist.", path.c_str());
+            Log::LogW(L"File %ls doesn't exist.", path.c_str());
             return *out;
         }
         const auto tmp = new ToolboxIni(false, false, false);
@@ -54,14 +54,14 @@ namespace {
             return false;
         }
         const std::string buffer{std::istreambuf_iterator(file), {}};
-        return !glz::read<glz::opts{.error_on_unknown_keys = false}>(value, buffer);
+        return !glz::read<SizeOptimisedJson{{.error_on_unknown_keys = false}}>(value, buffer);
     }
 
     template <typename T>
     bool WriteJsonFile(const std::filesystem::path& path, const T& value)
     {
         std::string buffer;
-        if (glz::write<glz::opts{.prettify = true}>(value, buffer)) {
+        if (glz::write<SizeOptimisedJson{{.prettify = true}}>(value, buffer)) {
             return false;
         }
         std::ofstream file(path, std::ios::binary | std::ios::trunc);

@@ -314,7 +314,7 @@ namespace {
     bool EliteBossLocationContextMenu(void* wparam)
     {
         if (!GW::Map::GetWorldMapContext()) return false;
-        const auto boss = (EliteBossLocation*)wparam;
+        const auto boss = static_cast<const EliteBossLocation*>(wparam);
         if (!boss) return false;
         ImGui::Text("%s", BossInfo(boss).c_str());
 
@@ -716,7 +716,7 @@ namespace {
             const float dy = viewport_quest_pos.y - viewport_player_pos.y;
 
             // Calculate the rotation angle in radians using atan2, pointing away from the player
-            float rotation_angle = std::atan2f(-dy, -dx);
+            float rotation_angle = std::atan2(-dy, -dx);
             rotation_angle += DirectX::XM_PI;
 
             const ImRect icon_rect = {{viewport_quest_pos.x - quest_icon_size_half, viewport_quest_pos.y - quest_icon_size_half}, {viewport_quest_pos.x + quest_icon_size_half, viewport_quest_pos.y + quest_icon_size_half}};
@@ -845,7 +845,7 @@ void WorldMapWidget::Initialize()
     }
     address = GW::Scanner::Find("\x8b\xd8\x83\xc4\x10\x8b\xcb\x8b\xf3\xd1\xe9", "xxxxxxxxxxx", -0x5);
     if (address) {
-        view_all_carto_areas_patch.SetRedirect(address, GetCartographyFlagsForArea);
+        view_all_carto_areas_patch.SetRedirect(address, reinterpret_cast<void*>(GetCartographyFlagsForArea));
     }
 
     ASSERT(view_all_outposts_patch.IsValid());

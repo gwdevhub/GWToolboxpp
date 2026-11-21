@@ -814,7 +814,7 @@ void PartyDamage::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
         std::ifstream file(json_path, std::ios::binary);
         const std::string buffer{std::istreambuf_iterator(file), {}};
         std::map<std::string, std::map<DWORD, DWORD>> loaded;
-        if (file && !glz::read<glz::opts{.error_on_unknown_keys = false}>(loaded, buffer)) {
+        if (file && !glz::read<SizeOptimisedJson{{.error_on_unknown_keys = false}}>(loaded, buffer)) {
             for (const auto& [section, map] : section_maps) {
                 const auto found = loaded.find(section);
                 if (found != loaded.end()) {
@@ -856,7 +856,7 @@ void PartyDamage::SaveSettings(SettingsDoc& doc)
         out[section] = *map;
     }
     std::string buffer;
-    if (glz::write<glz::opts{.prettify = true}>(out, buffer)) {
+    if (glz::write<SizeOptimisedJson{{.prettify = true}}>(out, buffer)) {
         return;
     }
     std::ofstream file(Resources::GetSettingFile(JSON_FILENAME), std::ios::binary | std::ios::trunc);

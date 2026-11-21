@@ -7,7 +7,6 @@
 #include <optional>
 #include <vector>
 
-#include <uwebsockets/App.h>
 
 class ObjectiveTimerWindow : public ToolboxWindow {
     ObjectiveTimerWindow() = default;

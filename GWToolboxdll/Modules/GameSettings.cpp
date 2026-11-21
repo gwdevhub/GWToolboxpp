@@ -67,7 +67,6 @@
 #include <Utils/TextUtils.h>
 
 #pragma warning(disable : 6011)
-#pragma comment(lib, "version.lib")
 
 using namespace GuiUtils;
 using namespace ToolboxUtils;
@@ -1364,9 +1363,8 @@ void PendingChatMessage::Init()
 
 std::vector<std::wstring> PendingChatMessage::SanitiseForSend() const
 {
-    const std::wstring sanitised = TextUtils::ctre_regex_replace<L"<[^>]+>", L"">(output_message);
-    const std::wstring sanitised2 = TextUtils::ctre_regex_replace<L"\n", L"|">(sanitised);
-    return TextUtils::Split(sanitised2, std::wstring(1, L'|'));
+    const auto sanitised = TextUtils::str_replace_all(TextUtils::StripTags(output_message), L"\n", L"|");
+    return TextUtils::Split(sanitised, std::wstring(1, L'|'));
 }
 
 bool PendingChatMessage::PrintMessage()
@@ -2424,7 +2422,7 @@ void GameSettings::OnAgentNameTag(GW::HookStatus*, const GW::UI::UIMessage msgid
         const auto count = GW::Items::CountItemByModelId(GW::Constants::ItemID::Lockpick, (int)GW::Constants::Bag::Backpack, (int)GW::Constants::Bag::Bag_2);
         static wchar_t item_count[4];
         GW::UI::UInt32ToEncStr(count, item_count, _countof(item_count));
-        swprintf(you_have_n_lockpicks, _countof(you_have_n_lockpicks), L"\xa35\x101%s\x10a\x8101\x730e\x1", item_count);
+        swprintf(you_have_n_lockpicks, _countof(you_have_n_lockpicks), L"\xa35\x101%ls\x10a\x8101\x730e\x1", item_count);
         tag->extra_info_enc = you_have_n_lockpicks;
     }
     if (const auto agent = GW::Agents::GetAgentByID(tag->agent_id)) {

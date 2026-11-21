@@ -1,5 +1,4 @@
-#include <unordered_map>
-#include <vector>
+#include <initializer_list>
 
 #include <GWCA/Constants/Maps.h>
 
@@ -19,7 +18,13 @@ struct SpawnPoint
     int Radius;
 };
 
-std::unordered_map<int, std::vector<MapConstantInfo>> constant_maps_info = {
+struct MapFileGroup {
+    int file_hash;
+    std::initializer_list<MapConstantInfo> entries;
+};
+
+// A constant table, scanned in full by its users, rather than a map built when the dll loads.
+constexpr MapFileGroup constant_maps_info[] = {
   {0,
    {{GW::Constants::MapID::Polymock_Coliseum, 0},
     {GW::Constants::MapID::Polymock_Glacier, 0},

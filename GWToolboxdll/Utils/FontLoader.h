@@ -1,13 +1,5 @@
 #pragma once
 
-#ifndef DLLAPI
-#ifdef GWToolboxdll_EXPORTS
-#define DLLAPI
-#else
-#define DLLAPI extern "C" __declspec(dllexport)
-#endif
-#endif
-
 namespace FontLoader {
     enum class FontSize {
         text         = 16,
@@ -34,7 +26,7 @@ namespace FontLoader {
     bool FontsLoaded();
     void LoadFonts(bool force = false);
 
-    DLLAPI ImFont* GetFont();
+    ImFont* GetFont();
 
     void Terminate();
 }

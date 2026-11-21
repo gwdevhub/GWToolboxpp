@@ -1,7 +1,5 @@
 #include "stdafx.h"
 
-#include <bcrypt.h>
-#pragma comment(lib, "bcrypt.lib")
 
 #include <Utf8.h>
 
@@ -54,10 +52,12 @@
 #include <Windows/MainWindow.h>
 
 #include <Utils/TextUtils.h>
+#include <Utils/TryCatch.h>
 #include "Utils/FontLoader.h"
 
 #include <EmbeddedResource.h>
 #include "resource.h"
+#include <Utils/Lz4.h>
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -201,7 +201,7 @@ namespace {
         Resources::EnsureFileExists(Resources::GetPath(L"Font.ttf"), "https://raw.githubusercontent.com/gwdevhub/GWToolboxpp/master/resources/Font.ttf", [](const bool success, const std::wstring& error) {
             FontLoader::LoadFonts();
             if (!success) {
-                Log::ErrorW(L"Cannot download font, please download it manually!\n%s", error.c_str());
+                Log::ErrorW(L"Cannot download font, please download it manually!\n%ls", error.c_str());
                 GWToolbox::SignalTerminate();
             }
         });
@@ -260,35 +260,22 @@ namespace {
         });
     }
 
-    // Lowercase hex sha256 of a byte buffer; empty on failure.
-    std::string Sha256Hex(const void* data, const size_t size)
-    {
-        unsigned char hash[32];
-        if (BCryptHash(BCRYPT_SHA256_ALG_HANDLE, nullptr, 0, static_cast<PUCHAR>(const_cast<void*>(data)),
-                       static_cast<ULONG>(size), hash, sizeof(hash)) != 0)
-            return {};
-        char hex[2 * sizeof(hash) + 1];
-        for (size_t i = 0; i < sizeof(hash); ++i)
-            sprintf_s(hex + i * 2, 3, "%02x", hash[i]);
-        return hex;
-    }
-
     std::string Sha256HexFile(const std::filesystem::path& path)
     {
         std::ifstream file(path, std::ios::binary);
         if (!file) return {};
         const std::vector<char> bytes((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-        return Sha256Hex(bytes.data(), bytes.size());
+        return TextUtils::Sha256Hex(bytes.data(), bytes.size());
     }
 
-    bool IsValidGWCADll(const std::filesystem::path& dll_path_str, [[maybe_unused]] const EmbeddedResource& resource_dll)
+    bool IsValidGWCADll(const std::filesystem::path& dll_path_str, [[maybe_unused]] const std::string_view embedded_dll)
     {
         if (!std::filesystem::exists(dll_path_str)) return false;
 
 #ifndef _DEBUG
         // The on-disk gwca.dll must be byte-for-byte the one embedded in this build.
-        if (!resource_dll.data()) return false;
-        const std::string expected = Sha256Hex(resource_dll.data(), resource_dll.size());
+        if (embedded_dll.empty()) return false;
+        const std::string expected = TextUtils::Sha256Hex(embedded_dll.data(), embedded_dll.size());
         return !expected.empty() && Sha256HexFile(dll_path_str) == expected;
 #else
         // Debug builds have no embedded resource; fall back to a version-number check.
@@ -316,17 +303,13 @@ namespace {
         if (!terminate) terminate = GetModuleFunctionW<GWFnVoid>(existing_gwca, "?Terminate@GW@@YAXXZ");
         if (disable_hooks) {
             Log::Log("[LoadGWCADll] Calling DisableHooks on old gwca.dll");
-            __try {
-                disable_hooks();
-            } __except (EXCEPTION_EXECUTE_HANDLER) {
+            if (!TryCatch(disable_hooks)) {
                 Log::Log("[LoadGWCADll] DisableHooks on old gwca.dll crashed; continuing");
             }
         }
         if (terminate) {
             Log::Log("[LoadGWCADll] Calling Terminate on old gwca.dll");
-            __try {
-                terminate();
-            } __except (EXCEPTION_EXECUTE_HANDLER) {
+            if (!TryCatch(terminate)) {
                 Log::Log("[LoadGWCADll] Terminate on old gwca.dll crashed; continuing");
             }
         }
@@ -346,7 +329,8 @@ namespace {
         const auto dll_path_str = gwca_dll_path.wstring();
 
         const EmbeddedResource resource(IDR_GWCA_DLL, RT_RCDATA, resource_module);
-        if (!resource.data()) {
+        std::string embedded_dll;
+        if (!resource.data() || !Lz4Decompress(resource.data(), resource.size(), embedded_dll)) {
             Log::Log("[LoadGWCADll] resource fail, couldn't get dll from resources");
             return nullptr;
         }
@@ -355,7 +339,7 @@ namespace {
         if (existing_gwca) {
             wchar_t existing_path[MAX_PATH] = {};
             GetModuleFileNameW(existing_gwca, existing_path, MAX_PATH);
-            if (_wcsicmp(existing_path, dll_path_str.c_str()) != 0 || !IsValidGWCADll(gwca_dll_path, resource)) {
+            if (_wcsicmp(existing_path, dll_path_str.c_str()) != 0 || !IsValidGWCADll(gwca_dll_path, embedded_dll)) {
                 Log::Log("[LoadGWCADll] Found existing gwca.dll at %ls; terminating before loading correct version", existing_path);
                 TerminateExistingGWCADll(existing_gwca);
             }
@@ -372,14 +356,13 @@ namespace {
             ShowTroubleshootingError(message, L"GWToolbox", Troubleshooting::BlockedFiles, MB_ICONERROR | MB_TOPMOST);
         };
 
-        if (!IsValidGWCADll(gwca_dll_path, resource)) {
-            std::wstring err;
-            if (!Resources::ResourceToFile(IDR_GWCA_DLL, gwca_dll_path, err)) {
+        if (!IsValidGWCADll(gwca_dll_path, embedded_dll)) {
+            if (!Resources::WriteFile(gwca_dll_path, embedded_dll)) {
                 const DWORD code = GetLastError();
-                Log::Log("[LoadGWCADll] ResourceToFile fail: %ls (%lu)", err.c_str(), code);
+                Log::Log("[LoadGWCADll] writing %ls failed (%lu)", dll_path_str.c_str(), code);
                 warn_if_antivirus(code);
             }
-            if (!IsValidGWCADll(gwca_dll_path, resource)) {
+            if (!IsValidGWCADll(gwca_dll_path, embedded_dll)) {
                 Log::Log("[LoadGWCADll] resource fail, GWCA not valid after replacing");
                 return nullptr;
             }
@@ -634,11 +617,11 @@ namespace {
 
     LRESULT CALLBACK SafeWndProc(const HWND hWnd, const UINT Message, const WPARAM wParam, const LPARAM lParam) noexcept
     {
-        __try {
-            return WndProc(hWnd, Message, wParam, lParam);
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
-            return CallWindowProc(OldWndProc, hWnd, Message, wParam, lParam);
+        LRESULT result = 0;
+        if (TryCatch([&] { result = WndProc(hWnd, Message, wParam, lParam); })) {
+            return result;
         }
+        return CallWindowProc(OldWndProc, hWnd, Message, wParam, lParam);
     }
 
     bool event_handler_attached = false;
@@ -761,11 +744,13 @@ HMODULE GWToolbox::GetDLLModule()
 DWORD __stdcall GWToolbox::MainLoop(LPVOID module) noexcept
 {
     dllmodule = static_cast<HMODULE>(module);
-    __try {
+    DWORD exit_code = EXIT_SUCCESS;
+    const auto completed = RunWithFaultFilter([&] {
         Initialize(module);
         if (!gwcamodule) {
             Log::Terminate();
-            return EXIT_FAILURE;
+            exit_code = EXIT_FAILURE;
+            return;
         }
         while (gwtoolbox_state != GWToolboxState::Terminated) {
             Sleep(100);
@@ -786,10 +771,11 @@ DWORD __stdcall GWToolbox::MainLoop(LPVOID module) noexcept
         Sleep(160);
 
         UnloadGWCADll();
-    } __except (EXCEPT_EXPRESSION_ENTRY) {
+    }, CrashHandler::CrashFilter);
+    if (!completed) {
         Log::Log("SafeThreadEntry __except body\n");
     }
-    return EXIT_SUCCESS;
+    return exit_code;
 }
 
 void GWToolbox::Initialize(LPVOID module)
@@ -963,7 +949,7 @@ std::filesystem::path GWToolbox::SaveSettings()
     const auto dir = doc->location_on_disk.parent_path();
     const auto dirstr = dir.wstring();
     const auto printable = TextUtils::str_replace_all(dirstr, LR"(\\)", L"/");
-    Log::LogW(L"Toolbox settings saved to %s", printable.c_str());
+    Log::LogW(L"Toolbox settings saved to %ls", printable.c_str());
     settings_folder_changed = false;
     return doc->location_on_disk;
 }

@@ -127,23 +127,31 @@ namespace {
         if (cols.size() < 13) {
             return false;
         }
-        try {
-            out.system_time = static_cast<time_t>(std::stoll(cols[0]));
-            out.map_id = static_cast<GW::Constants::MapID>(std::stoul(cols[2]));
-            out.item_name = cols[3];
-            out.quantity = static_cast<uint32_t>(std::stoul(cols[4]));
-            out.value = static_cast<uint32_t>(std::stoul(cols[5]));
-            out.type = static_cast<GW::Constants::ItemType>(std::stoul(cols[6]));
-            out.rarity = static_cast<GW::Constants::Rarity>(std::stoul(cols[7]));
-            out.damage_type = static_cast<GW::Constants::DamageType>(std::stoul(cols[8]));
-            out.min_damage = static_cast<uint16_t>(std::stoul(cols[9]));
-            out.max_damage = static_cast<uint16_t>(std::stoul(cols[10]));
-            out.requirement_attribute = static_cast<GW::Constants::AttributeByte>(std::stoul(cols[11]));
-            out.requirement_value = static_cast<uint8_t>(std::stoul(cols[12]));
+        // A malformed or partial line (e.g. a write caught mid-flush) is skipped.
+        wchar_t* end;
+        errno = 0;
+        const auto system_time = wcstoll(cols[0].c_str(), &end, 10);
+        if (end == cols[0].c_str() || errno == ERANGE) {
+            return false;
         }
-        catch (const std::exception&) {
-            return false; // malformed/partial line (e.g. a write caught mid-flush); skip it
+        unsigned int numbers[13]{};
+        for (const size_t i : {2, 4, 5, 6, 7, 8, 9, 10, 11, 12}) {
+            if (!TextUtils::ParseUInt(cols[i].c_str(), &numbers[i])) {
+                return false;
+            }
         }
+        out.system_time = static_cast<time_t>(system_time);
+        out.map_id = static_cast<GW::Constants::MapID>(numbers[2]);
+        out.item_name = cols[3];
+        out.quantity = numbers[4];
+        out.value = numbers[5];
+        out.type = static_cast<GW::Constants::ItemType>(numbers[6]);
+        out.rarity = static_cast<GW::Constants::Rarity>(numbers[7]);
+        out.damage_type = static_cast<GW::Constants::DamageType>(numbers[8]);
+        out.min_damage = static_cast<uint16_t>(numbers[9]);
+        out.max_damage = static_cast<uint16_t>(numbers[10]);
+        out.requirement_attribute = static_cast<GW::Constants::AttributeByte>(numbers[11]);
+        out.requirement_value = static_cast<uint8_t>(numbers[12]);
         return true;
     }
 

@@ -564,14 +564,14 @@ namespace {
         if (argc > 2 && TextUtils::ParseUInt(argv[2], &value)) {
             GW::GameThread::Enqueue([pref, value, pref_str = std::wstring(argv[1])] {
                 if (!GW::UI::SetPreference(pref, value)) {
-                    Log::ErrorW(L"Failed to set preference %s to %d", pref_str.c_str(), value);
+                    Log::ErrorW(L"Failed to set preference %ls to %d", pref_str.c_str(), value);
                 }
             });
             return;
         }
 
         if (argc < 3) {
-            Log::InfoW(L"Current preference value for %s is %d", argv[1], GetPreference(pref));
+            Log::InfoW(L"Current preference value for %ls is %d", argv[1], GetPreference(pref));
         }
         return Log::Error(pref_syntax);
     }
@@ -586,21 +586,21 @@ namespace {
         if (argc > 2 && TextUtils::ParseUInt(argv[2], &value)) {
             GW::GameThread::Enqueue([pref, value, pref_str = std::wstring(argv[1])] {
                 if (!GW::UI::SetPreference(pref, value)) {
-                    Log::ErrorW(L"Failed to set preference %s to %d", pref_str.c_str(), value);
+                    Log::ErrorW(L"Failed to set preference %ls to %d", pref_str.c_str(), value);
                 }
             });
             return;
         }
 
         if (argc < 3) {
-            Log::InfoW(L"Current preference value for %s is %d", argv[1], GetPreference(pref));
+            Log::InfoW(L"Current preference value for %ls is %d", argv[1], GetPreference(pref));
         }
 
         uint32_t* values = nullptr;
         const auto available = GetPreferenceOptions(pref, &values);
         wchar_t available_vals_buffer[120];
         uint32_t offset = 0;
-        offset += swprintf(&available_vals_buffer[offset], offset - _countof(available_vals_buffer), L"Available values for %s: ", argv[1]);
+        offset += swprintf(&available_vals_buffer[offset], offset - _countof(available_vals_buffer), L"Available values for %ls: ", argv[1]);
         for (size_t i = 0; i < available; i++) {
             offset += swprintf(&available_vals_buffer[offset], offset - _countof(available_vals_buffer), i > 0 ? L", %d" : L"%d", values[i]);
         }
@@ -624,7 +624,7 @@ namespace {
             }
             return;
         }
-        Log::InfoW(L"Current preference value for %s is %d", argv[1], GetPreference(pref));
+        Log::InfoW(L"Current preference value for %ls is %d", argv[1], GetPreference(pref));
     }
 
     // Reduce a preference name to a comparable slug so user input matches the label regardless of case, spacing or punctuation.
@@ -719,7 +719,7 @@ namespace {
                 if (!buffer.empty()) buffer += L", ";
                 buffer += option.label->wstring();
             }
-            return Log::InfoW(L"/pref options:\n%s", buffer.c_str());
+            return Log::InfoW(L"/pref options:\n%ls", buffer.c_str());
         }
 
         // Match leniently: slug both sides so the input accepts any case/spacing/punctuation
@@ -729,7 +729,7 @@ namespace {
             return SanitisePrefName(cmd.label->wstring()) == requested;
         });
         if (found == options.end()) {
-            return Log::ErrorW(L"Unknown preference \"%s\". Type '/pref list' to see the preferences you can set.", argv[1]);
+            return Log::ErrorW(L"Unknown preference \"%ls\". Type '/pref list' to see the preferences you can set.", argv[1]);
         }
         const PrefMapCommand* pref = &(*found);
 
@@ -936,7 +936,7 @@ namespace {
                 }
             }
             if (!flagged) {
-                Log::LogW(L"Failed to find hero %s", hero_name.c_str());
+                Log::LogW(L"Failed to find hero %ls", hero_name.c_str());
             }
         });
     }
@@ -1869,7 +1869,7 @@ void ChatCommands::DrawSettingsInternal()
 
         ImGui::PushItemWidth(avail_w * .3f);
         if (ImGui::InputText("###cmd_alias", alias->alias_cstr, _countof(CmdAlias::alias_cstr))) {
-            swprintf(alias->alias_wstr, _countof(CmdAlias::alias_wstr), L"%S", alias->alias_cstr);
+            swprintf(alias->alias_wstr, _countof(CmdAlias::alias_wstr), L"%hs", alias->alias_cstr);
         }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Alias for this command");
@@ -1879,7 +1879,7 @@ void ChatCommands::DrawSettingsInternal()
         const auto text_height = ImGui::GetTextLineHeightWithSpacing();
         const auto num_newlines = 1 + std::count(alias->command_cstr, alias->command_cstr + _countof(CmdAlias::command_cstr), '\n');
         if (ImGui::InputTextMultiline("##cmd_command", alias->command_cstr, _countof(CmdAlias::command_cstr), ImVec2(avail_w * .6f, text_height + num_newlines * ImGui::GetTextLineHeight()))) {
-            swprintf(alias->command_wstr, _countof(CmdAlias::command_wstr), L"%S", alias->command_cstr);
+            swprintf(alias->command_wstr, _countof(CmdAlias::command_wstr), L"%hs", alias->command_cstr);
         }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Chat command to trigger");
@@ -1927,16 +1927,12 @@ void ChatCommands::LoadSettings(SettingsDoc& doc, ToolboxIni* ini)
             if (!entry.pItem[0]) {
                 continue;
             }
-            auto alias = std::string(entry.pItem);
+            const auto alias = TextUtils::WithoutIndexPrefix(entry.pItem);
             std::string cmd = ini->GetValue(section_name, entry.pItem, "");
             if (cmd.empty()) {
                 continue;
             }
             std::ranges::replace(cmd, '\x2', '\n');
-            static constexpr ctll::fixed_string index_regex = "(\\d+):(.+)";
-            if (auto match = ctre::match<index_regex>(alias)) {
-                alias = match.template get<2>().to_string();
-            }
             const auto alias_wstr = TextUtils::StringToWString(alias);
             const auto command_wstr = TextUtils::StringToWString(cmd);
             CreateAlias(alias_wstr.c_str(), command_wstr.c_str());
@@ -2124,22 +2120,21 @@ void ChatCommands::QuestPing::Update()
 {
     if (!name.wstring().empty()) {
         wchar_t print_buf[128];
-        swprintf(print_buf, _countof(print_buf), L"Current Quest: %s", name.wstring().c_str());
+        swprintf(print_buf, _countof(print_buf), L"Current Quest: %ls", name.wstring().c_str());
         GW::Chat::SendChat('#', print_buf);
     }
     if (!objectives.wstring().empty()) {
-        static constexpr ctll::fixed_string current_obj_pattern = LR"(\{s\}([^\{]+))";
-
-        if (auto m = ctre::match<current_obj_pattern>(objectives.wstring())) {
+        const auto& objective = objectives.wstring();
+        if (objective.starts_with(L"{s}") && objective.size() > 3 && objective.find(L'{', 3) == std::wstring::npos) {
             wchar_t print_buf[128];
-            swprintf(print_buf, _countof(print_buf), L" - %s", m.get<1>().to_string().c_str());
+            swprintf(print_buf, _countof(print_buf), L" - %ls", objective.c_str() + 3);
             GW::Chat::SendChat('#', print_buf);
         }
         objectives.reset(nullptr);
     }
     if (!name.wstring().empty()) {
         wchar_t url_buf[64];
-        swprintf(url_buf, _countof(url_buf), L"%SGame_link:Quest_%d", GuiUtils::WikiUrl(L"").c_str(), quest_id);
+        swprintf(url_buf, _countof(url_buf), L"%hsGame_link:Quest_%d", GuiUtils::WikiUrl(L"").c_str(), quest_id);
         GW::Chat::SendChat('#', url_buf);
         name.reset(nullptr);
     }
@@ -2441,7 +2436,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTB)
             const auto dir = file_location.parent_path();
             const auto dirstr = dir.wstring();
             const auto printable = TextUtils::str_replace_all(dirstr, LR"(\)", L"/");
-            Log::InfoW(L"Settings saved to [%s;file://%s]", printable.c_str(), printable.c_str());
+            Log::InfoW(L"Settings saved to [%ls;file://%ls]", printable.c_str(), printable.c_str());
         }
         else if (arg1 == L"load") {
             // e.g. /tb load
@@ -2450,7 +2445,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTB)
             const auto dir = file_location.parent_path();
             const auto dirstr = dir.wstring();
             const auto printable = TextUtils::str_replace_all(dirstr, LR"(\)", L"/");
-            Log::InfoW(L"Settings loaded from [%s;file://%s]", printable.c_str() ,printable.c_str());
+            Log::InfoW(L"Settings loaded from [%ls;file://%ls]", printable.c_str() ,printable.c_str());
         }
         else if (arg1 == L"reset") {
             // e.g. /tb reset
@@ -2520,7 +2515,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTB)
         const auto dir = file_location.parent_path();
         const auto dirstr = dir.wstring();
         const auto printable = TextUtils::str_replace_all(dirstr, LR"(\)", L"/");
-        Log::InfoW(L"Settings saved to %s", printable.c_str());
+        Log::InfoW(L"Settings saved to %ls", printable.c_str());
     }
     else if (arg1 == L"load") {
         // e.g. /tb load tas
@@ -2533,7 +2528,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTB)
         const bool has_settings = (std::filesystem::exists(modules_folder, ec) && !std::filesystem::is_empty(modules_folder, ec)) || std::filesystem::exists(Resources::GetSettingFile(GWTOOLBOX_JSON_FILENAME), ec) ||
                                   std::filesystem::exists(Resources::GetLegacySettingFile(GWTOOLBOX_JSON_FILENAME), ec) || std::filesystem::exists(Resources::GetLegacySettingFile(GWTOOLBOX_INI_FILENAME), ec);
         if (!has_settings) {
-            Log::ErrorW(L"Settings folder '%s' does not exist", arg2.c_str());
+            Log::ErrorW(L"Settings folder '%ls' does not exist", arg2.c_str());
             GWToolbox::SetSettingsFolder(old_settings_folder);
             return;
         }
@@ -2541,7 +2536,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTB)
         const auto dir = file_location.parent_path();
         const auto dirstr = dir.wstring();
         const auto printable = TextUtils::str_replace_all(dirstr, LR"(\)", L"/");
-        Log::InfoW(L"Settings loaded from %s", printable.c_str());
+        Log::InfoW(L"Settings loaded from %ls", printable.c_str());
     }
     else {
         // Invalid argument
@@ -2612,7 +2607,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdHide)
 void CHAT_CMD_FUNC(ChatCommands::CmdToggle)
 {
     if (argc < 2) {
-        Log::ErrorW(L"Invalid syntax: %s", message);
+        Log::ErrorW(L"Invalid syntax: %ls", message);
         return;
     }
     const std::wstring last_arg = TextUtils::ToLower(argv[argc - 1]);

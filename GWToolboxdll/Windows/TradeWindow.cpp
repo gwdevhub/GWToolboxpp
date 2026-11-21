@@ -62,7 +62,7 @@ namespace {
     constexpr uint32_t COST_PER_CONNECTION_MAX_MS = 60 * 1000;
     static const char* months[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
     using easywsclient::WebSocket;
-    constexpr glz::opts json_opts{.error_on_unknown_keys = false};
+    constexpr SizeOptimisedJson json_opts{{.error_on_unknown_keys = false}};
 
     constexpr char ws_host_kmd[] = "wss://kamadan.gwtoolbox.com";
     constexpr char https_host_kmd[] = "https://kamadan.gwtoolbox.com";
@@ -136,11 +136,11 @@ namespace {
         if (raw.empty()) return 0ull;
         if (raw.front() == '"') {
             std::string parsed;
-            if (glz::read_json(parsed, raw)) return 0ull;
+            if (glz::read<SizeOptimisedJson{}>(parsed, raw)) return 0ull;
             return strtoull(parsed.c_str(), nullptr, 10);
         }
         double n = 0.0;
-        if (glz::read_json(n, raw)) return 0ull;
+        if (glz::read<SizeOptimisedJson{}>(n, raw)) return 0ull;
         return static_cast<uint64_t>(n);
     }
 
@@ -357,7 +357,7 @@ void TradeWindow::fetch()
 
         const tradechat_api::SearchRequest request{.query = pending_query_string};
         pending_query_sent = clock();
-        ws_window->send(glz::write_json(request).value_or(std::string{}));
+        ws_window->send(glz::write<SizeOptimisedJson{}>(request).value_or(std::string{}));
     }
 
     ws_window->dispatch([this](const std::string& data) {
@@ -394,7 +394,7 @@ void TradeWindow::fetch()
                     tm* local_tm = localtime(&ts);
                     if (local_tm) {
                         wchar_t buf[512];
-                        swprintf(buf, 512, L"<a=1>%s</a> @ %S %d, %02d:%02d: <c=#f96677><quote>%s", name_ws.c_str(), months[local_tm->tm_mon], local_tm->tm_mday, local_tm->tm_hour, local_tm->tm_min, msg_ws.c_str());
+                        swprintf(buf, 512, L"<a=1>%ls</a> @ %hs %d, %02d:%02d: <c=#f96677><quote>%ls", name_ws.c_str(), months[local_tm->tm_mon], local_tm->tm_mday, local_tm->tm_hour, local_tm->tm_min, msg_ws.c_str());
                         WriteChat(GW::Chat::Channel::CHANNEL_TRADE, buf,nullptr,true);
                     }
                 }

@@ -25,13 +25,6 @@ constexpr auto GWTOOLBOX_MODULES_FOLDERNAME = L"modules";
 
 #define CHAT_CMD_FUNC(fn) fn([[maybe_unused]] GW::HookStatus* status, [[maybe_unused]] const wchar_t* message,[[maybe_unused]] int argc,[[maybe_unused]] const LPWSTR* argv)
 
-#ifndef EXCEPT_EXPRESSION_ENTRY
-#define EXCEPT_EXPRESSION_ENTRY CrashHandler::Crash(GetExceptionInformation())
-#endif
-//#define EXCEPT_EXPRESSION_ENTRY EXCEPTION_CONTINUE_SEARCH
-#ifndef EXCEPT_EXPRESSION_LOOP
-#define EXCEPT_EXPRESSION_LOOP EXCEPTION_EXECUTE_HANDLER
-#endif
 
 #ifndef ASSERT
 #define ASSERT(expr) ((void)(!!(expr) || (Log::FatalAssert(#expr, __FILE__, (unsigned)__LINE__), 0)))

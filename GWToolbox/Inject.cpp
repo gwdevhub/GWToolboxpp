@@ -202,7 +202,7 @@ static InjectScanResult RunScan()
                 }
                 if (!charname[0]) {
                     fprintf(stderr, "Character name in process %lu is empty\n", process.GetProcessId());
-                    wcscpy_s(charname, sizeof(L"<No character selected>"), L"<No character selected>");
+                    wcscpy_s(charname, _countof(charname), L"<No character selected>");
                 }
 
                 const size_t charname_len = wcsnlen(charname, _countof(charname));
@@ -571,7 +571,7 @@ bool InjectRemoteThread(const Process* process, const LPCWSTR ImagePath, LPDWORD
         return FALSE;
     }
 
-    const LPVOID pLoadLibraryW = GetModuleFunctionW(L"kernel32.dll", "LoadLibraryW");
+    const auto pLoadLibraryW = GetModuleFunctionW<LPTHREAD_START_ROUTINE>(L"kernel32.dll", "LoadLibraryW");
     if (pLoadLibraryW == nullptr) {
         fprintf(stderr, "Failed to resolve LoadLibraryW (%lu)\n", GetLastError());
         return FALSE;
@@ -597,7 +597,7 @@ bool InjectRemoteThread(const Process* process, const LPCWSTR ImagePath, LPDWORD
     }
 
     DWORD ThreadId;
-    const HANDLE hThread = CreateRemoteThreadEx(ProcessHandle, nullptr, 0, reinterpret_cast<LPTHREAD_START_ROUTINE>(pLoadLibraryW), ImagePathAddress, 0, nullptr, &ThreadId);
+    const HANDLE hThread = CreateRemoteThreadEx(ProcessHandle, nullptr, 0, pLoadLibraryW, ImagePathAddress, 0, nullptr, &ThreadId);
 
     if (hThread == nullptr) {
         fprintf(stderr, "CreateRemoteThreadEx failed (%lu)\n", GetLastError());

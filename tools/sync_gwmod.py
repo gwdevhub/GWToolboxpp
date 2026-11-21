@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Keep gwtoolbox.gwmod available next to whichever launcher build /localdll runs.
 
-The wasm build (build-wasm, a separate single-config Emscripten tree) only
+The wasm build (build/<host>/wasm, a separate single-config Emscripten tree) only
 ever writes gwtoolbox.gwmod to <repo>/bin/. The native launcher build is
 multi-config (VS), so GWToolbox.exe actually lands in a per-config subfolder
 like bin/RelWithDebInfo/ or bin/Release/ -- and /localdll looks next to the
@@ -59,7 +59,7 @@ def _copy_gwmod(src_bin: Path, dest_dir: Path) -> int:
 
 
 def _build_wasm(repo_root: Path, debug: bool) -> int:
-    build_dir = repo_root / "build-wasm"
+    build_dir = repo_root / "build" / ("Windows" if os.name == "nt" else "Linux") / "wasm"
     flag = "ON" if debug else "OFF"
     r = subprocess.run(["cmake", "--preset", "wasm",
                          f"-DGWTOOLBOX_WASM_GWCA_DEBUG={flag}"],
