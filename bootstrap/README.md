@@ -67,6 +67,11 @@ bash bootstrap.sh
    enables the three profiles, selecting `relwithdebinfo`. CLion keeps them in `.idea/workspace.xml`, Rider in
    `.idea/.idea.<folder>.cmake/.idea/workspace.xml`. Profiles of the retired MSVC, clang-cl, xwin and `mingw*`
    presets are disabled.
+
+   A CLion installed the normal way (Toolbox, tarball, distro package) needs none of this sandbox plumbing: it runs
+   the host's CMake, vcpkg and vkd3d directly, so the bootstrap only enables its profiles in the same
+   `.idea/workspace.xml`. When it is on PATH or under `~/.local/share/JetBrains/Toolbox/`, the next steps say how to
+   open it.
 5. Configures the `relwithdebinfo` preset into `build/Linux/relwithdebinfo/`.
 6. If `code` is on PATH, installs the clangd and CMake Tools extensions. VS Code uses llvm-mingw's own clangd and
    `build/Linux/relwithdebinfo/compile_commands.json`.

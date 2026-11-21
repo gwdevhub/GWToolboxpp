@@ -92,6 +92,8 @@ def main():
         names = vs_solution.write_solution()
         log.note("%d projects: %s" % (len(names), ", ".join(names)))
     else:
+        if "CLion" not in flatpak_ides:
+            ide_setup.set_clion_profiles(log)
         ide_setup.install_vscode_extensions(log)
         ide_setup.clear_ide_locks(log, flatpak_ides)
 
@@ -118,6 +120,9 @@ def print_next_steps(log, flatpak_ides, manual_cmake):
         for ide in flatpak_ides:
             log.line("       %s: flatpak run %s %s (CMake profiles relwithdebinfo, debug and release)"
                      % (ide, ide_setup.FLATPAK_IDES[ide]["app"], ide_setup.FLATPAK_IDES[ide]["open"]))
+        clion = ide_setup.host_clion_command()
+        if clion and "CLion" not in flatpak_ides:
+            log.line("       CLion: %s %s (CMake profiles relwithdebinfo, debug and release)" % (clion, REPO_ROOT))
         if shutil.which("code"):
             log.line("       VS Code: code %s (then pick the relwithdebinfo preset in the CMake Tools status bar)" % REPO_ROOT)
         log.line("       a terminal: python3 scripts/build.py [--preset debug] [--target GWToolboxdll]")

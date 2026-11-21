@@ -166,6 +166,14 @@ def flatpak_ides():
         ["flatpak", "info", info["app"]], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0]
 
 
+def host_clion_command():
+    path = shutil.which("clion")
+    if path:
+        return path
+    launches = glob.glob(os.path.expanduser("~/.local/share/JetBrains/Toolbox/apps/clion*/bin/clion.sh"))
+    return max(launches, key=lambda script: [int(n) for n in re.findall(r"\d+", script)]) if launches else None
+
+
 def resolve_host_tool(tool):
     for directory in os.environ.get("PATH", "").split(os.pathsep):
         candidate = os.path.join(directory, tool)
