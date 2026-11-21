@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """Sets this checkout up to build with llvm-mingw from the terminal, CLion, Rider, VS Code or Visual Studio. The
 native bootstrap.sh / bootstrap.bat check and install the prerequisites, then run this. It opens and
 builds nothing; the last lines say how. Re-running is cheap: each step is skipped when its output is current.

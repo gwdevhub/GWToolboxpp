@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """Builds GWToolbox with llvm-mingw (the bootstrap scripts install it) on Linux or Windows. The IDEs build the same
 presets themselves; this is the terminal equivalent, and what the Visual Studio solution's projects run.
 

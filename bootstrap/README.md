@@ -51,9 +51,10 @@ Visual Studio's Clean runs. Runs on one build folder take turns, so parallel bui
 bash bootstrap.sh
 ```
 
-1. Installs the missing apt packages: git, curl, python3, ninja, zip/unzip/pkg-config (for vcpkg) and
-   build-essential, bison, flex, libjson-perl and libvulkan-dev (for vkd3d). CMake 3.29+ is only checked. On
-   another distro, install the equivalents and run `python3 scripts/bootstrap.py` yourself.
+1. Installs the missing packages with apt (Debian/Ubuntu) or dnf (Fedora): git, curl, python3, ninja, and
+   zip/unzip/pkg-config (for vcpkg) and a compiler toolchain, bison, flex, perl-JSON and the Vulkan headers (for
+   vkd3d). CMake 3.29+ is only checked. On another distro, install the equivalents and run
+   `python3 scripts/bootstrap.py` yourself.
 2. Copies `idea/` into `.idea/` and `vscode/` into `.vscode/`, backing up anything it overwrites to
    `bootstrap-backup/` there.
 3. Installs llvm-mingw, links the mixed-case header names and builds vkd3d-compiler (`scripts/toolchain.py`), then

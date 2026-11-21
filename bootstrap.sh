@@ -4,8 +4,9 @@
 # sets CLion, Rider (Flatpak) and VS Code up. It opens none of them; the last lines say how.
 #
 #   1. Refuses to run while CLion or Rider, or a CMake run one of them started, is still running.
-#   2. Installs the missing host packages with apt: git, curl, python3, ninja, vcpkg's zip/unzip/pkg-config, and
-#      what vkd3d-compiler (the shader compiler) needs to build. CMake 3.29+ is only checked.
+#   2. Installs the missing host packages with apt (Debian/Ubuntu) or dnf (Fedora): git, curl, python3, ninja,
+#      vcpkg's zip/unzip/pkg-config, and what vkd3d-compiler (the shader compiler) needs to build. CMake 3.29+ is
+#      only checked.
 #   3. Runs scripts/bootstrap.py.
 #
 # Run it from anywhere:  bash bootstrap.sh
@@ -41,22 +42,38 @@ if pgrep -f -- "${REPO_ROOT}/build/" >/dev/null 2>&1; then
 fi
 
 # git/curl/tar/xz fetch llvm-mingw and vcpkg; zip/unzip/pkg-config are what vcpkg needs; python3 runs the bootstrap
-# and the build's scripts; build-essential, bison, flex, libjson-perl and libvulkan-dev build vkd3d-compiler (its
+# and the build's scripts; the compilers, bison, flex, perl-JSON and the Vulkan headers build vkd3d-compiler (its
 # configure requires Vulkan even though only the shader compiler is built).
-HOST_PACKAGES=(git curl tar xz-utils python3 ninja-build zip unzip pkg-config
-               build-essential bison flex libjson-perl libvulkan-dev)
+APT_PACKAGES=(git curl tar xz-utils python3 ninja-build zip unzip pkg-config
+              build-essential bison flex libjson-perl libvulkan-dev)
+DNF_PACKAGES=(git curl tar xz python3 ninja-build zip unzip pkgconf-pkg-config
+              gcc gcc-c++ make bison flex perl-JSON vulkan-headers vulkan-loader-devel)
 
-command -v dpkg-query >/dev/null 2>&1 || die "this script installs packages with apt; on another distro install the equivalents of: ${HOST_PACKAGES[*]}, then run python3 scripts/bootstrap.py"
-missing=()
-for pkg in "${HOST_PACKAGES[@]}"; do
-    dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "install ok installed" || missing+=("$pkg")
-done
-if [ "${#missing[@]}" -eq 0 ]; then
-    log "host packages already present"
+if command -v dpkg-query >/dev/null 2>&1; then
+    missing=()
+    for pkg in "${APT_PACKAGES[@]}"; do
+        dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "install ok installed" || missing+=("$pkg")
+    done
+    if [ "${#missing[@]}" -eq 0 ]; then
+        log "host packages already present"
+    else
+        log "installing missing packages with apt: ${missing[*]}"
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends "${missing[@]}"
+    fi
+elif command -v dnf >/dev/null 2>&1; then
+    missing=()
+    for pkg in "${DNF_PACKAGES[@]}"; do
+        rpm -q "$pkg" >/dev/null 2>&1 || missing+=("$pkg")
+    done
+    if [ "${#missing[@]}" -eq 0 ]; then
+        log "host packages already present"
+    else
+        log "installing missing packages with dnf: ${missing[*]}"
+        sudo dnf install -y "${missing[@]}"
+    fi
 else
-    log "installing missing packages with apt: ${missing[*]}"
-    sudo apt-get update
-    sudo apt-get install -y --no-install-recommends "${missing[@]}"
+    die "this script installs packages with apt or dnf; on another distro install the equivalents of: ${APT_PACKAGES[*]}, then run python3 scripts/bootstrap.py"
 fi
 
 # cmake is not installed by apt here (the project needs >= 3.29, newer than some distros ship), so only check it.
