@@ -274,7 +274,7 @@ InjectReply InjectWindow::AskInjectProcess(InjectSelection* selection)
 }
 
 InjectWindow::InjectWindow(InjectScanResult scan)
-    : LauncherWindow("GWToolbox - Launch", 305, 200, IDR_INJECT_PAGE)
+    : LauncherWindow("GWToolbox - Launch", 305, 200, IDR_INJECT_PAGE, L"LaunchWindow")
 {
     ResetScan(std::move(scan));
     m_UpdateChecker.Start(!settings.noexecheck, !settings.noupdate);

@@ -284,7 +284,7 @@ bool EnableDebugPrivilege()
 }
 
 SettingsWindow::SettingsWindow()
-    : LauncherWindow("GWToolbox - Settings", 305, 135, IDR_SETTINGS_PAGE)
+    : LauncherWindow("GWToolbox - Settings", 305, 135, IDR_SETTINGS_PAGE, L"SettingsWindow")
 {
     handler().on("getState", [](WebViewWindow&, const Json&, const Reply& reply) {
         reply.result(Json{{"noUpdate", settings.noupdate}, {"asAdmin", settings.asadmin}});

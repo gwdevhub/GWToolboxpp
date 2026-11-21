@@ -647,7 +647,7 @@ bool DownloadWindow::DownloadDll(std::wstring& error)
 }
 
 DownloadWindow::DownloadWindow()
-    : LauncherWindow("GWToolbox - Download", 500, 330, IDR_DOWNLOAD_PAGE)
+    : LauncherWindow("GWToolbox - Download", 500, 330, IDR_DOWNLOAD_PAGE, L"DownloadWindow")
 {
 }
 

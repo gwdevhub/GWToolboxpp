@@ -2,6 +2,8 @@
 
 #include "LauncherWindow.h"
 
+#include "Registry.h"
+
 namespace {
 
 std::string LoadResourceText(const int id)
@@ -32,6 +34,7 @@ WindowOptions MakeOptions(std::string title, const int width, const int height)
     options.height = height;
     options.resizable = false;
     options.transparent = false;
+    options.centered = false;
     if (const wchar_t* local_app_data = _wgetenv(L"LOCALAPPDATA")) {
         options.webViewDataFolder = std::filesystem::path(local_app_data) / L"GWToolbox" / L"WebView2";
     }
@@ -95,9 +98,10 @@ void showError(const std::string& message)
     MessageBoxA(nullptr, message.c_str(), applicationName().c_str(), MB_OK | MB_ICONERROR);
 }
 
-LauncherWindow::LauncherWindow(std::string title, const int width, const int height, const int page_resource_id)
+LauncherWindow::LauncherWindow(std::string title, const int width, const int height, const int page_resource_id, std::wstring frame_key)
     : WebViewWindow(MakeOptions(std::move(title), width, height))
     , page_resource_id_(page_resource_id)
+    , frame_key_(std::move(frame_key))
 {
     handler().on("close", [](WebViewWindow& window, const Json&, const Reply& reply) {
         window.close();
@@ -115,4 +119,41 @@ std::string LauncherWindow::html() const
     InlineResource(page, "<!--launcher.css-->", IDR_LAUNCHER_CSS);
     InlineResource(page, "<!--launcher.js-->", IDR_LAUNCHER_JS);
     return page;
+}
+
+std::wstring LauncherWindow::frameValueName(const wchar_t* part) const
+{
+    return frame_key_ + part;
+}
+
+void LauncherWindow::onFrameChanged()
+{
+    const auto placement = frame();
+    const auto size = frameUnscaled();
+    if (!placement || !size) {
+        return;
+    }
+    std::wstring error;
+    RegWriteDWORD(frameValueName(L"X").c_str(), static_cast<DWORD>(placement->x), error);
+    RegWriteDWORD(frameValueName(L"Y").c_str(), static_cast<DWORD>(placement->y), error);
+    RegWriteDWORD(frameValueName(L"Width").c_str(), static_cast<DWORD>(size->first), error);
+    RegWriteDWORD(frameValueName(L"Height").c_str(), static_cast<DWORD>(size->second), error);
+}
+
+void LauncherWindow::onBeforeFirstShow()
+{
+    DWORD x = 0;
+    DWORD y = 0;
+    DWORD width = 0;
+    DWORD height = 0;
+    std::wstring error;
+    const bool saved = RegReadDWORD(frameValueName(L"X").c_str(), &x, error)
+        && RegReadDWORD(frameValueName(L"Y").c_str(), &y, error)
+        && RegReadDWORD(frameValueName(L"Width").c_str(), &width, error)
+        && RegReadDWORD(frameValueName(L"Height").c_str(), &height, error);
+    if (!saved) {
+        return;
+    }
+    resize(static_cast<int>(width), static_cast<int>(height));
+    move(static_cast<int>(x), static_cast<int>(y));
 }

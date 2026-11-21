@@ -3,9 +3,16 @@ FILE(GLOB SOURCES CONFIGURE_DEPENDS
     "*.h"
     "*.cpp"
     "GWToolbox.rc")
+FILE(GLOB UI_FILES CONFIGURE_DEPENDS
+    "ui/*.html"
+    "ui/*.css"
+    "ui/*.js")
+
+set_source_files_properties(${UI_FILES} PROPERTIES HEADER_FILE_ONLY TRUE)
+set_source_files_properties(GWToolbox.rc PROPERTIES OBJECT_DEPENDS "${UI_FILES}")
 
 add_executable(GWToolbox)
-target_sources(GWToolbox PRIVATE ${SOURCES})
+target_sources(GWToolbox PRIVATE ${SOURCES} ${UI_FILES})
 target_precompile_headers(GWToolbox PRIVATE "stdafx.h")
 target_include_directories(GWToolbox PRIVATE "${GWTOOLBOX_RESOURCE_INCLUDE_DIR}")
 webview_window_embed_loader(GWToolbox)
