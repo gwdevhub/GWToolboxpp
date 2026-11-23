@@ -1,0 +1,27 @@
+FROM node:22-trixie-slim AS build
+
+ARG BUILD_TYPE=RelWithDebInfo
+ARG PACK_APPIMAGE=1
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends cmake ninja-build g++ pkg-config python3 ca-certificates file \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /src
+COPY . .
+
+RUN --mount=type=cache,id=gwtoolbox-linux-build-${BUILD_TYPE},target=/src/build/Linux/docker,sharing=locked \
+    --mount=type=cache,id=gwtoolbox-appimagetool,target=/src/.toolchain,sharing=locked \
+    cmake -S . -B build/Linux/docker -G Ninja -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
+        -DGWTB_WINDOWS_LAUNCHER_PREBUILT=/src/bin/${BUILD_TYPE}/GWToolbox.exe \
+ && cmake --build build/Linux/docker --target GWToolbox_Launcher_Linux \
+ && mkdir -p /out \
+ && cp bin/${BUILD_TYPE}/GWToolbox bin/${BUILD_TYPE}/GWToolbox.debug /out/ \
+ && if [ "${PACK_APPIMAGE}" = 1 ]; then \
+        python3 scripts/appimage.py /src/bin/${BUILD_TYPE} \
+        && cp bin/${BUILD_TYPE}/GWToolbox.AppImage /out/; \
+    fi
+
+FROM scratch AS export
+COPY --from=build /out/ /

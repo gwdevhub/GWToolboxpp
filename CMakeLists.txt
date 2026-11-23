@@ -30,6 +30,14 @@ if(EMSCRIPTEN)
     # product yet, so Core/RestClient/GWToolbox (the native injector exe) stay out of
     # this configure until something wasm-side actually needs them.
     add_subdirectory(GWToolboxdll)
+elseif(UNIX AND NOT APPLE)
+    set(CMAKE_CXX_STANDARD 20)
+    set(CMAKE_CXX_STANDARD_REQUIRED ON)
+    set(WEBVIEW_WINDOW_BUILD_EXAMPLE OFF CACHE BOOL "" FORCE)
+    list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
+    add_subdirectory(Dependencies/WebViewWindow)
+    include(launcherpage)
+    add_subdirectory(GWToolbox/platform/linux)
 else()
 
 if(NOT (WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "GNU"))
@@ -189,6 +197,7 @@ include(imgui)
 include(gwtoolboxdll_plugins)
 include(nativefiledialog)
 include(webviewwindow)
+include(launcherpage)
 include(steamworks_sdk)
 
 find_path(EARCUT_HPP_INCLUDE_DIRS "mapbox/earcut.hpp")

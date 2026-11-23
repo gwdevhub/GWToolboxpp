@@ -1,0 +1,5 @@
+file(READ "${INPUT}" PAGE)
+set(TEMP "${OUTPUT}.tmp")
+file(WRITE "${TEMP}" "#pragma once\n\ninline constexpr char kLaunchPage[] = R\"GWTB(${PAGE})GWTB\";\n")
+execute_process(COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${TEMP}" "${OUTPUT}")
+file(REMOVE "${TEMP}")
