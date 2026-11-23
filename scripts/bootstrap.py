@@ -124,7 +124,7 @@ def print_next_steps(log, flatpak_ides, manual_cmake):
     if IS_WINDOWS:
         log.line("       Visual Studio or Rider: GWToolbox.slnx (configurations Debug, RelWithDebInfo and Release)")
         log.line("       CLion: this folder (CMake profiles relwithdebinfo, debug and release)")
-        log.line("       a terminal: python scripts\\build.py [--preset debug] [--target GWToolboxdll]")
+        log.line("       a terminal: python scripts\\build.py [--preset debug]   (the DLL and both launchers; Docker for the Linux launcher)")
     else:
         for ide in flatpak_ides:
             log.line("       %s: flatpak run %s %s (CMake profiles relwithdebinfo, debug and release)"
@@ -134,9 +134,9 @@ def print_next_steps(log, flatpak_ides, manual_cmake):
             log.line("       CLion: %s %s (CMake profiles relwithdebinfo, debug and release)" % (clion, REPO_ROOT))
         if shutil.which("code"):
             log.line("       VS Code: code %s (then pick the relwithdebinfo preset in the CMake Tools status bar)" % REPO_ROOT)
-        log.line("       a terminal: python3 scripts/build.py [--preset debug] [--target GWToolboxdll]")
+        log.line("       a terminal: python3 scripts/build.py [--preset debug]   (the DLL and both launchers)")
     bin_dir = os.path.join("bin", "<Config>")
-    log.line("  %d. Build. GWToolboxdll.dll and GWToolbox.exe land in %s%s." % (step + 1, bin_dir, os.sep))
+    log.line("  %d. Build. GWToolboxdll.dll, GWToolbox.exe and GWToolbox (Linux) land in %s%s." % (step + 1, bin_dir, os.sep))
     if IS_WINDOWS:
         log.line("  %d. Run %s: it injects the GWToolboxdll.dll next to it into Guild Wars." % (step + 2, os.path.join(bin_dir, "GWToolbox.exe")))
         log.line("     In Visual Studio, F5 starts it under the debugger.")
