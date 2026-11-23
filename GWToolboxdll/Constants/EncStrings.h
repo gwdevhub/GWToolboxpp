@@ -271,7 +271,7 @@ namespace GW {
         static const wchar_t* SpiderLegs = L"\x28EA";
 
         static const wchar_t* GuildVersusGuild = L"\x8102\x58B6\xFE7C\xB94E\x2209";
-        static const wchar_t* AllianceBattles = L"\x108\x107" L"Alliance Battles\x1"; // TODO: find this, subtitle when entering zone
+        static const wchar_t* AllianceBattles = L"\x108\x107" L"Alliance Battles\x1";
 
         static const wchar_t* GuildVersusGuildBonus = L"\x8103\xAD9";
         static const wchar_t* GuildVersusGuildBonusDescription = L"\x8103\xADa";

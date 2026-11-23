@@ -341,8 +341,6 @@ namespace {
     void Serialize(uint8_t** bytes, T* val)
     {
         uint8_t* b = *bytes;
-        // if we want to allign
-        // b = (uint8_t*)(((uintptr_t)b + (sizeof(T) - 1)) & ~(sizeof(T) - 1));
         memcpy(val, b, sizeof(T));
         *bytes = b + sizeof(T);
     }
@@ -556,7 +554,6 @@ void PacketLoggerWindow::PacketHandler(GW::HookStatus* status, GW::Packet::StoC:
     if (!game_server_handler.m_buffer) {
         return;
     }
-    //if (packet->header == 95) return true;
     if (packet->header >= game_server_handler.size()) {
         return;
     }

@@ -310,7 +310,6 @@ void IRC::parse_irc_reply(const char* data)
     char* hostd;
     char* cmd;
     char* params;
-    //char buffer[514];
     irc_reply_data hostd_tmp{};
     channel_user* cup;
     char* p;
@@ -565,7 +564,6 @@ void IRC::parse_irc_reply(const char* data)
             cup = chan_users;
             chan_temp = strchr(params, '#');
             if (chan_temp) {
-                //chan_temp+=3;
                 p = strstr(chan_temp, " :");
                 if (p) {
                     *p = '\0';

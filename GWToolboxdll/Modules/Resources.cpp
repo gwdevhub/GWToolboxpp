@@ -1276,14 +1276,12 @@ GuiUtils::EncString* Resources::GetRegionName(const GW::Region region)
             enc = GW::EncStrings::MapRegion::Kryta;
             break;
         case GW::Region::Region_NorthernShiverpeaks:
-            // TODO: Southern vs northern shivers
             enc = GW::EncStrings::MapRegion::NorthernShiverpeaks;
             break;
         case GW::Region_CrystalDesert:
             enc = GW::EncStrings::MapRegion::CrystalDesert;
             break;
         case GW::Region_FissureOfWoe:
-            // TODO: Ring of fire? Underworld
             enc = GW::EncStrings::MapRegion::FissureOfWoe;
             break;
 

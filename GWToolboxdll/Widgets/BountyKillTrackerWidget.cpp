@@ -284,8 +284,6 @@ namespace {
                 active_bounties.clear();
                 effect_id_to_skill.clear();
             } break;
-            // TODO: Add case for chat message(s) that announce kill milestones (e.g. "35 insects slain")
-            // and reset kill_count for the relevant active bounty. Encoded string IDs are not yet known.
         }
     }
 }

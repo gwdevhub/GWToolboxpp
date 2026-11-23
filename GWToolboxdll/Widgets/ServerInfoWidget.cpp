@@ -73,8 +73,6 @@ ServerInfoWidget::ServerInfo* ServerInfoWidget::GetServerInfo()
     if (current_server_info) {
         return current_server_info;
     }
-    //if (!GW::Map::GetIsMapLoaded())
-    //  return nullptr;
     const GW::GameContext* g = GW::GetGameContext();
     if (!g) {
         return nullptr;

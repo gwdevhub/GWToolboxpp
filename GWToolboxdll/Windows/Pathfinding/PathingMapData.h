@@ -7,26 +7,6 @@
 #include <GWCA/GameContainers/Array.h>
 #include <GWCA/GameEntities/Pathing.h>
 
-// =============================================================================
-// PathingMapData
-//
-// A self-contained representation of map pathfinding data using GW's actual
-// pointer-based types (GW::PathingTrapezoid*, GW::Portal*) with a single
-// continuous buffer per plane.
-//
-// Can be constructed from either:
-//   1. GW::PathContext (live game memory)
-//   2. FFNA Type-3 file chunk 0x20000008 (raw file data)
-//
-// Design principles:
-//   - Uses GW's native pointer-based types directly
-//   - Single buffer allocation per plane (mirrors GW::PathingMap::allocatedBuffer)
-//   - All internal pointers resolved within the buffer
-//   - No external pointer dependencies - fully self-contained deep copy
-//
-// This struct owns all its data and is fully self-contained.
-// =============================================================================
-
 namespace Pathing {
 
     struct Vec2f {

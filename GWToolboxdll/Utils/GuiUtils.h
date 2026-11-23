@@ -60,7 +60,6 @@ namespace GuiUtils {
         staged_map staged;
         if (glz::read<SizeOptimisedJson{}>(staged, map_str)) {
             staged.clear();
-            // TODO: delete this branch once pre-glaze configs are gone.
             std::vector<std::tuple<staged_key, typename T::mapped_type>> legacy;
             if (glz::read<SizeOptimisedJson{}>(legacy, map_str)) {
                 return {};

@@ -129,15 +129,15 @@ namespace {
     constexpr const wchar_t* endgame_reward_npcs[] = {
         L"",
         L"\x399E\x8A19\xC3B6\x2FE4",          // King Jalis (Droks Explorable)
-        L"\x108\x107" "Suun\x1",              // Suun (Divine Path) TODO: Encoded version of this name!
-        L"\x108\x107" "Keeper of Secrets\x1", // Keeper of Secrets (Throne of secrets) TODO: Encoded version of this name!
+        L"\x108\x107" "Suun\x1",
+        L"\x108\x107" "Keeper of Secrets\x1",
         L"\x108\x107" "Droknar\x1",
     };
     constexpr const wchar_t* endgame_reward_trophies[] = {
         L"",
         L"\x108\x107" "Deldrimor Talisman" "\x1",  // King Jalis (Droks Explorable)
-        L"\x108\x107" "Amulet of the Mists" "\x1", // Suun (Divine Path) TODO: Encoded version of this name!
-        L"\x108\x107" "Book of Secrets" "\x1",     // Keeper of Secrets (Throne of secrets) TODO: Encoded version of this name!
+        L"\x108\x107" "Amulet of the Mists" "\x1",
+        L"\x108\x107" "Book of Secrets" "\x1",
         L"\x108\x107" "Droknar's Key" "\x1",
     };
 

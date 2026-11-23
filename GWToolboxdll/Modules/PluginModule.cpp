@@ -254,7 +254,7 @@ void PluginModule::DrawSettingsInternal()
         const bool is_showing = has_settings ? ImGui::CollapsingHeader(buf, ImGuiTreeNodeFlags_AllowOverlap) : ImGui::CollapsingHeader(buf, ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_AllowOverlap);
 
         if (const auto icon = plugin->initialized ? plugin->api->icon() : nullptr) {
-            const float text_offset_x = ImGui::GetTextLineHeightWithSpacing() + 4.0f; // TODO: find a proper number
+            const float text_offset_x = ImGui::GetTextLineHeightWithSpacing() + 4.0f;
             ImGui::GetWindowDrawList()->AddText(
                 ImVec2(pos.x + text_offset_x, pos.y + style.ItemSpacing.y / 2),
                 ImColor(style.Colors[ImGuiCol_Text]), icon);

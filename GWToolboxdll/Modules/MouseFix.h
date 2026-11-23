@@ -2,9 +2,6 @@
 
 #include <ToolboxModule.h>
 
-// Disables the camera-glitch mouse fix entirely; none of its code is compiled when 0.
-// The cursor-size scaling feature is unaffected by this define.
-// Disabled Aug 2026 after a game update affected lookaround speed; code kept for reference.
 #define MOUSEFIX_ENABLE_CAMERA_FIX 0
 
 class MouseFix : public ToolboxModule {

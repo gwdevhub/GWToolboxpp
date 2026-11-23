@@ -788,8 +788,6 @@ GW::Constants::MapID TravelWindow::GetNearestOutpostToLocation(const GW::AreaInf
         if (!(IsValidOutpost(map_id) && GW::Map::GetMapInfo(map_id)->GetIsOnWorldMap())) continue;
         const auto map_info = GW::Map::GetMapInfo(map_id);
         if (!(map_info && map_info->continent == origin->continent && map_info->campaign == origin->campaign)) continue;
-        // if ((map_info->flags & 0x5000000) != 0)
-        //    continue; // e.g. "wrong" augury rock is map 119, no NPCs
         if (!GetMapLabelPos(map_info, &map_pos)) continue;
         const float dist = GetDistance(world_map_pos, map_pos);
         if (dist < nearest_distance) {

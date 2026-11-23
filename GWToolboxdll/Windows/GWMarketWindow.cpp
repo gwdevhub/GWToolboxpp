@@ -901,12 +901,10 @@ namespace {
             OnWebSocketMessage(msg);
         });
         market_ws.SetOnOpen([] {
-            //Log::Log("Connected");
             socket_io_ready = false;
             last_ping_time = clock();
         });
         market_ws.SetOnClose([] {
-            //Log::Warning("Disconnected");
             socket_io_ready = false;
         });
     }
@@ -1224,7 +1222,6 @@ namespace {
 
             // Use the order's address for a unique ID; descriptions are often empty and would collide.
             ImGui::PushID(&order);
-            // const auto top = ImGui::GetCursorPosY();
 
             ImGui::TextUnformatted(order.player.c_str());
             const auto timetext = TextUtils::RelativeTime(order.lastRefresh);

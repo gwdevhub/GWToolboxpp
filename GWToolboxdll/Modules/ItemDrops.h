@@ -15,11 +15,6 @@ public:
     // drives both the persistent running tallies here and the on-disk drill-down filter there.
     enum class GroupMode { None, ItemName, Map, Rarity, Type, Weapon };
 
-    // Running per-group totals kept for the whole session (bounded by distinct keys seen, not by
-    // drop count) so headline/group totals stay accurate even after drop_history is trimmed.
-    // min_damage/max_damage/requirements only have meaning for the Weapon grouping, but are cheap
-    // enough to maintain for every key regardless, so the weapon table's summary row (including when
-    // collapsed) never needs a disk read - only its per-item drill-down does.
     struct DropTally {
         uint64_t count = 0;
         uint64_t quantity = 0;
@@ -29,10 +24,6 @@ public:
         std::set<std::string> requirements;
     };
 
-    // The Weapon grouping's key isn't a single game identifier - it's (ItemType, DamageType) - so it
-    // gets its own small key type instead of a formatted string, same as Map/Rarity/Type use their
-    // native enums directly. The display label is derived from this only when rendering a group's
-    // summary row (WeaponCategoryName), not per drop or per CSV row scanned during drill-down.
     struct WeaponKey {
         GW::Constants::ItemType type = GW::Constants::ItemType::Unknown;
         GW::Constants::DamageType damage_type = GW::Constants::DamageType::None;
@@ -111,17 +102,9 @@ public:
         const std::wstring toCSV();
         static const wchar_t* GetCSVHeader();
         GuiUtils::EncString* GetItemName();
-        // Resolves the icon from the shared GwDatModule texture cache on demand (e.g. only for rows an
-        // ImGuiListClipper actually draws) instead of eagerly at drop time for every tracked drop -
-        // drop tracking sees far more distinct items in a session than inventory/skillbar ever would,
-        // and that cache is never evicted, so fetching unconditionally at drop time pins GPU textures
-        // for items that may never actually be shown.
         IDirect3DTexture9** GetIcon();
     };
 
-    // Recent drops only (capped rolling window) — for the default table and as a source for the CSV
-    // writer. Full-session totals live in the tallies below; full-session per-item listing for groups
-    // comes from GetSessionCsvPath() on disk, not from this list.
     std::vector<PendingDrop*>& GetDropHistory();
     uint64_t GetSessionDropCount() const;
     int GetTotalGoldValue();

@@ -35,7 +35,6 @@ namespace {
             original_charname_parameter = parameter_value;
             parameter_value = const_cast<wchar_t*>(L" ");
         }
-        //Log::Info("GetStringParameter_Ret %p = %ls", param_id, parameter_value);
         GW::Hook::LeaveHook();
         return parameter_value;
     }

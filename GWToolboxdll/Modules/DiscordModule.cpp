@@ -575,7 +575,6 @@ namespace {
                 SHA1 checksum;
                 checksum.update(party_id);
                 sprintf(activity.party.id, "%s", checksum.final().c_str());
-                // Add a party secret if in an outpost. TODO: Joining feature?
                 DiscordJoinableParty secret;
                 secret.map_id = map_id;
                 secret.region_id = server_region;

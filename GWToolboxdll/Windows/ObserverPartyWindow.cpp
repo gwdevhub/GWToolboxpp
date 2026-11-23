@@ -541,7 +541,6 @@ void ObserverPartyWindow::Draw(IDirect3DDevice9*)
         else if (party_member_index > 0) {
             ImGui::Text("");
         }
-        // else if (party_member_index > 0) ImGui::Separator();
 
         float offset = 0;
 

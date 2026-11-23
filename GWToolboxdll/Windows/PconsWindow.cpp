@@ -245,7 +245,6 @@ namespace {
             case GW::UI::UIMessage::kPostProcessingEffect: {
                 auto packet = (GW::UI::UIPacket::kPostProcessingEffect*)wparam;
                 PconAlcohol::alcohol_level = (uint32_t)(packet->amount * 5.f);
-                // printf("Level = %d, tint = %d\n", pak->level, pak->tint);
                 if (enabled) {
                     pcon_alcohol->Update();
                 }
@@ -260,8 +259,9 @@ namespace {
                     && (packet->effect->skill_id == SkillID::Spiritual_Possession || packet->effect->skill_id == SkillID::Lucky_Aura)) {
                     status->blocked = true;
                 }
+                Pcon::RemoveAppliedEffectTriggers();
+                break;
             }
-            [[fallthrough]];
             case GW::UI::UIMessage::kEffectRenew:
                 Pcon::RemoveAppliedEffectTriggers();
                 break;
@@ -468,7 +468,6 @@ void PconsWindow::OnAddExternalBond(GW::HookStatus* status, const GW::Packet::St
         && pak->caster_id == GW::Agents::GetObservingId()
         && pak->receiver_id == 0
         && (pak->skill_id == static_cast<DWORD>(SkillID::Spiritual_Possession) || pak->skill_id == static_cast<DWORD>(SkillID::Lucky_Aura))) {
-        // printf("blocked skill %d\n", pak->skill_id);
         status->blocked = true;
     }
 }

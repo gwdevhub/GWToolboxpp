@@ -133,7 +133,6 @@ namespace {
             delete it;
         }
         out->preferences.clear();
-        // TODO: Read preferences of all types...
         out->reordered = false;
         ASSERT(GetWindowRect(GW::MemoryMgr::GetGWWindowHandle(),&out->window_rect));
     }

@@ -6,9 +6,6 @@
 #include <thread>
 #include <vector>
 
-// A minimal WebSocket server (RFC 6455) that broadcasts text messages to every connected client, such as a LiveSplit
-// overlay. Clients' own messages are read and ignored. The sockets live on the server's thread; Broadcast queues
-// from any thread.
 class WebSocketServer {
 public:
     ~WebSocketServer() { Stop(); }

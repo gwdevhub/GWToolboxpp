@@ -145,11 +145,9 @@ namespace {
         uint32_t my_client_id = 0;
         std::string my_channel_id;
         std::string name;
-        //char welcome_message[512];
         std::string host;
         uint32_t port = 9987;
         uint32_t user_count = 0;
-        //char password[128];
     };
 
     std::map<uint32_t, TS3Server*> connected_servers;
@@ -424,7 +422,6 @@ namespace {
 
     bool OnWebsocketMessage(const std::string& data)
     {
-        //Log::Log("%s\n", data.c_str());
         ts5_api::IncomingEnvelope envelope{};
         if (auto ec = glz::read<json_opts>(envelope, data); ec) {
             Log::Log("ERROR: Failed to parse res JSON from response in websocket->dispatch\n");

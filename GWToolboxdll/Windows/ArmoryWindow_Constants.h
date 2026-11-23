@@ -1756,15 +1756,6 @@ namespace GWArmory {
         {"Restoration Scepter", 0x38671, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Ritualist Cane", 0x2B203, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000},
 
-        // -------------------------------------------------------------------
-        // Models discovered by scanning Gw.dat for ffna type-2 files that match
-        // the chunk layout of the weapons above (0xFA0 + 0xFA1 + 0xFA5).
-        // Labels are placeholder hex file ids, to be renamed as they are
-        // identified in game. ItemType is inferred from the 0xFA0 rig hash and
-        // is only reliable where marked "rig-pure"; the rest are best guesses
-        // and put the model in the wrong dropdown at worst.
-        // -------------------------------------------------------------------
-
         // Discovered Axe (44)
         {"0x2B0AA", 0x2B0AA, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766
         {"0x2B0AF", 0x2B0AF, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000}, // guess rig=0x9E84D766

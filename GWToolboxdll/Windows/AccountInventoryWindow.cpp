@@ -2394,7 +2394,6 @@ void AccountInventoryWindow::Draw(IDirect3DDevice9*)
         clipper.End();
 
         ImGui::EndChild();
-        // ImGui::Text("Rendered: %d / %d", rendered_cells, item_count);
     }
 
     ImGui::End();

@@ -256,8 +256,6 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
     ImGui::PushFont(font, draw_list, settings.font_effects);
 
     const auto hard_mode_frame = GW::UI::GetChildFrame(effects_frame, 1);
-    // const auto minion_count_frame = GW::UI::GetChildFrame(effects_frame, 2);
-    // const auto morale_frame = GW::UI::GetChildFrame(effects_frame, 3);
 
     if (hard_mode_frame && settings.show_vanquish_counter) {
         if (const auto foes_left = GW::Map::GetFoesToKill()) {

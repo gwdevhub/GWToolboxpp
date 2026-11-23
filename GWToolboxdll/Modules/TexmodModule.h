@@ -2,17 +2,6 @@
 
 #include <ToolboxModule.h>
 
-// ---------------------------------------------------------------------------
-// TexmodModule
-// GWToolbox module that loads gMod.dll at runtime and hands it the game's
-// already-created D3D9 device via gMod's exported SetDevice(), then loads texture
-// replacement packs (TPF/ZIP/DDS) through AddFile/RemoveFile. The list order is
-// priority: when two packs replace the same texture, the one higher in the list
-// wins, so reordering re-adds packs in the desired order.
-//
-// Draw() (a plain-module render hook) is used only to paint the texture-recording
-// overlay; the module has no window of its own.
-// ---------------------------------------------------------------------------
 class TexmodModule final : public ToolboxModule {
 public:
     static TexmodModule& Instance()

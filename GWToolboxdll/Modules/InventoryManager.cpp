@@ -1079,7 +1079,6 @@ namespace {
         }
         const auto unid = GetNextUnidentifiedItem();
         if (!unid) {
-            // Log::Info("Identified %d items", identified_count);
             CancelIdentify();
             return;
         }
@@ -1818,8 +1817,6 @@ uint16_t InventoryManager::RefillUpToQuantity(const uint16_t wanted_quantity, co
         uint16_t to_move = wanted_quantity - amount_in_inventory;
         const auto amount_in_storage = count_items(GW::Constants::Bag::Material_Storage, GW::Constants::Bag::Storage_14, is_same_item);
         if (amount_in_storage < to_move) {
-            // @Enhancement: Make this warning optional? Its more annoying than anything else if you're using it as a hotkey and you run out, so disabled for now.
-            // Log::Warning("Only able to withdraw %d of %d items with model id %d", amount_in_inventory + amount_in_storage, wanted_quantity, model_id);
         }
         const auto storage_items = FindItemsBy(GW::Constants::Bag::Material_Storage, GW::Constants::Bag::Storage_14, is_same_item);
         for (const auto item : storage_items) {

@@ -15,7 +15,6 @@ public:
     static void UpdateCachedFrameStates();
 
     [[nodiscard]] virtual const char* UIName() const;
-    //virtual const char* SettingsName() const override { return UIName(); }
 
     void Initialize() override;
     void Terminate() override;

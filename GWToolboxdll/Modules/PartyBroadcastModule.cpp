@@ -149,7 +149,6 @@ namespace {
         });
 
         party_ws.SetOnMessage([](const std::string&) {
-            // Log::Log("Websocket message\n%s", message.c_str());
         });
 
         party_ws.SetOnClose(on_websocket_closed);
