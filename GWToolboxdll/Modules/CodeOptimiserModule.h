@@ -19,8 +19,7 @@ public:
 
 
     const char* Description() const override { return "Optimises some internal GW functions to improve in-game performance"; }
-    // Standard CRC32 (init=0xFFFFFFFF, final XOR 0xFFFFFFFF). Uses the fast 16-table path.
-    static uint32_t Crc32(const void* data, size_t bytes);
+    static uint32_t Crc32(const void* data, size_t bytes, uint32_t seed = 0);
 
     void Initialize() override;
     void SignalTerminate() override;

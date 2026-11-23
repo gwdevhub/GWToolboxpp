@@ -1,12 +1,14 @@
 #pragma once
 
 #include <ToolboxModule.h>
+#include <Utils/GuildWarsFileServer.h>
 
 #include <atomic>
 #include <cstdint>
 #include <filesystem>
+#include <functional>
+#include <memory>
 #include <mutex>
-#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -23,8 +25,25 @@ public:
 
     const char* Name() const override { return "GW Dat Module"; };
     bool HasSettings() override { return false; }
+    void Initialize() override;
     void Update(float) override;
+    void SignalTerminate() override;
+    bool CanTerminate() override;
     void Terminate() override;
+
+    enum class DownloadState { NotRequested, Pending, Ready, Failed };
+
+    struct DownloadedFile {
+        uint32_t file_id = 0;
+        std::vector<uint8_t> data;
+    };
+
+    using DownloadStatus = GuildWarsFileServer::Status;
+    using DownloadedFilePtr = std::shared_ptr<const DownloadedFile>;
+    using DownloadCallback = std::function<void(DownloadedFilePtr file, DownloadStatus status)>;
+
+    static bool FetchFile(uint32_t base_file_id, DownloadCallback callback = nullptr);
+    static DownloadState GetDownloadedFile(uint32_t base_file_id, DownloadedFilePtr& file);
 
     // True once the client's Gw.dat has been located and its index parsed (no load attempt of its own).
     static bool IsLoaded();
@@ -44,11 +63,8 @@ public:
 
 
     // --- Archive reading ---
-    // Decompressed bytes for a GW file id; stream_id picks a stream (0 = the file's own data). False if absent.
     static bool ReadFile(uint32_t file_id, std::vector<uint8_t>& out, uint32_t stream_id = 0);
 
-    // True once any read found the dat mapped but did not contain the requested file - i.e. an incomplete
-    // (streaming/Steam) install. UI can surface this to suggest running Guild Wars with -image.
     static bool MissingDatData();
 
 private:
@@ -90,7 +106,7 @@ private:
     bool AcquireMappingInto(void*& mapping, long long& size);
     bool ParseFrom(void* mapping, long long size, std::vector<MftEntry>& slots,
                    std::unordered_map<uint32_t, int>& fileid_to_slot); // header + MFT + hash list -> temporaries
-    bool ReadRaw(uint32_t file_id, uint32_t stream_id, std::vector<uint8_t>& input, bool& compressed, bool& file_known);
+    bool ReadRaw(uint32_t file_id, uint32_t stream_id, std::vector<uint8_t>& input, bool& compressed, bool& file_known, bool& payload_missing);
 
     std::mutex m_load_mutex;                        // serialises the one-time ParseIndex
     std::atomic<bool> m_loaded{false};

@@ -1,4 +1,5 @@
 #include <cstdint>
+#include <array>
 #include <cstdio>
 #include <cstring>
 #include <memory.h>
@@ -767,4 +768,161 @@ void UnpackGWDat(unsigned char* input, int insize, unsigned char*& output, int& 
 {
     Decompress d;
     output = d.DecompressFile((unsigned int*)input, insize, outsize);
+}
+
+namespace {
+    struct FileBits {
+        std::span<const uint8_t> input;
+        size_t position = 0;
+        bool valid = true;
+
+        uint32_t Word(size_t offset) const
+        {
+            uint32_t value = 0;
+            if (offset < input.size())
+                memcpy(&value, input.data() + offset, sizeof(value));
+            return value;
+        }
+
+        uint32_t Peek(uint32_t count) const
+        {
+            const auto offset = position / 32 * 4;
+            const auto pair = (static_cast<uint64_t>(Word(offset)) << 32) | Word(offset + 4);
+            return static_cast<uint32_t>((pair << (position % 32)) >> (64 - count));
+        }
+
+        uint32_t Read(uint32_t count)
+        {
+            const auto value = Peek(count);
+            position += count;
+            valid = valid && position <= input.size() * 8 + 32;
+            return value;
+        }
+    };
+
+    struct FileCodes {
+        std::array<int64_t, 32> first{};
+        std::array<size_t, 32> start{}, count{};
+        std::array<uint32_t, 288> values{};
+
+        bool Build(FileBits& bits)
+        {
+            constexpr auto unused = uint32_t{0xffffffff};
+            std::array<uint32_t, 32> roots;
+            roots.fill(unused);
+            std::array<uint32_t, 288> follows{};
+            const auto symbols = bits.Read(16);
+            if (!symbols || symbols > follows.size())
+                return false;
+            auto symbol = static_cast<int32_t>(symbols) - 1;
+            size_t total = 0;
+            while (symbol >= 0 && bits.valid) {
+                const auto value = bits.Peek(32);
+                size_t entry = 0;
+                while (entry < 14 && Table1[entry * 2] > value)
+                    ++entry;
+                if (entry == 14)
+                    return false;
+                const auto length = static_cast<uint32_t>(entry) + 3;
+                const auto index = static_cast<int64_t>(Table1[entry * 2 + 1]) - ((value - Table1[entry * 2]) >> (32 - length));
+                if (index < 0 || index >= 256)
+                    return false;
+                bits.Read(length);
+                const auto packed = Table2[index];
+                const auto code_length = packed & 31;
+                const auto run = static_cast<uint32_t>((packed >> 5) + 1);
+                if (run > static_cast<uint32_t>(symbol + 1))
+                    return false;
+                if (code_length || symbols == 1) {
+                    total += run;
+                    for (uint32_t i = 0; i < run; ++i) {
+                        follows[symbol] = roots[code_length];
+                        roots[code_length] = static_cast<uint32_t>(symbol--);
+                    }
+                }
+                else {
+                    symbol -= static_cast<int32_t>(run);
+                }
+            }
+            if (!bits.valid)
+                return false;
+            if (!total) {
+                follows[symbols - 1] = unused;
+                roots[0] = symbols - 1;
+            }
+            int64_t code = 0;
+            size_t used = 0;
+            for (size_t length = 0; length < roots.size(); ++length) {
+                first[length] = code;
+                start[length] = used;
+                for (auto current = roots[length]; current != unused; current = follows[current]) {
+                    if (current >= symbols || used >= values.size() || code < 0)
+                        return false;
+                    values[used++] = current;
+                    --code;
+                }
+                count[length] = used - start[length];
+                code = code * 2 + 1;
+            }
+            return used != 0;
+        }
+
+        bool Read(FileBits& bits, uint32_t& value) const
+        {
+            if (count[0]) {
+                value = values[0];
+                return bits.valid;
+            }
+            const auto lookahead = bits.Peek(32);
+            for (uint32_t length = 1; length < 32; ++length) {
+                const auto index = first[length] - (lookahead >> (32 - length));
+                if (index < 0 || static_cast<uint64_t>(index) >= count[length])
+                    continue;
+                value = values[start[length] + static_cast<size_t>(index)];
+                bits.Read(length);
+                return bits.valid;
+            }
+            return false;
+        }
+    };
+}
+
+bool UnpackGWFile(std::span<const uint8_t> input, std::span<uint8_t> output, std::stop_token stop)
+{
+    if (input.size() < 8 || input.size() % 4 || output.empty())
+        return false;
+    auto bits = FileBits{input};
+    bits.Read(4);
+    const auto length_bias = bits.Read(4) + 1;
+    size_t written = 0;
+    while (written < output.size() && !stop.stop_requested()) {
+        FileCodes literals, distances;
+        if (!literals.Build(bits) || !distances.Build(bits))
+            return false;
+        const auto block_size = (bits.Read(4) + 1) * 4096;
+        for (uint32_t i = 0; i < block_size && written < output.size(); ++i) {
+            uint32_t symbol;
+            if (!literals.Read(bits, symbol))
+                return false;
+            if (symbol < 256) {
+                output[written++] = static_cast<uint8_t>(symbol);
+                continue;
+            }
+            if (symbol > 284)
+                return false;
+            const auto extra_length = Table4[symbol];
+            const auto length = length_bias + (Table3[symbol] | (extra_length ? bits.Read(extra_length) : 0));
+            if (!distances.Read(bits, symbol) || symbol >= 32)
+                return false;
+            const auto extra_distance = Table5[symbol];
+            const auto distance = Table6[symbol] | (extra_distance ? bits.Read(extra_distance) : 0);
+            if (!bits.valid || distance >= written || length > output.size() - written)
+                return false;
+            for (uint32_t j = 0; j < length; ++j) {
+                output[written] = output[written - distance - 1];
+                ++written;
+            }
+        }
+    }
+    return written == output.size() && !stop.stop_requested();
 }

@@ -57,15 +57,19 @@ namespace ArenaNetFileParser {
     }
     const Chunk* ArenaNetFile::FindChunk(ChunkType chunk_type)
     {
-        if (!isValid()) return nullptr;
+        return FindChunk(data, chunk_type);
+    }
+    const Chunk* ArenaNetFile::FindChunk(std::span<const uint8_t> bytes, ChunkType chunk_type)
+    {
+        if (bytes.size() < 5 || memcmp(bytes.data(), "ffna", 4)) return nullptr;
         size_t offset = 5;
-        while (offset + 8 <= data_size) {
-            const auto chunk = (Chunk*)&data[offset];
-            if (chunk->chunk_id == chunk_type)
-                return chunk;
-            const uint64_t next = static_cast<uint64_t>(offset) + chunk->chunk_size + 8ull;
-            if (next > data_size) break;
-            offset = static_cast<size_t>(next);
+        while (bytes.size() - offset >= sizeof(Chunk)) {
+            Chunk header;
+            memcpy(&header, bytes.data() + offset, sizeof(header));
+            if (header.chunk_size > bytes.size() - offset - sizeof(Chunk)) return nullptr;
+            if (header.chunk_id == chunk_type)
+                return reinterpret_cast<const Chunk*>(bytes.data() + offset);
+            offset += sizeof(Chunk) + header.chunk_size;
         }
         return nullptr;
     }
