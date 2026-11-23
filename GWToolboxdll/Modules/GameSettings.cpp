@@ -1621,10 +1621,9 @@ void GameSettings::MessageOnPartyChange()
 void GameSettings::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
     AgentAppearanceWindow::ResetAppearanceSettings();
-    AgentAppearanceWindow::LoadLegacyAppearanceDefaults(doc, legacy);
     ToolboxModule::LoadSettings(doc, legacy);
     doc.GetStruct(Name(), settings);
-    AgentAppearanceWindow::LoadCustomAgents(doc, legacy);
+    AgentAppearanceWindow::LoadCustomAgents(doc);
 
     for (const auto& [key, chan] : channel_color_settings)
         LoadChannelColor(doc, legacy, Name(), key, chan);

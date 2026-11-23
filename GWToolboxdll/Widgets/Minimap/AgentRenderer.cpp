@@ -104,7 +104,7 @@ void AgentRenderer::Render(IDirect3DDevice9* device)
         if (AgentAppearanceWindow::show_props_on_minimap) {
             const auto& props = GW::GetMapContext()->props->propArray;
             for (size_t i = 0; i < props.size(); ++i) {
-                Enqueue(AgentAppearanceWindow::default_shape, props[i], AgentAppearanceWindow::GetBaseSize(), AgentAppearanceWindow::color_default);
+                Enqueue(AgentAppearanceWindow::GetDefaultShape(), props[i], AgentAppearanceWindow::GetBaseSize(), AgentAppearanceWindow::GetDefaultColor());
             }
         }
         auto* agents = GW::Agents::GetAgentArray();
@@ -202,7 +202,7 @@ void AgentRenderer::Enqueue(const Shape_e shape, const GW::Agent* agent, const f
             Enqueue(shape, pos, size + border_thickness, border_color);
         }
     }
-    Enqueue(shape, pos, size, color, AgentAppearanceWindow::color_agent_modifier);
+    Enqueue(shape, pos, size, color, AgentAppearanceWindow::GetAgentModifierColor());
 }
 
 void AgentRenderer::Enqueue(const Shape_e shape, const GW::MapProp* agent, const float size, const Color color)
