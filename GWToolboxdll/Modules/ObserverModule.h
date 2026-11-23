@@ -391,8 +391,6 @@ public:
         
         uint32_t last_resurrector = NO_AGENT;
 
-        // TODO: last_hit_at to limit the kill window
-
         bool is_player;
         bool is_npc;
 
@@ -439,7 +437,7 @@ public:
         uint32_t faction; // 0 - kurz, 1 - lux
         uint32_t faction_point;
         uint32_t qualifier_point;
-        uint32_t cape_trim; // TODO: which is gold (1)?
+        uint32_t cape_trim;
     };
 
     // Represents a skill in an ObserverMode
@@ -536,8 +534,6 @@ public:
         wchar_t description_enc[8]{};
     };
 
-    // TODO: push this to GWCA
-    // applies to skill.target
     enum class TargetType {
         no_target = 0,
         anyone    = 1,
@@ -579,32 +575,18 @@ public:
     ObservableSkill* GetObservableSkillById(GW::Constants::SkillID skill_id);
     ObservableParty* GetObservablePartyById(uint32_t party_id);
 
-    ObservableMap* GetMap() const { return map; }
-    const std::vector<uint32_t>& GetObservableGuildIds() { return observable_guild_ids; }
-    const std::vector<uint32_t>& GetObservableAgentIds() { return observable_agent_ids; }
-    const std::vector<uint32_t>& GetObservablePartyIds() { return observable_party_ids; }
-    const std::vector<GW::Constants::SkillID>& GetObservableSkillIds() { return observable_skill_ids; }
-    const std::unordered_map<uint32_t, ObservableGuild*>& GetObservableGuilds() { return observable_guilds; }
-    const std::unordered_map<uint32_t, ObservableAgent*>& GetObservableAgents() { return observable_agents; }
-    const std::unordered_map<uint32_t, ObservableParty*>& GetObservableParties() { return observable_parties; }
-    const std::unordered_map<GW::Constants::SkillID, ObservableSkill*>& GetObservableSkills() { return observable_skills; }
-
-    // Get cached max HP for an agent (actively fetches and caches if not already cached)
-    uint32_t GetCachedMaxHP(uint32_t agent_id) {
-        return GetOrCacheMaxHP(agent_id);
-    }
-
-    // Get cached energy for an agent (returns 0 if not cached)
-    uint32_t GetCachedEnergy(uint32_t agent_id) const {
-        auto it = agent_cur_energy_cache.find(agent_id);
-        return (it != agent_cur_energy_cache.end()) ? it->second : 0;
-    }
-
-    // Get cached max energy for an agent (returns 0 if not cached)
-    uint32_t GetCachedMaxEnergy(uint32_t agent_id) const {
-        auto it = agent_max_energy_cache.find(agent_id);
-        return (it != agent_max_energy_cache.end()) ? it->second : 0;
-    }
+    ObservableMap* GetMap() const;
+    const std::vector<uint32_t>& GetObservableGuildIds();
+    const std::vector<uint32_t>& GetObservableAgentIds();
+    const std::vector<uint32_t>& GetObservablePartyIds();
+    const std::vector<GW::Constants::SkillID>& GetObservableSkillIds();
+    const std::unordered_map<uint32_t, ObservableGuild*>& GetObservableGuilds();
+    const std::unordered_map<uint32_t, ObservableAgent*>& GetObservableAgents();
+    const std::unordered_map<uint32_t, ObservableParty*>& GetObservableParties();
+    const std::unordered_map<GW::Constants::SkillID, ObservableSkill*>& GetObservableSkills();
+    uint32_t GetCachedMaxHP(uint32_t agent_id);
+    uint32_t GetCachedEnergy(uint32_t agent_id) const;
+    uint32_t GetCachedMaxEnergy(uint32_t agent_id) const;
 
     bool match_finished = false;
     uint32_t winning_party_id = NO_PARTY;
@@ -616,111 +598,4 @@ public:
     std::chrono::seconds match_duration_secs{};
     std::chrono::minutes match_duration_mins{};
 
-private:
-    ObservableGuild* CreateObservableGuild(const GW::Guild& guild);
-    ObservableAgent* CreateObservableAgent(const GW::AgentLiving& agent_living);
-    ObservableSkill* CreateObservableSkill(const GW::Skill& gw_skill);
-    ObservableParty* CreateObservableParty(const GW::PartyInfo& party_info);
-    ObservableParty* GetObservablePartyByPartyInfo(const GW::PartyInfo& party_info);
-
-    clock_t party_sync_timer = 0;
-    clock_t health_snapshot_timer = 0;
-
-    // can be force enabled in non-explorable explorable areas
-
-    bool observer_session_initialized = false;
-    bool is_observer = false;
-    bool is_explorable = false;
-    GW::Constants::MapID observed_map_id = static_cast<GW::Constants::MapID>(0); // Map ID from InstanceLoadInfo packet (actual match map in observer mode)
-
-    // packet handlers
-
-    void HandleInstanceLoadInfo(const GW::HookStatus* status, const GW::Packet::StoC::InstanceLoadInfo* packet);
-    void HandleJumboMessage(uint8_t type, uint32_t value);
-    void HandleAgentProjectileLaunched(const GW::Packet::StoC::AgentProjectileLaunched* packet);
-
-    // generic handlers
-
-    void HandleInterrupted(uint32_t agent_id);
-    void HandleKnockedDown(uint32_t agent_id, float duration);
-    void HandleAgentState(uint32_t agent_id, uint32_t state);
-    void HandleDamageDone(uint32_t caster_id, uint32_t target_id, float amount_pc, bool is_crit);
-    void HandleHealingDone(uint32_t caster_id, uint32_t target_id, float amount_pc);
-    void HandleAgentAdd(uint32_t agent_id);
-
-    uint32_t GetOrCacheMaxHP(uint32_t agent_id);
-
-    void HandleAttackFinished(uint32_t agent_id);
-    void HandleAttackStopped(uint32_t agent_id);
-    void HandleAttackStarted(uint32_t caster_id, uint32_t target_id);
-
-    void HandleInstantSkillActivated(uint32_t caster_id, uint32_t target_id, GW::Constants::SkillID skill_id);
-
-    void HandleAttackSkillFinished(uint32_t agent_id);
-    void HandleAttackSkillStarted(uint32_t caster_id, uint32_t target_id, GW::Constants::SkillID skill_id);
-
-    void HandleSkillFinished(uint32_t agent_id);
-    void HandleSkillCancelled(uint32_t agent_id);
-    void HandleSkillActivated(uint32_t caster_id, uint32_t target_id, GW::Constants::SkillID skill_id);
-
-    void HandleGenericPacket(uint32_t value_id, uint32_t caster_id,
-                             uint32_t target_id, float value, bool no_target);
-
-    void HandleGenericPacket(uint32_t value_id, uint32_t caster_id,
-                             uint32_t target_id, uint32_t value, bool no_target);
-
-    // Update the state of the module based on an Action & Stage
-    // return false means action was not assigned and may need freeing by the caller
-    bool ReduceAction(ObservableAgent* caster, ActionStage stage, TargetAction* new_action = nullptr);
-
-    // Get hardcoded max HP for known NPCs (e.g., GvG NPCs) based on sanitized name
-    // Returns 0 if not a known NPC type
-    uint32_t GetNPCMaxHP(uint32_t agent_id);
-
-    // Cache for agent max HP (used for damage calculation in observer mode)
-    // Populated opportunistically whenever we observe an agent
-    std::unordered_map<uint32_t, uint32_t> agent_max_hp_cache = {};
-    
-    // Cache for agent current and max energy
-    // Populated opportunistically whenever we observe an agent
-    std::unordered_map<uint32_t, uint32_t> agent_cur_energy_cache = {};
-    std::unordered_map<uint32_t, uint32_t> agent_max_energy_cache = {};
-
-    static uint32_t JumboMessageValueToPartyId(uint32_t value);
-    void HandleMoraleBoost(ObservableParty* boosting_party);
-    void HandleShrineCapture(ObservableParty* capturing_party);
-    void HandleTowerCapture(ObservableParty* capturing_party);
-    void HandleVictory(ObservableParty* winning_party);
-
-    ObservableMap* map{};
-
-    // lazy loaded observed guilds
-    std::unordered_map<uint32_t, ObservableGuild*> observable_guilds = {};
-    std::vector<uint32_t> observable_guild_ids = {};
-
-    // lazy loaded observed agents
-    std::unordered_map<uint32_t, ObservableAgent*> observable_agents = {};
-    std::vector<uint32_t> observable_agent_ids = {};
-
-    // lazy loaded observed skills
-    std::unordered_map<GW::Constants::SkillID, ObservableSkill*> observable_skills = {};
-    std::vector<GW::Constants::SkillID> observable_skill_ids = {};
-
-    // lazy loaded observed parties
-    std::unordered_map<uint32_t, ObservableParty*> observable_parties = {};
-    std::vector<uint32_t> observable_party_ids = {};
-
-    bool SynchroniseParties();
-
-    // hooks
-    GW::HookEntry JumboMessage_Entry;
-    GW::HookEntry InstanceLoadInfo_Entry;
-    GW::HookEntry CountdownStart_Entry;
-    GW::HookEntry AgentState_Entry;
-    GW::HookEntry AgentAdd_Entry;
-    GW::HookEntry AgentProjectileLaunched_Entry;
-    GW::HookEntry GenericModifier_Entry;
-    GW::HookEntry GenericValueTarget_Entry;
-    GW::HookEntry GenericValue_Entry;
-    GW::HookEntry GenericFloat_Entry;
 };
