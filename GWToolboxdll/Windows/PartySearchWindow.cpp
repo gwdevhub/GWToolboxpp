@@ -29,6 +29,8 @@
 #include <Windows/PartySearchWindow.h>
 
 #include <GWToolbox.h>
+#include <CircurlarBuffer.h>
+#include <Utils/RateLimiter.h>
 #include <Utils/TextUtils.h>
 #include <Utils/ToolboxUtils.h>
 
@@ -157,99 +159,442 @@ namespace {
     }
 }
 
-uint32_t PartySearchWindow::TBParty::IdFromRegionParty(const uint32_t party_id)
-{
-#pragma warning (push)
-#pragma warning (disable: 4244)
-    return static_cast<uint32_t>(static_cast<uint16_t>(0) << 16 | static_cast<uint16_t>(party_id));
-#pragma warning (pop)
-}
+namespace {
 
-uint32_t PartySearchWindow::TBParty::IdFromLocalParty(const uint32_t party_id)
-{
-#pragma warning (push)
-#pragma warning (disable: 4244)
-    return static_cast<uint32_t>(static_cast<uint16_t>(party_id) << 16);
-#pragma warning (pop)
-}
+    struct Message {
+    uint32_t timestamp = 0;
+    std::string name;
+    std::string message;
+    };
 
-bool PartySearchWindow::TBParty::FromRegionParty(const GW::PartySearch* party)
-{
-#pragma warning (push)
-#pragma warning (disable: 4244)
-    if (!party) {
-        return false;
+    struct TBParty {
+    TBParty()
+    {
+        message[0] = 0;
+        player_name[0] = 0;
     }
-    concat_party_id = IdFromRegionParty(party->party_search_id);
-    party_size = party->party_size;
-    hero_count = party->hero_count;
-    search_type = party->party_search_type;
-    is_hard_mode = party->hardmode;
-    map_id = static_cast<uint16_t>(GW::Map::GetMapID());
-    district = party->district;
-    language = static_cast<uint8_t>(party->language);
-    region_id = static_cast<uint8_t>(GW::Map::GetRegion());
-    message = TextUtils::WStringToString(party->message);
-    primary = party->primary;
-    secondary = party->secondary;
-    player_name = TextUtils::WStringToString(party->party_leader);
-    Log::Log("Party %d updated\n", concat_party_id);
-    return true;
-#pragma warning (pop)
-}
 
-bool PartySearchWindow::TBParty::FromPlayerInMap(const GW::Player* player)
-{
-#pragma warning (push)
-#pragma warning (disable: 4244)
-    if (!player || player->party_size < 2) {
-        return false;
-    }
-    const GW::AgentLiving* agent = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(player->agent_id));
-    if (!agent || !agent->GetIsLivingType() || !agent->IsPlayer()) {
-        return false;
-    }
-    party_size = player->party_size;
-    // TODO: Can we find out if the party is HM?
-    map_id = static_cast<uint16_t>(GW::Map::GetMapID());
-    district = GW::Map::GetDistrict();
-    language = static_cast<uint8_t>(GW::Map::GetLanguage());
-    region_id = static_cast<uint8_t>(GW::Map::GetRegion());
-    primary = player->primary;
-    secondary = player->secondary;
-    player_name = TextUtils::WStringToString(player->name);
-    Log::Log("Party %d updated\n", concat_party_id);
-    return true;
-#pragma warning (pop)
-}
+    static uint32_t IdFromRegionParty(uint32_t party_id);
+    static uint32_t IdFromLocalParty(uint32_t party_id);
+    bool FromRegionParty(const GW::PartySearch*);
+    bool FromLocalParty(GW::PartyInfo*);
+    bool FromPlayerInMap(const GW::Player* player);
+    uint32_t concat_party_id = 0;
+    uint32_t player_id = 0;
+    uint8_t party_size = 0;
+    uint8_t hero_count = 0;
+    uint8_t search_type = 5;
+    uint8_t is_hard_mode = 0;
+    uint16_t map_id = 0;
+    int8_t region_id = 0;
+    int8_t district = 0;
+    int8_t language = 0;
+    uint8_t primary = 0;
+    uint8_t secondary = 0;
+    std::string message;
+    std::string player_name;
+    };
 
-bool PartySearchWindow::TBParty::FromLocalParty(GW::PartyInfo* party)
-{
-#pragma warning (push)
-#pragma warning (disable: 4244)
-    if (!party) {
+    constexpr auto ALERT_BUF_SIZE = 1024 * 16;
+    GW::HookEntry OnMessageLocal_Entry;
+    std::unordered_map<std::wstring, TBParty*> party_advertisements;
+    WSAData wsaData = {};
+    bool show_alert_window = false;
+    std::recursive_mutex party_mutex;
+    bool collapsed = false;
+    char alert_buf[ALERT_BUF_SIZE]{};
+    bool alertfile_dirty = false;
+    char search_buffer[256] = {};
+    std::vector<TextUtils::SearchPattern<char>> alert_words;
+    std::vector<std::string> searched_words;
+    std::queue<std::function<void()>> thread_jobs;
+    bool should_stop = false;
+    std::thread worker;
+    bool ws_window_connecting = false;
+    clock_t refresh_parties = 0;
+    bool display_party_types[6] = {true, true, true, false, true, true};
+    bool ignore_party_types[6] = {};
+    uint32_t max_party_size = 0;
+    easywsclient::WebSocket* ws_window = nullptr;
+    RateLimiter window_rate_limiter;
+    CircularBuffer<Message> messages;
+
+    uint32_t TBParty::IdFromRegionParty(const uint32_t party_id)
+    {
+    #pragma warning (push)
+    #pragma warning (disable: 4244)
+        return static_cast<uint32_t>(static_cast<uint16_t>(0) << 16 | static_cast<uint16_t>(party_id));
+    #pragma warning (pop)
+    }
+
+    uint32_t TBParty::IdFromLocalParty(const uint32_t party_id)
+    {
+    #pragma warning (push)
+    #pragma warning (disable: 4244)
+        return static_cast<uint32_t>(static_cast<uint16_t>(party_id) << 16);
+    #pragma warning (pop)
+    }
+
+    bool TBParty::FromRegionParty(const GW::PartySearch* party)
+    {
+    #pragma warning (push)
+    #pragma warning (disable: 4244)
+        if (!party) {
+            return false;
+        }
+        concat_party_id = IdFromRegionParty(party->party_search_id);
+        party_size = party->party_size;
+        hero_count = party->hero_count;
+        search_type = party->party_search_type;
+        is_hard_mode = party->hardmode;
+        map_id = static_cast<uint16_t>(GW::Map::GetMapID());
+        district = party->district;
+        language = static_cast<uint8_t>(party->language);
+        region_id = static_cast<uint8_t>(GW::Map::GetRegion());
+        message = TextUtils::WStringToString(party->message);
+        primary = party->primary;
+        secondary = party->secondary;
+        player_name = TextUtils::WStringToString(party->party_leader);
+        Log::Log("Party %d updated\n", concat_party_id);
+        return true;
+    #pragma warning (pop)
+    }
+
+    bool TBParty::FromPlayerInMap(const GW::Player* player)
+    {
+    #pragma warning (push)
+    #pragma warning (disable: 4244)
+        if (!player || player->party_size < 2) {
+            return false;
+        }
+        const GW::AgentLiving* agent = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(player->agent_id));
+        if (!agent || !agent->GetIsLivingType() || !agent->IsPlayer()) {
+            return false;
+        }
+        party_size = player->party_size;
+        map_id = static_cast<uint16_t>(GW::Map::GetMapID());
+        district = GW::Map::GetDistrict();
+        language = static_cast<uint8_t>(GW::Map::GetLanguage());
+        region_id = static_cast<uint8_t>(GW::Map::GetRegion());
+        primary = player->primary;
+        secondary = player->secondary;
+        player_name = TextUtils::WStringToString(player->name);
+        Log::Log("Party %d updated\n", concat_party_id);
+        return true;
+    #pragma warning (pop)
+    }
+
+    bool TBParty::FromLocalParty(GW::PartyInfo* party)
+    {
+    #pragma warning (push)
+    #pragma warning (disable: 4244)
+        if (!party) {
+            return false;
+        }
+        const GW::Player* player = GetPartyLeader(party);
+        if (!player) {
+            return false;
+        }
+        concat_party_id = IdFromLocalParty(party->party_id);
+        hero_count = party->heroes.valid() ? party->heroes.size() : 0;
+        hero_count += party->henchmen.valid() ? party->henchmen.size() : 0;
+        party_size = party->players.valid() ? party->players.size() : 0;
+        party_size += hero_count;
+        map_id = static_cast<uint16_t>(GW::Map::GetMapID());
+        district = GW::Map::GetDistrict();
+        language = static_cast<uint8_t>(GW::Map::GetLanguage());
+        region_id = static_cast<uint8_t>(GW::Map::GetRegion());
+        primary = player->primary;
+        secondary = player->secondary;
+        player_name = TextUtils::WStringToString(player->name);
+        Log::Log("Party %d updated\n", concat_party_id);
+        return true;
+    #pragma warning (pop)
+    }
+
+    void ClearParties()
+    {
+        for (const auto& advertisement : party_advertisements | std::views::values) {
+            delete advertisement;
+        }
+        party_advertisements.clear();
+    }
+
+    TBParty* GetParty(const uint32_t party_id, wchar_t** leader_out = nullptr)
+    {
+        for (const auto& party : party_advertisements) {
+            if (!party.second) {
+                continue;
+            }
+            if (party.second->concat_party_id == party_id) {
+                if (leader_out != nullptr) {
+                    *leader_out = (wchar_t*)party.first.data();
+                }
+                return party.second;
+            }
+        }
+        return nullptr;
+    }
+
+    TBParty* GetPartyByName(const std::wstring& leader)
+    {
+        const auto it = party_advertisements.find(leader);
+        if (it == party_advertisements.end()) {
+            return nullptr;
+        }
+        return it->second;
+    }
+
+    void OnRegionPartyUpdated(GW::HookStatus*, GW::Packet::StoC::PacketBase* packet)
+    {
+        const std::scoped_lock lock(party_mutex);
+
+        // Unless pigs fly and district/party numbers go over 16 byte length, storing party_ids as uint16_t is fine.
+        wchar_t* party_name = nullptr;
+        uint32_t party_id;
+        TBParty* party = nullptr;
+        switch (packet->header) {
+            case GAME_SMSG_PARTY_SEARCH_TYPE:
+            case GAME_SMSG_PARTY_SEARCH_REMOVE:
+            case GAME_SMSG_PARTY_SEARCH_SIZE:
+            case GAME_SMSG_PARTY_SEARCH_ADVERTISEMENT: {
+                const uint32_t this_party_id = *(&packet->header + 1);
+                party_id = TBParty::IdFromRegionParty(this_party_id);
+                party = GetParty(party_id, &party_name);
+                GW::PartySearch* region_party = GetRegionParty(this_party_id);
+                if (region_party) {
+                    if (!party) {
+                        party = new TBParty();
+                    }
+                    if (!party->FromRegionParty(region_party)) {
+                        region_party = nullptr;
+                    }
+                    else {
+                        party_name = region_party->party_leader;
+                    }
+                }
+                if (!region_party) {
+                    delete party;
+                    party = nullptr;
+                }
+            }
+            break;
+            case GAME_SMSG_AGENT_DESTROY_PLAYER: {
+                const uint32_t player_id = *(&packet->header + 1);
+                const GW::Player* player = GW::PlayerMgr::GetPlayerByID(player_id);
+                if (!player || !player->name) {
+                    break;
+                }
+                party_name = player->name;
+                party = GetPartyByName(player->name);
+                if (party) {
+                    delete party;
+                    party = nullptr;
+                }
+            }
+            break;
+            case GAME_SMSG_UPDATE_AGENT_PARTYSIZE: {
+                const uint32_t player_id = *(&packet->header + 1);
+                const GW::Player* player = GW::PlayerMgr::GetPlayerByID(player_id);
+                if (!player || !player->name) {
+                    break;
+                }
+                party_name = player->name;
+                party = GetPartyByName(player->name);
+                if (!party) {
+                    party = new TBParty();
+                }
+                if (!party->FromPlayerInMap(player)) {
+                    delete party;
+                    party = nullptr;
+                }
+            }
+            break;
+            case GAME_SMSG_PARTY_PLAYER_ADD:
+                // Redirect back around to the above case to remove the previous player's party listing.
+                packet->header = GAME_SMSG_UPDATE_AGENT_PARTYSIZE;
+                OnRegionPartyUpdated(nullptr, packet);
+                packet->header = GAME_SMSG_PARTY_PLAYER_ADD;
+            case GAME_SMSG_PARTY_PLAYER_REMOVE:
+            case GAME_SMSG_PARTY_HENCHMAN_ADD:
+            case GAME_SMSG_PARTY_HENCHMAN_REMOVE:
+            case GAME_SMSG_PARTY_HERO_ADD:
+            case GAME_SMSG_PARTY_HERO_REMOVE:
+            case GAME_SMSG_PARTY_MEMBER_STREAM_END: {
+                const uint32_t this_party_id = *(&packet->header + 1);
+                party_id = TBParty::IdFromLocalParty(this_party_id);
+                party = GetParty(party_id, &party_name);
+                GW::PartyInfo* local_party = GetLocalParty(this_party_id);
+                if (local_party) {
+                    if (!party) {
+                        party = new TBParty();
+                    }
+                    if (!party->FromLocalParty(local_party)) {
+                        local_party = nullptr;
+                    }
+                    else {
+                        party_name = GetPartyLeader(local_party)->name;
+                    }
+                }
+                if (!local_party) {
+                    delete party;
+                    party = nullptr;
+                }
+            }
+            break;
+        }
+        if (party_name) {
+            party_advertisements[party_name] = party;
+            if (!party) {
+                party_advertisements.erase(party_name);
+            }
+        }
+    }
+
+    void FillParties()
+    {
+        ClearParties();
+        struct FakePacket : GW::Packet::StoC::PacketBase {
+            uint32_t id;
+        } packet;
+        packet.header = GAME_SMSG_UPDATE_AGENT_PARTYSIZE;
+        const GW::PlayerArray* players = GW::PlayerMgr::GetPlayerArray();
+        for (size_t i = 0; players && i < players->size(); i++) {
+            packet.id = i;
+            OnRegionPartyUpdated(nullptr, &packet);
+        }
+        const GW::GameContext* g = GW::GetGameContext();
+        if (!g || !g->party) {
+            return;
+        }
+        packet.header = GAME_SMSG_PARTY_PLAYER_ADD;
+        auto& local_parties = g->party->parties;
+        for (size_t i = 0; local_parties.valid() && i < local_parties.size(); i++) {
+            const GW::PartyInfo* party = local_parties[i];
+            if (!party) {
+                continue;
+            }
+            packet.id = party->party_id;
+            OnRegionPartyUpdated(nullptr, &packet);
+        }
+        packet.header = GAME_SMSG_PARTY_SEARCH_ADVERTISEMENT;
+        auto& region_parties = g->party->party_search;
+        for (size_t i = 0; region_parties.valid() && i < region_parties.size(); i++) {
+            const auto* party = region_parties[i];
+            if (!party) {
+                continue;
+            }
+            packet.id = party->party_search_id;
+            OnRegionPartyUpdated(nullptr, &packet);
+        }
+    }
+
+    bool parse_json_message(const std::string& data, Message* msg)
+    {
+        lfg_api::RawMessage raw{};
+        if (auto ec = glz::read<json_opts>(raw, data); ec) {
+            return false;
+        }
+        if (raw.s.empty() || raw.m.empty() || raw.t <= 0.0) {
+            return false;
+        }
+        msg->name = std::move(raw.s);
+        msg->message = std::move(raw.m);
+        msg->timestamp = static_cast<uint32_t>(raw.t / 1000.0); // Messy?
+        return true;
+    }
+
+    bool IsLfpAlert(std::string& message)
+    {
+        if (!settings.filter_alerts) {
+            return true;
+        }
+        // A word wrapped in slashes is a regex, anything else a case-insensitive substring.
+        for (const auto& word : alert_words) {
+            if (word.Matches(message)) {
+                return true;
+            }
+        }
         return false;
     }
-    const GW::Player* player = GetPartyLeader(party);
-    if (!player) {
-        return false;
+
+    void fetch()
+    {
+        if (!ws_window || ws_window->getReadyState() != WebSocket::OPEN) {
+            return;
+        }
+
+        ws_window->dispatch([](const std::string& data) {
+            Message msg;
+            if (!parse_json_message(data, &msg)) {
+                return; // Not valid message object
+            }
+            messages.add(msg);
+
+            // do not display trade chat while in kamadan AE district 1
+            const bool print_message = settings.print_game_chat && IsLfpAlert(msg.message);
+
+            if (print_message) {
+                wchar_t buffer[512];
+                const std::wstring name_ws = TextUtils::StringToWString(msg.name);
+                const std::wstring msg_ws = TextUtils::StringToWString(msg.message);
+                swprintf(buffer, 512, L"<a=1>%ls</a>: <c=#f96677><quote>%ls", name_ws.c_str(), msg_ws.c_str());
+                WriteChat(GW::Chat::Channel::CHANNEL_TRADE, buffer);
+            }
+        });
     }
-    concat_party_id = IdFromLocalParty(party->party_id);
-    hero_count = party->heroes.valid() ? party->heroes.size() : 0;
-    hero_count += party->henchmen.valid() ? party->henchmen.size() : 0;
-    party_size = party->players.valid() ? party->players.size() : 0;
-    party_size += hero_count;
-    // TODO: Can we find out if the party is HM?
-    map_id = static_cast<uint16_t>(GW::Map::GetMapID());
-    district = GW::Map::GetDistrict();
-    language = static_cast<uint8_t>(GW::Map::GetLanguage());
-    region_id = static_cast<uint8_t>(GW::Map::GetRegion());
-    primary = player->primary;
-    secondary = player->secondary;
-    player_name = TextUtils::WStringToString(player->name);
-    Log::Log("Party %d updated\n", concat_party_id);
-    return true;
-#pragma warning (pop)
+
+    void DrawAlertsWindowContent(bool)
+    {
+        ImGui::Text("Alerts");
+        ImGui::CheckboxWithHelp("Send party advertisements to your trade chat", &settings.print_game_chat, "Only when trade chat channel is visible in-game");
+        ImGui::Checkbox("Only show messages containing:", &settings.filter_alerts);
+        ImGui::TextDisabled("(Each line is a separate keyword. Not case sensitive.)");
+        if (ImGui::InputTextMultiline("##alertfilter", alert_buf, ALERT_BUF_SIZE,
+                                      ImVec2(-1.0f, 0.0f))) {
+            alert_words = TextUtils::ParsePatterns<char>(alert_buf);
+            alertfile_dirty = true;
+        }
+    }
+
+    void AsyncWindowConnect(const bool force = false)
+    {
+        if (ws_window) {
+            return;
+        }
+        if (ws_window_connecting) {
+            return;
+        }
+        if (!force && !window_rate_limiter.AddTime(COST_PER_CONNECTION_MS, COST_PER_CONNECTION_MAX_MS)) {
+            return;
+        }
+        int res;
+        if (!wsaData.wVersion && (res = WSAStartup(MAKEWORD(2, 2), &wsaData)) != 0) {
+            printf("Failed to call WSAStartup: %d\n", res);
+            return;
+        }
+        ws_window_connecting = true;
+        thread_jobs.push([] {
+            if ((ws_window = WebSocket::from_url(ws_host)) == nullptr) {
+                printf("Couldn't connect to the host '%s'", ws_host);
+            }
+            ws_window_connecting = false;
+        });
+    }
+
+    void DeleteWebSocket(WebSocket* ws)
+    {
+        if (!ws) {
+            return;
+        }
+        if (ws->getReadyState() == WebSocket::OPEN) {
+            ws->close();
+        }
+        while (ws->getReadyState() != WebSocket::CLOSED) {
+            ws->poll();
+        }
+        delete ws;
+    }
 }
 
 void PartySearchWindow::Initialize()
@@ -277,7 +622,6 @@ void PartySearchWindow::Initialize()
     GW::StoC::RegisterPostPacketCallback(&OnMessageLocal_Entry, GAME_SMSG_PARTY_SEARCH_ADVERTISEMENT, OnRegionPartyUpdated);
     GW::StoC::RegisterPostPacketCallback(&OnMessageLocal_Entry, GAME_SMSG_PARTY_SEARCH_TYPE, OnRegionPartyUpdated);
 
-    //GW::StoC::RegisterPostPacketCallback(&OnMessageLocal_Entry, GAME_SMSG_PARTY_RE, OnRegionPartyUpdated);
     GW::StoC::RegisterPostPacketCallback(&OnMessageLocal_Entry, GAME_SMSG_PARTY_PLAYER_ADD, OnRegionPartyUpdated);
     GW::StoC::RegisterPostPacketCallback(&OnMessageLocal_Entry, GAME_SMSG_PARTY_PLAYER_REMOVE, OnRegionPartyUpdated);
     GW::StoC::RegisterPostPacketCallback(&OnMessageLocal_Entry, GAME_SMSG_PARTY_HENCHMAN_ADD, OnRegionPartyUpdated);
@@ -289,187 +633,9 @@ void PartySearchWindow::Initialize()
     GW::StoC::RegisterPacketCallback(&OnMessageLocal_Entry, GAME_SMSG_AGENT_DESTROY_PLAYER, OnRegionPartyUpdated);
 
     GW::StoC::RegisterPostPacketCallback(&OnMessageLocal_Entry, GAME_SMSG_INSTANCE_LOADED, [](GW::HookStatus*, GW::Packet::StoC::PacketBase*) {
-        Instance().refresh_parties = clock() + 2 * CLOCKS_PER_SEC;
+        refresh_parties = clock() + 2 * CLOCKS_PER_SEC;
     });
     refresh_parties = clock();
-}
-
-void PartySearchWindow::ClearParties()
-{
-    for (const auto& advertisement : party_advertisements | std::views::values) {
-        delete advertisement;
-    }
-    party_advertisements.clear();
-}
-
-void PartySearchWindow::FillParties()
-{
-    ClearParties();
-    struct FakePacket : GW::Packet::StoC::PacketBase {
-        uint32_t id;
-    } packet;
-    packet.header = GAME_SMSG_UPDATE_AGENT_PARTYSIZE;
-    const GW::PlayerArray* players = GW::PlayerMgr::GetPlayerArray();
-    for (size_t i = 0; players && i < players->size(); i++) {
-        packet.id = i;
-        OnRegionPartyUpdated(nullptr, &packet);
-    }
-    const GW::GameContext* g = GW::GetGameContext();
-    if (!g || !g->party) {
-        return;
-    }
-    packet.header = GAME_SMSG_PARTY_PLAYER_ADD;
-    auto& local_parties = g->party->parties;
-    for (size_t i = 0; local_parties.valid() && i < local_parties.size(); i++) {
-        const GW::PartyInfo* party = local_parties[i];
-        if (!party) {
-            continue;
-        }
-        packet.id = party->party_id;
-        OnRegionPartyUpdated(nullptr, &packet);
-    }
-    packet.header = GAME_SMSG_PARTY_SEARCH_ADVERTISEMENT;
-    auto& region_parties = g->party->party_search;
-    for (size_t i = 0; region_parties.valid() && i < region_parties.size(); i++) {
-        const auto* party = region_parties[i];
-        if (!party) {
-            continue;
-        }
-        packet.id = party->party_search_id;
-        OnRegionPartyUpdated(nullptr, &packet);
-    }
-}
-
-PartySearchWindow::TBParty* PartySearchWindow::GetParty(const uint32_t party_id, wchar_t** leader_out) const
-{
-    for (const auto& party : party_advertisements) {
-        if (!party.second) {
-            continue;
-        }
-        if (party.second->concat_party_id == party_id) {
-            if (leader_out != nullptr) {
-                *leader_out = (wchar_t*)party.first.data();
-            }
-            return party.second;
-        }
-    }
-    return nullptr;
-}
-
-PartySearchWindow::TBParty* PartySearchWindow::GetPartyByName(const std::wstring& leader)
-{
-    const auto it = party_advertisements.find(leader);
-    if (it == party_advertisements.end()) {
-        return nullptr;
-    }
-    return it->second;
-}
-
-void PartySearchWindow::OnRegionPartyUpdated(GW::HookStatus*, GW::Packet::StoC::PacketBase* packet)
-{
-    auto& instance = Instance();
-    const std::scoped_lock lock(instance.party_mutex);
-
-    // Unless pigs fly and district/party numbers go over 16 byte length, storing party_ids as uint16_t is fine.
-    wchar_t* party_name = nullptr;
-    uint32_t party_id;
-    TBParty* party = nullptr;
-    switch (packet->header) {
-        case GAME_SMSG_PARTY_SEARCH_TYPE:
-        case GAME_SMSG_PARTY_SEARCH_REMOVE:
-        case GAME_SMSG_PARTY_SEARCH_SIZE:
-        case GAME_SMSG_PARTY_SEARCH_ADVERTISEMENT: {
-            const uint32_t this_party_id = *(&packet->header + 1);
-            party_id = TBParty::IdFromRegionParty(this_party_id);
-            party = instance.GetParty(party_id, &party_name);
-            GW::PartySearch* region_party = GetRegionParty(this_party_id);
-            if (region_party) {
-                if (!party) {
-                    party = new TBParty();
-                }
-                if (!party->FromRegionParty(region_party)) {
-                    region_party = nullptr;
-                }
-                else {
-                    party_name = region_party->party_leader;
-                }
-            }
-            if (!region_party) {
-                delete party;
-                party = nullptr;
-            }
-        }
-        break;
-        case GAME_SMSG_AGENT_DESTROY_PLAYER: {
-            const uint32_t player_id = *(&packet->header + 1);
-            const GW::Player* player = GW::PlayerMgr::GetPlayerByID(player_id);
-            if (!player || !player->name) {
-                break;
-            }
-            party_name = player->name;
-            party = instance.GetPartyByName(player->name);
-            if (party) {
-                delete party;
-                party = nullptr;
-            }
-        }
-        break;
-        case GAME_SMSG_UPDATE_AGENT_PARTYSIZE: {
-            const uint32_t player_id = *(&packet->header + 1);
-            const GW::Player* player = GW::PlayerMgr::GetPlayerByID(player_id);
-            if (!player || !player->name) {
-                break;
-            }
-            party_name = player->name;
-            party = instance.GetPartyByName(player->name);
-            if (!party) {
-                party = new TBParty();
-            }
-            if (!party->FromPlayerInMap(player)) {
-                delete party;
-                party = nullptr;
-            }
-        }
-        break;
-        case GAME_SMSG_PARTY_PLAYER_ADD:
-            // Redirect back around to the above case to remove the previous player's party listing.
-            packet->header = GAME_SMSG_UPDATE_AGENT_PARTYSIZE;
-            OnRegionPartyUpdated(nullptr, packet);
-            packet->header = GAME_SMSG_PARTY_PLAYER_ADD;
-        case GAME_SMSG_PARTY_PLAYER_REMOVE:
-        case GAME_SMSG_PARTY_HENCHMAN_ADD:
-        case GAME_SMSG_PARTY_HENCHMAN_REMOVE:
-        case GAME_SMSG_PARTY_HERO_ADD:
-        case GAME_SMSG_PARTY_HERO_REMOVE:
-        case GAME_SMSG_PARTY_MEMBER_STREAM_END: {
-            const uint32_t this_party_id = *(&packet->header + 1);
-            party_id = TBParty::IdFromLocalParty(this_party_id);
-            party = instance.GetParty(party_id, &party_name);
-            GW::PartyInfo* local_party = GetLocalParty(this_party_id);
-            if (local_party) {
-                if (!party) {
-                    party = new TBParty();
-                }
-                if (!party->FromLocalParty(local_party)) {
-                    local_party = nullptr;
-                }
-                else {
-                    party_name = GetPartyLeader(local_party)->name;
-                }
-            }
-            if (!local_party) {
-                delete party;
-                party = nullptr;
-            }
-        }
-        break;
-    }
-    if (party_name) {
-        instance.party_advertisements[party_name] = party;
-        if (!party) {
-            instance.party_advertisements.erase(party_name);
-        }
-    }
 }
 
 void PartySearchWindow::SignalTerminate()
@@ -507,8 +673,8 @@ void PartySearchWindow::Update(const float)
     }
     fetch();
     if (refresh_parties && clock() > refresh_parties) {
-        Instance().ClearParties();
-        Instance().FillParties();
+        ClearParties();
+        FillParties();
         refresh_parties = 0;
         max_party_size = 0;
     }
@@ -518,61 +684,6 @@ void PartySearchWindow::Update(const float)
             max_party_size = this_map->max_party_size;
         }
     }
-}
-
-bool PartySearchWindow::parse_json_message(const std::string& data, Message* msg)
-{
-    lfg_api::RawMessage raw{};
-    if (auto ec = glz::read<json_opts>(raw, data); ec) {
-        return false;
-    }
-    if (raw.s.empty() || raw.m.empty() || raw.t <= 0.0) {
-        return false;
-    }
-    msg->name = std::move(raw.s);
-    msg->message = std::move(raw.m);
-    msg->timestamp = static_cast<uint32_t>(raw.t / 1000.0); // Messy?
-    return true;
-}
-
-void PartySearchWindow::fetch()
-{
-    if (!ws_window || ws_window->getReadyState() != WebSocket::OPEN) {
-        return;
-    }
-
-    ws_window->dispatch([this](const std::string& data) {
-        Message msg;
-        if (!parse_json_message(data, &msg)) {
-            return; // Not valid message object
-        }
-        messages.add(msg);
-
-        // do not display trade chat while in kamadan AE district 1
-        const bool print_message = settings.print_game_chat && IsLfpAlert(msg.message);
-
-        if (print_message) {
-            wchar_t buffer[512];
-            const std::wstring name_ws = TextUtils::StringToWString(msg.name);
-            const std::wstring msg_ws = TextUtils::StringToWString(msg.message);
-            swprintf(buffer, 512, L"<a=1>%ls</a>: <c=#f96677><quote>%ls", name_ws.c_str(), msg_ws.c_str());
-            WriteChat(GW::Chat::Channel::CHANNEL_TRADE, buffer);
-        }
-    });
-}
-
-bool PartySearchWindow::IsLfpAlert(std::string& message) const
-{
-    if (!settings.filter_alerts) {
-        return true;
-    }
-    // A word wrapped in slashes is a regex, anything else a case-insensitive substring.
-    for (const auto& word : alert_words) {
-        if (word.Matches(message)) {
-            return true;
-        }
-    }
-    return false;
 }
 
 void PartySearchWindow::Draw(IDirect3DDevice9*)
@@ -646,7 +757,6 @@ void PartySearchWindow::Draw(IDirect3DDevice9*)
         const auto language = static_cast<uint8_t>(GW::Map::GetLanguage());
         const auto district = GW::Map::GetDistrict();
         const auto map = static_cast<uint8_t>(GW::Map::GetMapID());
-        //auto& parties = party_ctx->party_search;
         for (const auto& it : party_advertisements) {
             auto* party = it.second;
             if (!party) {
@@ -702,19 +812,6 @@ void PartySearchWindow::Draw(IDirect3DDevice9*)
     ImGui::End();
 }
 
-void PartySearchWindow::DrawAlertsWindowContent(bool)
-{
-    ImGui::Text("Alerts");
-    ImGui::CheckboxWithHelp("Send party advertisements to your trade chat", &settings.print_game_chat, "Only when trade chat channel is visible in-game");
-    ImGui::Checkbox("Only show messages containing:", &settings.filter_alerts);
-    ImGui::TextDisabled("(Each line is a separate keyword. Not case sensitive.)");
-    if (ImGui::InputTextMultiline("##alertfilter", alert_buf, ALERT_BUF_SIZE,
-                                  ImVec2(-1.0f, 0.0f))) {
-        alert_words = TextUtils::ParsePatterns<char>(alert_buf);
-        alertfile_dirty = true;
-    }
-}
-
 void PartySearchWindow::DrawSettingsInternal()
 {
     DrawAlertsWindowContent(false);
@@ -751,41 +848,8 @@ void PartySearchWindow::SaveSettings(SettingsDoc& doc)
     }
 }
 
-void PartySearchWindow::AsyncWindowConnect(const bool force)
-{
-    if (ws_window) {
-        return;
-    }
-    if (ws_window_connecting) {
-        return;
-    }
-    if (!force && !window_rate_limiter.AddTime(COST_PER_CONNECTION_MS, COST_PER_CONNECTION_MAX_MS)) {
-        return;
-    }
-    int res;
-    if (!wsaData.wVersion && (res = WSAStartup(MAKEWORD(2, 2), &wsaData)) != 0) {
-        printf("Failed to call WSAStartup: %d\n", res);
-        return;
-    }
-    ws_window_connecting = true;
-    thread_jobs.push([this] {
-        if ((ws_window = WebSocket::from_url(ws_host)) == nullptr) {
-            printf("Couldn't connect to the host '%s'", ws_host);
-        }
-        ws_window_connecting = false;
-    });
-}
 
-void PartySearchWindow::DeleteWebSocket(WebSocket* ws)
+PartySearchWindow::~PartySearchWindow()
 {
-    if (!ws) {
-        return;
-    }
-    if (ws->getReadyState() == WebSocket::OPEN) {
-        ws->close();
-    }
-    while (ws->getReadyState() != WebSocket::CLOSED) {
-        ws->poll();
-    }
-    delete ws;
+    ClearParties();
 }
