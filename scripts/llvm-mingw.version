@@ -1,0 +1,5 @@
+version=20260616
+linux_asset=llvm-mingw-20260616-msvcrt-ubuntu-22.04-x86_64.tar.xz
+linux_sha256=a1f7968b48ba8d949194d6dee6c76f3cd0f61cba91658599af2c2c834a55ab87
+windows_asset=llvm-mingw-20260616-msvcrt-x86_64.zip
+windows_sha256=744809646fdefe24a357399788d68fb07ecc65fa0be71baa2406793ce25c9813

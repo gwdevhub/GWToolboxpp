@@ -540,9 +540,9 @@ bool MouseFix::WndProc(const UINT Message, const WPARAM wParam, const LPARAM lPa
     }
     CursorFixWndProc(Message, wParam, lParam);
 #else
-    UNREFERENCED_PARAMETER(Message);
-    UNREFERENCED_PARAMETER(wParam);
-    UNREFERENCED_PARAMETER(lParam);
+    (void)Message;
+    (void)wParam;
+    (void)lParam;
 #endif // MOUSEFIX_ENABLE_CAMERA_FIX
     return false;
 }

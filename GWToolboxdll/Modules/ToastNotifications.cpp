@@ -20,7 +20,6 @@
 #include <GWCA/Managers/PartyMgr.h>
 #include <GWCA/Managers/PlayerMgr.h>
 
-#include <wintoast/wintoastlib.h>
 #include <Utils/GuiUtils.h>
 #include <Utils/ToolboxUtils.h>
 #include <Defines.h>
@@ -167,6 +166,11 @@ namespace {
 
     void SendEncodedToastMessage(const wchar_t* title, wchar_t* encoded_message);
 
+    std::wstring AppUserModelId()
+    {
+        return L"gwtoolbox.GWToolbox++.GWToolbox++." + TextUtils::StringToWString(GWTOOLBOXDLL_VERSION);
+    }
+
     GW::HookEntry OnWhisper_Entry;
     GW::HookEntry OnTeamChat_Entry;
 
@@ -206,7 +210,7 @@ namespace {
         const wchar_t* sender_name = sender && sender->name ? sender->name : L"Unknown";
         const size_t msg_len = wcslen(sender_name) + wcslen(packet->message) + 10;
         const auto msg_with_sender = new wchar_t[msg_len];
-        swprintf(msg_with_sender, msg_len, L"\x108\x107%s: \x1\x2%s", sender_name, packet->message);
+        swprintf(msg_with_sender, msg_len, L"\x108\x107%ls: \x1\x2%ls", sender_name, packet->message);
         SendEncodedToastMessage(L"Team Chat", msg_with_sender);
         delete[] msg_with_sender;
     }
@@ -294,10 +298,10 @@ namespace {
         const auto message_including_sender = new wchar_t[msg_len];
         int written;
         if (packet->sender_guild[0]) {
-            written = swprintf(message_including_sender, msg_len, L"\x108\x107%s [%s]: \x1\x2%s", packet->sender_name, packet->sender_guild, message_encoded);
+            written = swprintf(message_including_sender, msg_len, L"\x108\x107%ls [%ls]: \x1\x2%ls", packet->sender_name, packet->sender_guild, message_encoded);
         }
         else {
-            written = swprintf(message_including_sender, msg_len, L"\x108\x107%s: \x1\x2%s", packet->sender_name, message_encoded);
+            written = swprintf(message_including_sender, msg_len, L"\x108\x107%ls: \x1\x2%ls", packet->sender_name, message_encoded);
         }
         ASSERT(written != -1);
         SendEncodedToastMessage(title, message_including_sender);
@@ -426,61 +430,31 @@ ToastNotifications::Toast::Toast(const std::wstring& _title, const std::wstring&
 ToastNotifications::Toast::~Toast()
 {
     TriggerToastCallback(this, false);
-    delete toast_template;
-}
-
-void ToastNotifications::Toast::toastActivated() const
-{
-    TriggerToastCallback(this, true);
-}
-
-void ToastNotifications::Toast::toastActivated(int) const
-{
-    TriggerToastCallback(this, true);
-}
-
-void ToastNotifications::Toast::toastDismissed(WinToastDismissalReason) const
-{
-    TriggerToastCallback(this, false);
-};
-
-void ToastNotifications::Toast::toastFailed(HRESULT err) const
-{
-    Log::Log("Failed to show toast, error code: 0x%08x", err);
-    TriggerToastCallback(this, false);
 }
 
 bool ToastNotifications::Toast::send()
 {
-    using namespace WinToastLib;
-    const auto instance = WinToast::instance();
-    if (!instance->isCompatible()) {
-        return false;
-    }
-    if (!instance->isInitialized()) {
-        instance->setAppName(L"Guild Wars");
-        const auto version = TextUtils::StringToWString(GWTOOLBOXDLL_VERSION);
-        const auto aumi = WinToast::configureAUMI(L"gwtoolbox", L"GWToolbox++", L"GWToolbox++", version);
-        instance->setAppUserModelId(aumi);
-        if (!instance->initialize()) {
+    static bool app_registered = false;
+    if (!app_registered) {
+        app_registered = DesktopNotification::RegisterApp(L"Guild Wars", AppUserModelId());
+        if (!app_registered) {
             return false;
         }
     }
-    if (!toast_template) {
-        toast_template = new WinToastTemplate(WinToastTemplate::WinToastTemplateType::Text02);
-    }
-    toast_template->setTextField(title, WinToastTemplate::FirstLine);
-    toast_template->setTextField(message, WinToastTemplate::SecondLine);
     dismiss();
-    toast_id = instance->showToast(*toast_template, this);
-    return toast_id != -1;
+    notification = DesktopNotification::Show(AppUserModelId(), title, message, {
+        .activated = [this] { TriggerToastCallback(this, true); },
+        .dismissed = [this] { TriggerToastCallback(this, false); },
+        .failed = [this](const HRESULT error) {
+            Log::Log("Failed to show toast, error code: 0x%08lx", error);
+            TriggerToastCallback(this, false);
+        }});
+    return notification != nullptr;
 }
 
-bool ToastNotifications::Toast::dismiss()
+void ToastNotifications::Toast::dismiss()
 {
-    const bool ok = toast_id == -1 ? true : WinToastLib::WinToast::instance()->hideToast(toast_id);
-    toast_id = -1;
-    return ok;
+    notification.reset();
 }
 
 bool ToastNotifications::DismissToast(const wchar_t* title)
@@ -524,7 +498,7 @@ void ToastNotifications::Initialize()
     ToolboxModule::Initialize();
     SettingsRegistry::Register(this, settings);
 
-    is_platform_compatible = WinToastLib::WinToast::isCompatible();
+    is_platform_compatible = DesktopNotification::IsSupported();
     RegisterUIMessageCallback(&OnWhisper_Entry, GW::UI::UIMessage::kRecvWhisper, OnRecvWhisper);
     RegisterUIMessageCallback(&OnTeamChat_Entry, GW::UI::UIMessage::kPlayerChatMessage, OnTeamChatMessage);
     for (auto& callback : stoc_callbacks) {

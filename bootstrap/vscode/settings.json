@@ -1,0 +1,30 @@
+{
+    "clangd.path": "${workspaceFolder}/.toolchain/llvm-mingw-linux/bin/clangd",
+    "clangd.checkUpdates": false,
+    "clangd.arguments": [
+        "--compile-commands-dir=${workspaceFolder}/build/Linux/relwithdebinfo",
+        "--background-index=false",
+        "--header-insertion=never"
+    ],
+    "C_Cpp.intelliSenseEngine": "disabled",
+    "cmake.useCMakePresets": "always",
+    "cmake.configureOnOpen": false,
+    "files.watcherExclude": {
+        "**/.toolchain/**": true,
+        "**/.mingw-toolchain/**": true,
+        "**/.vcpkg/**": true,
+        "**/.xwin-toolchain/**": true,
+        "**/build*/**": true,
+        "**/bin*/**": true,
+        "**/logs/**": true
+    },
+    "search.exclude": {
+        "**/.toolchain": true,
+        "**/.mingw-toolchain": true,
+        "**/.vcpkg": true,
+        "**/.xwin-toolchain": true,
+        "**/build*": true,
+        "**/bin*": true,
+        "**/logs": true
+    }
+}

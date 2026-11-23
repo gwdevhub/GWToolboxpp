@@ -30,7 +30,7 @@ namespace {
     char server_location[255];
     bool server_string_dirty = false;
 
-    constexpr glz::opts json_opts{.error_on_unknown_keys = false};
+    constexpr SizeOptimisedJson json_opts{{.error_on_unknown_keys = false}};
 }
 
 static int

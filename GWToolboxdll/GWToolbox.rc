@@ -61,7 +61,7 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_UK
 //
 
 #include <windows.h>
-#include "Defines.h"
+#include "ResourceVersion.h"
 
 VS_VERSION_INFO VERSIONINFO
 FILEVERSION     GWTOOLBOX_MODULE_VERSION
@@ -73,14 +73,14 @@ BLOCK "040904E4"
 BEGIN
 VALUE "CompanyName", "gwdevhub"
 VALUE "FileDescription", "Tools for Guild Wars"
-VALUE "FileVersion", GWTOOLBOX_MODULE_VERSION
+VALUE "FileVersion", GWTOOLBOXDLL_VERSION_STR
 VALUE "InternalName", "GWToolboxdll"
 VALUE "LegalCopyright", "Guild Wars and all associated logos and designs are trademarks or registered trademarks of NCsoft Corporation. All other trademarks are the property of their respective owners."
 VALUE "LegalTrademarks1", ""
 VALUE "LegalTrademarks2", ""
 VALUE "OriginalFilename", "GWToolboxdll.dll"
 VALUE "ProductName", "GWToolbox++"
-VALUE "ProductVersion", GWTOOLBOXDLL_VERSION
+VALUE "ProductVersion", GWTOOLBOXDLL_VERSION_STR
 END
 END
 
@@ -98,8 +98,9 @@ END
 
 #include "gwca_embed_stamp.h"
 
-IDR_GWCA_DLL            RCDATA                  "../Dependencies/GWCA/bin/gwca.dll"
-IDR_PORTAL_CONNECTIONS_JSON RCDATA              "Windows/Pathfinding/portal_connections.json"
+// LZ4-compressed copies the build writes next to gwca_embed_stamp.h (see CMakeLists.txt)
+IDR_GWCA_DLL            RCDATA                  "gwca.dll.lz4"
+IDR_PORTAL_CONNECTIONS_JSON RCDATA              "portal_connections.json.lz4"
 
 #endif    // English (United Kingdom) resources
 /////////////////////////////////////////////////////////////////////////////

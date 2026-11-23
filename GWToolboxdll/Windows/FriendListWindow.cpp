@@ -137,7 +137,7 @@ namespace {
         if (std::filesystem::exists(json_path, ec)) {
             std::ifstream file(json_path, std::ios::binary);
             const std::string buffer{std::istreambuf_iterator(file), {}};
-            constexpr glz::opts lenient_opts{.error_on_unknown_keys = false};
+            constexpr SizeOptimisedJson lenient_opts{{.error_on_unknown_keys = false}};
             if (glz::read<lenient_opts>(records, buffer)) {
                 records.clear();
             }
@@ -203,10 +203,10 @@ namespace {
         switch (message_type) {
             case MessageType::CHARACTER_NAME_X_DOES_NOT_EXIST:
             case MessageType::FRIEND_ALREADY_ADDED_AS_X:
-                ASSERT(swprintf(buffer, _countof(buffer), L"%c\x107%s\x1", message_type, character_name) > 0);
+                ASSERT(swprintf(buffer, _countof(buffer), L"%lc\x107%ls\x1", message_type, character_name) > 0);
                 break;
             case MessageType::PLAYER_X_NOT_ONLINE:
-                ASSERT(swprintf(buffer, _countof(buffer), L"%c\x101\x100\x107%s\x1\x108\x1", message_type, character_name) > 0);
+                ASSERT(swprintf(buffer, _countof(buffer), L"%lc\x101\x100\x107%ls\x1\x108\x1", message_type, character_name) > 0);
                 break;
             default:
                 return false;
@@ -688,7 +688,7 @@ GW::Friend* FriendListWindow::Friend::GetFriend()
 void FriendListWindow::Friend::StartWhisper() const
 {
     if (!current_char || current_char->getNameW().empty()) {
-        return Log::ErrorW(L"Player %s is not logged in", alias.c_str());
+        return Log::ErrorW(L"Player %ls is not logged in", alias.c_str());
     }
     GW::GameThread::Enqueue([charname = current_char->getNameW()] {
         SendUIMessage(GW::UI::UIMessage::kOpenWhisper, const_cast<wchar_t*>(charname.data()));
@@ -1385,7 +1385,7 @@ void FriendListWindow::SaveToFile()
             }
         }
         std::string buffer;
-        if (glz::write<glz::opts{.prettify = true}>(records, buffer)) {
+        if (glz::write<SizeOptimisedJson{{.prettify = true}}>(records, buffer)) {
             return;
         }
         std::ofstream file(Resources::GetSettingFile(json_filename), std::ios::binary | std::ios::trunc);

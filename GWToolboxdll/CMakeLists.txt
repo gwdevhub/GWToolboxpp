@@ -10,37 +10,34 @@ if(EMSCRIPTEN)
     # a static MAIN_MODULE=2, not a side module (see either project's CMakeLists for
     # the full rationale).
     set(CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS "")
-    add_library(GWToolboxdll SHARED
+    add_library(GWToolbox_DLL SHARED
         Wasm/main_wasm.cpp
         Wasm/Logger_Wasm.cpp
     )
-    set_target_properties(GWToolboxdll PROPERTIES
+    set_target_properties(GWToolbox_DLL PROPERTIES
         PREFIX "" OUTPUT_NAME "GWToolboxdll" SUFFIX ".wasm")
     # Ninja + CXX_STANDARD 23 would trigger C++20 module dependency scanning, which
     # emscan-deps cannot answer; this target uses no modules. Same note as GWCA's own
     # CMakeLists and kamadanwasm's.
-    set_target_properties(GWToolboxdll PROPERTIES CXX_SCAN_FOR_MODULES OFF)
+    set_target_properties(GWToolbox_DLL PROPERTIES CXX_SCAN_FOR_MODULES OFF)
 
-    # Logger.h includes this unconditionally (GWTOOLBOXDLL_EXPORT), same as native.
-    include(GenerateExportHeader)
-    generate_export_header(GWToolboxdll)
-    target_include_directories(GWToolboxdll PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
+    target_include_directories(GWToolbox_DLL PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 
-    target_precompile_headers(GWToolboxdll PRIVATE "stdafx.h")
+    target_precompile_headers(GWToolbox_DLL PRIVATE "stdafx.h")
 
-    target_compile_definitions(GWToolboxdll PRIVATE GWCA_WASM=1)
+    target_compile_definitions(GWToolbox_DLL PRIVATE GWCA_WASM=1)
     # -fshort-wchar: GWCA's structs mirror the game's UTF-16 (2-byte wchar_t) layout;
     # clang defaults to 4. Matches kamadanwasm's CMakeLists note on the same flag.
-    target_compile_options(GWToolboxdll PRIVATE -fshort-wchar -fdeclspec)
+    target_compile_options(GWToolbox_DLL PRIVATE -fshort-wchar -fdeclspec)
 
-    target_include_directories(GWToolboxdll PRIVATE
+    target_include_directories(GWToolbox_DLL PRIVATE
         "${PROJECT_SOURCE_DIR}/Dependencies"
         "${PROJECT_SOURCE_DIR}/Dependencies/GWCA/include"
         "${PROJECT_SOURCE_DIR}/Dependencies/GWCA/source"
         "${CMAKE_CURRENT_SOURCE_DIR}"
     )
 
-    target_link_libraries(GWToolboxdll PRIVATE imgui)
+    target_link_libraries(GWToolbox_DLL PRIVATE imgui)
 
     # No gwca link step: GW::* calls resolve as env imports at injection time (see
     # gw_in_browser's docs/mod-loading.md), not at link time -- same as every other
@@ -52,7 +49,7 @@ if(EMSCRIPTEN)
     # statics/funcrefs cannot overlap and silently clobber gwca's. Not yet coordinated
     # against any OTHER mod (e.g. kamadanwasm's own 0x40000/0x20000) -- fine standalone,
     # but revisit if this is ever injected alongside another mod.
-    target_link_options(GWToolboxdll PRIVATE
+    target_link_options(GWToolbox_DLL PRIVATE
         -sMAIN_MODULE=2
         -sMALLOC=none
         -sIMPORTED_MEMORY=1
@@ -80,12 +77,12 @@ if(EMSCRIPTEN)
         -sAUTO_JS_LIBRARIES=0
     )
 
-    # Packaging is its own target, not just a build step of GWToolboxdll: the
+    # Packaging is its own target, not just a build step of GWToolbox_DLL: the
     # artifact gw_in_browser's loader actually takes is the .gwmod bundle
     # (GWToolboxdll.wasm + the gwca.wasm it was built against, zipped with a
     # manifest -- see tools/package.py), not the bare .wasm, and giving it a
     # name (gwtoolbox_gwmod) makes it independently buildable/discoverable
-    # (`cmake --build build-wasm --target gwtoolbox_gwmod`) rather than only
+    # (`cmake --build build/<host>/wasm --target gwtoolbox_gwmod`) rather than only
     # ever firing as a side effect of building GWToolboxdll. Still runs on a
     # plain build too -- it's in ALL -- so nothing about the default flow changes.
     find_package(Python3 COMPONENTS Interpreter REQUIRED)
@@ -95,7 +92,7 @@ if(EMSCRIPTEN)
     # GWCA's create_release also builds gwcad.wasm (DEBUG_POSTFIX "d", asserts +
     # [SCAN] logging compiled in -- see GWCA/CMakeLists.txt's wasm-debug preset),
     # same "d"-suffix convention as the native gwcad.dll/gwcad.lib. Off by default
-    # (the ordinary `cmake --build build-wasm` flow keeps embedding the release
+    # (the ordinary `cmake --build build/<host>/wasm` flow keeps embedding the release
     # gwca.wasm); GWToolboxpp2's build_wasm project (GWToolboxdll/CMakeLists.txt's
     # native branch) sets this ON when the VS config it was triggered from is
     # Debug -- see tools/sync_gwmod.py.
@@ -113,7 +110,7 @@ if(EMSCRIPTEN)
         OUTPUT "${GWTOOLBOX_WASM_DIST_DIR}/gwtoolbox.gwmod"
                "${GWTOOLBOX_WASM_DIST_DIR}/gwtoolbox.modfile.json"
         COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tools/package.py"
-                --dll  "$<TARGET_FILE:GWToolboxdll>"
+                --dll  "$<TARGET_FILE:GWToolbox_DLL>"
                 --gwca "${PROJECT_SOURCE_DIR}/Dependencies/GWCA/wasm/${GWTOOLBOX_WASM_GWCA_FILE}"
                 --out  "${GWTOOLBOX_WASM_DIST_DIR}"
                 # Same version string the native dll's PE resource carries (see
@@ -121,7 +118,7 @@ if(EMSCRIPTEN)
                 # same CMake variable) -- stamped into the bundled manifest.json
                 # since a .gwmod has no PE resource of its own to carry one.
                 --version "${GWTOOLBOXDLL_VERSION}"
-        DEPENDS GWToolboxdll "${PROJECT_SOURCE_DIR}/Dependencies/GWCA/wasm/${GWTOOLBOX_WASM_GWCA_FILE}"
+        DEPENDS GWToolbox_DLL "${PROJECT_SOURCE_DIR}/Dependencies/GWCA/wasm/${GWTOOLBOX_WASM_GWCA_FILE}"
         COMMENT "packaging ${GWTOOLBOX_WASM_DIST_DIR}/gwtoolbox.gwmod (${GWTOOLBOX_WASM_GWCA_FILE})"
         VERBATIM)
     add_custom_target(gwtoolbox_gwmod ALL
@@ -141,7 +138,8 @@ if(EMSCRIPTEN)
     return()
 endif()
 
-add_library(GWToolboxdll SHARED)
+add_library(GWToolbox_DLL SHARED)
+set_target_properties(GWToolbox_DLL PROPERTIES PREFIX "" OUTPUT_NAME "GWToolboxdll")
 
 file(GLOB SOURCES CONFIGURE_DEPENDS
     "*.h"
@@ -168,7 +166,18 @@ file(GLOB SOURCES CONFIGURE_DEPENDS
     )
     
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${SOURCES})
-target_sources(GWToolboxdll PRIVATE ${SOURCES})
+# Per-frame code is built for speed in GWToolboxdll_per_frame and GWToolboxdll_pathfinding below.
+file(GLOB PER_FRAME_SOURCES CONFIGURE_DEPENDS "Widgets/Minimap/*.cpp" "Utils/GameWorldCompositor.cpp")
+file(GLOB PATHFINDING_SOURCES CONFIGURE_DEPENDS "Windows/Pathfinding/*.cpp")
+list(REMOVE_ITEM SOURCES ${PER_FRAME_SOURCES} ${PATHFINDING_SOURCES})
+# These catch C++ exceptions, so they keep them: the crash handler reports one that escaped, SearchPattern rejects a
+# regex the user typed that doesn't compile, and the prop index drops a snapshot it ran out of memory on. clang won't
+# use the shared precompiled header across that setting.
+if(GWTB_EXCEPTIONS)
+    set_property(SOURCE Modules/CrashHandler.cpp Utils/TextUtils_SearchPattern.cpp Utils/PropSurfaceIndex.cpp APPEND PROPERTY COMPILE_OPTIONS ${GWTB_EXCEPTIONS})
+    set_property(SOURCE Modules/CrashHandler.cpp Utils/TextUtils_SearchPattern.cpp Utils/PropSurfaceIndex.cpp PROPERTY SKIP_PRECOMPILE_HEADERS ON)
+endif()
+target_sources(GWToolbox_DLL PRIVATE ${SOURCES})
 
 # Wasm/*.cpp is the Emscripten-only mod_init scaffold (see Wasm/main_wasm.cpp) --
 # never compiled into this native target (uses GLES3/emscripten_sleep, not part of
@@ -180,7 +189,7 @@ file(GLOB WASM_SOURCES CONFIGURE_DEPENDS
     "Wasm/*.cpp"
     )
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${WASM_SOURCES})
-target_sources(GWToolboxdll PRIVATE ${WASM_SOURCES})
+target_sources(GWToolbox_DLL PRIVATE ${WASM_SOURCES})
 set_source_files_properties(${WASM_SOURCES} PROPERTIES HEADER_FILE_ONLY ON)
 
 # A separate, explicitly-triggered project (Solution Explorer -> build_wasm ->
@@ -211,14 +220,14 @@ file(GLOB GWDAT_SOURCES CONFIGURE_DEPENDS
     "Utils/GwDat/*.cpp"
     )
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${GWDAT_SOURCES})
-target_sources(GWToolboxdll PRIVATE ${GWDAT_SOURCES})
+target_sources(GWToolbox_DLL PRIVATE ${GWDAT_SOURCES})
 set_source_files_properties(${GWDAT_SOURCES} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
 set_source_files_properties(
     "${CMAKE_CURRENT_SOURCE_DIR}/Utils/GwDat/xentax.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/Utils/GwDat/AtexAsm.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/Utils/GwDat/AtexReader.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/Utils/GwDat/AtexDecompress.cpp"
-    PROPERTIES COMPILE_FLAGS "/W0")
+    PROPERTIES COMPILE_OPTIONS -w)
 
 # Re-embed the current Dependencies/GWCA/bin/gwca.dll on every build
 set(GWCA_EMBED_DLL "${CMAKE_SOURCE_DIR}/Dependencies/GWCA/bin/gwca.dll")
@@ -234,64 +243,45 @@ add_custom_target(gwca_embed_stamp ALL
     BYPRODUCTS "${GWCA_EMBED_STAMP}"
     COMMENT "Checking embedded gwca.dll is current"
     VERBATIM)
-add_dependencies(GWToolboxdll gwca_embed_stamp)
+add_dependencies(GWToolbox_DLL gwca_embed_stamp)
+# The larger resources are embedded LZ4-compressed (Utils/Lz4.cpp decompresses them): 680 KB down to 330 KB.
+set(PACKED_RESOURCES)
+foreach(RESOURCE "${GWCA_EMBED_DLL}" "${CMAKE_CURRENT_SOURCE_DIR}/Windows/Pathfinding/portal_connections.json")
+    get_filename_component(RESOURCE_NAME "${RESOURCE}" NAME)
+    set(PACKED "${CMAKE_CURRENT_BINARY_DIR}/${RESOURCE_NAME}.lz4")
+    add_custom_command(OUTPUT "${PACKED}"
+        COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tools/lz4_pack.py" "${RESOURCE}" "${PACKED}"
+        DEPENDS "${RESOURCE}" "${PROJECT_SOURCE_DIR}/tools/lz4_pack.py"
+        COMMENT "Compressing ${RESOURCE_NAME}"
+        VERBATIM)
+    list(APPEND PACKED_RESOURCES "${PACKED}")
+endforeach()
 set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/GWToolbox.rc"
-    PROPERTIES OBJECT_DEPENDS "${GWCA_EMBED_DLL};${GWCA_EMBED_STAMP}")
+    PROPERTIES OBJECT_DEPENDS "${PACKED_RESOURCES};${GWCA_EMBED_STAMP}")
 
-# auto-generated files - export header & pch 
-include(GenerateExportHeader)
-generate_export_header(GWToolboxdll)
-#target_sources(GWToolboxdll PRIVATE FILE_SET generated_header TYPE HEADERS BASE_DIRS ${CMAKE_CURRENT_BINARY_DIR} FILES ${CMAKE_CURRENT_BINARY_DIR}/gwtoolboxdll_export.h)
-target_sources(GWToolboxdll PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/gwtoolboxdll_export.h)
-target_include_directories(GWToolboxdll PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
-source_group(Generated FILES ${CMAKE_CURRENT_BINARY_DIR}/gwtoolboxdll_export.h)
+target_include_directories(GWToolbox_DLL PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 
-target_precompile_headers(GWToolboxdll PRIVATE "stdafx.h")
+target_precompile_headers(GWToolbox_DLL PRIVATE "stdafx.h")
 source_group(Generated REGULAR_EXPRESSION cmake_pch)
 
-target_compile_definitions(GWToolboxdll PRIVATE
+target_compile_definitions(GWToolbox_DLL PRIVATE
     "_USRDLL"
     )
       
-target_compile_options(GWToolboxdll PRIVATE /Gy /utf-8)
-target_compile_options(GWToolboxdll PRIVATE $<$<CONFIG:RelWithDebInfo>:/Zi>)
-if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    # Skip /W4 for clang-cl: it expands to -Wall -Wextra
-    target_compile_options(GWToolboxdll PRIVATE $<$<CONFIG:Debug>:/Z7 /Od>)
-else()
-    target_compile_options(GWToolboxdll PRIVATE /W4 /WX)
-    target_compile_options(GWToolboxdll PRIVATE $<$<CONFIG:Debug>:/ZI /Od>)
-endif()
 
-set_target_properties(GWToolboxdll PROPERTIES
-    VS_GLOBAL_RunCodeAnalysis false
-    VS_GLOBAL_EnableMicrosoftCodeAnalysis true
-    VS_GLOBAL_EnableClangTidyCodeAnalysis false
-)
-
-target_link_options(GWToolboxdll PRIVATE
-    /WX /OPT:REF /OPT:ICF /SAFESEH:NO
-    $<$<NOT:$<CONFIG:Debug>>:/INCREMENTAL:NO>
-    $<$<CONFIG:Debug>:/IGNORE:4098 /OPT:NOREF /OPT:NOICF>
-    $<$<CONFIG:RelWithDebInfo>:/OPT:NOICF>
-    $<$<CONFIG:Debug>:/NODEFAULTLIB:LIBCMT>
-    /IGNORE:4099 # pdb not found for github action
-    )
-
-target_include_directories(GWToolboxdll PRIVATE
+target_include_directories(GWToolbox_DLL PRIVATE
     "${PROJECT_SOURCE_DIR}/Dependencies"
     "${PROJECT_SOURCE_DIR}/Dependencies/GWCA/include"
     "${CMAKE_CURRENT_SOURCE_DIR}"
-    ) 
+    "${GWTOOLBOX_RESOURCE_INCLUDE_DIR}"
+    )
 
 include(imgui_fonts)
 
-find_package(minhook CONFIG REQUIRED)
 
-find_package(unofficial-uwebsockets CONFIG REQUIRED)
 find_package(recastnavigation CONFIG REQUIRED)
 
-target_link_libraries(GWToolboxdll PRIVATE
+set(GWTOOLBOXDLL_LIBRARIES
     # cmake targets:
     Core
     RestClient
@@ -301,22 +291,44 @@ target_link_libraries(GWToolboxdll PRIVATE
     gwca
     steamworks_sdk
     easywsclient
-    ${CPP_GAME_SDK}
     glaze::glaze
     imgui::fonts
     IconFontCppHeaders
     nativefiledialog
-    wintoast
-	minhook::minhook
-	ctre::ctre
-    unofficial::uwebsockets::uwebsockets
     RecastNavigation::Detour
 
     # libs:
-    dbghelp.lib # for MiniDump
-    bcrypt.lib  # for SHA256 (Resources.cpp)
-    ws2_32.lib
+    dbghelp # for MiniDump
+    bcrypt  # for SHA256 (Resources.cpp)
+    version
+    strmiids
+    gdi32
+    dwmapi
+    ws2_32  # IRC, Teamspeak and the objective timer's WebSocketServer
     )
+target_link_libraries(GWToolbox_DLL PRIVATE ${GWTOOLBOXDLL_LIBRARIES})
+
+# The per-frame code is built at -O2 while the rest is optimised for size, and clang rejects a precompiled header
+# built with other -O or exception settings. Each such group is its own target with its own copy of the header;
+# without one these were the slowest files to build. It compiles with GWToolbox_DLL's settings and is linked into it.
+function(gwtoolboxdll_add_part NAME)
+    cmake_parse_arguments(PARSE_ARGV 1 ARG "" "" "SOURCES;OPTIONS")
+    add_library(${NAME} OBJECT ${ARG_SOURCES})
+    source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${ARG_SOURCES})
+    foreach(PROPERTY INCLUDE_DIRECTORIES COMPILE_DEFINITIONS COMPILE_OPTIONS)
+        set_property(TARGET ${NAME} PROPERTY ${PROPERTY} $<TARGET_PROPERTY:GWToolbox_DLL,${PROPERTY}>)
+    endforeach()
+    target_link_libraries(${NAME} PRIVATE ${GWTOOLBOXDLL_LIBRARIES})
+    target_compile_options(${NAME} PRIVATE ${ARG_OPTIONS})
+    target_precompile_headers(${NAME} PRIVATE "stdafx.h")
+    target_link_libraries(GWToolbox_DLL PRIVATE ${NAME})
+    add_dependencies(${NAME} compile_shaders)
+endfunction()
+set(SPEED_OPTIMISATION $<$<NOT:$<CONFIG:Debug>>:${GWTB_SPEED_OPTIMISATION}>)
+gwtoolboxdll_add_part(GWToolboxdll_per_frame SOURCES ${PER_FRAME_SOURCES} OPTIONS ${SPEED_OPTIMISATION})
+# Building the path graphs recovers from running out of memory by catching std::bad_alloc, so the whole of
+# pathfinding keeps exceptions: every frame between the allocation and the catch needs unwind tables.
+gwtoolboxdll_add_part(GWToolboxdll_pathfinding SOURCES ${PATHFINDING_SOURCES} OPTIONS ${SPEED_OPTIMISATION} ${GWTB_EXCEPTIONS})
 
 # Only 1.19 has actually been validated against these shaders; 1.6 (the version most
 # distros still package) miscompiles them. Raise the floor, never lower it, without testing.
@@ -327,13 +339,19 @@ file(GLOB FXC_PATHS "${WINDOWS_KITS_ROOT}/bin/*/x86" "C:/Program Files (x86)/Win
 find_program(FXC fxc DOC "hlsl compiler" PATHS ${FXC_PATHS})
 if(FXC)
     set(HLSL_COMPILE_COMMAND ${FXC})
+elseif(CMAKE_HOST_WIN32)
+    # Without the Windows SDK, call D3DCompile in Windows' own d3dcompiler_47.dll - the compiler fxc.exe wraps.
+    set(HLSL_COMPILE_COMMAND ${Python3_EXECUTABLE} "${PROJECT_SOURCE_DIR}/tools/hlsl_compile.py" --d3dcompiler)
+    message(STATUS "HLSL: using d3dcompiler_47.dll (fxc not found)")
 else()
     # No fxc: fall back to vkd3d-shader, the only non-Windows HLSL compiler that emits
     # d3dbc (shader model 1-3). dxc dropped every profile below SM6, so it can't be used.
     if(NOT VKD3D_COMPILER AND DEFINED ENV{VKD3D_COMPILER})
         set(VKD3D_COMPILER "$ENV{VKD3D_COMPILER}" CACHE FILEPATH "vkd3d-shader HLSL compiler, fxc stand-in")
     endif()
-    find_program(VKD3D_COMPILER vkd3d-compiler DOC "vkd3d-shader HLSL compiler, fxc stand-in")
+    # The bootstrap scripts build it into the toolchain folder.
+    find_program(VKD3D_COMPILER vkd3d-compiler DOC "vkd3d-shader HLSL compiler, fxc stand-in"
+        PATHS "${CMAKE_SOURCE_DIR}/.toolchain/vkd3d-${VKD3D_MINIMUM_VERSION}")
     if(NOT VKD3D_COMPILER)
         message(SEND_ERROR "no HLSL compiler found: need either fxc (Windows SDK) or vkd3d-compiler ${VKD3D_MINIMUM_VERSION}+")
     else()
@@ -374,26 +392,5 @@ endforeach()
 
 add_custom_target(compile_shaders DEPENDS ${SHADER_OUTPUTS})
 
-add_dependencies(GWToolboxdll compile_shaders) 
+add_dependencies(GWToolbox_DLL compile_shaders)
 
-# compress.ps1 needs PowerShell, which isn't available when configuring from a non-Windows
-# host (e.g. the clang/xwin cross-build in scripts/build-xwin.sh); gzip is a POSIX
-# equivalent for the RelWithDebInfo-only PDB compression it does.
-if(CMAKE_HOST_WIN32)
-    add_custom_command(TARGET GWToolboxdll POST_BUILD
-        COMMAND powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass
-                -File "${CMAKE_CURRENT_SOURCE_DIR}/compress.ps1"
-                "$<TARGET_PDB_FILE:GWToolboxdll>"
-                "$<CONFIG>"
-        COMMENT "Compressing PDB for distribution (RelWithDebInfo only)"
-        VERBATIM
-    )
-else()
-    add_custom_command(TARGET GWToolboxdll POST_BUILD
-        COMMAND $<IF:$<CONFIG:RelWithDebInfo>,gzip,${CMAKE_COMMAND}>
-                $<IF:$<CONFIG:RelWithDebInfo>,-kf,-E>
-                $<IF:$<CONFIG:RelWithDebInfo>,$<TARGET_PDB_FILE:GWToolboxdll>,true>
-        COMMENT "Compressing PDB for distribution (RelWithDebInfo only)"
-        VERBATIM
-    )
-endif()

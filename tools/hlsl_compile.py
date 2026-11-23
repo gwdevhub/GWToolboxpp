@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Compile an HLSL shader to a C header, standing in for fxc.exe on non-Windows hosts.
+"""Compile an HLSL shader to a C header, standing in for fxc.exe where it isn't installed.
+
+On Windows without the Windows SDK, --d3dcompiler calls D3DCompile in d3dcompiler_47.dll, which ships with
+Windows itself and is the compiler fxc.exe wraps, so its output matches fxc's. On Linux, vkd3d-compiler is used.
 
 fxc.exe is the only Microsoft compiler that still emits d3dbc (shader model 1-3)
 bytecode, and it is a Windows binary -- so a Linux build would otherwise need wine
@@ -24,6 +27,7 @@ indices actually depend on.
 """
 
 import argparse
+import ctypes
 import os
 import subprocess
 import sys
@@ -31,6 +35,8 @@ import tempfile
 
 BYTES_PER_ROW = 12
 VALUELESS_FXC_FLAGS = {"/nologo", "/Od", "/O0", "/O1", "/O2", "/O3", "/Zi", "/Zpr", "/Zpc"}
+D3DCOMPILE_FLAGS = {"/Zi": 1 << 0, "/Od": 1 << 2, "/Zpr": 1 << 3, "/Zpc": 1 << 4,
+                    "/O0": 1 << 14, "/O1": 0, "/O2": (1 << 14) | (1 << 15), "/O3": 1 << 15}
 
 
 def parse_fxc_arguments(argv):
@@ -59,9 +65,52 @@ def parse_fxc_arguments(argv):
     return entry, profile, variable, output, source
 
 
+def compile_with_d3dcompiler(entry, profile, source, fxc_argv):
+    compiler = ctypes.WinDLL("d3dcompiler_47.dll")
+    flags = 0
+    for argument in fxc_argv:
+        flags |= D3DCOMPILE_FLAGS.get(argument, 0)
+    with open(source, "rb") as source_file:
+        text = source_file.read()
+    code, errors = ctypes.c_void_p(), ctypes.c_void_p()
+    result = compiler.D3DCompile(text, len(text), source.encode(), None, None, entry.encode(), profile.encode(),
+                                 flags, 0, ctypes.byref(code), ctypes.byref(errors))
+
+    def blob_bytes(blob):
+        # ID3DBlob vtable: 0 QueryInterface, 1 AddRef, 2 Release, 3 GetBufferPointer, 4 GetBufferSize.
+        vtable = ctypes.cast(ctypes.cast(blob, ctypes.POINTER(ctypes.c_void_p))[0], ctypes.POINTER(ctypes.c_void_p))
+        method = lambda index, restype: ctypes.WINFUNCTYPE(restype, ctypes.c_void_p)(vtable[index])
+        data = ctypes.string_at(method(3, ctypes.c_void_p)(blob), method(4, ctypes.c_size_t)(blob))
+        method(2, ctypes.c_ulong)(blob)
+        return data
+
+    message = blob_bytes(errors).decode(errors="replace") if errors.value else ""
+    if result < 0:
+        sys.exit(f"hlsl_compile: D3DCompile failed for {source} (0x{result & 0xFFFFFFFF:08X})\n{message}")
+    return blob_bytes(code)
+
+
+def compile_with_vkd3d(vkd3d_compiler, entry, profile, source):
+    bytecode_fd, bytecode_path = tempfile.mkstemp(suffix=".bin")
+    os.close(bytecode_fd)
+    try:
+        result = subprocess.run(
+            [vkd3d_compiler, "-x", "hlsl", "-p", profile, "-b", "d3dbc",
+             "-e", entry, "-o", bytecode_path, source],
+            capture_output=True, text=True)
+        if result.returncode:
+            sys.stderr.write(result.stdout + result.stderr)
+            sys.exit(result.returncode)
+        with open(bytecode_path, "rb") as bytecode_file:
+            return bytecode_file.read()
+    finally:
+        os.unlink(bytecode_path)
+
+
 def main():
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("--vkd3d-compiler", default=os.environ.get("VKD3D_COMPILER", "vkd3d-compiler"))
+    parser.add_argument("--d3dcompiler", action="store_true")
     options, fxc_argv = parser.parse_known_args()
 
     entry, profile, variable, output, source = parse_fxc_arguments(fxc_argv)
@@ -69,23 +118,12 @@ def main():
     if missing:
         sys.exit(f"hlsl_compile: missing required argument(s): {', '.join(missing)}")
 
-    bytecode_fd, bytecode_path = tempfile.mkstemp(suffix=".bin")
-    os.close(bytecode_fd)
-    try:
-        result = subprocess.run(
-            [options.vkd3d_compiler, "-x", "hlsl", "-p", profile, "-b", "d3dbc",
-             "-e", entry, "-o", bytecode_path, source],
-            capture_output=True, text=True)
-        if result.returncode:
-            sys.stderr.write(result.stdout + result.stderr)
-            sys.exit(result.returncode)
-        with open(bytecode_path, "rb") as bytecode_file:
-            bytecode = bytecode_file.read()
-    finally:
-        os.unlink(bytecode_path)
-
+    if options.d3dcompiler:
+        bytecode = compile_with_d3dcompiler(entry, profile, source, fxc_argv)
+    else:
+        bytecode = compile_with_vkd3d(options.vkd3d_compiler, entry, profile, source)
     if not bytecode:
-        sys.exit(f"hlsl_compile: {options.vkd3d_compiler} produced no output for {source}")
+        sys.exit(f"hlsl_compile: no bytecode produced for {source}")
 
     rows = [", ".join(f"{byte:3d}" for byte in bytecode[offset:offset + BYTES_PER_ROW])
             for offset in range(0, len(bytecode), BYTES_PER_ROW)]

@@ -38,7 +38,6 @@
 #include <memory>
 #include <mutex>
 #include <numbers>
-#include <print>
 #include <queue>
 #include <ranges>
 #include <regex>
@@ -56,7 +55,6 @@
 #include <Windows.h>
 #include <Psapi.h>
 
-#include <strsafe.h>
 #include <DbgHelp.h>
 #include <shellapi.h>
 #include <ShlObj.h>
@@ -80,7 +78,7 @@
 #include <ToolboxIni.h>
 
 #ifndef __EMSCRIPTEN__
-// glaze/ctre are portable but vcpkg-managed, and vcpkg isn't part of an `emcmake` configure; deferred until a kept-for-wasm file needs one (pull in via FetchContent then, matching cmake/imgui.cmake).
+// glaze is portable but vcpkg-managed, and vcpkg isn't part of an `emcmake` configure; deferred until a kept-for-wasm file needs one (pull in via FetchContent then, matching cmake/imgui.cmake).
 #include <glaze/glaze.hpp>
 // winhttp-backed and Windows-only mp3 playback both need a browser-native replacement (JS WebSocket, Web Audio) before any wasm-compiled file can use them.
 #include <easywsclient.hpp>
@@ -90,12 +88,6 @@
 // IconsFontAwesome5.h: upstream declares its data `static` against an `extern` decl, which clang/emcc rejects; mapbox_earcut.h is vcpkg-provided. Neither needed by the wasm source list yet.
 #include <IconsFontAwesome5.h>
 #include <mapbox_earcut.h>
-#endif
-
-#ifndef __EMSCRIPTEN__
-#define __forceinline
-#include <ctre.hpp>
-#undef __forceinline
 #endif
 
 #include <imgui.h>
@@ -111,6 +103,23 @@
 #ifndef __EMSCRIPTEN__
 // Pulls in glaze (see above) transitively; not needed by the wasm source list either.
 #include <Utils/SettingsRegistry.h>
+// The headers a third or more of the sources include, parsed once here instead of in each of them. TextUtils.h also
+// compiles a regex when parsed.
+#include <GWCA/Constants/Constants.h>
+#include <GWCA/GameEntities/Agent.h>
+#include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/ChatMgr.h>
+#include <GWCA/Managers/GameThreadMgr.h>
+#include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/UIMgr.h>
+#include <Defines.h>
+#include <ImGuiAddons.h>
+#include <Logger.h>
+#include <Timer.h>
+#include <Modules/Resources.h>
+#include <Utils/GuiUtils.h>
+#include <Utils/TextUtils.h>
+#include <Utils/ToolboxUtils.h>
 #endif
 
 #pragma warning(pop)

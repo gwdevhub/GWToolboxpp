@@ -56,11 +56,13 @@ Pcon::Pcon(const char* chatname,
            const char* abbrevname,
            const char* ininame,
            const wchar_t* filename_,
+           const uint32_t model_file_id_,
            const int threshold_,
            const char* desc_)
     : threshold(threshold_)
     , filename(filename_)
     , timer(TIMER_INIT())
+    , model_file_id(model_file_id_)
 {
     enabled = settings_by_charname[L"default"] = new bool(false);
     if (desc_) {
@@ -679,40 +681,33 @@ void Pcon::LoadSettings(const ToolboxIni* inifile, const char* section)
 // ================================================
 size_t PconGeneric::PointsPerUse(const GW::Item* item) const
 {
-    if (model_file_id) {
-        return item->model_file_id == model_file_id ? 1u : 0u;
-    }
-    if (item->model_id == static_cast<DWORD>(itemID)) {
-        return 1;
-    }
-    return 0;
+    return item->model_file_id == model_file_id ? 1u : 0u;
 }
 
 void PconGeneric::OnButtonClick()
 {
-    using namespace GW::Constants;
     Pcon::OnButtonClick();
 
     if (PconsWindow::Instance().settings.shift_click_toggles_category && ImGui::IsKeyDown(ImGuiMod_Shift)) {
         namespace r = std::ranges;
         const std::vector<std::vector<DWORD>> categories{
-            {ItemID::ConsEssence, ItemID::ConsGrail, ItemID::ConsArmor},
-            {ItemID::GRC, ItemID::BRC, ItemID::RRC},
-            {ItemID::Kabobs, ItemID::PahnaiSalad, ItemID::SkalefinSoup}
+            {0x458A7, 0x24BB, 0x458A4},
+            {0x499ED, 0x45998, 0x45999},
+            {0x38467, 0x3846D, 0x3846A}
         };
         const auto found = r::find_if(categories, [this](const auto& category) {
-            return r::find(category, itemID) != r::end(category);
+            return r::find(category, model_file_id) != r::end(category);
         });
         if (found == r::end(categories)) {
             return;
         }
         const auto& category = *found;
         auto enable_if_same_category = [this, &category](Pcon* other) {
-            auto* generic = dynamic_cast<PconGeneric*>(other);
+            auto* generic = other->AsGeneric();
             if (generic == nullptr) {
                 return;
             }
-            if (r::find(category, generic->itemID) != r::end(category)) {
+            if (r::find(category, generic->model_file_id) != r::end(category)) {
                 generic->SetEnabled(IsEnabled());
             }
         };

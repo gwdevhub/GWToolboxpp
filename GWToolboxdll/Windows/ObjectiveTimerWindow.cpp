@@ -29,6 +29,7 @@
 #include <Logger.h>
 #include <GWCA/Context/CharContext.h>
 #include <Modules/ChatCommands.h>
+#include <Utils/WebSocketServer.h>
 
 constexpr uint32_t TIME_UNKNOWN = std::numeric_limits<uint32_t>::max();
 unsigned int ObjectiveTimerWindow::ObjectiveSet::cur_ui_id = 0;
@@ -79,7 +80,7 @@ namespace {
     // audacity, after I destroy your mind with my horrifying visions, of course."
     constexpr wchar_t kanaxai_dialog_r15[] = L"\x533D\x9EB1\x8BEE\x2637";
 
-    const enum DoorID : uint32_t {
+    enum DoorID : uint32_t {
         // object_id's for doors opening.
         Deep_room_1_first = 12669,
         // Room 1 Complete = Room 5 open
@@ -174,8 +175,7 @@ namespace {
         return static_cast<DWORD>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());
     }
 
-    std::thread* websocket_server = nullptr;
-    uWS::App* websocket_app = nullptr;
+    WebSocketServer websocket_server;
     enum WebsocketMode {
         None,
         LiveSplitOneJSON,
@@ -184,67 +184,20 @@ namespace {
     };
     WebsocketMode websocket_mode = None;
     void EnableWebsocketServer(bool enable) {
-        settings.websocket_server_port = std::max(settings.websocket_server_port, 0);
-        if (!enable) {
-            if (websocket_app) {
-                websocket_app->close();
-                delete websocket_app;
-                websocket_app = nullptr;
-            }
-            if (websocket_server) {
-                ASSERT(websocket_server->joinable());
-                websocket_server->join();
-                delete websocket_server;
-                websocket_server = nullptr;
-            }
-
+        settings.websocket_server_port = std::clamp(settings.websocket_server_port, 0, 65535);
+        if (enable) {
+            websocket_server.Start(static_cast<uint16_t>(settings.websocket_server_port));
         }
         else {
-            if (websocket_server) return;
-            EnableWebsocketServer(false);
-            websocket_server = new std::thread([]() {
-                // The app needs to be created in the thread that is supposed to handle the websocket connections
-                websocket_app = new uWS::App();
-                websocket_app
-                    ->ws<int>(
-                        "/*",
-                        {/* Settings */
-                         .compression = uWS::SHARED_COMPRESSOR,
-                         .maxPayloadLength = 16 * 1024,
-                         .idleTimeout = 10,
-                         .maxBackpressure = 1 * 1024 * 1024,
-                         .sendPingsAutomatically = true,
-                         /* Handlers */
-                         .upgrade = nullptr,
-                         .open =
-                             [](auto ws) {
-                                 ws->subscribe("objective_events");
-                             }
-                        }
-                    )
-                    .listen(
-                        settings.websocket_server_port,
-                        [](auto* listen_socket) {
-                            if (listen_socket) {
-                                Log::Log("EnableWebsocketServer listening on port %d", settings.websocket_server_port);
-                            }
-                        }
-                    )
-                    .run();
-            });
+            websocket_server.Stop();
         }
-
     }
 
     void WebsocketSendMessage(std::string_view message) {
-        if (websocket_app) {
-            // @Cleanup: Should we be sending this from a different thread to the websocket? Doesn't seem right...
-            if(websocket_mode == LiveSplitOneJSON) {
-                std::string command = "{\"command\": \"" + std::string(message) + "\"}";
-                websocket_app->publish("objective_events", command, uWS::OpCode::TEXT);
-            } else {
-                websocket_app->publish("objective_events", message, uWS::OpCode::TEXT);
-            }
+        if (websocket_mode == LiveSplitOneJSON) {
+            websocket_server.Broadcast("{\"command\": \"" + std::string(message) + "\"}");
+        } else {
+            websocket_server.Broadcast(message);
         }
     }
 } // namespace
@@ -1081,8 +1034,8 @@ void ObjectiveTimerWindow::DrawSettingsInternal()
             EnableWebsocketServer(false);
             EnableWebsocketServer(enable_websocket_server);
         }
-        ImGui::Text("LiveSplit Server status: %s", websocket_app && websocket_server ? "Running" : "Stopped");
-        if (websocket_app && websocket_server) {
+        ImGui::Text("LiveSplit Server status: %s", websocket_server.Listening() ? "Running" : "Stopped");
+        if (websocket_server.Listening()) {
             ImGui::SameLine();
             ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "(Port %d)", settings.websocket_server_port);
         }
@@ -1150,33 +1103,29 @@ void ObjectiveTimerWindow::LoadRuns()
         FindClose(hFind);
 
         for (auto it = obj_timer_files.rbegin(); it != obj_timer_files.rend() && instance.objective_sets.size() < max_objectives_in_memory; ++it) {
-            try {
-                std::ifstream file;
-                std::wstring fn = Resources::GetPath(L"runs", *it);
-                file.open(fn);
-                if (file.is_open()) {
-                    std::stringstream ss;
-                    ss << file.rdbuf();
-                    std::vector<ObjectiveSet::Serialized> os_arr;
-                    constexpr glz::opts opts{.error_on_unknown_keys = false};
-                    if (auto ec = glz::read<opts>(os_arr, ss.str()); !ec) {
-                        for (const auto& elem : os_arr) {
-                            ObjectiveSet* os = ObjectiveSet::FromJson(elem);
-                            if (instance.objective_sets.contains(os->system_time)) {
-                                delete os;
-                                continue; // Don't load in a run that already exists
-                            }
-                            os->StopObjectives();
-                            os->need_to_collapse = true;
-                            os->from_disk = true;
-                            instance.objective_sets.emplace(os->system_time, os);
-                            instance.display_order_dirty = true;
+            std::ifstream file;
+            std::wstring fn = Resources::GetPath(L"runs", *it);
+            file.open(std::filesystem::path(fn));
+            if (file.is_open()) {
+                std::stringstream ss;
+                ss << file.rdbuf();
+                std::vector<ObjectiveSet::Serialized> os_arr;
+                constexpr SizeOptimisedJson opts{{.error_on_unknown_keys = false}};
+                if (auto ec = glz::read<opts>(os_arr, ss.str()); !ec) {
+                    for (const auto& elem : os_arr) {
+                        ObjectiveSet* os = ObjectiveSet::FromJson(elem);
+                        if (instance.objective_sets.contains(os->system_time)) {
+                            delete os;
+                            continue; // Don't load in a run that already exists
                         }
+                        os->StopObjectives();
+                        os->need_to_collapse = true;
+                        os->from_disk = true;
+                        instance.objective_sets.emplace(os->system_time, os);
+                        instance.display_order_dirty = true;
                     }
-                    file.close();
                 }
-            } catch (const std::exception&) {
-                Log::Error("Failed to load ObjectiveSets from json");
+                file.close();
             }
         }
         loading = false;
@@ -1210,20 +1159,16 @@ void ObjectiveTimerWindow::SaveRuns()
             objective_sets_by_file[filename].push_back(os.second);
         }
         for (auto& it : objective_sets_by_file) {
-            try {
-                std::ofstream file;
-                file.open(Resources::GetPath(L"runs", it.first));
-                if (file.is_open()) {
-                    std::vector<ObjectiveSet::Serialized> os_arr;
-                    os_arr.reserve(it.second.size());
-                    for (const auto os : it.second) {
-                        os_arr.push_back(os->ToJson());
-                    }
-                    file << glz::write_json(os_arr).value_or(std::string{}) << std::endl;
-                    file.close();
+            std::ofstream file;
+            file.open(Resources::GetPath(L"runs", it.first));
+            if (file.is_open()) {
+                std::vector<ObjectiveSet::Serialized> os_arr;
+                os_arr.reserve(it.second.size());
+                for (const auto os : it.second) {
+                    os_arr.push_back(os->ToJson());
                 }
-            } catch (const std::exception&) {
-                Log::Error("Failed to save ObjectiveSets to json");
+                file << glz::write<SizeOptimisedJson{}>(os_arr).value_or(std::string{}) << std::endl;
+                file.close();
             }
         }
         runs_dirty = false;

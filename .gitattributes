@@ -1,6 +1,11 @@
-# Scripts that run inside the Linux build containers must keep LF endings even when the
-# repo is checked out on Windows with core.autocrlf=true (Git for Windows' default) and
-# bind-mounted into the container: CRLF turns the shebang into "/usr/bin/env bash\r",
+# Store text files with LF in the repo and convert to the checkout's native endings, so
+# CRLF edits from Windows don't show up as whole-file changes.
+* text=auto
+
+# Shell scripts must keep LF endings even when the repo is checked out on Windows with
+# core.autocrlf=true (Git for Windows' default): CRLF turns the shebang into "/usr/bin/env bash\r",
 # which fails as `bad interpreter: No such file or directory`.
 *.sh text eol=lf
-Dockerfile text eol=lf
+
+# cmd.exe misreads labels and goto in batch files with LF endings, which a checkout made on Linux would give them.
+*.bat text eol=crlf

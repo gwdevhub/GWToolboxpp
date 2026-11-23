@@ -43,6 +43,7 @@ public:
         bool collapsed = false;
     };
 
+    void Initialize() override;
     void Terminate() override;
     void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
     void SaveSettings(SettingsDoc& doc) override;

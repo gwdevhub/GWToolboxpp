@@ -108,6 +108,8 @@ public:
     bool SetGroup(HotkeyGroup* group);
 
     bool IsGroup();
+    // Without RTTI (the MinGW build has none), how code tells a group from a plain hotkey.
+    virtual HotkeyGroup* AsGroup() { return nullptr; }
 
 protected:
     static bool isLoading() { return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading; }

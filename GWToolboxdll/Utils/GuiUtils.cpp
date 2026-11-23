@@ -297,9 +297,22 @@ namespace GuiUtils {
         });
     }
 
-    std::string SanitizeWikiUrl(std::string s)
+    std::string SanitizeWikiUrl(const std::string s)
     {
-        return TextUtils::ctre_regex_replace<R"([\s_]*\[.*?\][\s_]*)", "">(s);
+        const auto is_padding = [](const char c) { return c == '_' || std::isspace(static_cast<unsigned char>(c)); };
+        std::string sanitized;
+        size_t kept_from = 0;
+        for (auto open = s.find('['); open != std::string::npos; open = s.find('[', kept_from)) {
+            const auto close = s.find(']', open + 1);
+            if (close == std::string::npos) break;
+            auto start = open;
+            while (start > kept_from && is_padding(s[start - 1])) start--;
+            auto end = close + 1;
+            while (end < s.size() && is_padding(s[end])) end++;
+            sanitized.append(s, kept_from, start - kept_from);
+            kept_from = end;
+        }
+        return sanitized.append(s, kept_from);
     }
 
     void OpenWiki(const std::wstring& url_path)
@@ -345,14 +358,12 @@ namespace GuiUtils {
         std::string token;
 
         while (iss >> token) {  // Read each space-separated number
-            try {
-                int key = std::stoi(token);  // Convert to int
-                if (key >= 0 && key < 256) { // Ensure valid range
-                    key_combo.set(key);
-                }
-            }
-            catch (...) {
-                // Handle conversion errors (e.g., if str contains invalid characters)
+            // std::stoi's rules: a leading number counts even with text after it; anything else is skipped.
+            char* end;
+            errno = 0;
+            const auto key = strtol(token.c_str(), &end, 10);
+            if (end != token.c_str() && errno != ERANGE && key >= 0 && key < 256) {
+                key_combo.set(key);
             }
         }
     }

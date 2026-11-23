@@ -345,10 +345,10 @@ namespace CompletionWindow_Constants {
         const char* completion_category;
     };
 
-    const char* completion_category_weapon_upgrades = "Weapon Upgrades";
-    const char* completion_category_runes_insignias = "Runes & Insignias";
-    const char* completion_category_inscriptions = "Inscriptions";
-    std::vector<ItemUpgradeInfo> item_upgrades_by_file_id = {
+    constexpr const char* completion_category_weapon_upgrades = "Weapon Upgrades";
+    constexpr const char* completion_category_runes_insignias = "Runes & Insignias";
+    constexpr const char* completion_category_inscriptions = "Inscriptions";
+    constexpr auto item_upgrades_by_file_id = std::to_array<ItemUpgradeInfo>({
         // Warrior
         {0x40e8b, "Knight's Insignia.png", completion_category_runes_insignias},
         {0x40e8c, "Lieutenant's Insignia.png", completion_category_runes_insignias},
@@ -475,5 +475,5 @@ namespace CompletionWindow_Constants {
         {0x32461, "Spear Grip.png", completion_category_weapon_upgrades},
         {0x32448, "Spearhead.png", completion_category_weapon_upgrades},
         {0x283e5, "Dagger Tang.png", completion_category_weapon_upgrades},
-    };
+    });
 }

@@ -379,19 +379,20 @@ namespace {
         std::string compare = TextUtils::ToLower(TextUtils::RemovePunctuation(TextUtils::WStringToString(s)));
         const std::string first_word = compare.substr(0, compare.find(' '));
 
-        static constexpr ctll::fixed_string district_regex = "([a-z]{2,3})(\\d+)?";
-        if (auto m = ctre::match<district_regex>(first_word)) {
-            const auto& shorthand_outpost = shorthand_district_names.find(m.get<1>().to_string());
-            if (shorthand_outpost == shorthand_district_names.end()) {
-                return false;
-            }
-            district = shorthand_outpost->second.district;
-            if (m.size() > 2 && !TextUtils::ParseUInt(m.get<2>().to_string().c_str(), &number)) {
-                number = 0;
-            }
-            return true;
+        const auto letters = static_cast<size_t>(std::ranges::find_if_not(first_word, [](const char c) { return c >= 'a' && c <= 'z'; }) - first_word.begin());
+        const auto digits = first_word.substr(letters);
+        if (letters < 2 || letters > 3 || !(digits.empty() || TextUtils::IsDigits(digits))) {
+            return false;
         }
-        return false;
+        const auto& shorthand_outpost = shorthand_district_names.find(first_word.substr(0, letters));
+        if (shorthand_outpost == shorthand_district_names.end()) {
+            return false;
+        }
+        district = shorthand_outpost->second.district;
+        if (!TextUtils::ParseUInt(digits.c_str(), &number)) {
+            number = 0;
+        }
+        return true;
     }
 
     void CHAT_CMD_FUNC(CmdTP)
@@ -975,7 +976,7 @@ bool TravelWindow::TravelNearest(const GW::Constants::MapID map_id)
 {
     const auto outpost = GetNearestOutpost(map_id);
     if (outpost == GW::Constants::MapID::None) {
-        Log::ErrorW(L"[Error] Failed to find an unlocked outpost near %s", Resources::GetMapName(map_id)->wstring().c_str());
+        Log::ErrorW(L"[Error] Failed to find an unlocked outpost near %ls", Resources::GetMapName(map_id)->wstring().c_str());
         return false;
     }
     return Travel(outpost);
@@ -997,7 +998,7 @@ bool TravelWindow::Travel(const GW::Constants::MapID map_id, const GW::Constants
         wchar_t map_name_buf[8];
         constexpr wchar_t err_message_buf[256] = L"[Error] Your character does not have that map unlocked";
         if (map && map->name_id && GW::UI::UInt32ToEncStr(map->name_id, map_name_buf, 8)) {
-            Log::ErrorW(L"[Error] Your character does not have \x1\x2%s\x2\x108\x107 unlocked", map_name_buf);
+            Log::ErrorW(L"[Error] Your character does not have \x1\x2%ls\x2\x108\x107 unlocked", map_name_buf);
         }
         else {
             Log::ErrorW(err_message_buf);

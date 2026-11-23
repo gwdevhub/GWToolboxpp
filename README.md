@@ -5,83 +5,59 @@
 If you are here to check toolbox features or for a download link, go to [https://gwtoolbox.com](https://gwtoolbox.com). Stay here and keep reading for information on how to download and build from source.
 
 ## How to download, build, and run
+
+GWToolbox builds with [llvm-mingw](https://github.com/mstorsjo/llvm-mingw) (clang, lld, libc++, MinGW-w64), the same
+pinned toolchain on Windows and Linux. Every binary gets a `.pdb`, so the Visual Studio debugger and crash dumps work
+as usual. No MSVC compiler is used. A bootstrap script installs the toolchain and vcpkg into the checkout and sets up
+Visual Studio, CLion, Rider or VS Code; see [bootstrap/README.md](bootstrap/README.md) for what it does.
+
 ### Requirements
-* Visual Studio 2026 version 18.0+. You can download [Visual Studio Community](https://visualstudio.microsoft.com/vs/community/) for free. You will also need the "Desktop development with C++" package.
-* C++23 compatible v144 MSVC Platform Toolset
-* Windows 11 SDK
-* CMake 3.29 or higher. This is integrated in the [Visual Studio Developer PowerShell](https://learn.microsoft.com/en-us/visualstudio/ide/reference/command-prompt-powershell?view=vs-2022). Alternatively download the latest version from [https://cmake.org/download/](https://cmake.org/download/).
-* vcpkg. This is integrated in the [Visual Studio Developer PowerShell](https://learn.microsoft.com/en-us/visualstudio/ide/reference/command-prompt-powershell?view=vs-2022). Alternatively download the latest version from [https://github.com/microsoft/vcpkg/releases/](https://github.com/microsoft/vcpkg/releases/latest).
-* [Git](https://git-scm.com/)
+* [Git](https://git-scm.com/) and Python 3.9+
+* CMake 3.29+ and Ninja (the Windows bootstrap installs them with winget when missing)
+* For the Visual Studio solution: Visual Studio 2026 with the "Desktop development with C++" workload (its compiler
+  is not used)
 
-1. Open **Visual Studio Developer PowerShell**. Use all the following commands: 
-
-2. Clone the repository: 
-`git clone https://github.com/gwdevhub/GWToolboxpp.git`
-
-3. Navigate to the GWToolboxpp folder: 
-`cd GWToolboxpp`
-
-4. Build: `cmake --preset=vcpkg`
-
-5. Open: `cmake --open build`
-
-6. Build the solution. `cmake --build build --config RelWithDebInfo`
-
-7. Run.
-
-## Building on Linux
-
-`clang` targets `i686-pc-windows-msvc` directly, linking with `lld-link`, against MSVC CRT
-and Windows SDK headers/libs fetched by [xwin](https://github.com/Jake-Shadle/xwin) from
-Microsoft's official installer manifests. Nothing Microsoft-built ever executes, so no Wine
-is involved and builds run at full `-j`. The twelve SM3 shaders are compiled by
-[vkd3d-shader](https://gitlab.winehq.org/wine/vkd3d) in place of `fxc.exe`, since `fxc` is
-the only Microsoft compiler still emitting shader model 1-3 and `dxc` dropped everything
-below SM6.
-
-**With Docker** - the only requirement is [Docker](https://docs.docker.com/get-docker/):
-
-```sh
-./scripts/build-xwin.sh
+### Windows
+```powershell
+git clone https://github.com/gwdevhub/GWToolboxpp.git
+cd GWToolboxpp
+.\bootstrap.bat
 ```
+(or double-click `bootstrap.bat` in Explorer).
+Then open `GWToolbox.slnx` in Visual Studio or Rider, or the folder in CLion, and build. From a terminal:
+`python scripts\build.py`.
 
-The first run builds the image (downloads the SDK headers/libs and builds vkd3d, expect it to
-take a while), then configures and builds `GWToolboxdll` into `bin/GWToolboxdll.dll`. Later
-runs reuse the cached image and only rebuild changed files.
-
-Options (see `./scripts/build-xwin.sh --help`):
-* `--target <name>` - build a different CMake target (default: `GWToolboxdll`; use `all` for everything)
-* `--config <Debug|RelWithDebInfo|Release>` - CMake config to build (default: `RelWithDebInfo`)
-* `--jobs <n>` - parallel build jobs (default: all cores)
-* `--shell` - drop into a shell in the build container instead of building
-* `--rebuild-image` - force a clean rebuild of the Docker image
-
-The container runs as root; the script hands ownership of anything it writes back to your
-user once done. Build output lives in `build-xwin/` (gitignored) - delete it for a fully
-clean reconfigure, e.g. after switching `--config` or branches.
-
-On a Windows host, `scripts\build-xwin.ps1` drives the same container through Docker Desktop
-(`-Config`, `-Target`, `-Jobs`, `-Shell`, `-RebuildImage`). Use it to reproduce a CI result or
-to check a change builds clean under clang - for ordinary Windows development build with
-Visual Studio or `build-clang.bat` instead.
-
-**Directly on the host** - needs `clang` **19 or newer** (the MSVC STL rejects older ones
-outright with `error STL1000`; note Ubuntu 24.04 still ships 18), `lld`, `llvm` (for
-`llvm-rc`/`llvm-lib`/`llvm-mt`), `cmake` >= 3.29, `ninja`, `python3`, and a bootstrapped
-`vcpkg` in `$VCPKG_ROOT`. Some distros do not ship a `clang-cl`; it is the same binary as
-`clang` selected by name, so `ln -s $(command -v clang) /usr/local/bin/clang-cl` is enough.
-
+### Linux
 ```sh
-./scripts/xwin/setup-toolchain.sh          # one-off: SDK (~800MB) + vkd3d-compiler
-export XWIN_SDK="$PWD/.xwin-toolchain/xwin-sdk"
-export VKD3D_COMPILER="$PWD/.xwin-toolchain/vkd3d-1.19/vkd3d-compiler"
-cmake --preset xwin -DCMAKE_BUILD_TYPE=RelWithDebInfo
-cmake --build build-xwin -j"$(nproc)"
+git clone https://github.com/gwdevhub/GWToolboxpp.git
+cd GWToolboxpp
+bash bootstrap.sh
+python3 scripts/build.py
 ```
+The SM3 shaders are compiled by [vkd3d-shader](https://gitlab.winehq.org/wine/vkd3d) in place of `fxc.exe`, which the
+bootstrap builds. Its bytecode is longer than `fxc`'s, so validate rendering changes in-game.
 
-Caveats: vkd3d-shader has no SM1-3 optimiser, so the shader bytecode is longer than `fxc`'s
-(register allocation is unaffected). Releases are still cut on Windows with MSVC - validate
-rendering changes in-game before shipping a clang-built DLL.
+`scripts/build.py` builds `GWToolbox_DLL`, `GWToolbox_Launcher_Windows` and `GWToolbox_Launcher_Linux` into `bin/<Config>/`. The Linux launcher is built with the host compiler on Linux, and in Docker (`Dockerfile.linux`) on Windows, which has no Linux compiler. `--preset` picks `relwithdebinfo`
+(default), `debug` or `release`, and `--target` builds other targets (`all` for everything). Each run is logged to `logs/build-*.log`.
+
+## Building and releasing
+
+**Build scripts**, run from the repository root. Each builds the `relwithdebinfo` preset:
+* `build_launcher.sh` / `build_launcher.bat`: the Windows and Linux launchers.
+* `build_dll.sh` / `build_dll.bat`: `GWToolboxdll.dll`.
+
+Extra arguments go to `scripts/build.py`, for example `--no-linux` or `--no-appimage`.
+
+**Outputs** in `bin/RelWithDebInfo/`:
+* `GWToolboxdll.dll` and `GWToolboxdll.pdb`
+* `GWToolbox.exe` and `GWToolbox.pdb`
+* `GWToolbox` (the Linux launcher), `GWToolbox.debug`, and `GWToolbox.AppImage`, which is packed on Linux and, on Windows, by the Docker build
+* `.gz` copies of the PDBs and `GWToolbox.debug` for distribution. The originals stay for debugging.
+
+**Releasing:** `python deploy.py --dry-run` builds and checks everything without changing git or creating a release.
+`python deploy.py` creates a draft GitHub release from the notes in `site/src/content/docs/history.md`. It uploads only
+the binaries that changed since the newest release that has them, and prints the draft's URL at the end. Add `--publish`
+to publish the release straight away.
 
 ## Notes
 * GWToolbox compiles as a DLL (`GWToolboxdll.dll`) and EXE (`GWToolbox.exe`). The exe lets you select a Guild Wars Client and injects the dll, but you can also use other dll injectors of your choice.
@@ -105,13 +81,16 @@ Both Widgets and Windows can also have a panel in Settings, and share common cod
 
 ## Plugins
 Toolbox supports plugins, meaning you can extend Toolbox functionality.
-Please take note that plugins are currently a *beta* feature - plugins compiled for one version of toolbox should continue working, but may have to be recompiled
+Please take note that plugins are currently a *beta* feature.
+
+Toolbox and plugins talk only through the plain C interface in `GWToolboxdll/PluginApi.h`, so a plugin built with MSVC, clang or GCC works with a toolbox built with any of them. Plugins built before this interface (which exported only `ToolboxPluginInstance`) no longer load and must be rebuilt against the current plugin SDK in `plugins/Base`.
 
 For users: put the plugin into GWToolboxpp/\<Computername\>/plugins
 If you use plugins that aren't compatible with your Toolbox version, you might experience crashes.
 
 For developers: there are a few things you should take note of:
-* Two examples (Clock and InstanceTimer) will automatically be added to the solution (see CMakeLists.txt)
+* ExamplePlugin is built alongside Toolbox (see cmake/gwtoolboxdll_plugins.cmake); start from it.
+* Keep writing a `ToolboxPlugin` subclass and `ToolboxPluginInstance()`; the SDK turns it into the exported `GWToolboxPlugin_GetApi` C table. `Log::*`, `MinimapRenderer::RegisterRenderer` and `FontLoader::GetFont` work as before but are routed through the host table, so a plugin imports nothing from GWToolboxdll.
 * Your Plugin::Initialize must call ToolboxPlugin::Initialize(ctx, fns, tbdll), otherwise you must take care of creating and destroying your own ImGui context.
 * We do not guarantee API stability between versions
 * If you wish to draw in your plugin, inherit from ToolboxUIPlugin. It will automatically initialise GWCA access for you (GW::Initialize()). If you create a plugin that inherits from ToolboxPlugin, you must manage that yourself. If you use GWCA, make sure the GW::Scanner points to GW.exe at the end of Plugin::Initialize().

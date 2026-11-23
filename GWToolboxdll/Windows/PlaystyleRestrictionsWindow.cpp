@@ -507,7 +507,7 @@ namespace {
     bool WriteProfile(const std::filesystem::path& path)
     {
         std::string buffer;
-        if (glz::write<glz::opts{.prettify = true}>(profile, buffer)) {
+        if (glz::write<SizeOptimisedJson{{.prettify = true}}>(profile, buffer)) {
             return false;
         }
         std::ofstream file(path, std::ios::binary | std::ios::trunc);
@@ -526,7 +526,7 @@ namespace {
         }
         const std::string buffer{std::istreambuf_iterator(file), {}};
         Profile loaded;
-        if (glz::read<glz::opts{.error_on_unknown_keys = false}>(loaded, buffer)) {
+        if (glz::read<SizeOptimisedJson{{.error_on_unknown_keys = false}}>(loaded, buffer)) {
             return false;
         }
         profile = std::move(loaded);

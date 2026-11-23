@@ -385,10 +385,10 @@ namespace {
                 my_file.open(drops_filename.c_str(), std::ios::app);
             }
             if (ec) {
-                Log::WarningW(L"std::filesystem::exists for %s failed", drops_filename.wstring().c_str());
+                Log::WarningW(L"std::filesystem::exists for %ls failed", drops_filename.wstring().c_str());
             }
             else if (!my_file.is_open() || my_file.fail()) {
-                Log::WarningW(L"std::wofstream for %s failed", drops_filename.wstring().c_str());
+                Log::WarningW(L"std::wofstream for %ls failed", drops_filename.wstring().c_str());
             }
             else {
                 if (!file_exists) {
@@ -583,14 +583,14 @@ void ItemDrops::Update(float) {
         Resources::EnqueueWorkerTask([filename, source_path] {
             std::wifstream src(source_path);
             if (!src.is_open()) {
-                Log::WarningW(L"Item drops: no session CSV yet at %s to export", source_path.wstring().c_str());
+                Log::WarningW(L"Item drops: no session CSV yet at %ls to export", source_path.wstring().c_str());
                 return;
             }
             std::error_code ec;
             const bool file_exists = std::filesystem::exists(filename, ec);
             std::wofstream my_file(filename, std::ios::app);
             if (!my_file.is_open()) {
-                Log::WarningW(L"std::wofstream for %s failed", filename.wstring().c_str());
+                Log::WarningW(L"std::wofstream for %ls failed", filename.wstring().c_str());
                 return;
             }
             std::wstring line;

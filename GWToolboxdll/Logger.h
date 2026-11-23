@@ -1,7 +1,5 @@
 #pragma once
 
-#include "gwtoolboxdll_export.h"
-
 #define ASSERT(expr) ((void)(!!(expr) || (Log::FatalAssert(#expr, __FILE__, (unsigned)__LINE__), 0)))
 #ifndef IM_ASSERT
 #define IM_ASSERT(expr) ASSERT(expr)
@@ -23,33 +21,33 @@ namespace Log {
 
     // === File/console logging ===
     // printf-style log
-    GWTOOLBOXDLL_EXPORT void Log(const char* msg, ...);
+    void Log(const char* msg, ...);
 
     // printf-style wide-string log
-    GWTOOLBOXDLL_EXPORT void LogW(const wchar_t* msg, ...);
+    void LogW(const wchar_t* msg, ...);
 
-    GWTOOLBOXDLL_EXPORT void FlushFile();
+    void FlushFile();
 
     // === Game chat logging ===
     // Shows a message in chat in the form of a white chat message from toolbox
-    GWTOOLBOXDLL_EXPORT void Info(const char* format, ...);
+    void Info(const char* format, ...);
     // Shows a message in chat in the form of a white chat message from toolbox
-    GWTOOLBOXDLL_EXPORT void InfoW(const wchar_t* format, ...);
+    void InfoW(const wchar_t* format, ...);
 
     // Shows a temporary message in chat in the form of a white chat message from toolbox. This message will disappear on map change.
-    GWTOOLBOXDLL_EXPORT void Flash(const char* format, ...);
+    void Flash(const char* format, ...);
     // Shows a temporary message in chat in the form of a white chat message from toolbox. This message will disappear on map change.
-    GWTOOLBOXDLL_EXPORT void FlashW(const wchar_t* format, ...);
+    void FlashW(const wchar_t* format, ...);
 
     // Shows a temporary message in chat in the form of a red chat message from toolbox. This message will disappear on map change.
-    GWTOOLBOXDLL_EXPORT void Error(const char* format, ...);
+    void Error(const char* format, ...);
     // Shows a temporary message in chat in the form of a red chat message from toolbox. This message will disappear on map change.
-    GWTOOLBOXDLL_EXPORT void ErrorW(const wchar_t* format, ...);
+    void ErrorW(const wchar_t* format, ...);
 
     // Shows a temporary message in chat in the form of a yellow chat message from toolbox. This message will disappear on map change.
-    GWTOOLBOXDLL_EXPORT void Warning(const char* format, ...);
+    void Warning(const char* format, ...);
     // Shows a temporary message in chat in the form of a yellow chat message from toolbox. This message will disappear on map change.
-    GWTOOLBOXDLL_EXPORT void WarningW(const wchar_t* format, ...);
+    void WarningW(const wchar_t* format, ...);
 
-    GWTOOLBOXDLL_EXPORT void FatalAssert(const char* expr, const char* file, const unsigned line);
+    void FatalAssert(const char* expr, const char* file, const unsigned line);
 }

@@ -114,7 +114,7 @@ namespace ts5_api {
 
 namespace {
 
-    constexpr glz::opts json_opts{.error_on_unknown_keys = false};
+    constexpr SizeOptimisedJson json_opts{{.error_on_unknown_keys = false}};
 
     GW::HookEntry ChatCmd_HookEntry;
 
@@ -205,7 +205,7 @@ namespace {
             .channel_name = channel_id,
         };
 
-        Resources::Post("https://invites.teamspeak.com/servers/create", glz::write_json(packet).value_or(std::string{}), [callback](const bool success, const std::string& response, void*) {
+        Resources::Post("https://invites.teamspeak.com/servers/create", glz::write<SizeOptimisedJson{}>(packet).value_or(std::string{}), [callback](const bool success, const std::string& response, void*) {
             if (!success) {
                 Log::Error("Failed to get teamspeak invite link (1)");
                 Log::Log("%s", response.c_str());
@@ -237,19 +237,19 @@ namespace {
             return;
         }
         wchar_t buf[120];
-        swprintf(buf, _countof(buf) - 1, L"%s (%d users)",
+        swprintf(buf, _countof(buf) - 1, L"%ls (%d users)",
                  TextUtils::StringToWString(teamspeak_server->name).c_str(),
                  teamspeak_server->user_count);
         GW::Chat::SendChat('#', buf);
 
-        swprintf(buf, _countof(buf) - 1, L"TS3: [https://invite.teamspeak.com/%S/?port=%d;xx]",
+        swprintf(buf, _countof(buf) - 1, L"TS3: [https://invite.teamspeak.com/%hs/?port=%d;xx]",
                  teamspeak_server->host.c_str(),
                  teamspeak_server->port);
         GW::Chat::SendChat('#', buf);
 
         GetServerInviteLink(teamspeak_server, teamspeak_server->my_channel_id, [](const std::string& url) {
             wchar_t buf[120];
-            swprintf(buf, _countof(buf) - 1, L"TS5: [%S;xx]", url.c_str());
+            swprintf(buf, _countof(buf) - 1, L"TS5: [%hs;xx]", url.c_str());
             GW::Chat::SendChat('#', buf);
         });
     }
@@ -266,7 +266,7 @@ namespace {
                 .content = {.apiKey = settings.gwtoolbox_teamspeak5_api_key},
             },
         };
-        websocket->send(glz::write_json(packet).value_or(std::string{}));
+        websocket->send(glz::write<SizeOptimisedJson{}>(packet).value_or(std::string{}));
     }
 
     bool Connect(bool user_invoked = false)

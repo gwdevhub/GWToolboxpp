@@ -156,7 +156,7 @@ namespace {
     void SetPlayerNumber(wchar_t* player_name, const uint32_t player_number)
     {
         wchar_t buf[32] = {0};
-        swprintf(buf, 32, L"%s (%d)", player_name, player_number);
+        swprintf(buf, 32, L"%ls (%d)", player_name, player_number);
         if (wcsncmp(player_name, buf, wcslen(buf)) != 0) {
             wcscpy(player_name, buf);
         }

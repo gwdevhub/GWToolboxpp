@@ -36,7 +36,7 @@ static constexpr uint32_t COST_PER_CONNECTION_MS = 30 * 1000;
 static constexpr uint32_t COST_PER_CONNECTION_MAX_MS = 60 * 1000;
 using easywsclient::WebSocket;
 
-constexpr glz::opts json_opts{.error_on_unknown_keys = false};
+constexpr SizeOptimisedJson json_opts{{.error_on_unknown_keys = false}};
 
 namespace lfg_api {
     struct RawMessage {
@@ -555,7 +555,7 @@ void PartySearchWindow::fetch()
             wchar_t buffer[512];
             const std::wstring name_ws = TextUtils::StringToWString(msg.name);
             const std::wstring msg_ws = TextUtils::StringToWString(msg.message);
-            swprintf(buffer, 512, L"<a=1>%s</a>: <c=#f96677><quote>%s", name_ws.c_str(), msg_ws.c_str());
+            swprintf(buffer, 512, L"<a=1>%ls</a>: <c=#f96677><quote>%ls", name_ws.c_str(), msg_ws.c_str());
             WriteChat(GW::Chat::Channel::CHANNEL_TRADE, buffer);
         }
     });

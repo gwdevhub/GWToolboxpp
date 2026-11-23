@@ -334,7 +334,7 @@ namespace {
         {
             if (displayed_quantity != quantity) {
                 auto build_desc = quantity > 1 ? std::to_string(quantity) + " " + description : description;
-                description_one_line = TextUtils::ctre_regex_replace<L"\n", L" - ">(build_desc);
+                description_one_line = TextUtils::str_replace_all(build_desc, "\n", " - ");
                 displayed_quantity = quantity;
             }
             return description_one_line;
@@ -1181,7 +1181,7 @@ namespace {
         r.path = path;
         std::string contents;
         if (!ReadFileToString(path, contents)) return r;
-        constexpr glz::opts opts{.error_on_unknown_keys = false};
+        constexpr SizeOptimisedJson opts{{.error_on_unknown_keys = false}};
         if (glz::read<opts>(r.account_json, contents)) return r; // parse error
         GUID file_account{};
         if (!TextUtils::StringToGuid(r.account_json.account, &file_account)) return r;
@@ -1335,7 +1335,7 @@ namespace {
             ini_by_path.erase(path);
             return;
         }
-        const auto compact = glz::write_json(aj).value_or(std::string{});
+        const auto compact = glz::write<SizeOptimisedJson{}>(aj).value_or(std::string{});
         if (compact.empty()) {
             Log::Error("Account Inventory: Failed to serialise inventory. Inventory tracking data will be lost.");
             return;

@@ -40,6 +40,20 @@ using namespace Missions;
 using namespace CompletionWindow_Constants;
 
 namespace {
+    // Each run of characters after `marker` up to any of `stops`, as the old "marker([^stops]+)" search_all found them.
+    std::vector<std::wstring_view> RunsAfter(const std::wstring_view subject, const std::wstring_view marker, const std::wstring_view stops)
+    {
+        std::vector<std::wstring_view> runs;
+        for (auto at = subject.find(marker); at != std::wstring_view::npos; at = subject.find(marker, at + 1)) {
+            const auto start = at + marker.size();
+            const auto end = std::min(subject.find_first_of(stops, start), subject.size());
+            if (end == start) continue;
+            runs.push_back(subject.substr(start, end - start));
+            at = end - 1;
+        }
+        return runs;
+    }
+
     bool ArrayBoolAt(GW::Array<uint32_t>& array, const uint32_t index)
     {
         const uint32_t real_index = index >> 5;
@@ -330,28 +344,18 @@ namespace {
         if (!(dialog_body && wcsncmp(dialog_body, L"\x8102\x2B9D\xDE1D\xB19F\x52DD", 5) == 0)) {
             return; // Not devotion dialog "Miniatures on display"
         }
-        static constexpr ctll::fixed_string displayed_miniatures = L"\x2\x102\x2([^\x102\x2]+)";
-        std::wstring_view subject(dialog_body);
+        const std::wstring_view subject(dialog_body);
         std::wstring msg;
         const auto cc = character_completion[GetPlayerName()];
         auto& minipets_unlocked = cc->minipets_unlocked;
         minipets_unlocked.clear();
-        for (auto m : ctre::search_all<displayed_miniatures>(subject)) {
-            std::wstring miniature_encoded_name = m.get<1>().to_string();
-            for (size_t i = 0; i < _countof(encoded_minipet_names); i++) {
-                if (encoded_minipet_names[i] == miniature_encoded_name) {
-                    ArrayBoolSet(minipets_unlocked, i, true);
-                    break;
-                }
-            }
-        }
-        static constexpr ctll::fixed_string available_miniatures = L"\x2\x109\x2([^\x109\x2]+)";
-        for (auto m : ctre::search_all<available_miniatures>(subject)) {
-            std::wstring miniature_encoded_name = m.get<1>().to_string();
-            for (size_t i = 0; i < _countof(encoded_minipet_names); i++) {
-                if (encoded_minipet_names[i] == miniature_encoded_name) {
-                    ArrayBoolSet(minipets_unlocked, i, true);
-                    break;
+        for (const auto& [marker, stops] : {std::pair{L"\x2\x102\x2", L"\x102\x2"}, std::pair{L"\x2\x109\x2", L"\x109\x2"}}) {
+            for (const auto miniature_encoded_name : RunsAfter(subject, marker, stops)) {
+                for (size_t i = 0; i < _countof(encoded_minipet_names); i++) {
+                    if (encoded_minipet_names[i] == miniature_encoded_name) {
+                        ArrayBoolSet(minipets_unlocked, i, true);
+                        break;
+                    }
                 }
             }
         }
@@ -399,9 +403,8 @@ namespace {
         std::wstring msg;
         const auto cc = character_completion[GetPlayerName()];
         auto& minipets_unlocked = cc->minipets_unlocked;
-        static constexpr ctll::fixed_string miniature_displayed_regex = L"\x8102\x2B91\xDAA2\xD19F\x32DB\x10A([^\x1]+)";
-        if (auto m = ctre::search<miniature_displayed_regex>(subject)) {
-            const std::wstring miniature_encoded_name = m.get<1>().to_string();
+        if (const auto runs = RunsAfter(subject, L"\x8102\x2B91\xDAA2\xD19F\x32DB\x10A", L"\x1"); !runs.empty()) {
+            const auto miniature_encoded_name = runs.front();
             for (size_t i = 0; i < _countof(encoded_minipet_names); i++) {
                 if (encoded_minipet_names[i] == miniature_encoded_name) {
                     ArrayBoolSet(minipets_unlocked, i, true);
@@ -417,7 +420,7 @@ namespace {
     void OnHomLoaded(HallOfMonumentsAchievements* result)
     {
         if (result->state != HallOfMonumentsAchievements::State::Done) {
-            Log::LogW(L"Failed to load Hall of Monuments achievements for %s", result->character_name.c_str());
+            Log::LogW(L"Failed to load Hall of Monuments achievements for %ls", result->character_name.c_str());
             if (result->error_str_from_request.contains("ErrCharacterNotFound")) {
                 auto found = character_completion.find(result->character_name);
                 if (found != character_completion.end()) {
@@ -1061,7 +1064,7 @@ size_t HeroUnlock::GetLoadedIcons(IDirect3DTexture9* icons_out[4])
         const auto path = Resources::GetPath(L"img/heros");
         Resources::EnsureFolderExists(path);
         wchar_t local_image[MAX_PATH];
-        swprintf(local_image, _countof(local_image), L"%s/hero_%d.jpg", path.c_str(), skill_id);
+        swprintf(local_image, _countof(local_image), L"%ls/hero_%d.jpg", path.c_str(), skill_id);
         char remote_image[128];
         snprintf(remote_image, _countof(remote_image), "https://github.com/gwdevhub/GWToolboxpp/raw/master/resources/heros/hero_%d.jpg", skill_id);
         Resources::LoadTexture(*icons, local_image, remote_image);
@@ -2814,7 +2817,7 @@ void CompletionWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
         std::ifstream file(json_path, std::ios::binary);
         const std::string buffer{std::istreambuf_iterator(file), {}};
         std::map<std::string, CharacterCompletionJson> loaded;
-        if (!file || glz::read<glz::opts{.error_on_unknown_keys = false}>(loaded, buffer)) {
+        if (!file || glz::read<SizeOptimisedJson{{.error_on_unknown_keys = false}}>(loaded, buffer)) {
             return Log::Error("Failed to load completion json");
         }
         auto read_json_to_buf = [](const CompletionType type, std::vector<uint32_t>& buf, const std::wstring_view name_ws) {
@@ -2998,7 +3001,7 @@ void CompletionWindow::SaveSettings(SettingsDoc& doc)
         data.hom_code = char_comp->hom_code;
     }
     std::string buffer;
-    if (glz::write<glz::opts{.prettify = true}>(out, buffer)) {
+    if (glz::write<SizeOptimisedJson{{.prettify = true}}>(out, buffer)) {
         return;
     }
     std::ofstream file(Resources::GetPath(completion_json_filename), std::ios::binary | std::ios::trunc);

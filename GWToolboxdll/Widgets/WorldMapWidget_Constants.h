@@ -2,7 +2,12 @@
 
 #include <GWCA/Constants/Skills.h>
 #include <GWCA/Constants/Maps.h>
+#include <GWCA/GameContainers/GamePos.h>
+
+#include <array>
 #include <cstdint>
+#include <initializer_list>
+
 namespace WorldMapWidget_Constants {
 
     // Repeated note strings
@@ -38,15 +43,32 @@ namespace WorldMapWidget_Constants {
     static constexpr const char* eidolon = "Eidolon";
     static constexpr const char* blade_ancient_syu_shai = "Blade Ancient Syu-Shai";
 
+    // A fixed array rather than a std::vector, so the boss table below is built at compile time instead of on dll load.
+    struct BossCoords {
+        std::array<GW::Vec2f, 5> points{};
+        size_t count = 0;
+
+        constexpr BossCoords() = default;
+        constexpr BossCoords(const std::initializer_list<GW::Vec2f> list)
+        {
+            for (const auto& point : list) {
+                points[count++] = point;
+            }
+        }
+        [[nodiscard]] constexpr bool empty() const { return count == 0; }
+        [[nodiscard]] constexpr const GW::Vec2f* begin() const { return points.data(); }
+        [[nodiscard]] constexpr const GW::Vec2f* end() const { return points.data() + count; }
+    };
+
     struct EliteBossLocation {
         GW::Constants::SkillID skill_id;
         const char* boss_name;
         GW::Constants::MapID map_id;
-        std::vector<GW::Vec2f> coords;
+        BossCoords coords;
         const char* note = nullptr;
     };
 
-    const EliteBossLocation elite_boss_locations[] = {
+    constexpr EliteBossLocation elite_boss_locations[] = {
         {GW::Constants::SkillID::Prepared_Shot, "Johon the Oxflinger", GW::Constants::MapID::Ice_Cliff_Chasms, {{6395, 2360}}},
         {GW::Constants::SkillID::Water_Trident, "Elsnil Frigidheart", GW::Constants::MapID::Ice_Cliff_Chasms, {{6382, 2207}}},
         {GW::Constants::SkillID::Crippling_Shot, "Chieftain Windswept", GW::Constants::MapID::Service_In_Defense_of_the_Eye, {{6369, 2447}}, "Only during \"Service: In Defense of the Eye\" quest."},

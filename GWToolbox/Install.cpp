@@ -1,11 +1,12 @@
 #include "stdafx.h"
 
 #include <Path.h>
-#include "Download.h"
-#include "Inject.h"
+#include "DllDownload.h"
 #include "Install.h"
+#include "Utf8.h"
 #include "WasmInject.h"
 #include "WindowsDefender.h"
+#include "WindowsInject.h"
 
 namespace fs = std::filesystem;
 
@@ -117,8 +118,27 @@ static void InstallLocalWasmGwmodIfPresent(const fs::path& install_path)
     const fs::path dest = install_path.parent_path() / WASM_GWMOD_FILENAME;
     if (source == dest) return;
     if (!PathSafeCopy(source, dest, true)) {
-        fprintf(stderr, "Found %S but failed to copy it to %S\n", source.c_str(), dest.c_str());
+        fprintf(stderr, "Found %ls but failed to copy it to %ls\n", source.c_str(), dest.c_str());
     }
+}
+
+static bool DownloadDllForInstall(const fs::path& install_dir, std::wstring& error)
+{
+    DllRelease release;
+    std::string failure;
+    if (!FetchDllRelease(release, failure)) {
+        error = FromUtf8(failure);
+        return false;
+    }
+    const auto progress = [](const int percent) {
+        fprintf(stderr, "\rDownloading GWToolboxdll.dll: %d%%", percent);
+    };
+    if (!DownloadDllFile(release, install_dir, progress, failure)) {
+        error = FromUtf8(failure);
+        return false;
+    }
+    fprintf(stderr, "\n");
+    return true;
 }
 
 bool Install(const bool quiet, std::wstring& error)
@@ -144,7 +164,7 @@ bool Install(const bool quiet, std::wstring& error)
     if (!CopyInstaller())
         return error = L"CopyInstaller failed", false;
 
-    if (!DownloadWindow::DownloadDll(error))
+    if (!DownloadDllForInstall(install_path.parent_path(), error))
         return false;
     const auto dll_path = install_path.parent_path() / "GWToolboxdll.dll";
     if (!fs::exists(dll_path)) {

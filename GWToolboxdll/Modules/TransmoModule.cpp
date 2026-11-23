@@ -600,11 +600,7 @@ void TransmoModule::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
             if (sscanf(val.c_str(), "%d,%d,%d,%d,%d", &npc_id, &scale, &model_file_id, &model_file_data, &flags) < 1) {
                 continue;
             }
-            std::string entry_name = key.pItem;
-            static constexpr ctll::fixed_string transmo_index_regex = "(\\d+):(.+)";
-            if (const auto match = ctre::match<transmo_index_regex>(entry_name)) {
-                entry_name = match.get<2>().to_string();
-            }
+            const auto entry_name = TextUtils::WithoutIndexPrefix(key.pItem);
             auto* e = new TransmoEntry;
             snprintf(e->name, sizeof(e->name), "%s", entry_name.c_str());
             e->npc_id = npc_id;

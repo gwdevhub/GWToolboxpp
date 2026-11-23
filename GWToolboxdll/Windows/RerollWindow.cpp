@@ -576,7 +576,8 @@ void RerollWindow::Draw(IDirect3DDevice9*)
                 return std::wstring_view(a.player_name) < std::wstring_view(b.player_name);
             });
         }
-        for (const auto& [idx, character] : available_chars_vector | std::views::enumerate) {
+        for (size_t idx = 0; idx < available_chars_vector.size(); idx++) {
+            const auto& character = available_chars_vector[idx];
             const wchar_t* player_name = character.player_name;
             const auto profession = character.primary();
             buf = TextUtils::WStringToString(player_name);
@@ -824,7 +825,7 @@ void RerollWindow::Update(float)
             }
             wchar_t msg_buf[32];
             ASSERT(same_party && party_leader[0]);
-            ASSERT(swprintf(msg_buf, _countof(msg_buf), L"invite %s", party_leader) != -1);
+            ASSERT(swprintf(msg_buf, _countof(msg_buf), L"invite %ls", party_leader) != -1);
             GW::Chat::SendChat('/', msg_buf);
             RerollSuccess();
         }

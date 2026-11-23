@@ -54,14 +54,15 @@ function Resolve-HarnessDir {
 function Get-GwPid { (Get-Process -Name 'Gw' -ErrorAction SilentlyContinue | Select-Object -First 1).Id }
 
 function Build-Dll {
-  Write-Host "[harness] building $Config GWToolboxdll..." -ForegroundColor Cyan
-  & cmake --build (Join-Path $Repo 'build') --config $Config --target GWToolboxdll 2>&1 |
-    Select-String -Pattern 'error C|error LNK|GWToolboxdll.vcxproj ->|LNK1168' | ForEach-Object { $_.Line }
+  Write-Host "[harness] building $Config GWToolbox_DLL..." -ForegroundColor Cyan
+  $python = (Get-Command python, py -ErrorAction SilentlyContinue | Select-Object -First 1).Source
+  & $python (Join-Path $Repo 'scripts\build.py') --preset $Config.ToLower() --target GWToolbox_DLL 2>&1 |
+    Select-String -Pattern ': error|error:|FAILED:|==> done|cannot open output file' | ForEach-Object { $_.Line }
   if (-not (Test-Path $Dll)) { throw "DLL not found after build: $Dll" }
 }
 
 function Inject {
-  if (-not (Test-Path $Launcher)) { throw "Launcher not found: $Launcher (build target GWToolbox)." }
+  if (-not (Test-Path $Launcher)) { throw "Launcher not found: $Launcher (build target GWToolbox_Launcher_Windows)." }
   $gw = Get-GwPid
   if (-not $gw) { throw "Gw.exe not running. Use 'up' to launch it." }
   # /localdll loads GWToolboxdll.dll from the launcher's own folder. Stage the fresh build there

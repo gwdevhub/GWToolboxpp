@@ -1,6 +1,8 @@
 #pragma once
 
-#include "Window.h"
+#include <cstdint>
+#include <filesystem>
+#include <string>
 
 struct Settings {
     bool help = false;
@@ -14,6 +16,9 @@ struct Settings {
     bool noexecheck = false;
     bool noinstall = false;
     bool localdll = false;
+    bool status = false;
+    bool scan = false;
+    bool json = false;
     uint32_t pid;
 };
 
@@ -28,26 +33,5 @@ bool CreateProcessInt(const wchar_t* path, const wchar_t* args, const wchar_t* w
 bool Restart(const wchar_t* args, bool force_admin = false);
 bool RestartAsAdmin(const wchar_t* args);
 void RestartWithSameArgs(bool force_admin = false);
+wchar_t* GetCommandLineWithoutProgram();
 bool EnableDebugPrivilege();
-
-class SettingsWindow : public Window {
-public:
-    SettingsWindow() = default;
-    SettingsWindow(const SettingsWindow&) = delete;
-    SettingsWindow(SettingsWindow&&) = delete;
-    ~SettingsWindow() override = default;
-
-    SettingsWindow& operator=(const SettingsWindow&) = delete;
-
-    bool Create() override;
-
-private:
-    LRESULT WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) override;
-
-    void OnCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
-    void OnCommand(HWND hwnd, LONG ControlId, LONG NotificateCode) const;
-
-private:
-    HWND m_hNoUpdate = nullptr;
-    HWND m_hStartAsAdmin = nullptr;
-};

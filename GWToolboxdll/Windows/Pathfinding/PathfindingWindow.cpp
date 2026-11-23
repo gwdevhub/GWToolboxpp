@@ -55,6 +55,7 @@
 #include "resource.h"
 
 #include <GWCA/Context/WorldContext.h>
+#include <Utils/Lz4.h>
 #include <Utils/ToolboxUtils.h>
 #include <Widgets/MissionMapWidget.h>
 #include <Widgets/WorldMapWidget.h>
@@ -3047,9 +3048,8 @@ void PathfindingWindow::Initialize()
 
     // Load portal connections from the JSON embedded as an RCDATA resource, so no loose file need sit next to the DLL at runtime.
     const EmbeddedResource portal_json(IDR_PORTAL_CONNECTIONS_JSON, RT_RCDATA, GWToolbox::GetDLLModule());
-    if (portal_json.data() && portal_json.size()) {
-        portal_connections.LoadFromMemory(
-            static_cast<const char*>(portal_json.data()), portal_json.size(), "<embedded resource>");
+    if (std::string json; portal_json.data() && Lz4Decompress(portal_json.data(), portal_json.size(), json)) {
+        portal_connections.LoadFromMemory(json.data(), json.size(), "<embedded resource>");
     }
     else {
         PATH_LOG_ERROR("Failed to load embedded portal connections resource");

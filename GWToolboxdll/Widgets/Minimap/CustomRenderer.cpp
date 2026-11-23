@@ -85,7 +85,7 @@ void CustomRenderer::LoadMarkers()
         std::ifstream file(json_path, std::ios::binary);
         const std::string json_buf{std::istreambuf_iterator(file), {}};
         MarkersFile data;
-        if (!file || glz::read<glz::opts{.error_on_unknown_keys = false}>(data, json_buf)) {
+        if (!file || glz::read<SizeOptimisedJson{{.error_on_unknown_keys = false}}>(data, json_buf)) {
             // leave markers_loaded unset so a save can't overwrite the unreadable file
             Log::Error("Failed to parse Markers.json");
             markers_changed = true;
@@ -232,7 +232,7 @@ void CustomRenderer::SaveMarkers()
         }
 
         std::string json_buf;
-        ASSERT(!glz::write<glz::opts{.prettify = true}>(data, json_buf));
+        ASSERT(!glz::write<SizeOptimisedJson{{.prettify = true}}>(data, json_buf));
         std::ofstream file(Resources::GetSettingFile(json_filename), std::ios::binary | std::ios::trunc);
         file.write(json_buf.data(), static_cast<std::streamsize>(json_buf.size()));
         ASSERT(file.good());

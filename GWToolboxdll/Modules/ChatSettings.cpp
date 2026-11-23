@@ -229,22 +229,46 @@ namespace {
                 return;
         }
 
-        std::wstring msg_str(msg);
+        // Bare URLs become "[url;url]" links, and "[url;code]" links whose name is the URL lose the code. A scan for
+        // what used to be the regex "(https?://[^\s\]]+)|\[([^\];]+);([^\]]*)\]" (ctre), with the same matches.
+        const std::wstring_view msg_str(msg);
         bool changed = false;
-        static constexpr ctll::fixed_string link_regex = LR"((https?://[^\s\]]+)|\[([^\];]+);([^\]]*)\])";
-        const auto new_msg = TextUtils::ctre_regex_replace_with_formatter<link_regex>(msg_str, [&](auto& match) -> std::wstring {
-            if (const auto bare_url = match.template get<1>().to_view(); !bare_url.empty()) {
-                changed = true;
-                return std::format(L"[{};{}]", bare_url, bare_url);
+        std::wstring new_msg;
+        size_t copied = 0;
+        for (size_t at = 0; at < msg_str.size();) {
+            const auto rest = msg_str.substr(at);
+            const size_t scheme = rest.starts_with(L"https://") ? 8 : rest.starts_with(L"http://") ? 7 : 0;
+            if (scheme) {
+                const auto url_end = std::min(rest.find_first_of(L" \t\n\v\f\r]", scheme), rest.size());
+                if (url_end > scheme) {
+                    const auto url = rest.substr(0, url_end);
+                    new_msg.append(msg_str.substr(copied, at - copied)).append(std::format(L"[{};{}]", url, url));
+                    changed = true;
+                    copied = at += url_end;
+                    continue;
+                }
             }
-            const auto name = match.template get<2>().to_view();
-            const auto code = match.template get<3>().to_view();
-            if (TextUtils::IsUrl(name.data()) && !TextUtils::IsUrl(code.data())) {
-                changed = true;
-                return std::format(L"[{};{}]", name, name);
+            if (rest.starts_with(L'[')) {
+                const auto semicolon = std::min(rest.find_first_of(L"];", 1), rest.size());
+                const auto close = semicolon < rest.size() && rest[semicolon] == L';' ? rest.find(L']', semicolon + 1) : std::wstring_view::npos;
+                if (semicolon > 1 && close != std::wstring_view::npos) {
+                    // name and code are null-terminated at the ']' or ';' for IsUrl.
+                    const std::wstring name(rest.substr(1, semicolon - 1)), code(rest.substr(semicolon + 1, close - semicolon - 1));
+                    new_msg.append(msg_str.substr(copied, at - copied));
+                    if (TextUtils::IsUrl(name.c_str()) && !TextUtils::IsUrl(code.c_str())) {
+                        new_msg.append(std::format(L"[{};{}]", name, name));
+                        changed = true;
+                    }
+                    else {
+                        new_msg.append(rest.substr(0, close + 1));
+                    }
+                    copied = at += close + 1;
+                    continue;
+                }
             }
-            return std::wstring(match.template get<0>());
-        });
+            at++;
+        }
+        new_msg.append(msg_str.substr(copied));
 
         if (!changed) return;
 
@@ -654,7 +678,7 @@ void ChatSettings::SetAfkMessage(std::wstring&& message)
     else if (message.size() <= MAX_AFK_MSG_LEN) {
         afk_message = std::move(message);
         afk_message_time = clock();
-        Log::Info("Afk message set to \"%S\"", afk_message.c_str());
+        Log::Info("Afk message set to \"%ls\"", afk_message.c_str());
     }
     else {
         Log::Error("Afk message must be under 80 characters. (Yours is %zu)", message.size());

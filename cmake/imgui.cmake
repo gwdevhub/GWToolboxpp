@@ -1,8 +1,7 @@
 include_guard()
 include(FetchContent)
 
-# apply_patch.bat can't run directly when configuring from a non-Windows host (e.g. the
-# clang/xwin cross-compile toolchain in scripts/build-xwin.sh); use the POSIX equivalent there.
+# apply_patch.bat can't run when configuring on Linux; use the POSIX equivalent there.
 if(CMAKE_HOST_WIN32)
     set(_IMGUI_PATCH_COMMAND "${CMAKE_CURRENT_LIST_DIR}/patches/apply_patch.bat")
 else()
@@ -11,8 +10,8 @@ endif()
 
 FetchContent_Declare(
     imgui
-    GIT_REPOSITORY https://github.com/ocornut/imgui.git
-    GIT_TAG v1.92.7-docking
+    URL https://github.com/ocornut/imgui/archive/refs/tags/v1.92.7-docking.tar.gz
+    URL_HASH SHA256=2c58e28c957497eba0ed01c48a0bc5f118ec5f10a1c3721ba9436253a623bd72
     PATCH_COMMAND ${_IMGUI_PATCH_COMMAND} imgui_transparent_viewports.patch
     LOG_PATCH true
     LOG_MERGED_STDOUTERR true
@@ -72,11 +71,5 @@ if(EMSCRIPTEN)
         "${CMAKE_CURRENT_LIST_DIR}/../Dependencies/GWCA/source")
 endif()
 
-# imgui is the per-frame hot path and nobody steps into it, so keep it optimised in Debug too:
-# unoptimised imgui is most of what a Debug-build profile measures (~25us for a 28-button window
-# vs ~7us once this is on), which buries the toolbox's own costs under framework noise.
-if(MSVC AND NOT GWTB_DEBUG_RUNTIME_CHECKS)
-    target_compile_options(imgui PRIVATE $<$<CONFIG:Debug>:/O2;/Ob2>)
-endif()
-
+target_compile_options(imgui PRIVATE $<$<NOT:$<CONFIG:Debug>>:${GWTB_SPEED_OPTIMISATION}>)
 set_target_properties(imgui PROPERTIES FOLDER "Dependencies/")

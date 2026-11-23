@@ -62,7 +62,7 @@ namespace {
     constexpr int GMOD_RETURN_EXISTS = -70;
 
     // gMod version check / download (mirrors Updater): fetch the latest release and download it into the GWToolbox folder if newer.
-    constexpr glz::opts gmod_json_opts{.error_on_unknown_keys = false};
+    constexpr SizeOptimisedJson gmod_json_opts{{.error_on_unknown_keys = false}};
 
     enum class GmodUpdateStep { Idle, Checking, Downloading };
     GmodUpdateStep gmodUpdateStep = GmodUpdateStep::Idle;
@@ -222,7 +222,7 @@ namespace {
         UINT trLen = 0;
         if (!VerQueryValueW(data.data(), L"\\VarFileInfo\\Translation", reinterpret_cast<LPVOID*>(&tr), &trLen) || !tr || trLen < sizeof(LangCodepage)) return {};
         wchar_t query[64];
-        swprintf_s(query, L"\\StringFileInfo\\%04x%04x\\%s", tr->language, tr->codepage, name);
+        swprintf_s(query, L"\\StringFileInfo\\%04x%04x\\%ls", tr->language, tr->codepage, name);
         wchar_t* val = nullptr;
         UINT valLen = 0;
         if (!VerQueryValueW(data.data(), query, reinterpret_cast<LPVOID*>(&val), &valLen) || !val) return {};

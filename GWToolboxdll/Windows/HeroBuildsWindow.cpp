@@ -590,7 +590,7 @@ void HeroBuildsWindow::Update(float)
 void CHAT_CMD_FUNC(HeroBuildsWindow::CmdHeroTeamBuild)
 {
     if (argc < 2) {
-        Log::ErrorW(L"Syntax: /%s [hero_build_name|build_code]", argv[0]);
+        Log::ErrorW(L"Syntax: /%ls [hero_build_name|build_code]", argv[0]);
         return;
     }
     std::wstring arg = argv[1];
@@ -624,7 +624,7 @@ void CHAT_CMD_FUNC(HeroBuildsWindow::CmdHeroTeamBuild)
 
     const TeamBuild* found = Instance().GetTeambuildByName(arg_s);
     if (!found) {
-        Log::ErrorW(L"No hero build found for '%s'", arg.c_str());
+        Log::ErrorW(L"No hero build found for '%ls'", arg.c_str());
         return;
     }
     found->Load();
@@ -670,7 +670,7 @@ void HeroBuildsWindow::LoadFromFile()
     if (std::filesystem::exists(json_path)) {
         std::string buffer;
         HeroBuildsFile file;
-        if (!Resources::ReadFile(json_path, buffer) || glz::read<glz::opts{.error_on_unknown_keys = false}>(file, buffer)) {
+        if (!Resources::ReadFile(json_path, buffer) || glz::read<SizeOptimisedJson{{.error_on_unknown_keys = false}}>(file, buffer)) {
             Log::Warning("Failed to read %ls", json_path.filename().c_str());
         }
         else {
@@ -833,7 +833,7 @@ void HeroBuildsWindow::SaveToFile() const
     }
 
     std::string buffer;
-    ASSERT(!glz::write<glz::opts{.prettify = true}>(file, buffer));
+    ASSERT(!glz::write<SizeOptimisedJson{{.prettify = true}}>(file, buffer));
     ASSERT(Resources::WriteFile(Resources::GetSettingFile(JSON_FILENAME), buffer));
 }
 

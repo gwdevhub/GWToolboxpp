@@ -1,9 +1,5 @@
 cmake_minimum_required(VERSION 3.29)
 
-if(NOT EMSCRIPTEN AND NOT CMAKE_GENERATOR MATCHES "Ninja|Makefile")
-    set(CMAKE_GENERATOR_PLATFORM win32)
-endif()
-
 project(gwtoolbox)
 
 set(GWTOOLBOXEXE_VERSION "4.8")
@@ -13,12 +9,11 @@ set(GWTOOLBOXDLL_VERSION_BETA "") # can be anything. Marks beta version if not e
 set(GWTOOLBOX_MODULE_VERSION "8,35,0,0")
 
 
-# Everything below this point (toolset/arch checks, MSVC-only flags, native-only
-# dependency acquisition) assumes an MSVC/clang-cl Win32 build -- none of it applies
-# configuring for Emscripten.
+# Everything below this point (toolchain checks, compiler flags, native-only dependency
+# acquisition) assumes the llvm-mingw Win32 build -- none of it applies configuring for Emscripten.
 if(EMSCRIPTEN)
     message(STATUS "Configuring for Emscripten: native-only dependencies "
-        "(minhook, DirectXTex, wintoast, Steamworks, Discord Game SDK) are skipped.")
+        "(DirectXTex, Steamworks) are skipped.")
 
     set(CMAKE_CXX_STANDARD 23)
     set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -35,19 +30,24 @@ if(EMSCRIPTEN)
     # product yet, so Core/RestClient/GWToolbox (the native injector exe) stay out of
     # this configure until something wasm-side actually needs them.
     add_subdirectory(GWToolboxdll)
+elseif(UNIX AND NOT APPLE)
+    set(CMAKE_CXX_STANDARD 20)
+    set(CMAKE_CXX_STANDARD_REQUIRED ON)
+    set(WEBVIEW_WINDOW_BUILD_EXAMPLE OFF CACHE BOOL "" FORCE)
+    list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
+    add_subdirectory(Dependencies/WebViewWindow)
+    include(launcherpage)
+    add_subdirectory(GWToolbox/platform/linux)
 else()
 
-if(MSVC_TOOLSET_VERSION LESS 143)
-    message(FATAL_ERROR "Build using Visual Studio 2022 toolset (v143) or higher. Run cmake with `-T143`. You're currently using ${MSVC_TOOLSET_VERSION}")
+if(NOT (WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "GNU"))
+    message(FATAL_ERROR "GWToolbox builds with llvm-mingw only: configure with one of the presets "
+        "(relwithdebinfo, debug, release) after running the bootstrap script for this platform.")
 endif()
+set(GWTB_MINGW ON)
 
-# Increase constexpr and template instantiation depth for CTRE compile-time regex library
-if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    # SHELL: prefix prevents CMake from deduplicating the repeated -Xclang flags.
-    add_compile_options("SHELL:-Xclang -fconstexpr-depth=2048" "SHELL:-Xclang -fconstexpr-steps=10000000" /bigobj)
-else()
-    add_compile_options(/constexpr:depth2048 /constexpr:steps10000000 /templateDepth:2048 /bigobj)
-endif()
+# Increase constexpr and template instantiation depth for glaze's compile-time reflection
+add_compile_options(-fconstexpr-depth=2048 -fconstexpr-steps=10000000 -ftemplate-depth=2048)
 
 if(NOT(CMAKE_SIZEOF_VOID_P EQUAL 4))
     message(FATAL_ERROR "You are configuring a non 32-bit build, this is not supported. Run cmake with `-A Win32`")
@@ -55,11 +55,28 @@ endif()
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
+# Parallel compiles are capped by memory as well as cores: the heaviest files peak at about 0.8 GB, and 4 GB is left
+# for the IDE and desktop. A Ninja job pool holds whatever -j the IDE or script passes.
+cmake_host_system_information(RESULT GWTB_CORES QUERY NUMBER_OF_LOGICAL_CORES)
+cmake_host_system_information(RESULT GWTB_MEMORY_MB QUERY TOTAL_PHYSICAL_MEMORY)
+math(EXPR GWTB_COMPILE_JOBS "(${GWTB_MEMORY_MB} - 4096) / 1024")
+if(GWTB_COMPILE_JOBS GREATER GWTB_CORES)
+    set(GWTB_COMPILE_JOBS ${GWTB_CORES})
+elseif(GWTB_COMPILE_JOBS LESS 1)
+    set(GWTB_COMPILE_JOBS 1)
+endif()
+set_property(GLOBAL APPEND PROPERTY JOB_POOLS compile=${GWTB_COMPILE_JOBS})
+set(CMAKE_JOB_POOL_COMPILE compile)
+
 add_compile_definitions(
     "NOMINMAX"
     "WIN32_LEAN_AND_MEAN"
+    # MinGW's dshow.h includes strsafe.h, whose deprecation macros would rewrite strcpy/swprintf calls.
+    "STRSAFE_NO_DEPRECATE"
     # glaze's zmij float writer uses _mm_cvtsi128_si64, an x64-only intrinsic, when SSE is detected; we build x86
     "ZMIJ_USE_SIMD=0"
+    # glaze only reads and writes settings and a few JSON files; its forced inlining made it a quarter of the dll's code.
+    "GLZ_DISABLE_ALWAYS_INLINE"
 
     # Dev test tooling (TestHarness module + extra pathfinding diagnostics) is gated on _DEBUG only, so
     # it is compiled out of the shipped RelWithDebInfo/Release builds. Debug now also mirrors the log to
@@ -73,108 +90,105 @@ add_compile_definitions(
     "GWTOOLBOX_MODULE_VERSION=${GWTOOLBOX_MODULE_VERSION}"
     )
 	
-add_compile_options(/permissive-)
-if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    # Warning suppressions for clang-cl. Stored in a variable so they can also be
-    # re-applied at target level AFTER any /Wn flag (which expands to -Wall/-Wextra
-    # and re-enables warnings disabled by earlier -Wno-* flags on the same line).
-    set(CLANG_WARNING_DISABLES
-        # glaze's exported INTERFACE_COMPILE_OPTIONS include MSVC-only switches
-        # (/Zc:preprocessor, /Zc:lambda, etc.)
-        -Wno-unused-command-line-argument
+# Stored in a variable so targets that turn on -Wall/-Wextra can re-apply them after it.
+set(CLANG_WARNING_DISABLES
+    # glaze's exported INTERFACE_COMPILE_OPTIONS include MSVC-only switches
+    # (/Zc:preprocessor, /Zc:lambda, etc.)
+    -Wno-unused-command-line-argument
 
-        # Microsoft-specific extensions accepted by MSVC that clang-cl flags
-        -Wno-microsoft-cast
-        -Wno-microsoft-include
-        -Wno-nonportable-include-path
-        -Wno-pragma-once-outside-header
-        -Wno-backslash-newline-escape
-        -Wno-unknown-attributes
-        -Wno-ignored-attributes
+    # Microsoft-specific extensions accepted by MSVC that clang flags
+    -Wno-microsoft-cast
+    -Wno-microsoft-include
+    -Wno-nonportable-include-path
+    -Wno-pragma-once-outside-header
+    -Wno-backslash-newline-escape
+    -Wno-unknown-attributes
+    -Wno-ignored-attributes
 
-        # Pointer / cast conversions
-        -Wno-pointer-bool-conversion
-        -Wno-int-to-void-pointer-cast
-        -Wno-cast-function-type-mismatch
+    # Pointer / cast conversions
+    -Wno-pointer-bool-conversion
+    -Wno-int-to-void-pointer-cast
+    -Wno-cast-function-type-mismatch
 
-        # Unused code (kept on purpose in this codebase)
-        -Wno-unused-variable
-        -Wno-unused-function
-        -Wno-unused-private-field
-        -Wno-unused-lambda-capture
-        -Wno-unused-const-variable
-        -Wno-unused-value
-        -Wno-unused-but-set-variable
-        -Wno-unused-parameter
-        -Wno-unused-local-typedef
-        -Wno-unused-but-set-parameter
-        -Wno-missing-declarations
+    # Unused code (kept on purpose in this codebase)
+    -Wno-unused-variable
+    -Wno-unused-function
+    -Wno-unused-private-field
+    -Wno-unused-lambda-capture
+    -Wno-unused-const-variable
+    -Wno-unused-value
+    -Wno-unused-but-set-variable
+    -Wno-unused-parameter
+    -Wno-unused-local-typedef
+    -Wno-unused-but-set-parameter
+    -Wno-missing-declarations
 
-        # Cosmetic / stylistic
-        -Wno-ignored-qualifiers
-        -Wno-missing-field-initializers
-        -Wno-missing-designated-field-initializers
-        -Wno-missing-braces
-        -Wno-braced-scalar-init
-        -Wno-reorder-ctor
-        -Wno-inconsistent-missing-override
-        -Wno-parentheses
-        -Wno-logical-op-parentheses
-        -Wno-bitwise-op-parentheses
-        -Wno-misleading-indentation
+    # Cosmetic / stylistic
+    -Wno-ignored-qualifiers
+    -Wno-missing-field-initializers
+    -Wno-missing-designated-field-initializers
+    -Wno-missing-braces
+    -Wno-braced-scalar-init
+    -Wno-reorder-ctor
+    -Wno-inconsistent-missing-override
+    -Wno-parentheses
+    -Wno-logical-op-parentheses
+    -Wno-bitwise-op-parentheses
+    -Wno-misleading-indentation
 
-        # Switch / enum coverage (deliberate fall-through in this codebase)
-        -Wno-switch
+    # Switch / enum coverage (deliberate fall-through in this codebase)
+    -Wno-switch
 
-        # Format strings (ImGui::Text(buf) style calls — buf never contains user-controlled %)
-        -Wno-format-security
-        -Wno-format
-        -Wno-format-extra-args
+    # Format strings (ImGui::Text(buf) style calls — buf never contains user-controlled %)
+    -Wno-format-security
+    -Wno-format
+    -Wno-format-extra-args
 
-        # Char/sign comparison (codebase only uses ASCII subscripts)
-        -Wno-char-subscripts
-        -Wno-sign-compare
-        -Wno-tautological-constant-out-of-range-compare
-        -Wno-multichar
-        -Wno-sizeof-array-argument
+    # Char/sign comparison (codebase only uses ASCII subscripts)
+    -Wno-char-subscripts
+    -Wno-sign-compare
+    -Wno-tautological-constant-out-of-range-compare
+    -Wno-multichar
+    -Wno-sizeof-array-argument
 
-        # Defaulted/deleted special members + non-virtual dtor through base
-        -Wno-defaulted-function-deleted
-        -Wno-delete-non-abstract-non-virtual-dtor
-    )
-    add_compile_options(${CLANG_WARNING_DISABLES})
-    
-    add_compile_options($<$<NOT:$<CONFIG:Debug>>:/clang:-O3>)
-    add_compile_options(/arch:AVX2)
-else()
-    # MSVC: whole-program optimization + link-time codegen in non-Debug
-    add_compile_options(/MP)
-    add_compile_options($<$<NOT:$<CONFIG:Debug>>:/GL>)
-    add_link_options($<$<NOT:$<CONFIG:Debug>>:/LTCG>)
-endif()
+    # Defaulted/deleted special members + non-virtual dtor through base
+    -Wno-defaulted-function-deleted
+    -Wno-delete-non-abstract-non-virtual-dtor
+)
+add_compile_options(${CLANG_WARNING_DISABLES})
 
-# Debug is what we profile in, and /RTC1 puts a check on every function entry/exit - measured
-# ~20% of the whole imgui frame on its own, and it can't coexist with /O2 on the hot third-party
-# targets (see cmake/imgui.cmake). Turn GWTB_DEBUG_RUNTIME_CHECKS on to get the checks back.
-option(GWTB_DEBUG_RUNTIME_CHECKS "MSVC /RTC1 runtime checks in Debug builds" OFF)
-if(MSVC AND NOT GWTB_DEBUG_RUNTIME_CHECKS)
-    string(REPLACE "/RTC1" "" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
-    string(REPLACE "/RTC1" "" CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
-endif()
+# Optimise for size by default; per-frame code opts back into speed with GWTB_SPEED_OPTIMISATION. clang's -Oz is
+# both smaller and quicker to compile than -Os.
+# Windows 10 API level (BCryptHash and friends); MinGW defaults lower.
+add_compile_definitions(_WIN32_WINNT=0x0A00 WINVER=0x0A00)
+set(GWTB_SIZE_OPTIMISATION -Oz)
+set(GWTB_SPEED_OPTIMISATION -O2)
+add_compile_options(-mavx2 -mfma -mfpmath=sse -ffunction-sections -fdata-sections)
+# No C++ exceptions: their unwind tables were a third of the dll. The few files that catch one build with
+# GWTB_EXCEPTIONS instead (see GWToolboxdll/CMakeLists.txt).
+add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>)
+set(GWTB_EXCEPTIONS -fexceptions)
+# No RTTI either: nothing uses typeid or dynamic_cast (TBHotkey::AsGroup and Pcon::AsGeneric stand in), and
+# clang still emits type information for the exceptions those files catch.
+add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>)
+add_link_options(-Wl,--gc-sections $<$<NOT:$<CONFIG:Debug>>:-Wl,--icf=all>)
+add_compile_options($<$<NOT:$<CONFIG:Debug>>:${GWTB_SIZE_OPTIMISATION}>)
 
-set(CMAKE_CXX_STANDARD 26)
-# CMake 4.3 doesn't yet know MSVC 14.50 supports C++26 — fall back to 23 for MSVC.
-if(MSVC AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    set(CMAKE_CXX_STANDARD 23)
-endif()
+# Don't raise this: the MinGW build uses GCC 13's libstdc++, which supports nothing above C++23.
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+# No C++20 modules are used, and scanning for them costs a full extra preprocessing pass per file.
+set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
 
 
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
+# windres re-parses -D values through a shell and drops their quotes, so .rc files take version strings from here.
+set(GWTOOLBOX_RESOURCE_INCLUDE_DIR "${PROJECT_BINARY_DIR}/generated")
+configure_file("${PROJECT_SOURCE_DIR}/cmake/ResourceVersion.h.in" "${GWTOOLBOX_RESOURCE_INCLUDE_DIR}/ResourceVersion.h" @ONLY)
+
 # Outputs dll, exe, and pdb into a /bin/config folder
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/bin/")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/bin/$<CONFIG>")
 
 include(gwca)
 include(directxtexloader)
@@ -182,15 +196,12 @@ include(easywsclient)
 include(imgui)
 include(gwtoolboxdll_plugins)
 include(nativefiledialog)
-include(wintoast)
+include(webviewwindow)
+include(launcherpage)
 include(steamworks_sdk)
 
-find_library(GAME_SDK discord_game_sdk)
-find_path(GAME_SDK_INCLUDE discord-game-sdk/discord.h)
 find_path(EARCUT_HPP_INCLUDE_DIRS "mapbox/earcut.hpp")
-find_package(minhook CONFIG REQUIRED)
 find_package(glaze CONFIG REQUIRED)
-find_package(ctre CONFIG REQUIRED)
 find_package(directxtex CONFIG REQUIRED)
 
 add_subdirectory(GWToolboxdll)
@@ -198,7 +209,5 @@ add_subdirectory(Core)
 add_subdirectory(RestClient)
 add_subdirectory(GWToolbox)
 add_subdirectory(bake_pathing)
-
-set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT GWToolbox)
 
 endif() # EMSCRIPTEN

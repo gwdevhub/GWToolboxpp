@@ -1,0 +1,74 @@
+/* The page's styles. Components are styled with Tailwind utilities; each keeps a semantic class name (for example `install`,
+   `picker` or `title-bar`) so a user's GWToolbox.override.css can target it. The palette and the utilities a component needs more
+   than once are defined here. */
+@import "tailwindcss";
+
+@theme {
+    --font-app: system-ui, "Segoe UI", "Cantarell", sans-serif;
+    --color-accent: #2b6cb0;
+    --color-border: #d0d4da;
+    --color-muted: #6b7280;
+    --color-danger: #b42318;
+    --color-warning: #a16207;
+    --color-surface: #f6f7f9;
+    --color-surface-hover: #eceff3;
+    --color-divider: #e5e7eb;
+}
+
+html {
+    height: 100%;
+}
+
+@utility note {
+    font-size: 11px;
+    color: var(--color-muted);
+}
+
+@utility error {
+    color: var(--color-danger);
+}
+
+@utility warning {
+    color: var(--color-warning);
+}
+
+.progress-track {
+    position: relative;
+    width: 100%;
+    height: 6px;
+    overflow: hidden;
+    border-radius: 3px;
+    background-color: var(--color-divider);
+}
+
+.progress-fill {
+    height: 100%;
+    border-radius: 3px;
+    background-color: var(--color-accent);
+    transition: width 150ms ease-out;
+}
+
+.progress-indeterminate {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 35%;
+    transition: none;
+    animation: progress-slide 1.2s ease-in-out infinite;
+}
+
+@keyframes progress-slide {
+    from {
+        left: -35%;
+    }
+    to {
+        left: 100%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .progress-indeterminate {
+        left: 32.5%;
+        animation: none;
+    }
+}

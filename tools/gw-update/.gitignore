@@ -1,7 +1,0 @@
-# transient scratch/fixtures produced by the toolkit; not part of the pipeline
-__pycache__/
-_*.json
-_*.txt
-static-survey.json
-survey.json
-state.json

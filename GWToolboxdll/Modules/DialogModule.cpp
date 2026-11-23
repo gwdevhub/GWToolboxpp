@@ -42,26 +42,31 @@ namespace {
     }
 
     void OnDialogBodyDecoded(void*, const wchar_t* decoded) {
-        static constexpr ctll::fixed_string button_pattern = LR"(<a=([0-9]+)>([^<]+)(<|$))";
-
-        std::wstring_view subject(decoded);
+        const std::wstring_view subject(decoded);
         GW::UI::DialogButtonInfo embedded_button{};
         embedded_button.dialog_id = 0;
         embedded_button.skill_id = 0xFFFFFFF;
 
-        for (auto m : ctre::search_all<button_pattern>(subject)) {
-            if (!TextUtils::ParseUInt(m.get<1>().to_string().c_str(), &embedded_button.dialog_id)) {
-                Log::ErrorW(L"Failed to parse dialog id for %s, %s", m.get<1>().to_string().c_str(), m.get<2>().to_string().c_str());
+        // Each <a=ID>label, where the label runs to the next '<'; that '<' is consumed, as the old (<|$) regex did.
+        for (auto at = subject.find(L"<a="); at != std::wstring_view::npos;) {
+            const auto id_end = subject.find_first_not_of(L"0123456789", at + 3);
+            if (id_end == std::wstring_view::npos || id_end == at + 3 || subject[id_end] != L'>' || id_end + 1 == subject.size() || subject[id_end + 1] == L'<') {
+                at = subject.find(L"<a=", at + 1);
+                continue;
+            }
+            const auto label_end = std::min(subject.find(L'<', id_end + 1), subject.size());
+            const std::wstring id(subject.substr(at + 3, id_end - at - 3));
+            const std::wstring label(subject.substr(id_end + 1, label_end - id_end - 1));
+            if (!TextUtils::ParseUInt(id.c_str(), &embedded_button.dialog_id)) {
+                Log::ErrorW(L"Failed to parse dialog id for %ls, %ls", id.c_str(), label.c_str());
                 return;
             }
 
             // Technically, there's no encoded string for this button, wrap it to avoid issues later.
-            std::wstring msg = L"\x108\x107";
-            msg += m.get<2>().to_string();
-            msg += L"\x1";
-
+            std::wstring msg = L"\x108\x107" + label + L"\x1";
             embedded_button.message = msg.data();
             OnDialogButtonAdded(&embedded_button);
+            at = label_end < subject.size() ? subject.find(L"<a=", label_end + 1) : std::wstring_view::npos;
         }
     }
 

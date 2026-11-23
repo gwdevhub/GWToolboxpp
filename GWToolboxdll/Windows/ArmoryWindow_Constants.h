@@ -50,12 +50,12 @@ namespace GWArmory {
         Campaign campaign = Campaign::BonusMissionPack;
         uint8_t dye_tint = 0;
         uint32_t interaction = 0x20000006;
-        Armor(const char* _label, uint32_t _model_file_id, Profession _profession, ItemType _type, Campaign _campaign, uint8_t _dye_tint, uint32_t _interaction = 0) :
+        constexpr Armor(const char* _label, uint32_t _model_file_id, Profession _profession, ItemType _type, Campaign _campaign, uint8_t _dye_tint, uint32_t _interaction = 0) :
             label(_label), model_file_id(_model_file_id), profession(_profession), type(_type), campaign(_campaign), dye_tint(_dye_tint) {
             if (_interaction)
                 interaction = _interaction;
         }
-        Armor(uint32_t _model_file_id, ItemType _type, uint8_t _dye_tint) :
+        constexpr Armor(uint32_t _model_file_id, ItemType _type, uint8_t _dye_tint) :
             model_file_id(_model_file_id), type(_type), dye_tint(_dye_tint) {}
     };
 
@@ -65,7 +65,7 @@ namespace GWArmory {
         Armor* current_piece = nullptr;
     };
 
-    Armor unequipped_armors[] = {
+    constinit Armor unequipped_armors[] = {
         // Empty slots
         { "NoHead", 0, Profession::None, ItemType::Headpiece, Campaign::Core, 0 },
         { "NoChest", 0, Profession::None, ItemType::Chestpiece, Campaign::Core, 0 },
@@ -78,7 +78,7 @@ namespace GWArmory {
         { "NoRightHand", 0, Profession::None, ItemType::Axe, Campaign::Core, 0 },
     };
 
-    Armor warrior_armors[] = {
+    constinit Armor warrior_armors[] = {
         // Core
         {"Obsidian Helm", 0x20D, Profession::Warrior, ItemType::Headpiece, Campaign::Core, 3},
         {"Obsidian Cuirass", 0x20B, Profession::Warrior, ItemType::Chestpiece, Campaign::Core, 3},
@@ -260,7 +260,7 @@ namespace GWArmory {
         {"Tinted Spectacles", 0x837, Profession::Warrior, ItemType::Headpiece, Campaign::EyeOfTheNorth, 6},
     };
 
-    Armor ranger_armors[] = {
+    constinit Armor ranger_armors[] = {
         // Core
         {"Obsidian Vest", 0x210, Profession::Ranger, ItemType::Chestpiece, Campaign::Core, 7},
         {"Obsidian Gloves", 0x211, Profession::Ranger, ItemType::Gloves, Campaign::Core, 7},
@@ -420,7 +420,7 @@ namespace GWArmory {
         {"Stone Gauntlets", 0x87A, Profession::Ranger, ItemType::Gloves, Campaign::EyeOfTheNorth, 6},
     };
 
-    Armor monk_armors[] = {
+    constinit Armor monk_armors[] = {
         // Core
         {"Obsidian Vestments", 0x214, Profession::Monk, ItemType::Chestpiece, Campaign::Core, 1},
         {"Obsidian Handwraps", 0x215, Profession::Monk, ItemType::Gloves, Campaign::Core, 1},
@@ -587,7 +587,7 @@ namespace GWArmory {
         {"Stone Gauntlets", 0x885, Profession::Monk, ItemType::Gloves, Campaign::EyeOfTheNorth, 6},
     };
 
-    Armor necromancer_armors[] = {
+    constinit Armor necromancer_armors[] = {
         // Core
         {"Obsidian Tunic", 0x223, Profession::Necromancer, ItemType::Chestpiece, Campaign::Core, 20},
         {"Obsidian Gloves", 0x219, Profession::Necromancer, ItemType::Gloves, Campaign::Core, 20},
@@ -751,7 +751,7 @@ namespace GWArmory {
         {"Tinted Spectacles", 0x840, Profession::Necromancer, ItemType::Headpiece, Campaign::EyeOfTheNorth, 6}
     };
 
-    Armor mesmer_armors[] = {
+    constinit Armor mesmer_armors[] = {
         // Core
         {"Obsidian Attire", 0x21C, Profession::Mesmer, ItemType::Chestpiece, Campaign::Core, 33},
         {"Obsidian Gloves", 0x21D, Profession::Mesmer, ItemType::Gloves, Campaign::Core, 33},
@@ -910,7 +910,7 @@ namespace GWArmory {
         {"Tinted Spectacles", 0x843, Profession::Mesmer, ItemType::Headpiece, Campaign::EyeOfTheNorth, 6}
     };
 
-    Armor elementalist_armors[] = {
+    constinit Armor elementalist_armors[] = {
         // Core
         {"Obsidian Robes", 0x220, Profession::Elementalist, ItemType::Chestpiece, Campaign::Core, 25},
         {"Obsidian Gloves", 0x221, Profession::Elementalist, ItemType::Gloves, Campaign::Core, 25},
@@ -1069,7 +1069,7 @@ namespace GWArmory {
         {"Tinted Spectacles", 0x846, Profession::Elementalist, ItemType::Headpiece, Campaign::EyeOfTheNorth, 6},
     };
 
-    Armor assassin_armors[] = {
+    constinit Armor assassin_armors[] = {
         // Core
         {"Obsidian Mask", 0x3D8, Profession::Assassin, ItemType::Headpiece, Campaign::Core, 11},
         {"Obsidian Guise", 0x3DA, Profession::Assassin, ItemType::Chestpiece, Campaign::Core, 11},
@@ -1185,7 +1185,7 @@ namespace GWArmory {
         {"Tinted Spectacles", 0x849, Profession::Assassin, ItemType::Headpiece, Campaign::EyeOfTheNorth, 6},
     };
 
-    Armor ritualist_armors[] = {
+    constinit Armor ritualist_armors[] = {
         // Core
         {"Obsidian Headwrap", 0x42B, Profession::Ritualist, ItemType::Headpiece, Campaign::Core, 12},
         {"Obsidian Raiment", 0x42D, Profession::Ritualist, ItemType::Chestpiece, Campaign::Core, 12},
@@ -1300,7 +1300,7 @@ namespace GWArmory {
         {"Tinted Spectacles", 0x84C, Profession::Ritualist, ItemType::Headpiece, Campaign::EyeOfTheNorth, 6}
     };
 
-    Armor paragon_armors[] = {
+    constinit Armor paragon_armors[] = {
         // Core
         {"Obsidian Raiment", 0x65C, Profession::Paragon, ItemType::Chestpiece, Campaign::Core, 13},
         {"Obsidian Armguards", 0x65D, Profession::Paragon, ItemType::Gloves, Campaign::Core, 13},
@@ -1377,7 +1377,7 @@ namespace GWArmory {
         {"Tinted Spectacles", 0x84F, Profession::Paragon, ItemType::Headpiece, Campaign::EyeOfTheNorth, 6},
     };
 
-    Armor dervish_armors[] = {
+    constinit Armor dervish_armors[] = {
         // Core
         {"Obsidian Hood", 0x696, Profession::Dervish, ItemType::Headpiece, Campaign::Core, 14},
         {"Obsidian Robes", 0x698, Profession::Dervish, ItemType::Chestpiece, Campaign::Core, 14},
@@ -1455,7 +1455,7 @@ namespace GWArmory {
         {"Spectacles", 0x851, Profession::Dervish, ItemType::Headpiece, Campaign::EyeOfTheNorth, 6},
         {"Tinted Spectacles", 0x852, Profession::Dervish, ItemType::Headpiece, Campaign::EyeOfTheNorth, 6}
     };
-    Armor costume_heads[] = {
+    constinit Armor costume_heads[] = {
         {"Grenth's Visage", 0x9e3, Profession::None, ItemType::Costume_Headpiece, Campaign::BonusMissionPack, 0},
         {"Dwayna's Diadem", 0x9e8, Profession::None, ItemType::Costume_Headpiece, Campaign::BonusMissionPack, 0},
         {"Shining Blade Cowl", 0xa5e, Profession::None, ItemType::Costume_Headpiece, Campaign::BonusMissionPack, 35},
@@ -1522,7 +1522,7 @@ namespace GWArmory {
         {"Stylish White Striped Scarf", 0xe5b, Profession::None, ItemType::Costume_Headpiece, Campaign::BonusMissionPack, 0},
         {"Stylish Black Scarf", 0xe5c, Profession::None, ItemType::Costume_Headpiece, Campaign::BonusMissionPack, 0}
     };
-    Armor costumes[] = {
+    constinit Armor costumes[] = {
 
         {"Dapper Tuxedo", 0xadd, Profession::None, ItemType::Costume, Campaign::BonusMissionPack, 0},
         {"Raiment of the Lich", 0xae3, Profession::None, ItemType::Costume, Campaign::BonusMissionPack, 47},
@@ -1550,7 +1550,7 @@ namespace GWArmory {
         {"Dragonguard", 0xd6b, Profession::None, ItemType::Costume, Campaign::BonusMissionPack, 0},
         {"Aegis of Unity", 0xd70, Profession::None, ItemType::Costume, Campaign::BonusMissionPack, 0},
     };
-    Armor weapons[] = {
+    constinit Armor weapons[] = {
         // Axes
         {"Chaos Axe", 0x213B9, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Eaglecrest Axe", 0x5370C, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000},

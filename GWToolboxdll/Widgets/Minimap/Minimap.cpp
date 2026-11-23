@@ -1196,7 +1196,7 @@ void Minimap::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
                 Instance().custom_renderer.LoadMarkers();
             }
             else {
-                Log::ErrorW(L"Failed to download Markers.ini\n%s", error.c_str());
+                Log::ErrorW(L"Failed to download Markers.ini\n%ls", error.c_str());
             }
         });
     }

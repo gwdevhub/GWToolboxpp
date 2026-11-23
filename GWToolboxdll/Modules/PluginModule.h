@@ -1,7 +1,7 @@
 #pragma once
 
 #include <ToolboxUIElement.h>
-#include <../plugins/Base/ToolboxPlugin.h>
+#include <PluginApi.h>
 
 class PluginModule final : public ToolboxUIElement {
     PluginModule() = default;
@@ -14,7 +14,7 @@ public:
 
         std::filesystem::path path;
         HMODULE dll = nullptr;
-        ToolboxPlugin* instance = nullptr;
+        const GWToolboxPluginApi* api = nullptr;
         bool initialized = false;
         bool terminating = false;
         bool visible = false;
@@ -42,7 +42,7 @@ public:
     bool CanTerminate() override;
     bool WndProc(UINT, WPARAM, LPARAM) override;
 
-    static std::vector<ToolboxPlugin*> GetPlugins();
+    static std::vector<const GWToolboxPluginApi*> GetPlugins();
 
     void ShowVisibleRadio() override { }
     void DrawSizeAndPositionSettings() override { }

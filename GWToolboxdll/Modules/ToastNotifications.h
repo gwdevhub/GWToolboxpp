@@ -1,8 +1,7 @@
 #pragma once
 
 #include <ToolboxModule.h>
-
-#include <wintoastlib.h>
+#include <Utils/DesktopNotification.h>
 
 class ToastNotifications : public ToolboxModule {
     ToastNotifications() = default;
@@ -59,22 +58,19 @@ public:
     // Runs when a toast is activated, deactivated or destructed. Will only trigger once.
     using OnToastCallback = void(__cdecl*)(const Toast* toast, bool is_activated);
 
-    class Toast : public WinToastLib::IWinToastHandler {
+    class Toast {
     public:
         std::wstring title;
         std::wstring message;
         OnToastCallback callback = nullptr;
         void* extra_args = nullptr;
-        WinToastLib::WinToastTemplate* toast_template = nullptr;
         Toast(const std::wstring& _title, const std::wstring& _message);
-        ~Toast() override;
-        void toastActivated() const override;
-        void toastActivated(int) const override;
-        void toastDismissed(WinToastDismissalReason) const override;
-        void toastFailed(HRESULT err = 0) const override;
-        INT64 toast_id = -1;
+        ~Toast();
         bool send();
-        bool dismiss();
+        void dismiss();
+
+    private:
+        std::unique_ptr<DesktopNotification> notification;
     };
 
 

@@ -54,7 +54,7 @@ bool SettingsDoc::LoadFile(const std::filesystem::path& path)
 bool SettingsDoc::SaveFile(const std::filesystem::path& path) const
 {
     std::string buffer;
-    if (glz::write<glz::opts{.prettify = true}>(sections, buffer)) {
+    if (glz::write<SizeOptimisedJson{{.prettify = true}}>(sections, buffer)) {
         return false;
     }
     std::ofstream file(path, std::ios::binary | std::ios::trunc);
@@ -102,7 +102,7 @@ bool SettingsDoc::SaveFolder(const std::filesystem::path& folder) const
     bool ok = true;
     for (const auto& [name, section] : sections) {
         std::string buffer;
-        if (glz::write<glz::opts{.prettify = true}>(section, buffer)) {
+        if (glz::write<SizeOptimisedJson{{.prettify = true}}>(section, buffer)) {
             ok = false;
             continue;
         }

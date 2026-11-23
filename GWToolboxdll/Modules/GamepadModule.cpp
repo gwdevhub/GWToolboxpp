@@ -88,7 +88,7 @@ bool GamepadModule::GetGamepadState(_XINPUT_GAMEPAD* gamepad)
 
 void GamepadModule::Update(float delta)
 {
-    UNREFERENCED_PARAMETER(delta);
+    (void)delta;
     HookXInput();
     // Update runs on the game thread, which outlives the ImGui context; everything below touches it
     if (!ImGui::GetCurrentContext()) {

@@ -68,7 +68,7 @@ bool GetWineDiagnostics(std::wstring& out, const bool include_launcher_environme
         if (get_host) get_host(&sysname, &release);
 
         wchar_t buf[256];
-        swprintf(buf, _countof(buf), L"Wine %S on %S %S", get_version(), sysname ? sysname : "unknown", release ? release : "");
+        swprintf(buf, _countof(buf), L"Wine %hs on %hs %hs", get_version(), sysname ? sysname : "unknown", release ? release : "");
         result.system = result.launcher = buf;
         if (GetEnvironmentVariableW(L"STEAM_COMPAT_DATA_PATH", nullptr, 0) || GetEnvironmentVariableW(L"SteamAppId", nullptr, 0))
             result.launcher += L"; launched via Steam/Proton (sandboxed prefix - known to break injection)";

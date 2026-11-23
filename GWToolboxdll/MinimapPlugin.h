@@ -7,14 +7,6 @@
 
 class D3DVertexBuffer;
 
-#ifndef GWTOOLBOXDLL_MINIMAP_EXPORT
-#  ifdef GWToolboxdll_EXPORTS
-#    define GWTOOLBOXDLL_MINIMAP_EXPORT __declspec(dllexport)
-#  else
-#    define GWTOOLBOXDLL_MINIMAP_EXPORT __declspec(dllimport)
-#  endif
-#endif
-
 struct MinimapRenderContext : RectF {
     ImVec2 anchor_point = {}; // Center of minimap - this may not necessarily be the center point of the clipping rect
 
@@ -60,8 +52,8 @@ struct MinimapRenderContext : RectF {
     }
 };
 
-// subclass this structure and register an instance to have plugins draw extra stuff on a minimap
-// Vtable layout (do not change): slot 0 = ~MinimapRenderer, slot 1 = RenderMinimap.
+// Subclass this and register an instance to draw extra things on a minimap. Plugins reach the toolbox's minimap
+// through PluginApi.h, so this vtable never crosses the dll boundary.
 class MinimapRenderer {
 public:
     MinimapRenderer() = default;
@@ -75,6 +67,6 @@ public:
 
     virtual void RenderMinimap(IDirect3DDevice9* device, const MinimapRenderContext& context) = 0;
 
-    GWTOOLBOXDLL_MINIMAP_EXPORT static void RegisterRenderer(MinimapRenderer* renderer);
-    GWTOOLBOXDLL_MINIMAP_EXPORT static void UnregisterRenderer(MinimapRenderer* renderer);
+    static void RegisterRenderer(MinimapRenderer* renderer);
+    static void UnregisterRenderer(MinimapRenderer* renderer);
 };

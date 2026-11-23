@@ -195,7 +195,7 @@ void FastIniSection::GetAllKeys(TNamesDepend& out) const {
 SI_Error ToolboxIni::LoadIfExists(const std::filesystem::path& a_pwszFile)
 {
     if (!exists(a_pwszFile)) {
-        INI_LOGW(L"[ToolboxIni] %s doesn't exist", a_pwszFile.wstring().c_str());
+        INI_LOGW(L"[ToolboxIni] %ls doesn't exist", a_pwszFile.wstring().c_str());
         return SI_OK;
     }
     return LoadFile(a_pwszFile);
@@ -215,11 +215,11 @@ SI_Error ToolboxIni::LoadFile(const std::filesystem::path& a_pwszFile)
         res = LoadFileRaw(a_pwszFile) ? SI_OK : SI_FAIL;
     }
     if (res == SI_OK) {
-        INI_LOGW(L"[ToolboxIni] LoadFile successful for %s", a_pwszFile.wstring().c_str());
+        INI_LOGW(L"[ToolboxIni] LoadFile successful for %ls", a_pwszFile.wstring().c_str());
         location_on_disk = a_pwszFile;
     }
     else {
-        INI_LOGW(L"[ToolboxIni] LoadFile failed for %s", a_pwszFile.wstring().c_str());
+        INI_LOGW(L"[ToolboxIni] LoadFile failed for %ls", a_pwszFile.wstring().c_str());
     }
     return res;
 }

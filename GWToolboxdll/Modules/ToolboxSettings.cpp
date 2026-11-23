@@ -659,7 +659,7 @@ void ToolboxSettings::Update(float)
             location_file.close();
         }
         const std::wstring path = Resources::GetPath(L"location logs", filename);
-        location_file.open(path);
+        location_file.open(std::filesystem::path(path));
     }
 
 

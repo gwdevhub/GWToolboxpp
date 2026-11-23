@@ -1,6 +1,6 @@
 ---
 title: "Miscellaneous Widgets"
-description: "Small overlay widgets for latency, clock, vanquish progress, server info, alcohol level, world map extras, and an in-game notepad."
+description: "Small overlay widgets for skill cooldown and recharge timers, latency, clock, vanquish progress, server info, alcohol level, world map extras, and an in-game notepad."
 section: widgets
 ---
 
@@ -29,6 +29,18 @@ The Clock Widget shows the current time on your computer.
 - Displays current time
 - Option for 12-hour or 24-hour format
 - Option to show or hide seconds
+
+## Skillbar Widget
+
+The Skillbar Widget displays the remaining cooldown (recharge time) directly over each skill icon on your in-game skill bar.
+
+<ToolboxPath steps={['Settings', 'Skillbar']} />
+
+- Enable the checkbox beside the **Skillbar** settings header, or type `/show skillbar` in chat, to show skill recharge timers. There is no separate cooldown-timer checkbox.
+- Under **Skill overlay settings**, adjust **Text size** to make the numbers larger or smaller, and **Text color** and **Text outline color** to change their appearance.
+- **Text decimal threshold** sets when to show decimal seconds, in milliseconds; for example, `1000` shows decimals below one second. **Round up integers** rounds the displayed whole seconds up.
+- Disable **Display effect monitor** under **Effect monitor settings** if you only want cooldown numbers without the additional effect-duration bars.
+- **Paint skills according to effect duration** colors skill icons based on remaining effect duration. Disabling it does not hide the recharge numbers.
 
 ## Vanquish Widget
 

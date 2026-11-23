@@ -86,7 +86,7 @@ namespace {
             }
             copied = true;
         }
-        if (copied) Log::LogW(L"Migrated hotkeys to %s", dst->location_on_disk.wstring().c_str());
+        if (copied) Log::LogW(L"Migrated hotkeys to %ls", dst->location_on_disk.wstring().c_str());
         return copied;
     }
 
@@ -157,7 +157,7 @@ namespace {
 
     void AddHotkeyIfValid(TBHotkey* hotkey, const char* player_name, GW::Constants::InstanceType instance_type, GW::Constants::Profession primary, GW::Constants::MapID map_id, bool is_pvp, std::vector<TBHotkey*>& valid)
     {
-        if (const auto* grp = dynamic_cast<HotkeyGroup*>(hotkey)) {
+        if (const auto* grp = hotkey->AsGroup()) {
             for (auto* child : grp->hotkeys) {
                 AddHotkeyIfValid(child, player_name,instance_type,primary,map_id,is_pvp,valid);
             }

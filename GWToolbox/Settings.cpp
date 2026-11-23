@@ -23,6 +23,9 @@ void PrintUsage(const bool terminate)
             "    /noinstall                 Won't try to install if missing\n"
             "    /localdll                  Check launcher directory for toolbox dll (or gwtoolbox.gwmod for a wasm client), won't try to install or update\n\n"
 
+            "    /status                    Print whether GWToolbox is installed, then exit\n"
+            "    /scan                      Print the Guild Wars processes that GWToolbox can inject into, then exit\n"
+            "    /json                      With /status, /scan or /pid, print the result as JSON on stdout\n\n"
             "    /pid <process id>          Process id of the target in which to inject\n"
     );
 
@@ -77,7 +80,6 @@ void ParseCommandLine()
                 fprintf(stderr, "'/pid' must be followed by a process id\n");
                 PrintUsage(true);
             }
-            // @Enhancement: Replace by proper 'ParseInt' that deal with errors
             const int pid = _wtoi(argv[i]);
             if (pid < 0) {
                 fprintf(stderr, "Process id must be a positive integer in the range [0, 4294967295]");
@@ -107,6 +109,15 @@ void ParseCommandLine()
             settings.localdll = true;
             settings.noupdate = true;
             settings.noinstall = true;
+        }
+        else if (wcscmp(arg, L"/status") == 0) {
+            settings.status = true;
+        }
+        else if (wcscmp(arg, L"/scan") == 0) {
+            settings.scan = true;
+        }
+        else if (wcscmp(arg, L"/json") == 0) {
+            settings.json = true;
         }
         else if (wcscmp(arg, L"/?") == 0) {
             settings.help = true;
@@ -197,8 +208,6 @@ bool Restart(const wchar_t* args, const bool force_admin)
         fprintf(stderr, "GetCurrentDirectoryW failed: %lu\n", GetLastError());
         return false;
     }
-    // stderr is redirected to GWToolbox.error.log; release that handle before spawning the replacement so the
-    // new instance can open the log for writing while this one is still exiting.
     FILE* stream;
     freopen_s(&stream, "NUL", "w", stderr);
 
@@ -245,7 +254,7 @@ static LPWSTR ConsumeArg(LPWSTR CmdLine)
     }
 }
 
-static wchar_t* GetCommandLineWithoutProgram()
+wchar_t* GetCommandLineWithoutProgram()
 {
     const LPWSTR CmdLine = GetCommandLineW();
     return ConsumeArg(CmdLine);
@@ -284,102 +293,4 @@ bool EnableDebugPrivilege()
     }
 
     return true;
-}
-
-static void SetCheckbox(HWND hWnd, const bool Checked)
-{
-    if (Checked) {
-        SendMessageW(hWnd, BM_SETCHECK, BST_CHECKED, 0);
-    }
-    else {
-        SendMessageW(hWnd, BM_SETCHECK, BST_UNCHECKED, 0);
-    }
-}
-
-static bool ToggleCheckbox(HWND hWnd)
-{
-    const LRESULT State = SendMessageW(hWnd, BM_GETCHECK, 0, 0);
-    const bool Checked = State == BST_CHECKED;
-    SetCheckbox(hWnd, !Checked);
-    return !Checked;
-}
-
-bool SettingsWindow::Create()
-{
-    SetWindowName(L"GWToolbox - Settings");
-    SetWindowDimension(305, 135);
-    return Window::Create();
-}
-
-LRESULT SettingsWindow::WndProc(HWND hWnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam)
-{
-    switch (uMsg) {
-        case WM_CREATE:
-            OnCreate(hWnd, uMsg, wParam, lParam);
-            break;
-
-        case WM_CLOSE:
-            DestroyWindow(hWnd);
-            break;
-
-        case WM_DESTROY:
-            SignalStop();
-            break;
-
-        case WM_COMMAND:
-            OnCommand(reinterpret_cast<HWND>(lParam), LOWORD(wParam), HIWORD(wParam));
-            break;
-
-        case WM_DPICHANGED:
-            OnDpiChanged(wParam, lParam);
-            break;
-    }
-
-    return DefWindowProcW(hWnd, uMsg, wParam, lParam);
-}
-
-void SettingsWindow::OnCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
-{
-    ApplyDpiScaling(hWnd);
-
-    m_hNoUpdate = CreateWindowW(
-        WC_BUTTONW,
-        L"Never check for update",
-        WS_VISIBLE | WS_CHILD | WS_TABSTOP | BS_CHECKBOX,
-        Scale(10),
-        Scale(10),
-        Scale(150),
-        Scale(15),
-        hWnd,
-        nullptr,
-        m_hInstance,
-        nullptr);
-    SendMessageW(m_hNoUpdate, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
-
-    m_hStartAsAdmin = CreateWindowW(
-        WC_BUTTONW,
-        L"Always start as admin",
-        WS_VISIBLE | WS_CHILD | WS_TABSTOP | BS_CHECKBOX,
-        Scale(10),
-        Scale(30),
-        Scale(150),
-        Scale(15),
-        hWnd,
-        nullptr,
-        m_hInstance,
-        nullptr);
-    SendMessageW(m_hStartAsAdmin, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
-
-    SetCheckbox(m_hNoUpdate, settings.noupdate);
-    SetCheckbox(m_hStartAsAdmin, settings.asadmin);
-}
-
-void SettingsWindow::OnCommand(HWND hWnd, LONG ControlId, LONG NotificateCode) const
-{
-    if (hWnd == m_hNoUpdate) {
-        settings.noupdate = ToggleCheckbox(m_hNoUpdate);
-    }
-    else if (hWnd == m_hStartAsAdmin) {
-        settings.asadmin = ToggleCheckbox(m_hStartAsAdmin);
-    }
 }

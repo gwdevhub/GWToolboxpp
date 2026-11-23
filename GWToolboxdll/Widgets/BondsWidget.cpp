@@ -180,7 +180,7 @@ namespace {
     void CHAT_CMD_FUNC(CmdBondsAddRemove) {
 
         const auto syntax_err = [argc, argv] {
-            Log::WarningW(L"Invalid syntax for /%s; correct syntax:\n%S", argc ? argv[0] : L"Unk", cmd_bonds_syntax);
+            Log::WarningW(L"Invalid syntax for /%ls; correct syntax:\n%hs", argc ? argv[0] : L"Unk", cmd_bonds_syntax);
             };
 
         if (argc < 4) {
@@ -221,7 +221,7 @@ namespace {
             }
         }
         if (add_bond && !skill_id) {
-            Log::WarningW(L"/%s: skill_id required when adding bond", argv[0]);
+            Log::WarningW(L"/%ls: skill_id required when adding bond", argv[0]);
             syntax_err();
             return;
         }
@@ -231,7 +231,7 @@ namespace {
             return;
         }
         if (add_bond && !agent_id) {
-            Log::WarningW(L"/%s: party_member_index required when adding bond", argv[0]);
+            Log::WarningW(L"/%ls: party_member_index required when adding bond", argv[0]);
             syntax_err();
             return;
         }

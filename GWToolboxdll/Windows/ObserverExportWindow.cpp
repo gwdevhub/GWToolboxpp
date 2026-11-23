@@ -607,7 +607,7 @@ void ObserverExportWindow::ExportToGWRank()
     
     glz::generic json = ToJSON_V_1_0();
     json["verson"] = "1.0";
-    std::string json_str = glz::write<glz::opts{.prettify = true}>(json).value_or(std::string{});
+    std::string json_str = glz::write<SizeOptimisedJson{{.prettify = true}}>(json).value_or(std::string{});
     
     // Build a multipart/form-data body containing a single "json_file" part.
     const std::string boundary = "----GWToolboxBoundary7d8e6f4c2a1b";
@@ -640,7 +640,7 @@ void ObserverExportWindow::ExportToGWRank()
     const int status_code = client.GetStatusCode();
     if (client.GetStatus() != ResponseStatus::Completed) {
         wchar_t error_msg[512];
-        swprintf(error_msg, 512, L"<c=#FF0000>Failed to upload: %S</c>", client.GetStatusStr());
+        swprintf(error_msg, 512, L"<c=#FF0000>Failed to upload: %hs</c>", client.GetStatusStr());
         GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GWCA1, error_msg);
     }
     else if (status_code >= 200 && status_code < 300) {
@@ -649,7 +649,7 @@ void ObserverExportWindow::ExportToGWRank()
     else {
         const std::string& response_data = client.GetContent();
         wchar_t error_msg[256];
-        swprintf(error_msg, 256, L"<c=#FF0000>Upload failed with HTTP status %d. Response: %S</c>",
+        swprintf(error_msg, 256, L"<c=#FF0000>Upload failed with HTTP status %d. Response: %hs</c>",
                  status_code, response_data.substr(0, 100).c_str());
         GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GWCA1, error_msg);
     }
@@ -676,7 +676,7 @@ void ObserverExportWindow::ExportToJSON(Version version)
             json = ToJSON_V_1_0();
             json["verson"] = "1.0";
             json["exported_at_local"] = export_time;
-            std::string name = glz::write_json(json["name"]).value_or(std::string{});
+            std::string name = glz::write<SizeOptimisedJson{}>(json["name"]).value_or(std::string{});
             // remove quotation marks (come in from json.dump())
             std::erase(name, '"');
             std::ranges::transform(name, name.begin(), [](const unsigned char c) {
@@ -698,7 +698,7 @@ void ObserverExportWindow::ExportToJSON(Version version)
     }
 
     std::ofstream out(file_location);
-    out << glz::write_json(json).value_or(std::string{});
+    out << glz::write<SizeOptimisedJson{}>(json).value_or(std::string{});
     out.close();
     wchar_t file_location_wc[512];
     size_t msg_len = 0;
@@ -721,7 +721,7 @@ void ObserverExportWindow::ExportToJSON(Version version)
     }
     file_location_wc[msg_len] = 0;
     wchar_t chat_message[1024];
-    swprintf(chat_message, _countof(chat_message), L"Match exported to <a=1>\x200C%s</a>", file_location_wc);
+    swprintf(chat_message, _countof(chat_message), L"Match exported to <a=1>\x200C%ls</a>", file_location_wc);
     WriteChat(GW::Chat::CHANNEL_GLOBAL, chat_message);
 }
 

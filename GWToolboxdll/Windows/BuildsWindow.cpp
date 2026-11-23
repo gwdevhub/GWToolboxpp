@@ -403,7 +403,7 @@ namespace {
     {
         std::string buffer;
         BuildsWindow::BuildsFile file;
-        if (!Resources::ReadFile(path, buffer) || glz::read<glz::opts{.error_on_unknown_keys = false}>(file, buffer)) {
+        if (!Resources::ReadFile(path, buffer) || glz::read<SizeOptimisedJson{{.error_on_unknown_keys = false}}>(file, buffer)) {
             Log::Warning("Failed to read %ls", path.filename().c_str());
             return;
         }
@@ -656,7 +656,7 @@ namespace {
         }
 
         std::string buffer;
-        ASSERT(!glz::write<glz::opts{.prettify = true}>(file, buffer));
+        ASSERT(!glz::write<SizeOptimisedJson{{.prettify = true}}>(file, buffer));
         ASSERT(Resources::WriteFile(Resources::GetSettingFile(JSON_FILENAME), buffer));
         SaveToBuildsFolder();
     }
@@ -719,7 +719,7 @@ namespace {
             return;
         }
         if (argc < 2) {
-            Log::WarningW(L"Syntax: /%s [teambuild_name] [build_name|build_code]\n/%s [build_name|build_code]", *argv, *argv);
+            Log::WarningW(L"Syntax: /%ls [teambuild_name] [build_name|build_code]\n/%ls [build_name|build_code]", *argv, *argv);
             return;
         }
         Load(FindBuildFromChatCmd(argc, argv));
@@ -727,7 +727,7 @@ namespace {
     void CHAT_CMD_FUNC(CmdPing)
     {
         if (argc < 2) {
-            Log::WarningW(L"Syntax: /%s [teambuild_name] [build_name|build_code]\n/%s [build_name|build_code]", *argv, *argv);
+            Log::WarningW(L"Syntax: /%ls [teambuild_name] [build_name|build_code]\n/%ls [build_name|build_code]", *argv, *argv);
             return;
         }
         const auto ref = FindBuildFromChatCmd(argc, argv);

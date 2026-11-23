@@ -12,6 +12,7 @@ public:
 
     static const char* IniSection() { return "HotkeyGroup"; }
     [[nodiscard]] const char* Name() const override { return IniSection(); }
+    HotkeyGroup* AsGroup() override { return this; }
 
     // section may be null when creating a new group interactively
     HotkeyGroup(const ToolboxIni* ini, const char* section);

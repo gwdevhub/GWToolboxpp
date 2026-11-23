@@ -162,7 +162,6 @@ public:
 
     static uint32_t GetTexmodHash(const char* data, size_t size);
     // Copy from compiled resource binary to file on local disk.
-    static bool ResourceToFile(WORD id, const std::filesystem::path& path_to_file, std::wstring& error);
 
 private:
     static void Cleanup();

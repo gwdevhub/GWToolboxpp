@@ -59,7 +59,7 @@ namespace {
         return g ? g->player_name : nullptr;
     }
 
-    std::vector obfuscated_name_pool = {
+    constinit std::array obfuscated_name_pool = {
         L"Abbot Ramoth",
         L"Acolyte of Dwayna",
         L"Acolyte of Grenth",
@@ -687,7 +687,7 @@ namespace {
                 const std::wstring tmp(&packet_actual->name_enc[2]);
                 *end_pos = '\x1';
                 if (ObfuscateName(tmp, ui_message_temp_message, true)) {
-                    swprintf(packet_actual->name_enc, _countof(packet_actual->name_enc), L"\x108\x107%s\x1", ui_message_temp_message.c_str());
+                    swprintf(packet_actual->name_enc, _countof(packet_actual->name_enc), L"\x108\x107%ls\x1", ui_message_temp_message.c_str());
                 }
             }
             break;

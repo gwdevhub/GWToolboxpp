@@ -25,7 +25,7 @@ namespace github_api {
 
 namespace {
 
-    constexpr glz::opts json_opts{.error_on_unknown_keys = false};
+    constexpr SizeOptimisedJson json_opts{{.error_on_unknown_keys = false}};
 
     using ReleaseType = Updater::ReleaseType;
     using Mode = Updater::Mode;
@@ -244,7 +244,7 @@ namespace {
                     Log::WarningW(L"Update successful, please restart toolbox.");
                 }
                 else {
-                    Log::ErrorW(L"Updated error - cannot download GWToolbox.dll\n%s", error.c_str());
+                    Log::ErrorW(L"Updated error - cannot download GWToolbox.dll\n%ls", error.c_str());
                     MoveFileW(dllold.c_str(), wdll.c_str());
                     step = Done;
                 }

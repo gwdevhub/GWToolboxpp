@@ -31,7 +31,7 @@ namespace pricechecker_api {
 
 namespace {
 
-    constexpr glz::opts json_opts{.error_on_unknown_keys = false};
+    constexpr SizeOptimisedJson json_opts{{.error_on_unknown_keys = false}};
 
     bool fetching_prices;
     const char* trader_quotes_url = "https://kamadan.gwtoolbox.com/trader_quotes";
@@ -300,7 +300,7 @@ namespace {
     };
 
     // Hand-mapped onto the mod-struct ids above, since the sheet only has free-text item names; rows it flags as pre-searing-unusable or with no price of their own are omitted.
-    const std::vector<PresearingSheetItem> presearing_sheet_items = {
+    constexpr auto presearing_sheet_items = std::to_array<PresearingSheetItem>({
         {"Runes", "Common", "Attunement", "08038225300423"},
         {"Runes", "Common", "Minor Vigor", "08038227e802c2"},
         {"Runes", "Common", "Vitae", "08038225300425"},
@@ -363,7 +363,7 @@ namespace {
         {"Insignias", "Warrior", "Dreadnought", "084ad3a53003f4"},
         {"Insignias", "Warrior", "Knight's", "084ad0a53003f2"},
         {"Insignias", "Warrior", "Sentinel's", "084ad4a53003f6"},
-    };
+    });
 
     const char* presearing_sheet_tabs[] = {"Runes", "Insignias"};
 

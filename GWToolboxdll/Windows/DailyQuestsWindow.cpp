@@ -1094,7 +1094,8 @@ namespace {
         ASSERT(found != nicholas_sandford_item_collected_count.end());
         return found->second;
     }
-    const std::unordered_map<GW::Constants::QuestID, DailyQuests::ZaishenCoinReward> zaishen_coin_rewards = {
+    // Constant data rather than a map built when the dll loads; looked up a few times a frame at most.
+    constexpr std::pair<GW::Constants::QuestID, DailyQuests::ZaishenCoinReward> zaishen_coin_rewards[] = {
         {QuestID::ZaishenMission_The_Great_Northern_Wall, {15, 74}},
         {QuestID::ZaishenMission_Fort_Ranik, {15, 74}},
         {QuestID::ZaishenMission_Ruins_of_Surmia, {15, 74}},
@@ -2146,8 +2147,8 @@ DailyQuests::DailyQuestResult DailyQuests::GetWeeklyPvPBonus(time_t unix)
 
 const DailyQuests::ZaishenCoinReward* DailyQuests::GetZaishenCoinReward(GW::Constants::QuestID quest_id)
 {
-    const auto it = zaishen_coin_rewards.find(quest_id);
-    return it != zaishen_coin_rewards.end() ? &it->second : nullptr;
+    const auto it = std::ranges::find(zaishen_coin_rewards, quest_id, &std::pair<GW::Constants::QuestID, ZaishenCoinReward>::first);
+    return it != std::ranges::end(zaishen_coin_rewards) ? &it->second : nullptr;
 }
 
 time_t DailyQuests::GetTimestampFromNicholasTheTraveller(NicholasCycleData* data, time_t now)

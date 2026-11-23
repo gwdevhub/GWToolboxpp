@@ -385,17 +385,17 @@ bool TBHotkey::Draw()
             const bool checkbox_changed = ImGui::Checkbox("##active", &active);
             hotkey_changed |= checkbox_changed;
             if (ImGui::IsItemHovered()) {
-                if (dynamic_cast<HotkeyGroup*>(this))
+                if (AsGroup())
                     ImGui::SetTooltip("The hotkey can trigger only when selected\nShift+Click to enable/disable all hotkeys in this group");
                 else
                     ImGui::SetTooltip("The hotkey can trigger only when selected");
             }
             if (checkbox_changed && ImGui::GetIO().KeyShift) {
-                if (auto* grp = dynamic_cast<HotkeyGroup*>(this)) {
+                if (auto* grp = AsGroup()) {
                     auto set_active = [](auto& self, HotkeyGroup* g, bool val) -> void {
                         for (auto* hk : g->hotkeys) {
                             hk->active = val;
-                            if (auto* child = dynamic_cast<HotkeyGroup*>(hk))
+                            if (auto* child = hk->AsGroup())
                                 self(self, child, val);
                         }
                     };
@@ -681,17 +681,17 @@ bool TBHotkey::DrawSettings()
         const bool checkbox_changed = ImGui::Checkbox("###active", &active);
         hotkey_changed |= checkbox_changed;
         if (ImGui::IsItemHovered()) {
-            if (dynamic_cast<HotkeyGroup*>(this))
+            if (AsGroup())
                 ImGui::SetTooltip("The hotkey can trigger only when selected\nShift+Click to enable/disable all hotkeys in this group");
             else
                 ImGui::SetTooltip("The hotkey can trigger only when selected");
         }
         if (checkbox_changed && ImGui::GetIO().KeyShift) {
-            if (auto* grp = dynamic_cast<HotkeyGroup*>(this)) {
+            if (auto* grp = AsGroup()) {
                 auto set_active = [](auto& self, HotkeyGroup* g, bool val) -> void {
                     for (auto* hk : g->hotkeys) {
                         hk->active = val;
-                        if (auto* child = dynamic_cast<HotkeyGroup*>(hk))
+                        if (auto* child = hk->AsGroup())
                             self(self, child, val);
                     }
                 };
@@ -814,7 +814,7 @@ bool TBHotkey::SetGroup(HotkeyGroup* to_set)
 }
 bool TBHotkey::IsGroup()
 {
-    return dynamic_cast<HotkeyGroup*>(this);
+    return AsGroup();
 }
 
 void TBHotkey::SortHotkeys()
@@ -831,7 +831,7 @@ void TBHotkey::SortHotkeys()
         });
         for (int i = 0; i < static_cast<int>(vec.size()); i++) {
             vec[i]->sort_order = i;
-            if (auto* grp = dynamic_cast<HotkeyGroup*>(vec[i])) {
+            if (auto* grp = vec[i]->AsGroup()) {
                 sort_and_normalise(grp->hotkeys);
             }
         }
@@ -844,7 +844,7 @@ void TBHotkey::SortHotkeys()
     std::function<void(std::vector<TBHotkey*>&)> flatten = [&](std::vector<TBHotkey*>& vec) {
         for (auto* hk : vec) {
             all_hotkeys.push_back(hk);
-            if (auto* grp = dynamic_cast<HotkeyGroup*>(hk)) {
+            if (auto* grp = hk->AsGroup()) {
                 flatten(grp->hotkeys);
             }
         }
@@ -855,7 +855,7 @@ void TBHotkey::SortHotkeys()
 
 TBHotkey* TBHotkey::Duplicate()
 {
-    if (dynamic_cast<HotkeyGroup*>(this)) 
+    if (AsGroup()) 
         return 0; // groups don't support duplicate
     ToolboxIni tmp_ini;
     char section_buf[64];

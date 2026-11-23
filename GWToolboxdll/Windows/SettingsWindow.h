@@ -39,6 +39,8 @@ public:
     // Declare a settings sub-header (call from a module's Initialize) so it appears in settings search.
     static void RegisterSubSection(const char* section, const char* label);
 
+    static void RegisterSearchLabel(const char* section, const char* label);
+
     size_t sep_modules = 0;
     size_t sep_windows = 0;
     size_t sep_widgets = 0;

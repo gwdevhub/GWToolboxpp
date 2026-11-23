@@ -109,38 +109,38 @@ void MainWindow::Draw(IDirect3DDevice9*)
                         }
                         module->visible = false;
                     }
-                    for (const auto plugin : PluginModule::GetPlugins() | std::views::filter([](ToolboxPlugin* p) {
-                        return p && p->GetVisiblePtr() && p->ShowInMainMenu();
+                    for (const auto plugin : PluginModule::GetPlugins() | std::views::filter([](const GWToolboxPluginApi* p) {
+                        return p && p->visible_ptr() && p->show_in_main_menu();
                     })) {
-                        *plugin->GetVisiblePtr() = false;
+                        *plugin->visible_ptr() = false;
                     }
                 }
             }
             ImGui::PopID();
         }
         size_t i = 0;
-        for (const auto plugin : PluginModule::GetPlugins() | std::views::filter([](ToolboxPlugin* p) {
-            return p && p->GetVisiblePtr() && p->ShowInMainMenu();
+        for (const auto plugin : PluginModule::GetPlugins() | std::views::filter([](const GWToolboxPluginApi* p) {
+            return p && p->visible_ptr() && p->show_in_main_menu();
         })) {
             ImGui::PushID(i++);
             if (drawn) {
                 ImGui::Separator();
             }
-            if (plugin->DrawTabButton(settings.show_icons, true, settings.center_align_text)) {
-                if (settings.one_panel_at_time_only && plugin->GetVisiblePtr() && *plugin->GetVisiblePtr()) {
+            if (plugin->draw_tab_button(settings.show_icons, true, settings.center_align_text)) {
+                if (settings.one_panel_at_time_only && plugin->visible_ptr() && *plugin->visible_ptr()) {
                     for (const auto& module : modules_to_draw | std::views::values) {
                         if (!module->IsWindow()) {
                             continue;
                         }
                         module->visible = false;
                     }
-                    for (const auto plug : PluginModule::GetPlugins() | std::views::filter([](ToolboxPlugin* p) {
-                        return p && p->GetVisiblePtr() && p->ShowInMainMenu();
+                    for (const auto plug : PluginModule::GetPlugins() | std::views::filter([](const GWToolboxPluginApi* p) {
+                        return p && p->visible_ptr() && p->show_in_main_menu();
                     })) {
                         if (plugin == plug) {
                             continue;
                         }
-                        *plug->GetVisiblePtr() = false;
+                        *plug->visible_ptr() = false;
                     }
                 }
             }
