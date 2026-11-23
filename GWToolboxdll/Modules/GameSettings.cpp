@@ -2358,42 +2358,24 @@ void GameSettings::OnAgentStartCast(GW::HookStatus*, GW::UI::UIMessage, void* wP
     }
 };
 
-namespace {
-    std::optional<std::string> GameLinkTitle(const std::string& raw_url)
-    {
-        static const std::regex game_link_regex(R"(game_link(?:%3a|:)(\w+))", std::regex::icase);
-        std::smatch match;
-        if (!std::regex_search(raw_url, match, game_link_regex)) {
-            return std::nullopt;
-        }
-        return "Game_link:" + match[1].str();
-    }
-
-    std::optional<std::string> RedirectTarget(const std::string& wikitext)
-    {
-        static const std::regex redirect_regex(R"(\[\[(?:ingame-help:)?([^\]|#]+))");
-        std::smatch match;
-        if (!std::regex_search(wikitext, match, redirect_regex)) {
-            return std::nullopt;
-        }
-        return match[1].str();
-    }
-} // namespace
-
 void GameSettings::OnOpenWiki(GW::HookStatus* status, const GW::UI::UIMessage message_id, void* wParam, void*)
 {
     const std::string raw_url = static_cast<char*>(wParam);
     const std::string url = TextUtils::ToLower(raw_url);
-    if (const auto game_link_title = GameLinkTitle(raw_url)) {
+    static const std::regex game_link_regex(R"(game_link(?:%3a|:)(\w+))", std::regex::icase);
+    std::smatch game_link_match;
+    if (std::regex_search(raw_url, game_link_match, game_link_regex)) {
         // The wiki's Game_link redirect adds an rdfrom query that its load balancer rejects with 403.
         status->blocked = true;
-        Resources::Download(WikiTemplateUrlFromTitle(*game_link_title), [message_id, game_link_title = *game_link_title](const bool ok, const std::string& wikitext, void*) {
-            const auto redirect_target = RedirectTarget(wikitext);
-            if (!ok || !redirect_target) {
+        const std::string game_link_title = "Game_link:" + game_link_match[1].str();
+        Resources::Download(WikiTemplateUrlFromTitle(game_link_title), [message_id, game_link_title](const bool ok, const std::string& wikitext, void*) {
+            static const std::regex redirect_regex(R"(\[\[(?:ingame-help:)?([^\]|#]+))");
+            std::smatch redirect_match;
+            if (!ok || !std::regex_search(wikitext, redirect_match, redirect_regex)) {
                 Log::Error("Failed to find the wiki page for %s", game_link_title.c_str());
                 return;
             }
-            GW::GameThread::Enqueue([message_id, resolved_url = WikiUrl(*redirect_target)] {
+            GW::GameThread::Enqueue([message_id, resolved_url = WikiUrl(redirect_match[1].str())] {
                 SendUIMessage(message_id, (void*)resolved_url.c_str());
             });
         });
