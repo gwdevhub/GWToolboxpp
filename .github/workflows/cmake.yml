@@ -2,9 +2,8 @@ name: CMake
 
 on:
   # push covers dev (post-merge validation and beta releases) and master
-  # (release builds). pull_request covers PRs against dev - including
-  # from forks, where CERTUM_OTP_URI is unset and signing/release is skipped -
-  # so branches only build once a PR is open instead of on every push.
+  # (release builds). pull_request covers PRs against dev, so branches only
+  # build once a PR is open instead of on every push.
   push:
     branches:
       - dev
@@ -18,6 +17,9 @@ on:
       - '**/*.rc'
       - '**/*.ico'
       - '**/*.manifest'
+      # Launcher web UI, embedded into both launchers
+      - 'GWToolbox/web/**'
+      - 'resources/**'
       # Build system
       - 'CMakeLists.txt'
       - 'cmake/*.cmake'
@@ -28,6 +30,7 @@ on:
       # The build and toolchain scripts it runs
       - 'scripts/*.py'
       - 'scripts/llvm-mingw.version'
+      - 'scripts/*.sh'
       # The workflow itself
       - '.github/workflows/cmake.yml'
   pull_request:
@@ -35,109 +38,36 @@ on:
       - dev
     paths: *cmake-paths
 
-# Cancel a still-running build for the same ref when a new commit supersedes
-# it, instead of letting both run to completion on the paid Windows runner.
+# Cancel a still-running build for the same ref when a new commit supersedes it.
 concurrency:
   group: cmake-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   build:
-    runs-on: windows-2025-vs2026
-    timeout-minutes: 30
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
     permissions:
       contents: write
-    env:
-      HAS_CERTUM_CREDENTIALS: ${{ secrets.CERTUM_OTP_URI != '' && secrets.CERTUM_USERID != '' && secrets.CERTUM_CERT_SHA1 != '' }}
 
     steps:
-#    - name: Setup Windows 10 SDK Action
-#      uses: GuillaumeFalourd/setup-windows10-sdk-action@v2
-#      with:
-#        sdk-version: 22621
-
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
         submodules: recursive
 
-    - name: Cache vcpkg toolchain
-      id: cache-vcpkg-tool
-      uses: actions/cache@v4
-      with:
-        path: ${{ github.workspace }}/vcpkg
-        key: vcpkg-tool-${{ runner.os }}-2b65c20fc66eda893aa15a15a453c3cf09500b19
-
-    - name: Install vcpkg
-      if: steps.cache-vcpkg-tool.outputs.cache-hit != 'true'
-      shell: bash
-      # Keep in sync with the default-registry baseline in vcpkg-configuration.json:
-      # this checkout provides scripts/, including the pinned msys2 package URLs that
-      # vcpkg_fixup_pkgconfig downloads. Stale pins 404 once MSYS2 rotates them out.
-      env:
-        VCPKG_COMMIT: 2b65c20fc66eda893aa15a15a453c3cf09500b19
+    - name: Install host packages
+      # Same list as bootstrap.sh: the compiler builds the Linux launcher and vkd3d-compiler, and vcpkg needs zip,
+      # unzip and pkg-config.
       run: |
-        git clone https://github.com/microsoft/vcpkg.git
-        cd vcpkg
-        git checkout "$VCPKG_COMMIT"
-        ./bootstrap-vcpkg.bat
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends ninja-build zip unzip pkg-config build-essential bison flex \
+          libjson-perl libvulkan-dev
 
-    - name: Set VCPKG_ROOT
+    - name: Install CMake 3.29+
       run: |
-        echo "VCPKG_ROOT=$(Get-Location)\vcpkg" >> $env:GITHUB_ENV
-      shell: powershell
-
-    - name: Restore vcpkg binary cache
-      uses: actions/cache@v4
-      with:
-        path: ${{ github.workspace }}/vcpkg-bincache
-        key: vcpkg-bin-mingw-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json', 'vcpkg-overlays/**', 'scripts/llvm-mingw.version') }}
-        restore-keys: |
-          vcpkg-bin-mingw-${{ runner.os }}-
-
-    - name: Cache llvm-mingw
-      uses: actions/cache@v4
-      with:
-        path: ${{ github.workspace }}/.toolchain/llvm-mingw-windows
-        key: llvm-mingw-${{ runner.os }}-${{ hashFiles('scripts/llvm-mingw.version') }}
-
-    - name: Install llvm-mingw
-      run: python scripts/toolchain.py
-
-    - name: Restore FetchContent cache
-      uses: actions/cache@v4
-      with:
-        path: ${{ github.workspace }}/build/Windows/relwithdebinfo/_deps
-        key: deps-mingw-${{ runner.os }}-${{ hashFiles('cmake/*.cmake') }}
-        restore-keys: |
-          deps-mingw-${{ runner.os }}-
-
-    - name: Restore vcpkg installed cache
-      uses: actions/cache@v4
-      with:
-        path: ${{ github.workspace }}/build/Windows/vcpkg_installed
-        key: vcpkg-inst-mingw-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json', 'vcpkg-overlays/**', 'scripts/llvm-mingw.version') }}
-
-    - name: Build
-      # Configures the relwithdebinfo preset into build/Windows/relwithdebinfo/ on the first run, then builds the dll and
-      # the launcher into bin/RelWithDebInfo/.
-      run: python scripts/build.py --preset relwithdebinfo
-      env:
-        VCPKG_ROOT: ${{ env.VCPKG_ROOT }}
-        VCPKG_BINARY_SOURCES: "clear;files,${{ github.workspace }}/vcpkg-bincache,readwrite"
-
-    - name: Compress the dll's debug info
-      shell: bash
-      run: gzip -kf bin/RelWithDebInfo/GWToolboxdll.pdb
-
-    - name: Save output
-      uses: actions/upload-artifact@v4
-      with:
-        # GWToolboxdll.pdb.gz already carries the debug info the raw .pdb has - excluded so the artifact doesn't
-        # ship both.
-        path: |
-          ${{ github.workspace }}/bin/RelWithDebInfo/*
-          !${{ github.workspace }}/bin/RelWithDebInfo/GWToolboxdll.pdb
+        pipx install 'cmake>=3.29'
+        echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
     - name: Determine release version
       id: version
@@ -183,51 +113,60 @@ jobs:
           echo "should_release=true" >> "$GITHUB_OUTPUT"
         fi
 
-    - name: Set up Certum SimplySign
-      if: steps.version.outputs.should_release == 'true' && env.HAS_CERTUM_CREDENTIALS == 'true'
-      shell: bash
-      run: |
-        chmod +x ./.github/scripts/install-simplysign.sh
-        ./.github/scripts/install-simplysign.sh
-        powershell -ExecutionPolicy Bypass -File "./.github/scripts/configure-simplysign.ps1"
+    - name: Cache toolchain and vcpkg
+      uses: actions/cache@v4
+      with:
+        path: |
+          .toolchain
+          .vcpkg
+        key: toolchain-linux-${{ hashFiles('scripts/llvm-mingw.version', 'vcpkg-configuration.json', 'scripts/toolchain.py') }}
 
-    - name: Authenticate Certum SimplySign
-      if: steps.version.outputs.should_release == 'true' && env.HAS_CERTUM_CREDENTIALS == 'true'
-      shell: bash
+    - name: Cache vcpkg binaries
+      uses: actions/cache@v4
+      with:
+        path: vcpkg-bincache
+        key: vcpkg-bin-linux-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json', 'vcpkg-overlays/**', 'scripts/llvm-mingw.version') }}
+        restore-keys: |
+          vcpkg-bin-linux-
+
+    - name: Cache build dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          build/Linux/relwithdebinfo/_deps
+          build/Linux/vcpkg_installed
+        key: deps-linux-${{ hashFiles('cmake/*.cmake', 'vcpkg.json', 'vcpkg-configuration.json', 'vcpkg-overlays/**', 'scripts/llvm-mingw.version') }}
+        restore-keys: |
+          deps-linux-
+
+    - name: Bootstrap
+      # Installs llvm-mingw and vkd3d-compiler into .toolchain/, checks vcpkg out at the registry baseline into .vcpkg/,
+      # and configures the relwithdebinfo preset.
+      run: python3 scripts/bootstrap.py
+
+    - name: Build
+      # The DLL and the Windows launcher with llvm-mingw, then the Linux launcher with the host compiler. Its AppImage
+      # goes into bin/RelWithDebInfo/GWToolbox.AppImage.
+      run: python3 scripts/build.py --preset relwithdebinfo
       env:
-        CERTUM_OTP_URI: ${{ secrets.CERTUM_OTP_URI }}
-        CERTUM_USERID: ${{ secrets.CERTUM_USERID }}
-        CERTUM_CERT_SHA1: ${{ secrets.CERTUM_CERT_SHA1 }}
-      run: powershell -ExecutionPolicy Bypass -File "./.github/scripts/connect-simplysign.ps1"
+        VCPKG_BINARY_SOURCES: "clear;files,${{ github.workspace }}/vcpkg-bincache,readwrite"
 
-    - name: Sign release binaries
-      if: steps.version.outputs.should_release == 'true' && env.HAS_CERTUM_CREDENTIALS == 'true'
-      shell: pwsh
-      env:
-        CERTUM_CERT_SHA1: ${{ secrets.CERTUM_CERT_SHA1 }}
+    - name: Compress the debug info
       run: |
-        $bin = "${{ github.workspace }}/bin/RelWithDebInfo"
-        ./.github/scripts/sign-certum.ps1 -Files @("$bin/GWToolbox.exe", "$bin/GWToolboxdll.dll")
-
-    - name: Disconnect Certum SimplySign
-      if: always() && steps.version.outputs.should_release == 'true' && env.HAS_CERTUM_CREDENTIALS == 'true'
-      continue-on-error: true
-      shell: pwsh
-      run: ./.github/scripts/disconnect-simplysign.ps1
+        gzip -kf bin/RelWithDebInfo/GWToolboxdll.pdb
+        gzip -kf bin/RelWithDebInfo/GWToolbox.pdb
+        gzip -kf bin/RelWithDebInfo/GWToolbox.debug
 
     - name: Create release
       if: steps.version.outputs.should_release == 'true'
       shell: bash
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         TAG_NAME: ${{ steps.version.outputs.tag_name }}
         VERSION: ${{ steps.version.outputs.version }}
         PRERELEASE: ${{ steps.version.outputs.prerelease }}
         BIN_DIR: ${{ github.workspace }}/bin/RelWithDebInfo
       run: |
-        # Already compressed by the step after the build - no need to re-gzip.
-        cp "$BIN_DIR/GWToolboxdll.pdb.gz" GWToolboxdll.pdb.gz
-
         # Pull this version's patch notes from history.md for the release body. Exact heading
         # match so "8.3" can't grab "8.30"; stop at the next version heading. Fall back to a
         # non-empty placeholder so the Github API never returns a null body (which the updater
@@ -255,4 +194,9 @@ jobs:
           --title "$TAG_NAME" \
           --notes-file release_notes.md \
           "${release_args[@]}" \
-          "$BIN_DIR/GWToolbox.exe" "$BIN_DIR/GWToolboxdll.dll" GWToolboxdll.pdb.gz
+          "$BIN_DIR/GWToolbox.exe" \
+          "$BIN_DIR/GWToolboxdll.dll" \
+          "$BIN_DIR/GWToolboxdll.pdb.gz" \
+          "$BIN_DIR/GWToolbox.pdb.gz" \
+          "$BIN_DIR/GWToolbox.AppImage" \
+          "$BIN_DIR/GWToolbox.debug.gz"

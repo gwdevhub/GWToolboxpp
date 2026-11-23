@@ -37,9 +37,27 @@ python3 scripts/build.py
 The SM3 shaders are compiled by [vkd3d-shader](https://gitlab.winehq.org/wine/vkd3d) in place of `fxc.exe`, which the
 bootstrap builds. Its bytecode is longer than `fxc`'s, so validate rendering changes in-game.
 
-`scripts/build.py` builds `GWToolboxdll` and `GWToolbox` into `bin/<Config>/`. `--preset` picks `relwithdebinfo`
-(default), `debug` or `release`, each in its own `build/<host>/<preset>/` (`build/Windows/` or `build/Linux/`), and `--target` builds other targets (`all` for
-everything). Each run is logged to `logs/build-*.log`.
+`scripts/build.py` builds `GWToolbox_DLL`, `GWToolbox_Launcher_Windows` and `GWToolbox_Launcher_Linux` into `bin/<Config>/`. The Linux launcher is built with the host compiler on Linux, and in Docker (`Dockerfile.linux`) on Windows, which has no Linux compiler. `--preset` picks `relwithdebinfo`
+(default), `debug` or `release`, and `--target` builds other targets (`all` for everything). Each run is logged to `logs/build-*.log`.
+
+## Building and releasing
+
+**Build scripts**, run from the repository root. Each builds the `relwithdebinfo` preset:
+* `build_launcher.sh` / `build_launcher.bat`: the Windows and Linux launchers.
+* `build_dll.sh` / `build_dll.bat`: `GWToolboxdll.dll`.
+
+Extra arguments go to `scripts/build.py`, for example `--no-linux` or `--no-appimage`.
+
+**Outputs** in `bin/RelWithDebInfo/`:
+* `GWToolboxdll.dll` and `GWToolboxdll.pdb`
+* `GWToolbox.exe` and `GWToolbox.pdb`
+* `GWToolbox` (the Linux launcher), `GWToolbox.debug`, and `GWToolbox.AppImage`, which is packed on Linux and, on Windows, by the Docker build
+* `.gz` copies of the PDBs and `GWToolbox.debug` for distribution. The originals stay for debugging.
+
+**Releasing:** `python deploy.py --dry-run` builds and checks everything without changing git or creating a release.
+`python deploy.py` creates a draft GitHub release from the notes in `site/src/content/docs/history.md`. It uploads only
+the binaries that changed since the newest release that has them, and prints the draft's URL at the end. Add `--publish`
+to publish the release straight away.
 
 ## Notes
 * GWToolbox compiles as a DLL (`GWToolboxdll.dll`) and EXE (`GWToolbox.exe`). The exe lets you select a Guild Wars Client and injects the dll, but you can also use other dll injectors of your choice.
