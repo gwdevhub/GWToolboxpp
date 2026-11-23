@@ -1283,16 +1283,6 @@ namespace {
         return (uint64_t)(uint32_t)a | ((uint64_t)(uint32_t)b << 32);
     }
 
-    // =====================================================================
-    // Portal-connection graph + LazySP router (see ROUTING_REDESIGN.md).
-    // Topology is built PURELY from portal_connections.json — no world-map
-    // bounds. Nodes are portal endpoints keyed by MapID (never collapsed by
-    // file_hash); edges are portal crossings (a JSON connection) and intra-map
-    // walks (two endpoints on the same physical mesh). Search is LazySP:
-    // Dijkstra on optimistic euclidean intra-weights, then load+refine the first
-    // unevaluated intra-edge on the returned path, repeat.
-    // =====================================================================
-
     // Per-portal-crossing cost (game units): a modest per-zone bias so the router
     // prefers fewer loading screens unless the walking detour saved exceeds it.
     constexpr float CROSSING_COST = 2500.f;

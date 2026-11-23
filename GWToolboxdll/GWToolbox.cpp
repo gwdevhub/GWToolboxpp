@@ -184,11 +184,9 @@ namespace {
 
         io.MouseDrawCursor = false;
         io.IniFilename = imgui_inifile.bytes;
-        // io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
         io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
         io.ConfigNavCaptureKeyboard = false;
 
-        // ImGui_ImplDX9_Init(GW::MemoryMgr().GetGWWindowHandle(), device);
         ImGui_ImplDX9_Init(device);
         ImGui_ImplWin32_Init(GW::MemoryMgr::GetGWWindowHandle());
 
@@ -556,9 +554,7 @@ namespace {
                     return true;
                 }
             }
-            // if (!skip_mouse_capture) {
 
-            //}
             break;
 
             case WM_KEYUP:
@@ -658,9 +654,6 @@ namespace {
         OldWndProc = reinterpret_cast<WNDPROC>(SetWindowLongPtrW(gw_window_handle, GWL_WNDPROC, reinterpret_cast<LONG>(SafeWndProc)));
         Log::Log("Installed input event handler, oldwndproc = 0x%X\n", OldWndProc);
 
-        // NB: Inputs are being listened to in reforged
-        // DEBUG_ASSERT(RegisterRawInputs(true));
-
         event_handler_attached = true;
         return true;
     }
@@ -671,8 +664,6 @@ namespace {
             return true;
         }
         Log::Log("Restoring input hook\n");
-        // NB: Don't unregister the raw input - Guild Wars needs it
-        // DEBUG_ASSERT(RegisterRawInputs(false));
 
         SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, reinterpret_cast<LONG>(OldWndProc));
         event_handler_attached = false;
@@ -818,9 +809,6 @@ void GWToolbox::Initialize(LPVOID module)
     AttachRenderCallback();
     GW::EnableHooks();
 
-    // Module init registers GWCA packet/UI callbacks, which push_back into vectors the game thread
-    // is already iterating with a cached begin(). Let the game-loop callback drive Initialising
-    // instead, so every registration is serialised against packet dispatch.
     pending_detach_dll = false;
     AttachGameLoopCallback();
 }
@@ -1195,7 +1183,6 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
         ImGui::UpdatePlatformWindows();
         ImGui::RenderPlatformWindowsDefault();
-        // TODO for OpenGL: restore current GL context.
     }
 }
 

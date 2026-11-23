@@ -424,7 +424,6 @@ namespace {
             if (!GW::Map::HasMapDisplayInfo(map_info) || GW::Map::IsExcludedMapInfo(map_info)) continue;
             if (!map_info->GetIsOnWorldMap()) continue;
             (world_map_point);
-            // TODO: distance from point to rect
         }
         return GW::Constants::MapID::None;
     }
@@ -1047,7 +1046,6 @@ void WorldMapWidget::SaveSettings(SettingsDoc& doc)
 void WorldMapWidget::Draw(IDirect3DDevice9*)
 {
     if (!(GW::UI::GetIsWorldMapShowing() && PreCalculateFrameVars())) {
-        // ShowAllOutposts(showing_all_outposts = false);
         drawn = false;
         return;
     }

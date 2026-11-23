@@ -351,8 +351,6 @@ void TradeWindow::fetch()
     }
     const bool search_pending = !pending_query_sent && !pending_query_string.empty();
     if (search_pending) {
-        //strcpy(search_buffer, pending_query_string.c_str());
-        // Fill searched_words for the on-the-fly search in ::fetch
         searched_words = TextUtils::ParsePatterns<char>(search_buffer);
 
         const tradechat_api::SearchRequest request{.query = pending_query_string};

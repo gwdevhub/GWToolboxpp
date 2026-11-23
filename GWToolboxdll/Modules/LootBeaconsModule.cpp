@@ -511,9 +511,6 @@ void LootBeaconsModule::DrawInWorld(IDirect3DDevice9* device)
     }
 
     const auto n_planes = TerrainDrape::PathingPlaneCount();
-    // One shared timer for every beacon - a single global interval, not per-beacon - so the rings' radii
-    // are a single value per frame, not per-vertex data. The beam doesn't pulse at all, just the rings.
-    // Wrapping on the full loop (4 x kPulseInterval) keeps the float small without a visible phase jump.
     constexpr auto period_ms = static_cast<clock_t>(4 * kPulseInterval * CLOCKS_PER_SEC);
     const float cycle = static_cast<float>(now % period_ms) * (DirectX::XM_2PI / period_ms);
     const float osc01 = 0.5f - 0.5f * std::cos(cycle);

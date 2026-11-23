@@ -58,16 +58,9 @@ namespace {
     std::vector<ItemDrops::PendingDrop*> pending_write_to_csv;
     std::vector<std::string> pending_full_exports;
 
-    // Rolling in-memory window: drop_history is trimmed to this many most-recent entries once they've
-    // been handed off to the CSV writer, so a long session can't grow it forever. The full session is
-    // still on disk (session_csv_path) and in the tallies below.
     constexpr size_t kMaxRetainedDrops = 2000;
     constexpr size_t kTrimBatch = 200; // amortize the front-erase instead of doing it every single drop
 
-    // Whole-session running totals, bounded by distinct keys seen (item names/maps/etc.), not by drop
-    // count — these stay correct for the full session even once drop_history is trimmed. Everything
-    // but item name is keyed by its native game identifier (MapID/Rarity/ItemType/WeaponKey), not a
-    // formatted string, so tallying is a plain enum lookup with no EncString decode dependency.
     uint64_t session_drop_count = 0;
     int64_t session_total_gold_value = 0;
     std::unordered_map<std::string, ItemDrops::DropTally> tally_by_item_name;
@@ -266,9 +259,6 @@ namespace {
         MAP_ENTRY(ObsidianEdge),
     };
 
-    // The active session's CSV path, fixed the first time a drop is written and named by that moment
-    // (not by calendar day) so each tracking session gets its own file and the "session" the tallies
-    // above describe has an unambiguous on-disk counterpart. Reset by ClearDropHistory().
     std::filesystem::path GetItemDropCSVFilename() {
         if (!session_csv_path.empty()) {
             return session_csv_path;
@@ -1029,9 +1019,6 @@ IDirect3DTexture9** ItemDrops::PendingDrop::GetIcon()
     if (!model_file_id) {
         return nullptr;
     }
-    // Same packing Resources' internal ItemDyes() uses on a live GW::Item, replicated here from the
-    // stored GW::DyeInfo so this lands on the same GwDatModule cache key as any other consumer asking
-    // for this exact model+dye combo (e.g. inventory), instead of a redundant duplicate texture.
     const uint32_t dyes = static_cast<uint32_t>(dye.dye1)
         | (static_cast<uint32_t>(dye.dye2) << 8)
         | (static_cast<uint32_t>(dye.dye3) << 16)

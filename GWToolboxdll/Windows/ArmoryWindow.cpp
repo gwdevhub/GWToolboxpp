@@ -45,7 +45,6 @@ namespace GWArmory {
 
     constexpr size_t costume_count = 0x17;
     struct CostumeData {
-        // [costume_model_file_id][profession] = { chest file id, legs file id, hands file id, legs file id }
         uint32_t sets[costume_count][10][4];
     };
 
@@ -53,7 +52,6 @@ namespace GWArmory {
 
     constexpr size_t festival_hat_sets_count = 0x3c;
     struct FestivalHatData {
-        // [festival_hat_set_id][profession] = { headpiece file id }
         uint32_t sets[festival_hat_sets_count][10][1];
     };
     bool SetArmorItem(const GW::ItemData* item_data);

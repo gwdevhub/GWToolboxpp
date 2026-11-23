@@ -191,7 +191,7 @@ namespace Pathing {
                 finalized = true;
             }
 
-        MilePath* m_mp; //TODO: move to private?
+        MilePath* m_mp;
 		
         private:
             bool finalized = false;

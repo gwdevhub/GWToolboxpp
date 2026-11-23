@@ -44,13 +44,13 @@ namespace CompletionWindow_Constants {
         RealmOfTorment_EliteArea = 0x43466,
 
         EyeOfTheNorth_Dungeon = 0x50830,
-        EyeOfTheNorth_DungeonComplete = 0x50830, // TODO
+        EyeOfTheNorth_DungeonComplete = 0x50830,
         EyeOfTheNorth_Mission = 0x50831,
-        EyeOfTheNorth_MissionComplete = 0x50831, // TODO
+        EyeOfTheNorth_MissionComplete = 0x50831,
         EyeOfTheNorth_HardMode_Dungeon = 0x50832,
-        EyeOfTheNorth_HardMode_DungeonComplete = 0x50832, // TODO
+        EyeOfTheNorth_HardMode_DungeonComplete = 0x50832,
         EyeOfTheNorth_HardMode_Mission = 0x50833,
-        EyeOfTheNorth_HardMode_MissionComplete = 0x50833, // TODO
+        EyeOfTheNorth_HardMode_MissionComplete = 0x50833,
 
         HardMode = 0x45563,
         HardMode_CompletePrimary = 0x45567,

@@ -164,7 +164,7 @@ namespace {
                 }
                 started = TIMER_INIT();
                 stage = WaitForHero;
-                [[fallthrough]];
+                return Process();
             case WaitForHero: {
                 if (TIMER_DIFF(started) > 1000) return true;
                 const GW::HeroPartyMember* hero = GetPartyHeroByID(build.hero_id, &party_hero_index);
@@ -208,7 +208,7 @@ namespace {
                     Log::Warning("Timed out applying disabled skills to hero %d (expected 0x%02X, got 0x%02X)", build.hero_id, build.disabled_skills, actual);
                 }
                 stage = Finished;
-                [[fallthrough]];
+                return true;
             }
             case Finished:
                 return true;

@@ -1665,7 +1665,6 @@ void DailyQuests::Initialize()
 
 
     if (wanted_by_shining_blade_cycles.empty()) {
-        // TODO: Find the encoded names and maps for these
         for (const auto hard_coded_name : hard_coded_wanted_by_shining_blade_names) {
             const auto wrapped = std::format(L"\x108\x107{}\x1", TextUtils::StringToWString(hard_coded_name));
             wanted_by_shining_blade_cycles.push_back({MapID::None, wrapped.c_str()});
@@ -1673,7 +1672,6 @@ void DailyQuests::Initialize()
     }
 
     if (vanguard_cycles.empty()) {
-        // TODO: Find the encoded names and maps for these
         for (const auto hard_coded_name : hard_coded_vanguard_names) {
             const auto wrapped = std::format(L"\x108\x107{}\x1", TextUtils::StringToWString(hard_coded_name));
             vanguard_cycles.push_back({MapID::None, wrapped.c_str()});

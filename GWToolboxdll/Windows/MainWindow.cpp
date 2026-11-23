@@ -46,7 +46,6 @@ void MainWindow::RegisterSettingsContent()
         SettingsName(),
         Icon(),
         [this](const std::string&, const bool is_showing) {
-            // ShowVisibleRadio();
             if (!is_showing) {
                 return;
             }

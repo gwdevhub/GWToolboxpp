@@ -638,7 +638,6 @@ namespace {
         new_name_enc += L"\x1";
 
         return 0;
-        //CreateUIComponent(frame_id, behavior, child_frame_id, ui_callback, new_name_enc.data(), label);
     }
 }
 

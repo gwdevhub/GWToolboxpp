@@ -571,9 +571,6 @@ namespace Pathing {
             return ox * ox + oy * oy;
         }
 
-        // The doorway blocks as a disc the width of the prop, not as a line drawn across it. A
-        // walk that only clips the opening, or that creeps over it in steps too short to straddle
-        // a line, is still going through the gate.
         bool SegmentHitsDoorway(const GW::Vec2f& a, const GW::Vec2f& b, const PortalDoorway& doorway)
         {
             return DistanceToSegmentSq(doorway.pos, a, b) < doorway.radius_sq;
@@ -2572,7 +2569,6 @@ namespace Pathing {
 
         for (const auto& ttd : teleportGraph) {
             if (ttd.tp1 == ts && ttd.tp2 == tg) {
-                // cost = sqrtf(dist_start) + ttd.distance + sqrtf(dist_goal);
                 cost = sqrtf(dist_start);
                 break;
             }

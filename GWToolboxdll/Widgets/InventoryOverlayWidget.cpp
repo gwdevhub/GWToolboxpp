@@ -25,7 +25,6 @@ namespace {
     };
 
     void HighlightFrame(const GW::UI::Frame* frame, const ImColor& color, const GW::UI::Frame* root = GW::UI::GetRootFrame(), ImDrawList* draw_list = ImGui::GetBackgroundDrawList()) {
-        // @TODO: Check parent frame scrollable position and crop to fit.
         const auto top_left = frame->position.GetTopLeftOnScreen(root);
         const auto bottom_right = frame->position.GetBottomRightOnScreen(root);
         draw_list->AddRect({ top_left.x, top_left.y }, { bottom_right.x, bottom_right.y }, color);
@@ -97,9 +96,6 @@ void InventoryOverlayWidget::DrawSettingsInternal()
     ImGui::SameLine();
     ImGui::Checkbox("Show overlay explorable", &settings.show_in_explorable);
 
-    // @TODO: Adding item colours by name (usability would be to add this to a context menu to manually add)
-    // @TODO: Adding item colours by type
-
 }
 
 void InventoryOverlayWidget::Draw(IDirect3DDevice9*)
@@ -122,7 +118,6 @@ void InventoryOverlayWidget::Draw(IDirect3DDevice9*)
         return;
 
     const auto viewport = ImGui::GetMainViewport();
-    //const auto& viewport_offset = viewport->Pos;
     const auto draw_list = ImGui::GetBackgroundDrawList(viewport);
 
     const auto root = GW::UI::GetRootFrame();

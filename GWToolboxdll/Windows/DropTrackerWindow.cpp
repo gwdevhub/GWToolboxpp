@@ -25,9 +25,6 @@ namespace {
     const char* group_mode_names[] = {"None", "Item Name", "Map", "Rarity", "Type", "Weapon"};
     DropTrackerWindow::Settings settings;
 
-    // Uniform view over a drop row, whether it's a live in-memory PendingDrop (recent window) or a row
-    // parsed back out of the session CSV (older, already trimmed from memory). icon is null for
-    // disk-sourced rows — the original GW::Item is long gone, so there's nothing to look an icon up from.
     struct DisplayRow {
         time_t system_time = 0;
         IDirect3DTexture9** icon = nullptr;
@@ -55,10 +52,6 @@ namespace {
         };
     }
 
-    // Per-key-type overloads instead of a GroupMode switch: each tally dimension now uses its native
-    // game identifier as the key (see ItemDrops::GetTallyBy*), so there's no single "key" type to
-    // switch on any more. LabelFor turns a key into the text a group's row shows; RowMatchesKey filters
-    // parsed CSV rows during drill-down without needing to format/decode anything just to compare.
     std::string LabelFor(const std::string& key) { return key.empty() ? "(Unknown)" : key; }
     std::string LabelFor(GW::Constants::MapID key) { auto name = Resources::GetMapName(key)->string(); return name.empty() ? "(Unknown)" : name; }
     std::string LabelFor(GW::Constants::Rarity key) { return GW::Items::GetRarityName(key); }
@@ -207,9 +200,6 @@ namespace {
         ImGui::TextColoredUnformatted(GW::Items::GetRarityColor(drop.rarity), TextUtils::WStringToString(drop.item_name).c_str());
     }
 
-    // Takes the live PendingDrop list (not pre-converted DisplayRows) so ToDisplayRow - and the icon
-    // fetch/cache lookup inside it - only runs for rows the clipper actually decides to draw, instead
-    // of for the whole (up to ~2000-entry) rolling window every frame regardless of scroll position.
     void DrawDefaultTable(const std::vector<ItemDrops::PendingDrop*>& drops)
     {
         if (ImGui::BeginTable("drops_table", 8, ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg)) {

@@ -963,7 +963,6 @@ namespace {
             GW::GameThread::Enqueue([] {
                 GW::GetCharContext()->player_flags |= 0x8;
                 GW::UI::SendUIMessage((GW::UI::UIMessage)0x1000008a, 0, 0);
-                // GW::GetCharContext()->player_flags ^= 0x8;
             });
         }
         if (ImGui::Button("DownloadStringFiles")) {

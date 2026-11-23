@@ -47,9 +47,7 @@ public:
     static bool IsModuleEnabled(ToolboxModule* m);
     static bool IsModuleEnabled(const char* name);
 
-    //const std::vector<ToolboxModule*>& GetModules();
     static const std::vector<ToolboxModule*>& GetAllModules();
-    //const std::vector<ToolboxModule*>& GetCoreModules() const { return core_modules; }
     static const std::vector<ToolboxUIElement*>& GetUIElements();
     // Get modules that are currently enabled, that are not windows or widgets
     static const std::vector<ToolboxModule*>& GetModules();

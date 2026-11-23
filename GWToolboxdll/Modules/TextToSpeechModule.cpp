@@ -41,7 +41,6 @@ namespace {
     const char* voice_id_dwarven_male = "N2lVS1w4EtoT3dr4eOWO";
 
     const char* gwtts_hostname = "https://tts.gwtoolbox.com";
-    // const char* gwtts_hostname = "http://localhost:8081";
 
     struct PendingNPCAudio;
     typedef std::string (*GenerateVoiceCallback)(PendingNPCAudio* audio);
@@ -1276,14 +1275,6 @@ Gender GetGenderByFileId(const uint32_t file_id)
         return audio_data;
     }
 
-    // -------------------------------------------------------------------------
-    // GenerateVoice — the main dispatch function
-    //
-    // Takes shared ownership of `audio`. The worker lambda captures a weak_ptr so
-    // that if the audio is cancelled (ClearSounds / CancelDialogSpeech) while the
-    // worker is running, the lock() returns null and we bail out cleanly without
-    // touching freed memory.
-    // -------------------------------------------------------------------------
     void GenerateVoice(std::shared_ptr<PendingNPCAudio> audio)
     {
         if (!audio) return;

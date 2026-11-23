@@ -71,28 +71,6 @@ namespace TeamBuildEncoder {
         }
     };
 
-    // ---------------------------------------------------------------------------
-    // EncodedTeamBuild wchar encoding
-    //
-    // Two encoding tables, selected by GW region at encode time and identified
-    // by the magic nibble at decode time. All confirmed working as chat link chars.
-    //
-    // Both tables share a 479-codepoint base:
-    //   Basic Latin (excl ;<>[]): 90   U+0020-U+007E
-    //   Latin-1+Extended-A:      223   U+00A1-U+017F
-    //   General Punctuation:     166   U+2010-U+20B5
-    //
-    // Topped up with 33 region-specific codepoints:
-    //   Western (0xE): U+0391-U+03B1  Greek+Cyrillic  (America, Europe, International)
-    //   Asian   (0xD): U+FF01-U+FF21  Halfwidth Forms  (Korea, China, Japan)
-    //
-    // Halfwidth confirmed working in all Asian districts as chat link chars.
-    // Greek+Cyrillic confirmed working in Western districts.
-    // Magic nibble is essential — first wchar is always from shared Basic Latin base.
-    //
-    // Excludes ; U+003B, < U+003C, > U+003E, [ U+005B, ] U+005D
-    // ---------------------------------------------------------------------------
-
     constexpr uint32_t kMagicWestern = 0xE;
     constexpr uint32_t kMagicAsian = 0xD;
 
@@ -386,21 +364,6 @@ namespace TeamBuildEncoder {
         }
         return result;
     }
-
-    // ---------------------------------------------------------------------------
-    // Shared hero write/read for EncodedTeamBuild
-    //
-    // Attribute encoding:
-    //   - 4-bit slot_count (number of attribute slots for this profession pair)
-    //   - slot_count-bit presence mask (1 bit per slot in kProfessionAttributes order)
-    //   - Fixed 4-bit value for each set bit only (no total_points header)
-    //
-    // Skill encoding:
-    //   - 1-bit width flag: 0 = indices fit in 8 bits, 1 = need 9 bits
-    //   - 8 skill indices at the determined width
-    //   - PvE skills are at the end of the hero accessible list (heroes never equip
-    //     them), keeping hero build skill indices small.
-    // ---------------------------------------------------------------------------
 
     static int BuildAttrSlots(Profession primary, Profession secondary, Attribute out_attrs[], int max_slots)
     {

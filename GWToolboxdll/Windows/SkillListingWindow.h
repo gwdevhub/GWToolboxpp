@@ -44,8 +44,6 @@ public:
         const std::wstring& NameLower();
         const wchar_t* GWWDescription();
         const wchar_t* GWWConcise();
-        //const wchar_t* Description(uint32_t attribute_level, wchar_t* buffer);
-        //const wchar_t* Concise(uint32_t attribute_level, wchar_t* buffer);
         GW::Skill* skill;
         const std::wstring GetSkillType() const;
         const bool HasExhaustion() const { return skill->special & 0x1; }

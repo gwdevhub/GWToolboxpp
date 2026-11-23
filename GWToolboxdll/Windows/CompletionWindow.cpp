@@ -145,7 +145,6 @@ namespace {
                 *icon_file_ids = WorldMapIcon::HardMode_CompleteAll;
         }
         else {
-            // TODO: Change these icons out for Hard Mode
             switch (area_info->continent) {
                 case GW::Continent::Kryta: {
                     switch (area_info->type) {
@@ -430,7 +429,6 @@ namespace {
             }
             return;
         }
-        //Log::InfoW(L"Loaded Hom for %s", result->character_name);
         CompletionWindow::Instance().CheckProgress();
     }
 
@@ -1247,9 +1245,7 @@ FactionsPvESkill::FactionsPvESkill(const SkillID skill_id)
 
 bool FactionsPvESkill::Draw(IDirect3DDevice9* device)
 {
-    //icon_size.y *= 2.f;
     const bool drawn = PvESkill::Draw(device);
-    //icon_size.y /= 2.f;
     return drawn;
 }
 
@@ -1274,7 +1270,6 @@ void CompletionWindow::Initialize()
 
     *min_size = 780.f;
 
-    //Resources::LoadTexture(&button_texture, Resources::GetPath(L"img/missions", L"MissionIcon.png"), IDB_Missions_MissionIcon);
     outposts = {
         {Campaign::Prophecies, {}},
         {Campaign::Factions, {}},
@@ -2132,7 +2127,6 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
         return;
     }
 
-    // TODO Button at the top to go to current daily
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSizeConstraints(ImVec2(min_size[0], min_size[1]), ImVec2(max_size[0], max_size[1]));
 

@@ -39,12 +39,6 @@ namespace {
     std::unordered_map<GW::AgentID, std::vector<SkillActivation>> history{};
     std::unordered_map<GW::AgentID, float> casttime_map{};
 
-    // The client always broadcasts kAgentSkillInterrupted for both a genuine interrupt and a plain
-    // self-cancel/stop (kAgentSkillCancelled is never actually posted by the retail client), so the UI
-    // message alone can't tell them apart. The server does send a distinct GenericValue StoC packet
-    // (value_id == interrupted) for a real interrupt, immediately after the attack_skill_stopped/
-    // skill_stopped packet that triggers the UI message - so we track that separately, per-agent, and
-    // consult it when the UI message arrives.
     std::unordered_map<GW::AgentID, bool> confirmed_interrupted{};
 
     SkillMonitorWidget::Settings settings;
@@ -166,10 +160,6 @@ namespace {
             case GW::UI::UIMessage::kAgentSkillCancelled:
             case GW::UI::UIMessage::kAgentSkillInterrupted: {
                 const auto packet = (GW::UI::UIPacket::kAgentSkillPacket*)wparam;
-                // kAgentSkillCancelled is never actually broadcast by the client, and
-                // kAgentSkillInterrupted fires for both real interrupts and plain self-cancels -
-                // use the GenericValue-derived flag (set from the raw StoC "interrupted" packet)
-                // to tell them apart instead of trusting message_id.
                 auto status = CANCELLED;
                 if (const auto it = confirmed_interrupted.find(packet->agent_id); it != confirmed_interrupted.end()) {
                     status = it->second ? INTERRUPTED : CANCELLED;

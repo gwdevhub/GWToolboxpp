@@ -639,7 +639,6 @@ bool SettingsWindow::DrawSettingsSection(const char* section)
     size_t i = 0;
     if (is_showing) ImGui::Indent();
     for (const auto& setting_callback : settings_section->second) {
-        // if (i && is_showing) ImGui::Separator();
         ImGui::PushID(i);
         setting_callback.callback(settings_section->first, is_showing);
         i++;

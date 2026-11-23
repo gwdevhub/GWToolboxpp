@@ -481,7 +481,6 @@ void ChatSettings::Initialize()
     uintptr_t address = GW::Scanner::Find("\x74?\xc7??\xff\xff\xff\xff\xc7??\xff\xff\xff\xff", "x?x??xxxxx??xxxx", 1);
     if (address) {
         bypass_chat_codepage_limitation.SetPatch(address, "\x0", 1);
-        //bypass_chat_codepage_limitation.TogglePatch(true);
     }
     ASSERT(bypass_chat_codepage_limitation.IsValid());
 }

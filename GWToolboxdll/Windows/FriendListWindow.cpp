@@ -414,7 +414,6 @@ namespace {
             if (const auto friend_ = FriendListWindow::GetFriend(packet->player_name)) {
                 const auto& friendname = friend_->current_char->getNameW();
                 if (!friend_->IsOffline() && friend_->current_char && friendname != packet->player_name) {
-                    // TODO; Would doing this cause a memory leak on the previous wchar_t* ?
                     packet->player_name = const_cast<wchar_t*>(friendname.data());
                 }
             }
@@ -924,7 +923,6 @@ void FriendListWindow::AddFriendAliasToMessage(wchar_t** message_ptr)
             new_message = std::wstring(message).replace(player_name_pos, player_name.length(), friend_->GetAliasW());
         }
     }
-    // TODO; Would doing this cause a memory leak on the previous wchar_t* ?
     *message_ptr = const_cast<wchar_t*>(new_message.c_str());
 }
 

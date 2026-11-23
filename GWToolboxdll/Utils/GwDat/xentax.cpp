@@ -229,8 +229,6 @@ public:
 
                         if (_data >= HuffmanTree.Var2)
                         {
-                            //printf( "Error\n" );
-                            //throw error
                             return 0;
                         }
 
@@ -244,8 +242,6 @@ public:
                     }
                     if (_temp >= 0x20)
                     {
-                        //printf( "Error\n" );
-                        //throw error
                         return 0;
                     }
                     if (_temp)
@@ -289,8 +285,6 @@ public:
                             _data |= ESIplusC >> (0x20 - _temp);
                             if (_temp >= 0x20)
                             {
-                                //printf( "Error\n" );
-                                //throw error
                                 return 0;
                             }
                             ESIplusC = (ESIplus10 >> (0x20 - _temp)) | (ESIplusC << _temp);
@@ -337,8 +331,6 @@ public:
 
                             if (_data >= HuffmanTree2.Var2)
                             {
-                                //printf( "Error\n" );
-                                //throw error
                                 return 0;
                             }
 
@@ -347,8 +339,6 @@ public:
 
                         if (_temp >= 0x20)
                         {
-                            //printf("Error\n");
-                            //throw error
                             return 0;
                         }
 
@@ -389,8 +379,6 @@ public:
                             _data = backtrack | ESIplusC >> (0x20 - _temp);
                             if (_temp >= 0x20)
                             {
-                                //printf("Error\n");
-                                //throw error
                                 return 0;
                             }
 
@@ -511,8 +499,6 @@ public:
 
         memset(EBPminus128, 0, 0x80);
         memset(EBPminus128 + 0x20, 0xff, 0x80);
-        //Helper2( EBPminus128, 0x80 );
-        //Helper3( EBPminus128 + 0x80, EDX | 0xff, 0x80);
 
         EBPminus8 = EBPminus10 = EBPminus14 - 1;
 
@@ -532,8 +518,6 @@ public:
                 arg_0 = Table2[Table1[i + 1] - ((ESIplusC - Table1[i]) >> EBPminus4)];
                 if (j >= 0x20)
                 {
-                    //printf( "Error\n" );
-                    //throw error
                     delete[] EBPminus20;
                     return false;
                 }
@@ -567,8 +551,6 @@ public:
                 arg_0 &= 0x1f;
                 if (arg_0 > 0x1f)
                 {
-                    //printf( "Error\n" );
-                    //throw error
                     delete[] EBPminus20;
                     return false;
                 }
@@ -591,8 +573,6 @@ public:
                     {
                         if (EBPminus8 >= EBPminus14)
                         {
-                            //printf( "Error\n" );
-                            //throw error
                             delete[] EBPminus20;
                             return false;
                         }
@@ -654,8 +634,6 @@ public:
                         {
                             if ((unsigned)(EBPminus28 | i) >= 0x100)
                             {
-                                //printf( "Error\n" );
-                                //throw error
                                 delete[] EBPminus20;
                                 return false;
                             }
@@ -679,8 +657,6 @@ public:
 
         if (EBPminus24 > EBPminus1C)
         {
-            //printf( "Error\n" );
-            // throw error
             delete[] EBPminus20;
             return false;
         }
@@ -733,8 +709,6 @@ public:
                                 HData.HuffmanTable[(EBPminus8 >> (arg_0 - 8)) * 2] = -1;
                                 if (v >= HData.Var2)
                                 {
-                                    //printf( "Error\n" );
-                                    //throw error
                                     delete[] EBPminus20;
                                     return false;
                                 }

@@ -43,10 +43,6 @@
 #include "ToolboxUtils.h"
 
 namespace {
-    // Replaces each match of `patterns`, where '.' matches any character, with what `format` returns for the matched text,
-    // scanning left to right. Where several patterns match at one position the first listed wins, as a regex tries its
-    // alternatives in order. These were compile-time regexes (ctre): a scan of fixed-length patterns is as fast and needs
-    // no regex engine.
     template <typename Format>
     std::wstring ReplaceEncoded(const std::wstring_view text, const std::initializer_list<std::wstring_view> patterns, Format format)
     {
@@ -1408,9 +1404,6 @@ namespace ToolboxUtils {
                 original = item->complete_name_enc;
                 const std::wstring_view item_str(item->info_string);
 
-                // These checks replaced anchored regexes (ctre::match); the patterns are in the comments. %ls prints from the
-                // capture to the end of item_str, as it did with the regex capture.
-                // "\x2.\x10A\xA84\x10A(.{1,2})\x1\x101\x101\x1\x2\xA3E\x10A\xAA8\x10A\xAB1\x1\x1"
                 constexpr std::wstring_view stacking_suffix = L"\x1\x101\x101\x1\x2\xA3E\x10A\xAA8\x10A\xAB1\x1\x1";
                 if (const auto stacking = item_str.size() - std::min(item_str.size(), 5 + stacking_suffix.size());
                     (stacking == 1 || stacking == 2) && item_str[0] == L'\x2' && item_str.substr(2, 3) == L"\x10A\xA84\x10A" && item_str.ends_with(stacking_suffix)) {

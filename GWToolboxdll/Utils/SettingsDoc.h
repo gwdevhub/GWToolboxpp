@@ -23,9 +23,6 @@ public:
 
     [[nodiscard]] bool Empty() const { return sections.empty(); }
 
-    // Lenient whole-struct read: unknown keys ignored, missing keys keep current values. Plain structs are read member
-    // by member, each in place as a whole-struct read would, so the parsing code is shared by every struct with members
-    // of the same types rather than generated for each struct (glaze made that a seventh of the dll).
     template <typename T>
     bool GetStruct(const std::string_view section, T& out) const
     {

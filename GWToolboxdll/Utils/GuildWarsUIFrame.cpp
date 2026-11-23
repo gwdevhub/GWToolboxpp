@@ -74,7 +74,6 @@ void GuildWarsUI_Frame::ApplyLayout()
     frame->position.top = margin_top_;
     frame->position.right = explicit_margins_ ? margin_right_ : margin_left_ + width_;
     frame->position.bottom = explicit_margins_ ? margin_bottom_ : margin_top_ - height_;
-    //GW::UI::TriggerFrameRedraw(frame);
 }
 
 GuildWarsUI_Checkbox::GuildWarsUI_Checkbox(std::wstring label, void (*onClick)(), bool* variable) : GuildWarsUI_Button(std::move(label), onClick), variable_(variable ? variable : &local_variable)

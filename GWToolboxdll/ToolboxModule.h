@@ -75,8 +75,6 @@ public:
 
     virtual void SaveSettings(SettingsDoc& doc);
 
-    // Draw settings interface. Will be called if the setting panel is visible, calls DrawSettingsInternal()
-    //virtual void DrawSettings();
     virtual void DrawSettingsInternal() { }
 
     void RegisterSettingsContent(

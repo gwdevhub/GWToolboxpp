@@ -49,8 +49,6 @@ namespace {
         }
         OnSetCameraMode_Ret(camera_mode, enabled);
         if (cam->camera_mode != old_mode && last_camera_by_mode[cam->camera_mode] && cam->camera_mode == 0) {
-            // TODO: How to set the camera position to what it was before we died?
-
             // We can't just do it here because there is further logic in the chain that resets the camera position now that we're alive
 
         }

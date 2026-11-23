@@ -197,7 +197,6 @@ namespace {
         GWCA_INFO("[SCAN] mouse_look_event_id = 0x%02x", mouse_look_event_id);
 
 #ifdef _DEBUG
-        //ASSERT(ProcessInput_Func && HasRegisteredTrackMouseEvent && gw_mouse_move && SetCursorPosCenter_Func);
 #endif
         if (ProcessInput_Func && HasRegisteredTrackMouseEvent && gw_mouse_move && SetCursorPosCenter_Func && mouse_look_event_id) {
             GW::Hook::CreateHook((void**)&ProcessInput_Func, OnProcessInput, reinterpret_cast<void**>(&ProcessInput_Ret));

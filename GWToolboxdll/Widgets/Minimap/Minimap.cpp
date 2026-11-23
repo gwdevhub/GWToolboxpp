@@ -459,8 +459,6 @@ namespace {
         if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) {
             return false;
         }
-        // keep an internal flag for the minimap flagging until StartCaptureMouseClick_Func is working
-        // minimap_flagging_state = set_state;
         if (GetFlaggingState() == set_state) {
             return true;
         }
@@ -621,11 +619,6 @@ namespace {
     void DrawNSEW(const MinimapRenderContext& context)
     {
         if ((context.cardinal_color & IM_COL32_A_MASK) == 0) return;
-        // -------------------------------------------------------------------------
-        // Cardinal direction labels (N / S / E / W) — ImGui background draw list.
-        // cardinal_upright: true = labels always read upright on screen (default);
-        // false = labels rotate with the map, each letter facing outward from the centre.
-        // -------------------------------------------------------------------------
         ImDrawList* draw_list = ImGui::GetBackgroundDrawList();
 
         ImFont* font = FontLoader::GetFont();
@@ -1190,7 +1183,6 @@ void Minimap::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
     ToolboxWidget::LoadSettings(doc, legacy);
     std::error_code ec;
     if (!std::filesystem::exists(Resources::GetSettingFile(L"Markers.json"), ec)) {
-        // No Markers.json yet; fetch the legacy ini if needed and parse it via the ini fallback. TODO: download Markers.json once it exists on master.
         Resources::EnsureFileExists(Resources::GetPath(L"Markers.ini"), "https://raw.githubusercontent.com/gwdevhub/GWToolboxpp/master/resources/Markers.ini", [](const bool success, const std::wstring& error) {
             if (success) {
                 Instance().custom_renderer.LoadMarkers();
@@ -1385,7 +1377,6 @@ void Minimap::Draw(IDirect3DDevice9* device)
                         else {
                             SetFlaggingState(static_cast<FlaggingState>(i));
                         }
-                        // flagging[i] ^= 1;
                     }
                     if (is_flagging) {
                         ImGui::PopStyleColor();
