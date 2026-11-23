@@ -182,42 +182,4 @@ public:
     static void OnUpdateAgentState(GW::HookStatus* status, GW::Packet::StoC::AgentState* packet);
     static void OnUpdateSkillCount(GW::HookStatus*, void* packet);
     static void OnAgentNameTag(GW::HookStatus* status, GW::UI::UIMessage msgid, void* wParam, void*);
-private:
-    void FactionEarnedCheckAndWarn();
-    bool faction_checked = false;
-
-    void MessageOnPartyChange();
-
-    std::vector<std::wstring> previous_party_names{};
-
-    GW::HookEntry VanquishComplete_Entry;
-    GW::HookEntry ItemClickCallback_Entry;
-    GW::HookEntry FriendStatusCallback_Entry;
-    GW::HookEntry PartyDefeated_Entry;
-    GW::HookEntry OnAfterAgentAdd_Entry;
-    GW::HookEntry AgentState_Entry;
-    GW::HookEntry AgentRemove_Entry;
-    GW::HookEntry AgentAdd_Entry;
-    GW::HookEntry TradeStart_Entry;
-    GW::HookEntry PartyPlayerAdd_Entry;
-    GW::HookEntry PartyPlayerReady_Entry;
-    GW::HookEntry PartyPlayerRemove_Entry;
-    GW::HookEntry PartyLeaderChanged_Entry;
-    GW::HookEntry GameSrvTransfer_Entry;
-    GW::HookEntry CinematicPlay_Entry;
-    GW::HookEntry PlayerJoinInstance_Entry;
-    GW::HookEntry PlayerLeaveInstance_Entry;
-    GW::HookEntry OnDialog_Entry;
-    GW::HookEntry OnChangeTarget_Entry;
-    GW::HookEntry OnWriteChat_Entry;
-    GW::HookEntry OnAgentStartCast_Entry;
-    GW::HookEntry OnOpenWikiUrl_Entry;
-    GW::HookEntry OnScreenShake_Entry;
-    GW::HookEntry OnCast_Entry;
-    GW::HookEntry OnPartyTargetChange_Entry;
-    GW::HookEntry OnAgentNameTag_Entry;
-    GW::HookEntry OnEnterMission_Entry;
-    GW::HookEntry OnPreSendDialog_Entry;
-    GW::HookEntry OnPostSendDialog_Entry;
-    GW::HookEntry OnAgentModel_Entry;
 };
