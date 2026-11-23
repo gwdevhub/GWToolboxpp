@@ -38,11 +38,12 @@ it to `.toolchain/`. The old `build-mingw*/` and `bin-mingw/` folders are no lon
 ## Terminal builds
 
 ```
-python3 scripts/build.py [--preset debug] [--target GWToolboxdll] [--clean | --rebuild] [--jobs N]
+python3 scripts/build.py [--preset debug] [--target GWToolbox_DLL] [--clean | --rebuild] [--jobs N]
 ```
 
-It builds `GWToolboxdll` and `GWToolbox` by default (`--target all` for everything) and configures a new build
-folder first. `--clean` alone cleans the whole folder; with `--target` it cleans only those targets, which is what
+It builds `GWToolbox_DLL`, `GWToolbox_Launcher_Windows` and `GWToolbox_Launcher_Linux` by default (`--target all` for everything).
+The Linux launcher is built with the host compiler on Linux, and in Docker (`Dockerfile.linux`) on Windows, which has no Linux
+compiler. It embeds `GWToolbox.exe`, so the Windows launcher is built first. `--no-linux` skips it. A new build folder is configured first. `--clean` alone cleans the whole folder; with `--target` it cleans only those targets, which is what
 Visual Studio's Clean runs. Runs on one build folder take turns, so parallel builds never share ninja's state.
 
 ## Linux

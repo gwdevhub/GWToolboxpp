@@ -69,6 +69,21 @@
       "environment": {
         "EMSDK_QUIET": "1"
       }
+    },
+    {
+      "name": "GWToolbox (Linux)",
+      "displayName": "GWToolbox (Linux): the Linux launcher, which embeds GWToolbox.exe",
+      "description": "Configures the Linux launcher (GWToolboxLinux) with the host's compiler, in build/Linux/native. Only on Linux: its build embeds GWToolbox.exe, which the Windows build of the same repo produces.",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${hostSystemName}/native",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
     }
   ]
 }

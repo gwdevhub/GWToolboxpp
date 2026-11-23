@@ -30,8 +30,24 @@ echo "bootstrap log: ${BOOTSTRAP_LOG}"
 log() { echo "==> $*"; }
 die() { echo "bootstrap: $*" >&2; exit 1; }
 
-# A running CLion or Rider rewrites its .idea files on exit, which would undo what the bootstrap writes there.
-running_ides=$(flatpak ps --columns=application 2>/dev/null | grep -xE 'com\.jetbrains\.(CLion|Rider)' | sort -u | tr '\n' ' ' || true)
+# A running CLion or Rider rewrites its .idea files on exit, which would undo what the bootstrap writes there. A Flatpak
+# IDE's sandbox is a bwrap process whose descendants are the IDE. After the IDE closes, only the JetBrains daemon can be
+# left behind, so a sandbox counts as running only when it has a descendant other than that daemon.
+ide_sandbox_busy() {
+    local child
+    for child in $(pgrep -P "$1" 2>/dev/null); do
+        if [ "$(ps -o comm= -p "$child")" != "jetbrainsd" ] || ide_sandbox_busy "$child"; then
+            return 0
+        fi
+    done
+    return 1
+}
+running_ides=""
+for sandbox in $(pgrep -f 'bwrap .*-- (rider-wrapper|clion)( |$)' 2>/dev/null); do
+    if ide_sandbox_busy "$sandbox"; then
+        running_ides="$running_ides $sandbox"
+    fi
+done
 if pgrep -x clion >/dev/null 2>&1 || pgrep -x rider >/dev/null 2>&1 || [ -n "$running_ides" ]; then
     die "CLion or Rider is running (${running_ides:-native}). Close it and re-run, so it does not overwrite the .idea files."
 fi

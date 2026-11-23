@@ -61,9 +61,6 @@ CMakeCache.txt
 *.o
 *.obj
 *.exe
-*.wxs
-*.wixobj
-*.msi
 *_ps.h
 *_vs.h
 
@@ -73,7 +70,6 @@ CMakeCache.txt
 *.idb
 *.pdb
 *.opendb
-*.wixpdb
 
 # Visual studio stuff
 *.user

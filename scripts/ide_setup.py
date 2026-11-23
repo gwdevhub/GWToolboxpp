@@ -9,10 +9,14 @@ import subprocess
 
 from common import IS_WINDOWS, LOG_DIR, PRESETS, REPO_ROOT, TOOLCHAIN_DIR, capture
 
-PROFILES = list(PRESETS)
+RUN_CONFIGURATIONS = ["GWToolbox_DLL", "GWToolbox_Launcher_Windows", "GWToolbox_Launcher_Linux"]
+LINUX_PROFILE = "GWToolbox (Linux)"
+PROFILES = list(PRESETS) + ([] if IS_WINDOWS else [LINUX_PROFILE])
 SELECTED_PROFILE = os.environ.get("SELECTED_PROFILE", "relwithdebinfo")
 # Profiles earlier bootstraps enabled whose presets are gone: the mingw names, and the MSVC, clang-cl and xwin builds.
-RETIRED_PROFILES = ["mingw", "mingw-debug", "mingw-release", "minsizerel", "windows", "clang", "vcpkg"]
+# The Linux launcher's profile is only usable on Linux, so a shared workspace.xml disables it on Windows.
+RETIRED_PROFILES = ["mingw", "mingw-debug", "mingw-release", "minsizerel", "windows", "clang", "vcpkg"] + (
+    [LINUX_PROFILE] if IS_WINDOWS else [])
 HOST_TOOLS_DIR = os.path.join(TOOLCHAIN_DIR, "host-tools", "bin")
 SANDBOX_TOOLS = ["cmake", "ctest", "cpack", "ninja"]
 VSCODE_EXTENSIONS = ["llvm-vs-code-extensions.vscode-clangd", "ms-vscode.cmake-tools"]
@@ -65,6 +69,33 @@ def read(path):
 def write(path, text):
     with open(path, "w", encoding="utf-8", newline="\n") as file:
         file.write(text)
+
+
+def prune_run_configurations(log, workspace):
+    if not os.path.isfile(workspace):
+        return
+    text = read(workspace)
+    removed = []
+
+    def keep_or_drop(match):
+        target = re.search(r'TARGET_NAME="([^"]*)"', match.group(0))
+        if target is None or target.group(1) in RUN_CONFIGURATIONS:
+            return match.group(0)
+        removed.append(match.group(1))
+        return ""
+
+    text = re.sub(r'\n?[ \t]*<configuration name="([^"]+)" type="CMakeRunConfiguration"[^\n]*?>.*?</configuration>',
+                  keep_or_drop, text, flags=re.S)
+    for name in removed:
+        text = re.sub(r'\n[ \t]*<item itemvalue="CMake Application\.%s" />' % re.escape(name), "", text)
+    selected = re.search(r'<component name="RunManager" selected="CMake Application\.([^"]*)"', text)
+    if selected and selected.group(1) in removed:
+        text = text.replace(selected.group(0), '<component name="RunManager" selected="CMake Application.%s"'
+                            % RUN_CONFIGURATIONS[0], 1)
+    if removed:
+        write(workspace, text)
+        log.step("removed the CMake run configurations for %s from %s" % (", ".join(sorted(set(removed))),
+                                                                          os.path.relpath(workspace, REPO_ROOT)))
 
 
 def copy_clion_settings(log):
@@ -153,6 +184,7 @@ def set_profiles(log, workspace, label):
     write(workspace, text)
     log.step("enabled the CMake profiles (%s) for %s, disabled the retired ones and selected %s"
              % (", ".join(PROFILES), label, SELECTED_PROFILE))
+    prune_run_configurations(log, workspace)
 
 
 def set_clion_profiles(log):

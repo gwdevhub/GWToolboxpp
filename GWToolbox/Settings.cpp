@@ -23,6 +23,9 @@ void PrintUsage(const bool terminate)
             "    /noinstall                 Won't try to install if missing\n"
             "    /localdll                  Check launcher directory for toolbox dll (or gwtoolbox.gwmod for a wasm client), won't try to install or update\n\n"
 
+            "    /status                    Print whether GWToolbox is installed, then exit\n"
+            "    /scan                      Print the Guild Wars processes that GWToolbox can inject into, then exit\n"
+            "    /json                      With /status, /scan or /pid, print the result as JSON on stdout\n\n"
             "    /pid <process id>          Process id of the target in which to inject\n"
     );
 
@@ -106,6 +109,15 @@ void ParseCommandLine()
             settings.localdll = true;
             settings.noupdate = true;
             settings.noinstall = true;
+        }
+        else if (wcscmp(arg, L"/status") == 0) {
+            settings.status = true;
+        }
+        else if (wcscmp(arg, L"/scan") == 0) {
+            settings.scan = true;
+        }
+        else if (wcscmp(arg, L"/json") == 0) {
+            settings.json = true;
         }
         else if (wcscmp(arg, L"/?") == 0) {
             settings.help = true;
@@ -242,7 +254,7 @@ static LPWSTR ConsumeArg(LPWSTR CmdLine)
     }
 }
 
-static wchar_t* GetCommandLineWithoutProgram()
+wchar_t* GetCommandLineWithoutProgram()
 {
     const LPWSTR CmdLine = GetCommandLineW();
     return ConsumeArg(CmdLine);
@@ -281,26 +293,4 @@ bool EnableDebugPrivilege()
     }
 
     return true;
-}
-
-SettingsWindow::SettingsWindow()
-    : LauncherWindow("GWToolbox - Settings", 305, 135, IDR_SETTINGS_PAGE, L"SettingsWindow")
-{
-    handler().on("getState", [](WebViewWindow&, const Json&, const Reply& reply) {
-        reply.result(Json{{"noUpdate", settings.noupdate}, {"asAdmin", settings.asadmin}});
-    });
-    handler().on("setOption", [](WebViewWindow&, const Json& args, const Reply& reply) {
-        const auto name = args.at(0).get<std::string>();
-        const auto value = args.at(1).get<bool>();
-        if (name == "noUpdate") {
-            settings.noupdate = value;
-        }
-        else if (name == "asAdmin") {
-            settings.asadmin = value;
-        }
-        else {
-            throw std::invalid_argument("Unknown setting: " + name);
-        }
-        reply.result(nullptr);
-    });
 }

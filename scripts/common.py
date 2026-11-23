@@ -1,6 +1,7 @@
 """Shared by the build's Python scripts: repo paths, presets, logging, processes and the build-folder lock."""
 
 import datetime
+import gzip
 import os
 import re
 import shutil
@@ -38,7 +39,8 @@ class Log:
     def line(self, text=""):
         if self.rewrite:
             text = self.rewrite(text)
-        print(text, flush=True)
+        console = sys.stdout.encoding or "utf-8"
+        print(text.encode(console, errors="replace").decode(console), flush=True)
         self.file.write(text + "\n")
         self.file.flush()
 
@@ -54,6 +56,14 @@ class Log:
 
 def timestamp():
     return datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+
+
+def gzip_file(source, target):
+    partial = str(target) + ".part"
+    with open(source, "rb") as original, open(partial, "wb") as raw:
+        with gzip.GzipFile(filename=os.path.basename(source), mode="wb", compresslevel=9, fileobj=raw) as packed:
+            shutil.copyfileobj(original, packed)
+    os.replace(partial, target)
 
 
 def run(log, command, what=None, env=None, cwd=REPO_ROOT, check=True):
@@ -104,6 +114,25 @@ def find_visual_studio(requires=None):
         command[3:3] = ["-requires", requires]
     path = (capture(command) or "").strip().splitlines()
     return path[0] if path else None
+
+
+CMAKE_MINIMUM = (3, 29)
+
+
+def cmake_version(path):
+    output = capture([path, "--version"]) or ""
+    match = re.search(r"cmake version (\d+)\.(\d+)", output)
+    return (int(match.group(1)), int(match.group(2))) if match else None
+
+
+def find_cmake():
+    candidates = [os.path.join(directory, "cmake" + EXE) for directory in os.environ.get("PATH", "").split(os.pathsep)]
+    candidates.append(find_tool("cmake") or "")
+    for candidate in candidates:
+        if os.path.isfile(candidate) and (cmake_version(candidate) or (0, 0)) >= CMAKE_MINIMUM:
+            return candidate
+    raise Failure("CMake %d.%d+ isn't on PATH (the project needs it); install it or run the bootstrap script"
+                  % CMAKE_MINIMUM)
 
 
 def find_tool(name):

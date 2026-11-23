@@ -2,13 +2,23 @@
 
 #include <Defender.h>
 #include <Path.h>
+#include <SystemInfo.h>
 #include "WindowsDefender.h"
 
-#include "Inject.h"
+#include "WindowsInject.h"
 #include "Registry.h"
 #include "Settings.h"
 
 namespace fs = std::filesystem;
+
+namespace {
+    // Wine has no Windows Defender, so there is nothing to check or add there.
+    bool RunningUnderWine()
+    {
+        std::wstring wine;
+        return GetWineDiagnostics(wine);
+    }
+}
 
 namespace {
     // Registry value under HKCU\Software\GWToolbox holding the build for which the user ticked
@@ -258,6 +268,9 @@ bool AddDefenderExceptions(const std::filesystem::path& exclusion_path,
                            const std::vector<std::filesystem::path>& controlled_folder_access_apps,
                            const bool quiet, std::wstring& error)
 {
+    if (RunningUnderWine())
+        return true;
+
     // Collect only the changes we actually need, so a re-run with nothing to do is a silent no-op.
     DefenderState state;
     QueryDefenderState(state);
@@ -380,6 +393,9 @@ bool AddDefenderExceptions(const std::filesystem::path& exclusion_path,
 void EnsureDefenderReadiness(const std::filesystem::path& exclusion_path,
                              const std::vector<std::filesystem::path>& controlled_folder_access_apps)
 {
+    if (RunningUnderWine())
+        return;
+
     // The user asked not to be reminded again for this build.
     if (DefenderPromptSuppressed())
         return;
