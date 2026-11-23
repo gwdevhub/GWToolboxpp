@@ -231,93 +231,90 @@ void AgentAppearanceWindow::GetAgentAppearanceRules(std::vector<AppearanceRule*>
     out.assign(custom_agents.begin(), custom_agents.end());
 }
 
-bool AgentAppearanceWindow::GetAgentAppearance(const GW::Agent* agent, Shape_e* shape_out, Color* color_out,
-    Color* border_color_out, float* border_thickness_out, Color* text_color_out, float* size_out,
-    std::vector<const AppearanceRule*>* matched_rules_out)
+void AgentAppearanceWindow::GetAgentAppearance(const GW::Agent* agent, AgentAppearance& appearance)
 {
-    if (matched_rules_out) matched_rules_out->clear();
-    if (!agent || (!shape_out && !color_out && !border_color_out && !border_thickness_out && !text_color_out && !size_out && !matched_rules_out)) {
-        return false;
-    }
-    const auto requested_color_out = color_out;
-    const AppearanceRule* color_rule = nullptr;
-    if (border_thickness_out) {
-        const auto is_target = agent->agent_id == GW::Agents::GetTargetId() || agent->agent_id == auto_target_id;
-        *border_thickness_out = is_target ? target_border_thickness : agent_border_thickness;
-    }
-
-    if (!shape_out && !color_out && !border_color_out && !text_color_out && !size_out && !matched_rules_out) return false;
+    appearance = {};
+    if (!agent) return;
+    const auto is_target = agent->agent_id == GW::Agents::GetTargetId() || agent->agent_id == auto_target_id;
+    appearance.layers[0] = {default_shape, color_default, color_default,
+        is_target ? target_border_thickness : agent_border_thickness, GetBaseSize()};
+    appearance.active_layers = 1u;
+    std::array<uint32_t, LayerCount> resolved{};
+    std::array<const AppearanceRule*, LayerCount> color_rules{};
+    uint8_t stopped_layers = 0;
     const auto* matches = GetAppearanceRules(agent);
-    if (matched_rules_out && matches) matched_rules_out->assign(matches->begin(), matches->end());
-    if (!shape_out && !color_out && !border_color_out && !text_color_out && !size_out) return false;
-    bool overridden = false;
     if (matches) for (const auto* rule : *matches) {
-        if (shape_out && rule->shape != Shape_None) {
-            *shape_out = rule->shape;
-            shape_out = nullptr;
-            overridden = true;
+        if (!appearance.name_tag_color && rule->override_text_color) appearance.name_tag_color = rule->color_text;
+        const auto layer = static_cast<size_t>(rule->layer);
+        const auto bit = static_cast<uint8_t>(1u << layer);
+        if (stopped_layers & bit) continue;
+        auto& marker = appearance.layers[layer];
+        auto& properties = resolved[layer];
+        if (!(properties & 1u) && rule->shape != Shape_None) {
+            marker.shape = rule->shape;
+            properties |= 1u;
         }
-        if (color_out && rule->override_color) {
-            *color_out = rule->color;
-            color_rule = rule;
-            color_out = nullptr;
-            overridden = true;
+        if (!(properties & 2u) && rule->override_color) {
+            marker.color = rule->color;
+            color_rules[layer] = rule;
+            properties |= 2u;
         }
-        if (border_color_out && rule->override_border_color) {
-            *border_color_out = rule->border_color;
-            border_color_out = nullptr;
-            overridden = true;
+        if (!(properties & 4u) && rule->override_border_color) {
+            marker.border_color = rule->border_color;
+            properties |= 4u;
         }
-        if (text_color_out && rule->override_text_color) {
-            *text_color_out = rule->color_text;
-            text_color_out = nullptr;
-            overridden = true;
+        if (!(properties & 8u) && rule->scale > 0.f) {
+            marker.size = GetBaseSize() * rule->scale;
+            properties |= 8u;
         }
-        if (size_out && rule->scale > 0.f) {
-            *size_out = GetBaseSize() * rule->scale;
-            size_out = nullptr;
-            overridden = true;
-        }
-        if (!shape_out && !color_out && !border_color_out && !text_color_out && !size_out) break;
+        if (properties) appearance.active_layers |= bit;
+        if (rule->stop_processing_rules) stopped_layers |= bit;
     }
-    if (shape_out) *shape_out = default_shape;
-    if (color_out) *color_out = color_default;
-    if (border_color_out) *border_color_out = color_default;
-    if (text_color_out) *text_color_out = color_default;
-    if (size_out) *size_out = GetBaseSize();
-    if (requested_color_out) {
-        const auto* living = agent->GetAsAgentLiving();
+    for (size_t layer = 1; layer < LayerCount; ++layer) {
+        auto& marker = appearance.layers[layer];
+        const auto& primary = appearance.layers[0];
+        if (!(resolved[layer] & 1u)) marker.shape = primary.shape;
+        if (!(resolved[layer] & 2u)) {
+            marker.color = primary.color;
+            color_rules[layer] = color_rules[0];
+        }
+        if (!(resolved[layer] & 4u)) marker.border_color = primary.border_color;
+        if (!(resolved[layer] & 8u)) marker.size = primary.size;
+        marker.border_thickness = primary.border_thickness;
+    }
+    const auto* living = agent->GetAsAgentLiving();
+    const auto* dead_npc = living && living->GetIsDead() && living->IsNPC() ? GW::Agents::GetNPCByID(living->player_number) : nullptr;
+    const auto hidden_dead_spirit = dead_npc && (dead_npc->model_file_id == 0x22A34 || dead_npc->model_file_id == 0x2D0E4 || dead_npc->model_file_id == 0x2D07E);
+    for (size_t layer = 0; layer < LayerCount; ++layer) {
+        auto& marker = appearance.layers[layer];
+        const auto* color_rule = color_rules[layer];
         if (color_rule && living && !living->GetIsDead() && living->allegiance == GW::Constants::Allegiance::Enemy
             && living->hp <= 0.9f && color_rule->target_state != Marked) {
-            *requested_color_out = Colors::Sub(*requested_color_out, color_agent_damaged_modifier);
+            marker.color = Colors::Sub(marker.color, color_agent_damaged_modifier);
         }
-        const auto* dead_npc = living && living->GetIsDead() && living->IsNPC() ? GW::Agents::GetNPCByID(living->player_number) : nullptr;
-        if (dead_npc && (dead_npc->model_file_id == 0x22A34 || dead_npc->model_file_id == 0x2D0E4 || dead_npc->model_file_id == 0x2D07E)) {
-            *requested_color_out = IM_COL32(0, 0, 0, 0);
-        }
+        if (hidden_dead_spirit) marker.color = 0;
     }
-    return overridden;
 }
 
 AgentAppearanceWindow::Shape_e AgentAppearanceWindow::GetShape(const GW::Agent* agent)
 {
-    auto shape = Shape_None;
-    GetAgentAppearance(agent, &shape);
-    return shape;
+    AgentAppearance appearance;
+    GetAgentAppearance(agent, appearance);
+    return appearance.layers[0].shape;
 }
 
 Color AgentAppearanceWindow::GetColor(const GW::Agent* agent)
 {
-    auto color = Color{0};
-    GetAgentAppearance(agent, nullptr, &color);
-    return color;
+    AgentAppearance appearance;
+    GetAgentAppearance(agent, appearance);
+    return appearance.layers[0].color;
 }
 
 float AgentAppearanceWindow::GetSize(const GW::Agent* agent)
 {
-    auto size = 0.f;
-    GetAgentAppearance(agent, nullptr, nullptr, nullptr, nullptr, nullptr, &size);
-    return size;
+    AgentAppearance appearance;
+    GetAgentAppearance(agent, appearance);
+    return appearance.layers[0].size;
 }
 
 void AgentAppearanceWindow::RegisterSettings(ToolboxModule* module)
@@ -341,7 +338,6 @@ void AgentAppearanceWindow::RegisterSettings(ToolboxModule* module)
     if (!hooks_added) {
         hooks_added = true;
         GW::UI::RegisterUIMessageCallback(&UIMsg_Entry, GW::UI::UIMessage::kMapLoaded, OnUIMessage);
-        // Gw.exe sends kAgentUpdate (wparam = agent_id) from its agent "created" event handler, i.e. when an agent is added
         GW::UI::RegisterUIMessageCallback(&UIMsg_Entry, GW::UI::UIMessage::kAgentUpdate, OnUIMessage);
         GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"marktarget", CmdMarkTarget);
         GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"clearmarktarget", CmdClearMarkTarget);
@@ -492,7 +488,6 @@ void AgentAppearanceWindow::LoadCustomAgents(SettingsDoc& doc, ToolboxIni* legac
 
 void AgentAppearanceWindow::SeedSpiritDefaults(const SettingsDoc& doc)
 {
-    if (spirit_defaults_seeded) return;
     struct SpiritDefault {
         uint32_t identifier;
         const char* color_key;
@@ -505,6 +500,19 @@ void AgentAppearanceWindow::SeedSpiritDefaults(const SettingsDoc& doc)
         {GW::Constants::ModelID::FrozenSoil, "color_frozen_soil", 0x00FEFFFF},
         {GW::Constants::ModelID::Symbiosis, "color_symbiosis", 0x00FF00FF}
     };
+    auto rules_version = 0;
+    const auto* rules_section = doc.Has("Game Settings", "appearance_rules") ? "Game Settings" : "Minimap";
+    doc.Get(rules_section, "appearance_rules_version", rules_version);
+    if (rules_version < 6) {
+        for (auto* rule : custom_agents) {
+            if (rule->layer != 0 || rule->agent_type != NPC || rule->shape != BigCircle || std::strcmp(rule->group, "Defaults") != 0) continue;
+            if (std::ranges::any_of(defaults, [rule](const SpiritDefault& entry) { return entry.identifier == rule->identifier; })) {
+                rule->layer = 1;
+            }
+        }
+        RebuildRuleMatchers();
+    }
+    if (spirit_defaults_seeded) return;
     std::vector<AppearanceRule*> spirits;
     for (const auto& entry : defaults) {
         Colors::SettingColor color(LegacyRuleColor(entry.color_key, entry.color));
@@ -516,6 +524,7 @@ void AgentAppearanceWindow::SeedSpiritDefaults(const SettingsDoc& doc)
         rule->identifier = entry.identifier;
         rule->dead_states = 1u << Alive;
         rule->shape = BigCircle;
+        rule->layer = 1;
         rule->scale = ScaleFromAbsolute(GW::Constants::Range::SpiritExtended);
         rule->stop_processing_rules = true;
         std::snprintf(rule->group, sizeof(rule->group), "Defaults");
@@ -674,7 +683,7 @@ void AgentAppearanceWindow::SaveCustomAgents(SettingsDoc& doc)
             entries.push_back(ca->ToSettings());
         }
         doc.Set("Game Settings", "appearance_rules", entries);
-        doc.Set("Game Settings", "appearance_rules_version", 5);
+        doc.Set("Game Settings", "appearance_rules_version", 6);
         doc.EraseKey("Game Settings", "fallback_size_scales");
         doc.Set("Game Settings", "custom_agent_defaults_seeded", custom_agent_defaults_seeded);
         doc.Set("Game Settings", "appearance_defaults_seeded", appearance_defaults_seeded);
@@ -821,7 +830,7 @@ void AgentAppearanceWindow::DrawSettings()
     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - add_width - ImGui::GetStyle().ItemSpacing.x);
     ImGui::InputTextWithHint("##filter", "Filter by label or group...", group_filter, sizeof(group_filter));
     if (ImGui::IsItemHovered()) {
-        ImGui::SetTooltip("Only affects what's shown here. Rules are evaluated top to bottom, independently for each enabled property. A matching 'Stop after this rule' ends the lookup.");
+        ImGui::SetTooltip("Only affects what's shown here. Rules are evaluated top to bottom, independently for each property in each layer. Name tag colour is shared across layers.");
     }
     ImGui::SameLine();
     if (ImGui::Button("Add", ImVec2(add_width, 0.f))) {
@@ -846,31 +855,37 @@ void AgentAppearanceWindow::DrawSettings()
     GetAgentAppearanceRules(rules);
     const auto* target = GW::Agents::GetTarget();
     if (!target && auto_target_id) target = GW::Agents::GetAgentByID(auto_target_id);
-    auto target_shape = Shape_None;
-    auto target_color = Color{0};
-    auto target_border_color = Color{0};
-    auto target_text_color = Color{0};
-    auto resolved_border_thickness = 0.f;
-    auto target_size = 0.f;
+    AgentAppearance target_appearance;
     std::vector<const AppearanceRule*> target_rules;
     std::unordered_set<unsigned int> matching_rule_ids;
     size_t applied_rules = 0;
-    uint32_t resolved_properties = 0;
+    std::array<uint32_t, LayerCount> resolved_properties{};
+    uint8_t stopped_layers = 0;
+    bool text_color_resolved = false;
     if (target) {
-        GetAgentAppearance(target, &target_shape, &target_color, &target_border_color, &resolved_border_thickness,
-            &target_text_color, &target_size, &target_rules);
+        GetAgentAppearance(target, target_appearance);
+        if (const auto* matches = GetAppearanceRules(target)) target_rules = *matches;
         for (const auto* rule : target_rules) {
             matching_rule_ids.insert(rule->ui_id);
+            auto applied = rule->override_text_color && !text_color_resolved;
+            text_color_resolved |= rule->override_text_color;
+            const auto bit = static_cast<uint8_t>(1u << rule->layer);
+            if (stopped_layers & bit) {
+                if (applied) ++applied_rules;
+                continue;
+            }
             const auto properties = (rule->shape != Shape_None ? 1u : 0u) | (rule->override_color ? 2u : 0u)
-                | (rule->override_border_color ? 4u : 0u) | (rule->override_text_color ? 8u : 0u) | (rule->scale > 0.f ? 16u : 0u);
-            if ((properties & ~resolved_properties) || rule->stop_processing_rules) ++applied_rules;
-            resolved_properties |= properties;
+                | (rule->override_border_color ? 4u : 0u) | (rule->scale > 0.f ? 8u : 0u);
+            applied |= (properties & ~resolved_properties[rule->layer]) != 0 || rule->stop_processing_rules;
+            if (applied) ++applied_rules;
+            resolved_properties[rule->layer] |= properties;
+            if (rule->stop_processing_rules) stopped_layers |= bit;
         }
     }
     bool changed = false;
     AppearanceRule* move_rule = nullptr;
     int move_offset = 0;
-    const auto footer_height = ImGui::GetTextLineHeightWithSpacing() * (target ? 6.f : 2.f) + ImGui::GetStyle().ItemSpacing.y + 1.f;
+    const auto footer_height = ImGui::GetTextLineHeightWithSpacing() * (target ? 8.f : 2.f) + ImGui::GetStyle().ItemSpacing.y + 1.f;
     ImGui::BeginChild("##custom_agents_scroll", ImVec2(0.f, -footer_height), true);
     if (ImGui::BeginTable("AppearanceRules", 2, ImGuiTableFlags_SizingStretchProp)) {
         const auto button_size = ImGui::GetFrameHeight();
@@ -957,11 +972,16 @@ void AgentAppearanceWindow::DrawSettings()
     }
     ImGui::Text("Target #%u: %zu matching rules, %zu applied", target->agent_id, target_rules.size(), applied_rules);
     if (ImGui::IsItemHovered()) {
-        ImGui::SetTooltip("Highlighted rows match this target. Applied rules supply the first override for a property or stop further matching.");
+        ImGui::SetTooltip("Highlighted rows match this target. Applied rules supply the first override for a property or stop their layer.");
     }
+    static int preview_layer = 0;
+    static constexpr const char* layer_names[] = {"1 (Primary)", "2", "3", "4", "5 (Back)"};
+    ImGui::Combo("Preview layer", &preview_layer, layer_names, static_cast<int>(LayerCount));
+    const auto& marker = target_appearance.layers[preview_layer];
+    if (!(target_appearance.active_layers & (1u << preview_layer))) ImGui::TextDisabled("No marker in this layer.");
     static constexpr const char* shape_names[] = {"Tear", "Circle", "Square", "Big Circle", "Star"};
-    const auto shape_name = target_shape >= Tear && target_shape <= Star ? shape_names[target_shape] : "None";
-    ImGui::Text("Size: %.1f (%.2fx)    Shape: %s", target_size, target_size / GetBaseSize(), shape_name);
+    const auto shape_name = marker.shape >= Tear && marker.shape <= Star ? shape_names[marker.shape] : "None";
+    ImGui::Text("Size: %.1f (%.2fx)    Shape: %s", marker.size, marker.size / GetBaseSize(), shape_name);
     const auto draw_color_readout = [](const char* label, const Color color) {
         ImGui::PushID(label);
         const auto rgba = ImGui::ColorConvertU32ToFloat4(color);
@@ -971,16 +991,17 @@ void AgentAppearanceWindow::DrawSettings()
         ImGui::Text("%s: 0x%08X (%.0f%% alpha)", label, color, rgba.w * 100.f);
         ImGui::PopID();
     };
-    draw_color_readout("Marker", target_color);
-    if (target_shape == BigCircle || !Colors::IsVisible(target_color)) {
-        ImGui::TextDisabled("Border: none (%s)", target_shape == BigCircle ? "Big Circle" : "transparent marker");
+    draw_color_readout("Marker", marker.color);
+    if (marker.shape == BigCircle || !Colors::IsVisible(marker.color)) {
+        ImGui::TextDisabled("Border: none (%s)", marker.shape == BigCircle ? "Big Circle" : "transparent marker");
     }
     else {
-        draw_color_readout("Target border", target_border_color);
+        draw_color_readout("Target border", marker.border_color);
         ImGui::SameLine();
-        ImGui::Text("Width: %.1f", resolved_border_thickness);
+        ImGui::Text("Width: %.1f", marker.border_thickness);
     }
-    draw_color_readout("Name tag", target_text_color);
+    if (target_appearance.name_tag_color) draw_color_readout("Name tag", *target_appearance.name_tag_color);
+    else ImGui::TextDisabled("Name tag: game colour");
 }
 
 void AgentAppearanceWindow::EditRule(CustomAgent* rule)
@@ -1160,17 +1181,19 @@ void AgentAppearanceWindow::RefreshMatches(const GW::Agent* agent)
             if (!entry.name_pattern->Matches(cached.name)) continue;
         }
         cached.matches.push_back(rule);
-        if (rule->stop_processing_rules) break;
     }
 }
 
 bool AgentAppearanceWindow::ApplyNameTagColor(const GW::Agent* agent, Color& color)
 {
-    // Only overwrite the game's colour when a rule sets one; GetAgentAppearance fills unmatched outputs with color_default.
-    Color matched = color;
-    if (!GetAgentAppearance(agent, nullptr, nullptr, nullptr, nullptr, &matched)) return false;
-    color = matched;
-    return true;
+    const auto* rules = GetAppearanceRules(agent);
+    if (!rules) return false;
+    for (const auto* rule : *rules) {
+        if (!rule->override_text_color) continue;
+        color = rule->color_text;
+        return true;
+    }
+    return false;
 }
 
 void AgentAppearanceWindow::InvalidateAppearance(const uint32_t agent_id)
@@ -1237,7 +1260,8 @@ void AgentAppearanceWindow::RebuildRuleMatchers()
         if (ca->match_name[0]) compiled_name_patterns.emplace(ca, TextUtils::StringToWString(ca->match_name));
     }
     for (const auto* ca : rules) {
-        if (!ca->active || (!ca->map_ids.empty() && !std::ranges::contains(ca->map_ids, map_id))
+        if (!ca->active || ca->layer < 0 || ca->layer >= static_cast<int>(LayerCount)
+            || (!ca->map_ids.empty() && !std::ranges::contains(ca->map_ids, map_id))
             || (ca->outpost_only && instance_type != static_cast<uint32_t>(GW::Constants::InstanceType::Outpost))) continue;
 
         CompiledRule entry;
@@ -1249,7 +1273,7 @@ void AgentAppearanceWindow::RebuildRuleMatchers()
             entry.name_pattern = &pattern->second;
         }
         const auto profession = static_cast<size_t>(ca->profession);
-        if (profession && ca->override_color && profession < profession_rules.size() && !profession_rules[profession]) {
+        if (profession && ca->layer == 0 && ca->override_color && profession < profession_rules.size() && !profession_rules[profession]) {
             profession_rules[profession] = ca;
         }
         const auto add_state = [&](const uint32_t states, const uint32_t flag) {
@@ -1310,6 +1334,7 @@ AgentAppearanceWindow::CustomAgent::CustomAgent(const ToolboxIni* ini, const cha
 {
     active = ini->GetBoolValue(section, VAR_NAME(active), active);
     stop_processing_rules = ini->GetBoolValue(section, VAR_NAME(stop_processing_rules), stop_processing_rules);
+    layer = std::clamp(static_cast<int>(ini->GetLongValue(section, VAR_NAME(layer), 0)), 0, static_cast<int>(LayerCount) - 1);
     std::snprintf(name, sizeof(name), "%s", ini->GetValue(section, VAR_NAME(name), ""));
     std::snprintf(group, sizeof(group), "%s", ini->GetValue(section, VAR_NAME(group), ""));
     modelId = static_cast<DWORD>(ini->GetLongValue(section, VAR_NAME(modelId), static_cast<long>(modelId)));
@@ -1357,6 +1382,7 @@ AgentAppearanceWindow::CustomAgent::CustomAgent(const Settings& settings)
 {
     active = settings.active;
     stop_processing_rules = settings.stop_processing_rules;
+    layer = std::clamp(settings.layer, 0, static_cast<int>(LayerCount) - 1);
     std::snprintf(name, sizeof(name), "%s", settings.name.c_str());
     std::snprintf(group, sizeof(group), "%s", settings.group.c_str());
     modelId = settings.modelId;
@@ -1418,6 +1444,7 @@ AgentAppearanceWindow::CustomAgent::Settings AgentAppearanceWindow::CustomAgent:
     Settings settings;
     settings.active = active;
     settings.stop_processing_rules = stop_processing_rules;
+    settings.layer = layer;
     settings.name = name;
     settings.group = group;
     settings.modelId = modelId;
@@ -1582,6 +1609,8 @@ bool AgentAppearanceWindow::CustomAgent::DrawHeader()
         ImGui::SameLine();
         ImGui::TextDisabled("(%s)", group);
     }
+    ImGui::SameLine();
+    ImGui::TextDisabled("[Layer %d]", layer + 1);
     return changed;
 }
 
@@ -1617,8 +1646,12 @@ bool AgentAppearanceWindow::CustomAgent::DrawSettings()
         }
         ImGui::ShowHelp("An optional tag to filter this list by, e.g. 'Farming' or 'Bosses'. Purely organisational.");
         ImGui::SetCursorPosX(x);
-        changed |= ImGui::CheckboxWithHelp("Stop after this rule", &stop_processing_rules,
-            "When this rule matches, do not evaluate any later appearance rules.");
+        static constexpr const char* layer_names[] = {"1 (Primary)", "2", "3", "4", "5 (Back)"};
+        changed |= ImGui::Combo("Layer", &layer, layer_names, static_cast<int>(LayerCount));
+        ImGui::ShowHelp("Markers draw from layer 5 to layer 1. Extra layers inherit unset properties from the primary marker. Name tag colour is shared across all layers.");
+        ImGui::SetCursorPosX(x);
+        changed |= ImGui::CheckboxWithHelp("Stop processing this layer", &stop_processing_rules,
+            "When this rule matches, later rules cannot change this marker layer. Other layers and name tag colour continue to resolve.");
         ImGui::SetCursorPosX(x);
         if (ImGui::BeginCombo("Agent type", AgentTypeName())) {
             for (const auto& option : agent_type_options) {
@@ -1732,7 +1765,7 @@ bool AgentAppearanceWindow::CustomAgent::DrawSettings()
             if (!std::isfinite(scale) || scale < 0.f) scale = 0.f;
             changed = true;
         }
-        ImGui::ShowHelp("Multiplier of Default Size: 1.0 is the default, 0.8 is 80%, and 1.1 is 110%. Zero inherits the next matching size.");
+        ImGui::ShowHelp("Multiplier of Default Size: 1.0 is the default, 0.8 is 80%, and 1.1 is 110%. Zero inherits the next matching size in this layer, then the primary marker size.");
 
         static const char* items[] = {"Inherit", "Tear", "Circle", "Square", "Big Circle", "Star"};
         auto shape_selection = static_cast<int>(shape) + 1;
@@ -1740,7 +1773,7 @@ bool AgentAppearanceWindow::CustomAgent::DrawSettings()
             shape = static_cast<Shape_e>(shape_selection - 1);
             changed = true;
         }
-        ImGui::ShowHelp("Inherit uses the next matching shape or the minimap default.");
+        ImGui::ShowHelp("Inherit uses the next matching shape in this layer, then the primary marker shape or minimap default.");
 
         ImGui::PopID();
     }

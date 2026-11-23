@@ -129,7 +129,6 @@ void AgentRenderer::Render(IDirect3DDevice9* device)
         players_to_draw.clear();
         dead_agents_to_draw.clear();
         other_agents_to_draw.clear();
-        target_drawn = false;
 
         const auto add_custom_agent = [](const GW::Agent* agent) {
             const auto* rules = AgentAppearanceWindow::GetAppearanceRules(agent);
@@ -183,13 +182,13 @@ void AgentRenderer::Render(IDirect3DDevice9* device)
 
 void AgentRenderer::Enqueue(const GW::Agent* agent)
 {
-    auto color = Color{0};
-    auto size = 0.f;
-    auto shape = Shape_None;
-    auto border_color = Color{0};
-    auto border_thickness = 0.f;
-    AgentAppearanceWindow::GetAgentAppearance(agent, &shape, &color, &border_color, &border_thickness, nullptr, &size);
-    Enqueue(shape, agent, size, color, border_color, border_thickness);
+    AgentAppearanceWindow::AgentAppearance appearance;
+    AgentAppearanceWindow::GetAgentAppearance(agent, appearance);
+    for (auto layer = AgentAppearanceWindow::LayerCount; layer-- > 0;) {
+        if (!(appearance.active_layers & (1u << layer))) continue;
+        const auto& marker = appearance.layers[layer];
+        Enqueue(marker.shape, agent, marker.size, marker.color, marker.border_color, marker.border_thickness);
+    }
 }
 
 void AgentRenderer::Enqueue(const Shape_e shape, const GW::Agent* agent, const float size, const Color color,
@@ -199,12 +198,9 @@ void AgentRenderer::Enqueue(const Shape_e shape, const GW::Agent* agent, const f
     if (!alpha) return;
     const RenderPosition pos = {agent->rotation_cos, agent->rotation_sin, agent->pos};
     if (shape != BigCircle) {
-        const auto is_target = AgentAppearanceWindow::auto_target_id == agent->agent_id || GW::Agents::GetTargetId() == agent->agent_id;
-        if (is_target && target_drawn) return;
         if (border_thickness > 0.f) {
             Enqueue(shape, pos, size + border_thickness, border_color);
         }
-        if (is_target) target_drawn = true;
     }
     Enqueue(shape, pos, size, color, AgentAppearanceWindow::color_agent_modifier);
 }

@@ -41,7 +41,6 @@ private:
 
     Shape_t shapes[shape_size];
     DWORD last_check = 0;
-    bool target_drawn = false;
 
     void Initialize(IDirect3DDevice9* device) override;
     void Enqueue(const GW::Agent* agent);
