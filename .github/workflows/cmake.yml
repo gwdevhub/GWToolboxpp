@@ -49,6 +49,8 @@ jobs:
     timeout-minutes: 60
     permissions:
       contents: write
+    env:
+      HAS_CERTUM_CREDENTIALS: ${{ secrets.CERTUM_OTP_URI != '' && secrets.CERTUM_USERID != '' && secrets.CERTUM_CERT_SHA1 != '' }}
 
     steps:
     - name: Checkout repository
@@ -144,10 +146,46 @@ jobs:
       # and configures the relwithdebinfo preset.
       run: python3 scripts/bootstrap.py
 
-    - name: Build
-      # The DLL and the Windows launcher with llvm-mingw, then the Linux launcher with the host compiler. Its AppImage
-      # goes into bin/RelWithDebInfo/GWToolbox.AppImage.
-      run: python3 scripts/build.py --preset relwithdebinfo
+    - name: Build the Windows binaries
+      run: python3 scripts/build.py --preset relwithdebinfo --no-linux
+      env:
+        VCPKG_BINARY_SOURCES: "clear;files,${{ github.workspace }}/vcpkg-bincache,readwrite"
+
+    - name: Install the signing tools
+      if: steps.version.outputs.should_release == 'true' && env.HAS_CERTUM_CREDENTIALS == 'true'
+      run: |
+        set -euo pipefail
+        sudo apt-get update -qq
+        sudo apt-get install -y --no-install-recommends osslsigncode ca-certificates
+        curl --fail --location --retry 3 --output "$RUNNER_TEMP/ssign.tar.gz" \
+          https://github.com/Le-Syl21/ssign/releases/download/v0.1.8/ssign-linux-x86_64.tar.gz
+        echo "fc38f083ea1f061a097a3a9c5dc1a056c9c7310a47e40f56a8976895ec5a928d  $RUNNER_TEMP/ssign.tar.gz" | sha256sum --check
+        mkdir -p "$RUNNER_TEMP/ssign-bin"
+        tar -xzf "$RUNNER_TEMP/ssign.tar.gz" -C "$RUNNER_TEMP/ssign-bin"
+        "$RUNNER_TEMP/ssign-bin/ssign" --version
+        osslsigncode --version
+
+    - name: Sign the Windows binaries with Certum
+      if: steps.version.outputs.should_release == 'true' && env.HAS_CERTUM_CREDENTIALS == 'true'
+      timeout-minutes: 10
+      env:
+        CERTUM_EMAIL: ${{ secrets.CERTUM_USERID }}
+        CERTUM_OTP: ${{ secrets.CERTUM_OTP_URI }}
+      run: |
+        "$RUNNER_TEMP/ssign-bin/ssign" --timestamp-url http://time.certum.pl/ \
+          bin/RelWithDebInfo/GWToolbox.exe bin/RelWithDebInfo/GWToolboxdll.dll
+
+    - name: Verify the Windows signatures, timestamps and signer
+      if: steps.version.outputs.should_release == 'true' && env.HAS_CERTUM_CREDENTIALS == 'true'
+      timeout-minutes: 10
+      env:
+        CERTUM_CERT_SHA1: ${{ secrets.CERTUM_CERT_SHA1 }}
+      run: bash .github/scripts/verify-certum.sh bin/RelWithDebInfo/GWToolbox.exe bin/RelWithDebInfo/GWToolboxdll.dll
+
+    - name: Build the Linux launcher
+      # After signing, so the Linux launcher embeds the signed GWToolbox.exe. Its AppImage goes into
+      # bin/RelWithDebInfo/GWToolbox.AppImage.
+      run: python3 scripts/build.py --preset relwithdebinfo --target GWToolbox_Launcher_Linux
       env:
         VCPKG_BINARY_SOURCES: "clear;files,${{ github.workspace }}/vcpkg-bincache,readwrite"
 
