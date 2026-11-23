@@ -2,17 +2,21 @@
 
 #include <cstdio>
 
-#include <Defender.h>
 #include <Module.h>
 #include <Path.h>
 #include <RestClient.h>
 #include <SystemInfo.h>
 
+#include "Cli.h"
 #include "Inject.h"
 #include "Install.h"
+#include "Launcher.h"
+#include "LauncherUpdate.h"
 #include "Process.h"
+#include "ScanResult.h"
 #include "Settings.h"
-#include "WindowsDefender.h"
+#include "Utf8.h"
+#include "WindowsInject.h"
 
 // Redirects stderr to a log file; never blocks the launcher on failure (e.g. CFA can block the exe's own folder before any AV exception is granted) - falls back to %TEMP%, then gives up silently.
 static void OpenLogFile(const std::filesystem::path& exe_path)
@@ -37,6 +41,12 @@ static void OpenLogFile(const std::filesystem::path& exe_path)
     fprintf(stderr, "%ls\n", PathDiagnoseWritability(exe_path.parent_path()).c_str());
 }
 
+void showError(const std::string& message)
+{
+    fprintf(stderr, "%s\n", message.c_str());
+    ShowMessageBoxA(nullptr, message.c_str(), "GWToolbox - Error", MB_OK | MB_ICONERROR);
+}
+
 static void ShowError(const wchar_t* message)
 {
     ShowMessageBoxWithLinksW(nullptr, message, L"GWToolbox - Error");
@@ -45,107 +55,6 @@ static void ShowError(const wchar_t* message)
 static void ShowError(const char* message)
 {
     ShowMessageBoxA(nullptr, message, "GWToolbox - Error", 0);
-}
-
-static bool RestartAsAdminForInjection(const uint32_t target_pid)
-{
-    wchar_t args[64];
-    swprintf(args, 64, L"/pid %u", target_pid);
-    return RestartAsAdmin(args);
-}
-
-static bool InjectInstalledDllInProcess(const Process* process, std::wstring& error)
-{
-    std::wstring exe_filename;
-    if (!PathGetExeFileName(exe_filename)) return error = L"PathGetExeFileName failed", false;
-
-    error.clear();
-    ProcessModule module;
-    if (process->GetModule(&module, L"GWToolboxdll.dll")) {
-        return error = L"GWToolbox is already running in this process", true;
-    }
-
-    if (!EnableDebugPrivilege() && !IsRunningAsAdmin()) {
-        RestartAsAdminForInjection(process->GetProcessId());
-        return true;
-    }
-
-    std::filesystem::path dllpath;
-    dllpath = GetInstallationDir();
-    if (dllpath.empty()) return error = L"GetInstallationDir failed", false;
-    dllpath = dllpath.parent_path() / L"GWToolboxdll.dll";
-    if (settings.localdll) {
-        if (!PathGetProgramDirectory(dllpath)) return error = L"PathGetProgramDirectory failed", false;
-        dllpath = dllpath / L"GWToolboxdll.dll";
-        if (!exists(dllpath)) {
-            return error = std::format(L"Application @ {} not found.\n\nEnsure your copy of {} is local to {} or run {} without the /localdll argument.", dllpath.wstring(), dllpath.filename().wstring(), exe_filename, exe_filename), false;
-        }
-    }
-
-    if (!exists(dllpath)) {
-        if (settings.noinstall) {
-            return error = std::format(L"Application @ {} not found.\n\nYou may need to install GWToolbox by running {} without the /noinstall argument.", dllpath.wstring(), exe_filename), false;
-        }
-        return error =
-                   std::format(L"Application @ {} not found; it may have been quarantined by anti virus software!\n\nExclude the {} directory in your anti virus settings and re-launch {}.", dllpath.wstring(), dllpath.parent_path().wstring(), exe_filename),
-               false;
-    }
-
-    DWORD ExitCode;
-    if (!InjectRemoteThread(process, dllpath.wstring().c_str(), &ExitCode)) return error = std::format(L"InjectRemoteThread failed (ExitCode: {})", ExitCode), false;
-    if (!exists(dllpath))
-        return error = std::format(
-                   L"Application @ {} did exist, but now it doesn't; it may have been quarantined by anti virus software!\n\nExclude the {} directory in your anti virus settings and re-launch {}.", dllpath.wstring(), dllpath.parent_path().wstring(),
-                   exe_filename
-               ),
-               false;
-    if (!process->GetModule(&module, L"GWToolboxdll.dll")) {
-        std::wstring detail;
-        if (FindRecentDefenderBlock(L"GWToolboxdll.dll", 30, detail))
-            return error = std::format(L"Windows Defender blocked GWToolbox from loading:\n\n{}\n\nAdd an exclusion for the {} directory in Windows Security and re-launch {}.", detail, dllpath.parent_path().wstring(), exe_filename), false;
-        return error = std::format(
-                   L"Application @ {} failed to inject; it may have been quarantined by anti virus software!\n\nExclude the {} directory in your anti virus settings and re-launch {}.", dllpath.wstring(), dllpath.parent_path().wstring(), exe_filename
-               ),
-               false;
-    }
-
-    return true;
-}
-
-// Mirrors InjectInstalledDllInProcess's dllpath resolution (incl. /localdll) for gwtoolbox.gwmod, the wasm build's packaged bundle.
-static bool InjectWasmModIntoSession(const WasmSession& session, std::wstring& error)
-{
-    std::wstring exe_filename;
-    if (!PathGetExeFileName(exe_filename)) return error = L"PathGetExeFileName failed", false;
-
-    std::filesystem::path gwmod_path = GetInstallationDir();
-    if (gwmod_path.empty()) return error = L"GetInstallationDir failed", false;
-    gwmod_path = gwmod_path.parent_path() / WASM_GWMOD_FILENAME;
-    if (settings.localdll) {
-        if (!PathGetProgramDirectory(gwmod_path)) return error = L"PathGetProgramDirectory failed", false;
-        gwmod_path = gwmod_path / WASM_GWMOD_FILENAME;
-        if (!exists(gwmod_path)) {
-            return error = std::format(L"Application @ {} not found.\n\nEnsure your copy of {} is local to {} or run {} without the /localdll argument.", gwmod_path.wstring(), gwmod_path.filename().wstring(), exe_filename, exe_filename), false;
-        }
-    }
-
-    if (!exists(gwmod_path)) {
-        return error = std::format(L"Application @ {} not found.\n\nThe wasm build of GWToolbox may not be installed alongside the native one.", gwmod_path.wstring()), false;
-    }
-
-    std::vector<std::string> log_lines;
-    const bool ok = InjectWasmMod(session, gwmod_path, log_lines, error);
-    for (const auto& line : log_lines) {
-        fprintf(stderr, "  %s\n", line.c_str());
-    }
-    // `error` alone says nothing about which module/step failed - fold the loader's own log into the shown message rather than leaving it to GWToolbox.error.log.
-    if (!ok && !log_lines.empty()) {
-        error += L"\n\ngw_in_browser reported:\n";
-        for (const auto& line : log_lines) {
-            error += L"  " + std::wstring(line.begin(), line.end()) + L"\n";
-        }
-    }
-    return ok;
 }
 
 // Opts in to per-monitor DPI awareness so scaled displays get real layout instead of blurry bitmap-stretching; must run before any window (incl. a MessageBox) is created.
@@ -157,38 +66,53 @@ static void EnableDpiAwareness()
         return;
     }
 
-    SetProcessDPIAware(); // Vista+ fallback: system-DPI aware still beats fully unaware.
+    SetProcessDPIAware();
 }
 
-static bool SetProcessForeground(const Process* process)
+static int InjectProcessIdFromCommandLine(const std::filesystem::path& exe_path)
 {
-    HWND hWndIt = GetTopWindow(nullptr);
-    if (hWndIt == nullptr) {
-        fprintf(stderr, "GetTopWindow failed (%lu)\n", GetLastError());
-        return false;
+    Process process;
+    if (!process.Open(settings.pid)) {
+        fprintf(stderr, "Couldn't open process %d\n", settings.pid);
+        if (settings.json)
+            PrintInjectResult(false, std::format(L"Couldn't open process {}", settings.pid));
+        return 1;
     }
 
-    const DWORD ProcessId = process->GetProcessId();
-
-    while (hWndIt != nullptr) {
-        DWORD WindowPid;
-        if (GetWindowThreadProcessId(hWndIt, &WindowPid) == 0) {
-            // @Cleanup:
-            // Not clear whether this is the return value hold an error, so we just log.
-            fprintf(stderr, "GetWindowThreadProcessId returned 0\n");
-            continue;
-        }
-
-        if (WindowPid == ProcessId) {
-            SetForegroundWindow(hWndIt);
-            return true;
-        }
-
-        hWndIt = GetWindow(hWndIt, GW_HWNDNEXT);
+    std::wstring error;
+    if (!InjectInstalledDllInProcess(&process, error)) {
+        fprintf(stderr, "InjectInstalledDllInProcess failed\n");
+        if (settings.json)
+            PrintInjectResult(false, error);
+        return 1;
     }
+    if (settings.json)
+        PrintInjectResult(true, error);
 
-    return false;
+    SetProcessForeground(&process);
+    return 0;
 }
+
+static int InjectQuietly()
+{
+    const ScanResult scan = ScanGuildWars();
+    if (scan.targets.size() == 1) {
+        const InjectOutcome outcome = injectTarget(scan.targets.front());
+        if (!outcome.ok) {
+            ShowError(FromUtf8(outcome.message).c_str());
+            fprintf(stderr, "injectTarget failed\n");
+            return 1;
+        }
+        return 0;
+    }
+    if (scan.targets.empty()) {
+        const std::string message = scan.errors.empty() ? "Guild Wars isn't running." : scan.errors.front().message;
+        fprintf(stderr, "%s\n", message.c_str());
+        return 0;
+    }
+    return RunLauncher();
+}
+
 #ifdef _DEBUG
 int main()
 #else
@@ -203,12 +127,10 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
         ShowMessageBoxW(nullptr, L"Failed to get qualified path for logs file.", L"GWToolbox", MB_OK | MB_TOPMOST);
         return 0;
     }
-    // A previous self-update renames the old exe aside; clean it up now that it's no longer locked.
-    std::filesystem::path stale_exe = exe_path;
-    stale_exe += L".old";
-    DeleteFileW(stale_exe.wstring().c_str());
+    RemoveLauncherLeftovers(exe_path);
 
     OpenLogFile(exe_path);
+    setvbuf(stderr, nullptr, _IONBF, 0);
 
     ParseCommandLine();
 
@@ -218,13 +140,20 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
         return 0;
     }
 
+    if (settings.status) {
+        return PrintInstallStatus();
+    }
+
+    if (settings.scan) {
+        return PrintScanResult();
+    }
+
     if (settings.asadmin && !IsRunningAsAdmin()) {
         RestartWithSameArgs(true);
     }
 
     AsyncRestScopeInit RestInitializer;
 
-    InjectSelection selection;
     if (settings.install) {
         Install(settings.quiet, error);
         return 0;
@@ -254,7 +183,6 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
         }
 
         if (iRet == IDYES) {
-            // @Cleanup: Check return value
             if (!Install(settings.quiet, error)) {
                 ShowError(std::format(L"Failed to install GWToolbox:\n\n{}", error).c_str());
                 fprintf(stderr, "Failed to install\n");
@@ -262,84 +190,14 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
             }
         }
     }
-    // Exe/dll update checking now happens inside InjectWindow (status row + Update button), not here.
 
     if (settings.pid) {
-        // A wasm session never reaches here: RestartAsAdminForInjection (the only caller of /pid) is native-only, HTTP injection needs no elevation.
-        if (!selection.process.Open(settings.pid)) {
-            fprintf(stderr, "Couldn't open process %d\n", settings.pid);
-            return 1;
-        }
-
-        if (!InjectInstalledDllInProcess(&selection.process, error)) {
-            fprintf(stderr, "InjectInstalledDllInProcess failed\n");
-            return 1;
-        }
-
-        SetProcessForeground(&selection.process);
-
-        return 0;
+        return InjectProcessIdFromCommandLine(exe_path);
     }
 
-    // If we can't open with appropriate rights, we can then ask to re-open
-    // as admin.
-    const InjectReply reply = InjectWindow::AskInjectProcess(&selection);
-
-    if (reply == InjectReply_Cancel) {
-        fprintf(stderr, "InjectReply_Cancel\n");
-        return 0;
+    if (settings.quiet) {
+        return InjectQuietly();
     }
 
-    if (selection.is_wasm) {
-        if (!InjectWasmModIntoSession(*selection.wasm_session, error)) {
-            ShowError(error.c_str());
-            fprintf(stderr, "InjectWasmModIntoSession failed\n");
-            return 1;
-        }
-        return 0;
-    }
-
-    Process& proc = selection.process;
-
-    // Before injecting, make sure Windows Security won't block the DLL from writing to its Documents folder.
-    if (!settings.quiet) {
-        const auto install_dir = GetInstallationDir();
-        if (!install_dir.empty()) {
-            std::vector<std::filesystem::path> cfa_apps = GetGuildWarsExecutablePaths();
-            cfa_apps.push_back(install_dir.parent_path() / L"GWToolbox.exe"); // the installed copy
-            cfa_apps.push_back(exe_path);                                    // the copy actually running right now (e.g. a fresh, not-yet-installed download)
-            EnsureDefenderReadiness(install_dir.parent_path(), cfa_apps);
-        }
-    }
-
-    if (!InjectInstalledDllInProcess(&proc, error)) {
-        std::wstring wine;
-        std::wstring emulation;
-        if (GetWineDiagnostics(wine)) {
-            error += std::format(
-                L"\n\nGWToolbox is running under Wine on a non-Windows host, which is not supported. The "
-                L"Linux guide at <a href=\"https://www.gwtoolbox.com/docs/linux/\">gwtoolbox.com/docs/linux</a> "
-                L"is provided as-is for convenience only.\n\nDetected: {}",
-                wine
-            );
-            fprintf(stderr, "Wine detected: %ls\n", wine.c_str());
-        }
-        else if (GetEmulationDiagnostics(emulation)) {
-            error += std::format(
-                L"\n\nGWToolbox is running under CPU emulation, which is not supported. Guild Wars and GWToolbox "
-                L"are x86 software; running them on non-x86 hardware (e.g. Windows on ARM, or a VM on an Apple "
-                L"Silicon Mac) is known to cause crashes, particularly with texture packs and other hooking-based "
-                L"features.\n\nDetected: {}",
-                emulation
-            );
-            fprintf(stderr, "CPU emulation detected: %ls\n", emulation.c_str());
-        }
-        ShowError(error.c_str());
-        fprintf(stderr, "InjectInstalledDllInProcess failed\n");
-        return 1;
-    }
-
-    SetProcessForeground(&proc);
-
-    return 0;
+    return RunLauncher();
 }

@@ -1,18 +1,12 @@
 #pragma once
 
-#include <memory>
+#include <filesystem>
 #include <optional>
+#include <string>
+#include <vector>
 
-#include "Download.h"
-#include "LauncherWindow.h"
 #include "Process.h"
-#include "Settings.h"
 #include "WasmInject.h"
-
-enum InjectReply {
-    InjectReply_Inject,
-    InjectReply_Cancel,
-};
 
 struct InjectProcess {
     InjectProcess(const bool injected, Process&& process, std::wstring&& charname) : m_Injected(injected), m_Process(std::move(process)), m_Charname(std::move(charname)) {}
@@ -32,12 +26,6 @@ struct InjectProcess {
     std::wstring m_Charname;
 };
 
-struct InjectSelection {
-    bool is_wasm = false;
-    Process process;
-    std::optional<WasmSession> wasm_session;
-};
-
 struct InjectScanResult {
     bool m_Found = false;
     std::vector<InjectProcess> m_Processes;
@@ -46,42 +34,13 @@ struct InjectScanResult {
     const wchar_t* m_TroubleshootingUrl = nullptr;
 };
 
-class InjectWindow : public LauncherWindow {
-public:
-    static InjectReply AskInjectProcess(InjectSelection* selection);
-
-    explicit InjectWindow(InjectScanResult scan);
-    InjectWindow(const InjectWindow&) = delete;
-    InjectWindow(InjectWindow&&) = delete;
-    ~InjectWindow() override = default;
-
-    InjectWindow& operator=(const InjectWindow&) = delete;
-    InjectWindow& operator=(InjectWindow&&) = delete;
-
-    bool Finished() const;
-
-    bool GetSelected(size_t* index) const;
-    InjectSelection TakeSelected(size_t index);
-
-protected:
-    void onClosed() override;
-
-private:
-    void RegisterMethods();
-    Json State() const;
-    void ResetScan(InjectScanResult scan);
-    void OpenSettings();
-
-    InjectScanResult m_ScanResult;
-    size_t m_Preselected = 0;
-    std::optional<size_t> m_Selected;
-    UpdateChecker m_UpdateChecker;
-    std::unique_ptr<SettingsWindow> m_SettingsWindow;
-};
-
 bool InjectRemoteThread(const Process* process, LPCWSTR ImagePath, LPDWORD lpExitCode);
+bool InjectInstalledDllInProcess(const Process* process, std::wstring& error);
+bool InjectWasmModIntoSession(const WasmSession& session, std::wstring& error);
+bool SetProcessForeground(const Process* process);
 
 std::vector<Process> GetGuildWarsProcesses();
 std::vector<Process> GetGuildWars2Processes();
-
 std::vector<std::filesystem::path> GetGuildWarsExecutablePaths();
+
+InjectScanResult RunScan();
