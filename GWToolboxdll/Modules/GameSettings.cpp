@@ -133,7 +133,6 @@ namespace {
     std::unique_ptr<EncString> pending_wiki_search_term;
 
     uint32_t actual_signets_of_capture_amount = 1;
-    // bool select_with_chat_doubleclick = false;
 
     clock_t activity_timer = 0;
 
@@ -1133,7 +1132,6 @@ namespace {
                 }
             } break;
             case GW::UI::UIMessage::kQuestAdded:
-                // OnQuestAdded(*static_cast<uint32_t*>(wParam));
                 break;
             case GW::UI::UIMessage::kTradeSessionStart: {
                 if (settings.flash_window_on_trade) {
@@ -1217,6 +1215,161 @@ namespace {
         }
     }
 } // namespace
+
+namespace {
+
+    bool faction_checked = false;
+    std::vector<std::wstring> previous_party_names{};
+    GW::HookEntry VanquishComplete_Entry;
+    GW::HookEntry ItemClickCallback_Entry;
+    GW::HookEntry FriendStatusCallback_Entry;
+    GW::HookEntry PartyDefeated_Entry;
+    GW::HookEntry OnAfterAgentAdd_Entry;
+    GW::HookEntry AgentState_Entry;
+    GW::HookEntry AgentRemove_Entry;
+    GW::HookEntry AgentAdd_Entry;
+    GW::HookEntry TradeStart_Entry;
+    GW::HookEntry PartyPlayerAdd_Entry;
+    GW::HookEntry PartyPlayerReady_Entry;
+    GW::HookEntry PartyPlayerRemove_Entry;
+    GW::HookEntry PartyLeaderChanged_Entry;
+    GW::HookEntry GameSrvTransfer_Entry;
+    GW::HookEntry CinematicPlay_Entry;
+    GW::HookEntry PlayerJoinInstance_Entry;
+    GW::HookEntry PlayerLeaveInstance_Entry;
+    GW::HookEntry OnDialog_Entry;
+    GW::HookEntry OnChangeTarget_Entry;
+    GW::HookEntry OnWriteChat_Entry;
+    GW::HookEntry OnAgentStartCast_Entry;
+    GW::HookEntry OnOpenWikiUrl_Entry;
+    GW::HookEntry OnScreenShake_Entry;
+    GW::HookEntry OnCast_Entry;
+    GW::HookEntry OnPartyTargetChange_Entry;
+    GW::HookEntry OnAgentNameTag_Entry;
+    GW::HookEntry OnEnterMission_Entry;
+    GW::HookEntry OnPreSendDialog_Entry;
+    GW::HookEntry OnPostSendDialog_Entry;
+    GW::HookEntry OnAgentModel_Entry;
+
+    void FactionEarnedCheckAndWarn()
+    {
+        if (!settings.faction_warn_percent) {
+            return; // Disabled
+        }
+        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) {
+            faction_checked = false;
+            return; // Loading or explorable area.
+        }
+        if (faction_checked) {
+            return; // Already checked.
+        }
+        faction_checked = true;
+        const auto world_context = GW::GetWorldContext();
+        if (!world_context || !world_context->max_luxon || !world_context->total_earned_kurzick) {
+            faction_checked = false;
+            return; // No world context yet.
+        }
+        settings.faction_warn_percent_amount = std::clamp(settings.faction_warn_percent_amount, 0, 100);
+
+        using MapID = GW::Constants::MapID;
+        static constexpr std::array luxon_maps = {MapID::The_Deep, MapID::The_Jade_Quarry_Luxon_outpost, MapID::Fort_Aspenwood_Luxon_outpost, MapID::Zos_Shivros_Channel, MapID::The_Aurios_Mines};
+        static constexpr std::array kurzick_maps = {MapID::Urgozs_Warren, MapID::The_Jade_Quarry_Kurzick_outpost, MapID::Fort_Aspenwood_Kurzick_outpost, MapID::Altrumm_Ruins, MapID::Amatz_Basin};
+
+        const auto map_id = GW::Map::GetMapID();
+        const uint32_t* current;
+        const uint32_t* max;
+        const uint32_t* other_current;
+        const char* name;
+        const char* other_name;
+
+        if (std::ranges::find(luxon_maps, map_id) != luxon_maps.end()) {
+            current = &world_context->current_luxon;
+            max = &world_context->max_luxon;
+            other_current = &world_context->current_kurzick;
+            name = "Luxon";
+            other_name = "Kurzick";
+        }
+        else if (std::ranges::find(kurzick_maps, map_id) != kurzick_maps.end()) {
+            current = &world_context->current_kurzick;
+            max = &world_context->max_kurzick;
+            other_current = &world_context->current_luxon;
+            name = "Kurzick";
+            other_name = "Luxon";
+        }
+        else {
+            return;
+        }
+
+        const float pct = 100.0f * static_cast<float>(*current) / static_cast<float>(*max);
+        if (pct >= static_cast<float>(settings.faction_warn_percent_amount))
+            Log::Warning("%s faction earned is %d of %d", name, *current, *max);
+        else if (*other_current > 4999 && *other_current > *current)
+            Log::Warning("%s faction earned is greater than %s", other_name, name);
+    }
+
+    void MessageOnPartyChange()
+    {
+        if (!check_message_on_party_change || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) {
+            return; // Don't need to check, or not an outpost.
+        }
+        GW::PartyInfo* current_party = GW::PartyMgr::GetPartyInfo();
+        const GW::AgentLiving* me = GW::Agents::GetControlledCharacter();
+        if (!me || !current_party || !current_party->players.valid()) {
+            return; // Party not ready yet.
+        }
+        bool is_leading = false;
+        std::vector<std::wstring> current_party_names;
+        GW::PlayerPartyMemberArray& current_party_players = current_party->players; // Copy the player array here to avoid ptr issues.
+        for (size_t i = 0; i < current_party_players.size(); i++) {
+            if (!current_party_players[i].login_number) {
+                continue;
+            }
+            if (i == 0) {
+                is_leading = current_party_players[i].login_number == me->login_number;
+            }
+            const wchar_t* player_name = GW::Agents::GetPlayerNameByLoginNumber(current_party_players[i].login_number);
+            if (!player_name) {
+                continue;
+            }
+            current_party_names.push_back(player_name);
+        }
+        // If previous party list is empty (i.e. map change), then initialise
+        if (!previous_party_names.size()) {
+            previous_party_names = current_party_names;
+            was_leading = is_leading;
+        }
+        if (current_party_names.size() > previous_party_names.size()) {
+            // Someone joined my party
+            for (size_t i = 0; i < current_party_names.size() && settings.notify_when_party_member_joins; i++) {
+                bool found = false;
+                for (size_t j = 0; j < previous_party_names.size() && !found; j++) {
+                    found = previous_party_names[j] == current_party_names[i];
+                }
+                if (!found) {
+                    WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, std::format(L"<a=1>{}</a> joined the party.", current_party_names[i]).c_str(), nullptr, true);
+                }
+            }
+        }
+        else if (!was_leading && is_leading && current_party_names.size() == 1 && previous_party_names.size() > 2) {
+            // We left a party of at least 2 other people
+        }
+        else if (current_party_names.size() < previous_party_names.size()) {
+            // Someone left my party
+            for (size_t i = 0; i < previous_party_names.size() && settings.notify_when_party_member_leaves; i++) {
+                bool found = false;
+                for (size_t j = 0; j < current_party_names.size() && !found; j++) {
+                    found = previous_party_names[i] == current_party_names[j];
+                }
+                if (!found) {
+                    WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, std::format(L"<a=1>{}</a> left the party.", previous_party_names[i]).c_str(), nullptr, true);
+                }
+            }
+        }
+        was_leading = is_leading;
+        previous_party_names = current_party_names;
+        check_message_on_party_change = false;
+    }
+}
 
 bool GameSettings::GetSettingBool(const char* setting)
 {
@@ -1343,19 +1496,15 @@ void PendingChatMessage::Init()
 {
     if (!invalid) {
         if (IsStringEncoded(this->encoded_message)) {
-            // Log::LogW(L"message IS encoded, ");
             GW::UI::AsyncDecodeStr(encoded_message, &output_message);
         }
         else {
             output_message = std::wstring(encoded_message);
-            // Log::LogW(L"message NOT encoded, ");
         }
         if (IsStringEncoded(this->encoded_sender)) {
-            // Log::LogW(L"sender IS encoded\n");
             GW::UI::AsyncDecodeStr(encoded_sender, &output_sender);
         }
         else {
-            // Log::LogW(L"sender NOT encoded\n");
             output_sender = std::wstring(encoded_sender);
         }
     }
@@ -1554,69 +1703,6 @@ void GameSettings::Initialize()
 #endif
 }
 
-
-void GameSettings::MessageOnPartyChange()
-{
-    if (!check_message_on_party_change || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) {
-        return; // Don't need to check, or not an outpost.
-    }
-    GW::PartyInfo* current_party = GW::PartyMgr::GetPartyInfo();
-    const GW::AgentLiving* me = GW::Agents::GetControlledCharacter();
-    if (!me || !current_party || !current_party->players.valid()) {
-        return; // Party not ready yet.
-    }
-    bool is_leading = false;
-    std::vector<std::wstring> current_party_names;
-    GW::PlayerPartyMemberArray& current_party_players = current_party->players; // Copy the player array here to avoid ptr issues.
-    for (size_t i = 0; i < current_party_players.size(); i++) {
-        if (!current_party_players[i].login_number) {
-            continue;
-        }
-        if (i == 0) {
-            is_leading = current_party_players[i].login_number == me->login_number;
-        }
-        const wchar_t* player_name = GW::Agents::GetPlayerNameByLoginNumber(current_party_players[i].login_number);
-        if (!player_name) {
-            continue;
-        }
-        current_party_names.push_back(player_name);
-    }
-    // If previous party list is empty (i.e. map change), then initialise
-    if (!previous_party_names.size()) {
-        previous_party_names = current_party_names;
-        was_leading = is_leading;
-    }
-    if (current_party_names.size() > previous_party_names.size()) {
-        // Someone joined my party
-        for (size_t i = 0; i < current_party_names.size() && settings.notify_when_party_member_joins; i++) {
-            bool found = false;
-            for (size_t j = 0; j < previous_party_names.size() && !found; j++) {
-                found = previous_party_names[j] == current_party_names[i];
-            }
-            if (!found) {
-                WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, std::format(L"<a=1>{}</a> joined the party.", current_party_names[i]).c_str(), nullptr, true);
-            }
-        }
-    }
-    else if (!was_leading && is_leading && current_party_names.size() == 1 && previous_party_names.size() > 2) {
-        // We left a party of at least 2 other people
-    }
-    else if (current_party_names.size() < previous_party_names.size()) {
-        // Someone left my party
-        for (size_t i = 0; i < previous_party_names.size() && settings.notify_when_party_member_leaves; i++) {
-            bool found = false;
-            for (size_t j = 0; j < current_party_names.size() && !found; j++) {
-                found = previous_party_names[i] == current_party_names[j];
-            }
-            if (!found) {
-                WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, std::format(L"<a=1>{}</a> left the party.", previous_party_names[i]).c_str(), nullptr, true);
-            }
-        }
-    }
-    was_leading = is_leading;
-    previous_party_names = current_party_names;
-    check_message_on_party_change = false;
-}
 
 void GameSettings::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
@@ -1942,62 +2028,6 @@ void GameSettings::DrawSettingsInternal()
         ImGui::Unindent();
     }
     ImGui::Unindent();
-}
-
-void GameSettings::FactionEarnedCheckAndWarn()
-{
-    if (!settings.faction_warn_percent) {
-        return; // Disabled
-    }
-    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) {
-        faction_checked = false;
-        return; // Loading or explorable area.
-    }
-    if (faction_checked) {
-        return; // Already checked.
-    }
-    faction_checked = true;
-    const auto world_context = GW::GetWorldContext();
-    if (!world_context || !world_context->max_luxon || !world_context->total_earned_kurzick) {
-        faction_checked = false;
-        return; // No world context yet.
-    }
-    settings.faction_warn_percent_amount = std::clamp(settings.faction_warn_percent_amount, 0, 100);
-
-    using MapID = GW::Constants::MapID;
-    static constexpr std::array luxon_maps = {MapID::The_Deep, MapID::The_Jade_Quarry_Luxon_outpost, MapID::Fort_Aspenwood_Luxon_outpost, MapID::Zos_Shivros_Channel, MapID::The_Aurios_Mines};
-    static constexpr std::array kurzick_maps = {MapID::Urgozs_Warren, MapID::The_Jade_Quarry_Kurzick_outpost, MapID::Fort_Aspenwood_Kurzick_outpost, MapID::Altrumm_Ruins, MapID::Amatz_Basin};
-
-    const auto map_id = GW::Map::GetMapID();
-    const uint32_t* current;
-    const uint32_t* max;
-    const uint32_t* other_current;
-    const char* name;
-    const char* other_name;
-
-    if (std::ranges::find(luxon_maps, map_id) != luxon_maps.end()) {
-        current = &world_context->current_luxon;
-        max = &world_context->max_luxon;
-        other_current = &world_context->current_kurzick;
-        name = "Luxon";
-        other_name = "Kurzick";
-    }
-    else if (std::ranges::find(kurzick_maps, map_id) != kurzick_maps.end()) {
-        current = &world_context->current_kurzick;
-        max = &world_context->max_kurzick;
-        other_current = &world_context->current_luxon;
-        name = "Kurzick";
-        other_name = "Luxon";
-    }
-    else {
-        return;
-    }
-
-    const float pct = 100.0f * static_cast<float>(*current) / static_cast<float>(*max);
-    if (pct >= static_cast<float>(settings.faction_warn_percent_amount))
-        Log::Warning("%s faction earned is %d of %d", name, *current, *max);
-    else if (*other_current > 4999 && *other_current > *current)
-        Log::Warning("%s faction earned is greater than %s", other_name, name);
 }
 
 void GameSettings::Update(float)
