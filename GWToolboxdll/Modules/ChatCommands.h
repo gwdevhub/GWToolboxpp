@@ -52,53 +52,6 @@ public:
     static void CHAT_CMD_FUNC(CmdReapplyTitle);
     static void CHAT_CMD_FUNC(CmdCustomMarker);
 
-private:
-    static bool ReadTemplateFile(const std::wstring& path, char* buff, size_t buffSize);
-
-    static bool IsLuxon();
-
-    static void CHAT_CMD_FUNC(CmdEnterMission);
-    static void CHAT_CMD_FUNC(CmdAge2);
-    static void CHAT_CMD_FUNC(CmdDialog);
-    static void CHAT_CMD_FUNC(CmdTB);
-    static void CHAT_CMD_FUNC(CmdObserverReset);
-    static void CHAT_CMD_FUNC(CmdChest);
-    static void CHAT_CMD_FUNC(CmdAfk);
-    static void CHAT_CMD_FUNC(CmdShow);
-    static void CHAT_CMD_FUNC(CmdHide);
-    static void CHAT_CMD_FUNC(CmdToggle);
-    static void CHAT_CMD_FUNC(CmdCamera);
-    static void CHAT_CMD_FUNC(CmdSCWiki);
-    static void CHAT_CMD_FUNC(CmdLoad);
-    static void CHAT_CMD_FUNC(CmdPingBuild);
-    static void CHAT_CMD_FUNC(CmdResize);
-    static void CHAT_CMD_FUNC(CmdPingEquipment);
-    static void CHAT_CMD_FUNC(CmdPingQuest);
-    static void CHAT_CMD_FUNC(CmdMorale);
-    static void CHAT_CMD_FUNC(CmdVolume);
-    static void CHAT_CMD_FUNC(CmdSetHardMode);
-    static void CHAT_CMD_FUNC(CmdSetNormalMode);
-    static void CHAT_CMD_FUNC(CmdMute);
-    // Trigger hall of monuments info for current target or given player name
-    static void CHAT_CMD_FUNC(CmdHom);
-    static void CHAT_CMD_FUNC(CmdWithdraw);
-    static void CHAT_CMD_FUNC(CmdDeposit);
-
-    static void TargetNearest(const wchar_t* model_id_or_name, GW::AgentTargetFlags type);
-
-    static std::vector<ToolboxUIElement*> CHAT_CMD_FUNC(MatchingWindows);
-    static GW::UI::WindowID CHAT_CMD_FUNC(MatchingGWWindow);
-
-
-    struct QuestPing {
-        GW::Constants::QuestID quest_id = static_cast<GW::Constants::QuestID>(0);
-        GuiUtils::EncString name;
-        GuiUtils::EncString description;
-        GuiUtils::EncString objectives;
-        void Update();
-        void Init();
-    } quest_ping;
-
 protected:
     float SettingsWeighting() override { return 1.2f; };
 };
