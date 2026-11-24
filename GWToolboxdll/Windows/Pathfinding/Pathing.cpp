@@ -139,6 +139,27 @@ namespace Pathing {
     }
 
 
+    float DistanceToTrapezoidEdges(const GW::PathingTrapezoid* pt, const GW::GamePos& point)
+    {
+        const float d1 = MathUtil::getDistanceFromLine({pt->XTL, pt->YT}, {pt->XTR, pt->YT}, point);
+        const float d2 = MathUtil::getDistanceFromLine({pt->XTR, pt->YT}, {pt->XBR, pt->YB}, point);
+        const float d3 = MathUtil::getDistanceFromLine({pt->XBR, pt->YB}, {pt->XBL, pt->YB}, point);
+        const float d4 = MathUtil::getDistanceFromLine({pt->XBL, pt->YB}, {pt->XTL, pt->YT}, point);
+        return std::min({d1, d2, d3, d4});
+    }
+
+    std::pair<GW::Vec2f, GW::Vec2f> ClosestEdge(const GW::PathingTrapezoid* closest, const GW::GamePos& point, const float closest_dist)
+    {
+        const GW::Vec2f top_left{closest->XTL, closest->YT};
+        const GW::Vec2f top_right{closest->XTR, closest->YT};
+        const GW::Vec2f bottom_right{closest->XBR, closest->YB};
+        const GW::Vec2f bottom_left{closest->XBL, closest->YB};
+        if (closest_dist == MathUtil::getDistanceFromLine(top_left, top_right, point)) return {top_left, top_right};
+        if (closest_dist == MathUtil::getDistanceFromLine(top_right, bottom_right, point)) return {top_right, bottom_right};
+        if (closest_dist == MathUtil::getDistanceFromLine(bottom_right, bottom_left, point)) return {bottom_right, bottom_left};
+        return {bottom_left, top_left};
+    }
+
     GW::PathingTrapezoid* FindClosestTrapezoid(const GW::GamePos& point, GW::PathingMapArray* map)
     {
         if (!(map && map->size())) return nullptr;
@@ -193,11 +214,7 @@ namespace Pathing {
                             return pt;
                         }
                         else {
-                            float d1 = MathUtil::getDistanceFromLine({pt->XTL, pt->YT}, {pt->XTR, pt->YT}, point);
-                            float d2 = MathUtil::getDistanceFromLine({pt->XTR, pt->YT}, {pt->XBR, pt->YB}, point);
-                            float d3 = MathUtil::getDistanceFromLine({pt->XBR, pt->YB}, {pt->XBL, pt->YB}, point);
-                            float d4 = MathUtil::getDistanceFromLine({pt->XBL, pt->YB}, {pt->XTL, pt->YT}, point);
-                            float d = std::min({d1, d2, d3, d4});
+                            const float d = DistanceToTrapezoidEdges(pt, point);
                             if (closest_dist > d) {
                                 closest_dist = d;
                                 closest = pt;
@@ -226,11 +243,7 @@ namespace Pathing {
             const auto& m = (*map)[z];
             for (uint32_t i = 0; i < m.trapezoid_count; ++i) {
                 pt = &m.trapezoids[i];
-                float d1 = MathUtil::getDistanceFromLine({pt->XTL, pt->YT}, {pt->XTR, pt->YT}, point);
-                float d2 = MathUtil::getDistanceFromLine({pt->XTR, pt->YT}, {pt->XBR, pt->YB}, point);
-                float d3 = MathUtil::getDistanceFromLine({pt->XBR, pt->YB}, {pt->XBL, pt->YB}, point);
-                float d4 = MathUtil::getDistanceFromLine({pt->XBL, pt->YB}, {pt->XTL, pt->YT}, point);
-                float d = std::min({d1, d2, d3, d4});
+                const float d = DistanceToTrapezoidEdges(pt, point);
                 if (closest_dist > d) {
                     closest_dist = d;
                     closest = pt;
@@ -241,23 +254,7 @@ namespace Pathing {
         if (!closest) return nullptr;
 
         // Located outside pathing trapezoids. Find closest point lying on the edge of trapezoid.
-        GW::Vec2f p0, p1;
-        if (closest_dist == MathUtil::getDistanceFromLine({closest->XTL, closest->YT}, {closest->XTR, closest->YT}, point)) {
-            p0 = {closest->XTL, closest->YT};
-            p1 = {closest->XTR, closest->YT};
-        }
-        else if (closest_dist == MathUtil::getDistanceFromLine({closest->XTR, closest->YT}, {closest->XBR, closest->YB}, point)) {
-            p0 = {closest->XTR, closest->YT};
-            p1 = {closest->XBR, closest->YB};
-        }
-        else if (closest_dist == MathUtil::getDistanceFromLine({closest->XBR, closest->YB}, {closest->XBL, closest->YB}, point)) {
-            p0 = {closest->XBR, closest->YB};
-            p1 = {closest->XBL, closest->YB};
-        }
-        else /*(closest_dist == MathUtil::getDistanceFromLine({ closest->XTR, closest->YT }, { closest->XBR, closest->YB }, point))*/ {
-            p0 = {closest->XBL, closest->YB};
-            p1 = {closest->XTL, closest->YT};
-        }
+        const auto [p0, p1] = ClosestEdge(closest, point, closest_dist);
 
         // Calculate new point by projecting start point on the closest line segment.
         auto ba = p1 - p0, pa = point - p0;
@@ -817,11 +814,7 @@ namespace Pathing {
                             return pt;
                         }
 
-                        float d1 = MathUtil::getDistanceFromLine({pt->XTL, pt->YT}, {pt->XTR, pt->YT}, point);
-                        float d2 = MathUtil::getDistanceFromLine({pt->XTR, pt->YT}, {pt->XBR, pt->YB}, point);
-                        float d3 = MathUtil::getDistanceFromLine({pt->XBR, pt->YB}, {pt->XBL, pt->YB}, point);
-                        float d4 = MathUtil::getDistanceFromLine({pt->XBL, pt->YB}, {pt->XTL, pt->YT}, point);
-                        float d = std::min({d1, d2, d3, d4});
+                        const float d = DistanceToTrapezoidEdges(pt, point);
                         if (closest_dist > d) {
                             closest_dist = d;
                             closest = pt;
@@ -855,11 +848,7 @@ namespace Pathing {
             const auto& m = mapData->planes[z];
             for (uint32_t i = 0; i < m.trapezoid_count; ++i) {
                 pt = &m.trapezoids[i];
-                float d1 = MathUtil::getDistanceFromLine({pt->XTL, pt->YT}, {pt->XTR, pt->YT}, point);
-                float d2 = MathUtil::getDistanceFromLine({pt->XTR, pt->YT}, {pt->XBR, pt->YB}, point);
-                float d3 = MathUtil::getDistanceFromLine({pt->XBR, pt->YB}, {pt->XBL, pt->YB}, point);
-                float d4 = MathUtil::getDistanceFromLine({pt->XBL, pt->YB}, {pt->XTL, pt->YT}, point);
-                float d = std::min({d1, d2, d3, d4});
+                const float d = DistanceToTrapezoidEdges(pt, point);
                 if (closest_dist > d) {
                     closest_dist = d;
                     closest = pt;
@@ -869,23 +858,7 @@ namespace Pathing {
         }
         if (!closest) return nullptr;
 
-        GW::Vec2f p0, p1;
-        if (closest_dist == MathUtil::getDistanceFromLine({closest->XTL, closest->YT}, {closest->XTR, closest->YT}, point)) {
-            p0 = {closest->XTL, closest->YT};
-            p1 = {closest->XTR, closest->YT};
-        }
-        else if (closest_dist == MathUtil::getDistanceFromLine({closest->XTR, closest->YT}, {closest->XBR, closest->YB}, point)) {
-            p0 = {closest->XTR, closest->YT};
-            p1 = {closest->XBR, closest->YB};
-        }
-        else if (closest_dist == MathUtil::getDistanceFromLine({closest->XBR, closest->YB}, {closest->XBL, closest->YB}, point)) {
-            p0 = {closest->XBR, closest->YB};
-            p1 = {closest->XBL, closest->YB};
-        }
-        else {
-            p0 = {closest->XBL, closest->YB};
-            p1 = {closest->XTL, closest->YT};
-        }
+        const auto [p0, p1] = ClosestEdge(closest, point, closest_dist);
 
         auto ba = p1 - p0, pa = point - p0;
         float h = std::clamp(Dot(pa, ba) / Dot(ba, ba), 0.0f, 1.0f);
