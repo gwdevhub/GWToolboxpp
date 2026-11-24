@@ -13,7 +13,6 @@ set(GWTB_WINDOWS_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/WasmInject.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/WindowsDefender.cpp"
     "${GWTB_WINDOWS_DIR}/DllDownload.cpp"
-    "${GWTB_WINDOWS_DIR}/DllVersion.cpp"
     "${GWTB_WINDOWS_DIR}/Elevation.cpp"
     "${GWTB_WINDOWS_DIR}/FileDialog.cpp"
     "${GWTB_WINDOWS_DIR}/Installation.cpp"
@@ -71,8 +70,6 @@ target_link_libraries(GWToolbox_Launcher_Windows PRIVATE
     glaze::glaze
     webview_window
 
-    version # for GetFileVersionInfo
-    bcrypt # for sha256 of the launcher exe
     comctl32 # for TaskDialogIndirect (Defender prompt checkbox)
     ole32 # for the file dialogs
     shell32 # for the file dialogs and ShellExecute

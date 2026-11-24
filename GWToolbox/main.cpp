@@ -10,6 +10,7 @@
 #include "Cli.h"
 #include "Inject.h"
 #include "Install.h"
+#include "Installation.h"
 #include "Launcher.h"
 #include "LauncherUpdate.h"
 #include "Process.h"
@@ -18,7 +19,6 @@
 #include "Utf8.h"
 #include "WindowsInject.h"
 
-// Redirects stderr to a log file; never blocks the launcher on failure (e.g. CFA can block the exe's own folder before any AV exception is granted) - falls back to %TEMP%, then gives up silently.
 static void OpenLogFile(const std::filesystem::path& exe_path)
 {
     static FILE* stream;
@@ -47,8 +47,6 @@ void showError(const std::string& message)
     ShowMessageBoxA(nullptr, message.c_str(), "GWToolbox - Error", MB_OK | MB_ICONERROR);
 }
 
-
-// Opts in to per-monitor DPI awareness so scaled displays get real layout instead of blurry bitmap-stretching; must run before any window (incl. a MessageBox) is created.
 static void EnableDpiAwareness()
 {
     using SetProcessDpiAwarenessContextFn = BOOL(WINAPI*)(DPI_AWARENESS_CONTEXT);
@@ -84,25 +82,6 @@ static int InjectProcessIdFromCommandLine(const std::filesystem::path& exe_path)
     return 0;
 }
 
-static int InjectQuietly()
-{
-    const ScanResult scan = ScanGuildWars();
-    if (scan.targets.size() == 1) {
-        const InjectOutcome outcome = injectTarget(scan.targets.front());
-        if (outcome.ok) {
-            return 0;
-        }
-        fprintf(stderr, "injectTarget failed: %s\n", outcome.message.c_str());
-        return RunLauncher(outcome.message);
-    }
-    if (scan.targets.empty()) {
-        const std::string message = scan.errors.empty() ? std::string() : scan.errors.front().message;
-        fprintf(stderr, "%s\n", message.empty() ? "Guild Wars isn't running." : message.c_str());
-        return RunLauncher(message);
-    }
-    return RunLauncher();
-}
-
 #ifdef _DEBUG
 int main()
 #else
@@ -123,6 +102,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     setvbuf(stderr, nullptr, _IONBF, 0);
 
     ParseCommandLine();
+    SetLocalDllOnly(settings.localdll);
 
     assert(settings.help == false);
     if (settings.version) {

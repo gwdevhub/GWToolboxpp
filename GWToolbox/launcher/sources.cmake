@@ -4,6 +4,12 @@ set(GWTB_LAUNCHER_SOURCES
     "${GWTB_LAUNCHER_DIR}/ChoiceWindow.cpp"
     "${GWTB_LAUNCHER_DIR}/InstallWindow.cpp"
     "${GWTB_LAUNCHER_DIR}/Launcher.cpp"
+    "${GWTB_LAUNCHER_DIR}/InstalledDll.cpp"
+    "${GWTB_LAUNCHER_DIR}/DllVersion.cpp"
+    "${GWTB_LAUNCHER_DIR}/LauncherFiles.cpp"
+    "${GWTB_LAUNCHER_DIR}/Sha256.cpp"
+    "${GWTB_LAUNCHER_DIR}/ReleaseListing.cpp"
+    "${GWTB_LAUNCHER_DIR}/LauncherSettings.cpp"
     "${GWTB_LAUNCHER_DIR}/SettingsWindow.cpp")
 
 set(GWTB_LAUNCHER_HEADERS

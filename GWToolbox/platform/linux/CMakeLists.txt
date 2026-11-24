@@ -53,7 +53,7 @@ add_executable(GWToolbox_Launcher_Linux
     ${GWTB_LAUNCHER_SOURCES}
     ${GWTB_LAUNCHER_HEADERS}
     Command.cpp
-    DllVersion.cpp
+    Download.cpp
     Elevation.cpp
     EmbeddedIcon.cpp
     EmbeddedLauncher.cpp
