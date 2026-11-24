@@ -61,16 +61,6 @@ namespace {
         return buff ? buff->begin() : nullptr;
     }
 
-    GW::PartySearch* GetRegionParty(const uint32_t party_id)
-    {
-        return GW::PartyMgr::GetPartySearch(party_id);
-    }
-
-    GW::PartyInfo* GetLocalParty(const uint32_t party_id)
-    {
-        return GW::PartyMgr::GetPartyInfo(party_id);
-    }
-
     GW::Player* GetPartyLeader(GW::PartyInfo* party)
     {
         if (!(party && party->players.valid() && party->players.size())) {
@@ -344,7 +334,7 @@ namespace {
                 const uint32_t this_party_id = *(&packet->header + 1);
                 party_id = TBParty::IdFromRegionParty(this_party_id);
                 party = GetParty(party_id, &party_name);
-                GW::PartySearch* region_party = GetRegionParty(this_party_id);
+                GW::PartySearch* region_party = GW::PartyMgr::GetPartySearch(this_party_id);
                 if (region_party) {
                     if (!party) {
                         party = new TBParty();
@@ -407,7 +397,7 @@ namespace {
                 const uint32_t this_party_id = *(&packet->header + 1);
                 party_id = TBParty::IdFromLocalParty(this_party_id);
                 party = GetParty(party_id, &party_name);
-                GW::PartyInfo* local_party = GetLocalParty(this_party_id);
+                GW::PartyInfo* local_party = GW::PartyMgr::GetPartyInfo(this_party_id);
                 if (local_party) {
                     if (!party) {
                         party = new TBParty();
