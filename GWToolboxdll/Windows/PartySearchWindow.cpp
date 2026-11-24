@@ -21,6 +21,7 @@
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/PlayerMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/PartyMgr.h>
 
 #include <Logger.h>
 #include <Utils/GuiUtils.h>
@@ -60,32 +61,6 @@ namespace {
         return buff ? buff->begin() : nullptr;
     }
 
-    GW::PartySearch* GetRegionParty(const uint32_t party_id)
-    {
-        const GW::GameContext* g = GW::GetGameContext();
-        if (!g || !g->party) {
-            return nullptr;
-        }
-        auto& parties = g->party->party_search;
-        if (!parties.valid() || !(party_id < parties.size())) {
-            return nullptr;
-        }
-        return parties[party_id];
-    }
-
-    GW::PartyInfo* GetLocalParty(const uint32_t party_id)
-    {
-        const GW::GameContext* g = GW::GetGameContext();
-        if (!g || !g->party) {
-            return nullptr;
-        }
-        auto& parties = g->party->parties;
-        if (!parties.valid() || !(party_id < parties.size())) {
-            return nullptr;
-        }
-        return parties[party_id];
-    }
-
     GW::Player* GetPartyLeader(GW::PartyInfo* party)
     {
         if (!(party && party->players.valid() && party->players.size())) {
@@ -96,11 +71,11 @@ namespace {
 
     GW::PartyInfo* GetPartyFromPlayer(const uint32_t player_number)
     {
-        const GW::GameContext* g = GW::GetGameContext();
-        if (!g || !g->party) {
+        const auto* ctx = GW::GetPartyContext();
+        if (!ctx) {
             return nullptr;
         }
-        auto& parties = g->party->parties;
+        auto& parties = ctx->parties;
         if (!parties.valid()) {
             return nullptr;
         }
@@ -172,6 +147,18 @@ namespace {
         {
             message[0] = 0;
             player_name[0] = 0;
+        }
+
+        void FillCurrentLocation(const GW::Player* player)
+        {
+            map_id = static_cast<uint16_t>(GW::Map::GetMapID());
+            district = GW::Map::GetDistrict();
+            language = static_cast<uint8_t>(GW::Map::GetLanguage());
+            region_id = static_cast<uint8_t>(GW::Map::GetRegion());
+            primary = player->primary;
+            secondary = player->secondary;
+            player_name = TextUtils::WStringToString(player->name);
+            Log::Log("Party %d updated\n", concat_party_id);
         }
 
         static uint32_t IdFromRegionParty(uint32_t party_id);
@@ -272,14 +259,7 @@ namespace {
             return false;
         }
         party_size = player->party_size;
-        map_id = static_cast<uint16_t>(GW::Map::GetMapID());
-        district = GW::Map::GetDistrict();
-        language = static_cast<uint8_t>(GW::Map::GetLanguage());
-        region_id = static_cast<uint8_t>(GW::Map::GetRegion());
-        primary = player->primary;
-        secondary = player->secondary;
-        player_name = TextUtils::WStringToString(player->name);
-        Log::Log("Party %d updated\n", concat_party_id);
+        FillCurrentLocation(player);
         return true;
     #pragma warning (pop)
     }
@@ -300,14 +280,7 @@ namespace {
         hero_count += party->henchmen.valid() ? party->henchmen.size() : 0;
         party_size = party->players.valid() ? party->players.size() : 0;
         party_size += hero_count;
-        map_id = static_cast<uint16_t>(GW::Map::GetMapID());
-        district = GW::Map::GetDistrict();
-        language = static_cast<uint8_t>(GW::Map::GetLanguage());
-        region_id = static_cast<uint8_t>(GW::Map::GetRegion());
-        primary = player->primary;
-        secondary = player->secondary;
-        player_name = TextUtils::WStringToString(player->name);
-        Log::Log("Party %d updated\n", concat_party_id);
+        FillCurrentLocation(player);
         return true;
     #pragma warning (pop)
     }
@@ -361,7 +334,7 @@ namespace {
                 const uint32_t this_party_id = *(&packet->header + 1);
                 party_id = TBParty::IdFromRegionParty(this_party_id);
                 party = GetParty(party_id, &party_name);
-                GW::PartySearch* region_party = GetRegionParty(this_party_id);
+                GW::PartySearch* region_party = GW::PartyMgr::GetPartySearch(this_party_id);
                 if (region_party) {
                     if (!party) {
                         party = new TBParty();
@@ -424,7 +397,7 @@ namespace {
                 const uint32_t this_party_id = *(&packet->header + 1);
                 party_id = TBParty::IdFromLocalParty(this_party_id);
                 party = GetParty(party_id, &party_name);
-                GW::PartyInfo* local_party = GetLocalParty(this_party_id);
+                GW::PartyInfo* local_party = GW::PartyMgr::GetPartyInfo(this_party_id);
                 if (local_party) {
                     if (!party) {
                         party = new TBParty();
