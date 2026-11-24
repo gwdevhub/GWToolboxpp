@@ -70,6 +70,7 @@
 // intrin.h declares (but never defines) _ReturnAddress(void); parse it before the macro exists so a later include can't break.
 #include <intrin.h>
 #endif
+// GCC/MinGW diagnostic-build compatibility shim (not needed on MSVC).
 #define _ReturnAddress() __builtin_return_address(0)
 #endif
 

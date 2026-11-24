@@ -152,12 +152,12 @@ namespace GW::Items {
     extern "C" GWCA_API Constants::MaterialSlot __cdecl GW_Items_GetMaterialSlot(const Item* item) noexcept;
     extern "C" GWCA_API EquipmentStatus __cdecl GW_Items_GetEquipmentVisibility(EquipmentType type) noexcept;
     extern "C" GWCA_API bool __cdecl GW_Items_SetEquipmentVisibility(EquipmentType type, EquipmentStatus state) noexcept;
-    extern "C" GWCA_API const BaseArray < PvPItemUpgradeInfo >& __cdecl GW_Items_GetPvPItemUpgradesArray() noexcept;
+    extern "C" GWCA_API const BaseArray < PvPItemUpgradeInfo >* __cdecl GW_Items_GetPvPItemUpgradesArray() noexcept;
     extern "C" GWCA_API const PvPItemUpgradeInfo* __cdecl GW_Items_GetPvPItemUpgrade(uint32_t pvp_item_upgrade_idx) noexcept;
     extern "C" GWCA_API const PvPItemInfo* __cdecl GW_Items_GetPvPItemInfo(uint32_t pvp_item_idx) noexcept;
-    extern "C" GWCA_API const BaseArray < PvPItemInfo >& __cdecl GW_Items_GetPvPItemInfoArray() noexcept;
+    extern "C" GWCA_API const BaseArray < PvPItemInfo >* __cdecl GW_Items_GetPvPItemInfoArray() noexcept;
     extern "C" GWCA_API const CompositeModelInfo* __cdecl GW_Items_GetCompositeModelInfo(uint32_t model_file_id) noexcept;
-    extern "C" GWCA_API const BaseArray < CompositeModelInfo >& __cdecl GW_Items_GetCompositeModelInfoArray() noexcept;
+    extern "C" GWCA_API const BaseArray < CompositeModelInfo >* __cdecl GW_Items_GetCompositeModelInfoArray() noexcept;
     extern "C" GWCA_API bool __cdecl GW_Items_GetPvPItemUpgradeEncodedName(uint32_t pvp_item_upgrade_idx, wchar_t** out) noexcept;
     extern "C" GWCA_API bool __cdecl GW_Items_GetPvPItemUpgradeEncodedDescription(uint32_t pvp_item_upgrade_idx, wchar_t** out) noexcept;
     extern "C" GWCA_API const ItemFormula* __cdecl GW_Items_GetItemFormula(const GW::Item* item) noexcept;
@@ -372,7 +372,7 @@ namespace GW::Items {
 
     inline const BaseArray < PvPItemUpgradeInfo >& GetPvPItemUpgradesArray()
     {
-        return GWCA_CALL_C(GW_Items_GetPvPItemUpgradesArray);
+        return *GWCA_CALL_C(GW_Items_GetPvPItemUpgradesArray);
     }
 
     inline const PvPItemUpgradeInfo* GetPvPItemUpgrade(uint32_t pvp_item_upgrade_idx)
@@ -387,7 +387,7 @@ namespace GW::Items {
 
     inline const BaseArray < PvPItemInfo >& GetPvPItemInfoArray()
     {
-        return GWCA_CALL_C(GW_Items_GetPvPItemInfoArray);
+        return *GWCA_CALL_C(GW_Items_GetPvPItemInfoArray);
     }
 
     inline const CompositeModelInfo* GetCompositeModelInfo(uint32_t model_file_id)
@@ -397,7 +397,7 @@ namespace GW::Items {
 
     inline const BaseArray < CompositeModelInfo >& GetCompositeModelInfoArray()
     {
-        return GWCA_CALL_C(GW_Items_GetCompositeModelInfoArray);
+        return *GWCA_CALL_C(GW_Items_GetCompositeModelInfoArray);
     }
 
     inline bool GetPvPItemUpgradeEncodedName(uint32_t pvp_item_upgrade_idx, wchar_t** out)

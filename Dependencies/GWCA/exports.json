@@ -1,6 +1,6 @@
 {
-  "abi": "0x040C0000u",
-  "schema": "f84bbdbff525d558",
+  "abi": "0x040D0100u",
+  "schema": "641353bac54269e0",
   "validation_export": "GWCA_ValidateApi",
   "exports": [
     {
@@ -839,7 +839,7 @@
     },
     {
       "name": "GW_CameraMgr_ComputeCamPos",
-      "signature": "Vec3f __cdecl GW_CameraMgr_ComputeCamPos(float dist) noexcept",
+      "signature": "void __cdecl GW_CameraMgr_ComputeCamPos(float dist, Vec3f* out) noexcept",
       "guards": [],
       "header": "GWCA/Managers/CameraMgr.h"
     },
@@ -1541,7 +1541,7 @@
     },
     {
       "name": "GW_Items_GetPvPItemUpgradesArray",
-      "signature": "const BaseArray < PvPItemUpgradeInfo >& __cdecl GW_Items_GetPvPItemUpgradesArray() noexcept",
+      "signature": "const BaseArray < PvPItemUpgradeInfo >* __cdecl GW_Items_GetPvPItemUpgradesArray() noexcept",
       "guards": [],
       "header": "GWCA/Managers/ItemMgr.h"
     },
@@ -1559,7 +1559,7 @@
     },
     {
       "name": "GW_Items_GetPvPItemInfoArray",
-      "signature": "const BaseArray < PvPItemInfo >& __cdecl GW_Items_GetPvPItemInfoArray() noexcept",
+      "signature": "const BaseArray < PvPItemInfo >* __cdecl GW_Items_GetPvPItemInfoArray() noexcept",
       "guards": [],
       "header": "GWCA/Managers/ItemMgr.h"
     },
@@ -1571,7 +1571,7 @@
     },
     {
       "name": "GW_Items_GetCompositeModelInfoArray",
-      "signature": "const BaseArray < CompositeModelInfo >& __cdecl GW_Items_GetCompositeModelInfoArray() noexcept",
+      "signature": "const BaseArray < CompositeModelInfo >* __cdecl GW_Items_GetCompositeModelInfoArray() noexcept",
       "guards": [],
       "header": "GWCA/Managers/ItemMgr.h"
     },

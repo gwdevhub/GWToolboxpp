@@ -1,16 +1,16 @@
 {
   "_": "Written by tools/update_gwca.py. The pinned GWCA release this repo builds against: native gwca.dll and SDK headers from one release. Runtime binding validates ABI and export schema.",
   "repo": "gwdevhub/GWCA",
-  "tag": "v4.12.0.0",
-  "abi": "0x040C0000",
+  "tag": "v4.13.1.0",
+  "abi": "0x040D0100",
   "assets": {
     "gwca.dll": {
       "size": 535054,
-      "sha256": "8d5db98ea7ab75e8eebda577fec4054e99042c10bf7b40547f96d3ed6203ca80"
+      "sha256": "791fe6a66430161b8e24b0038f0bba74cdc421885467f35e16d4b915ca5f967c"
     },
     "GWCA-headers.zip": {
-      "size": 213983,
-      "sha256": "d547b773017bf52a5274cf96b8212cf3232150150ba554c1c892e54aa87d018b"
+      "size": 213990,
+      "sha256": "74953ae12949d8f26e42f722b1338e43a345c32ebea43d31eee90121984dadb0"
     }
   }
 }

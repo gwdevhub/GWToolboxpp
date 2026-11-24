@@ -6,7 +6,7 @@
 #include <GWCA/Utilities/Export.h>
 
 // Guards against headers and binary being from different releases -- struct offsets shift and nothing else catches it.
-#define GWCA_ABI_VERSION 0x040C0000u
+#define GWCA_ABI_VERSION 0x040D0100u
 
 namespace GW {
     uint32_t GetAbiVersion();

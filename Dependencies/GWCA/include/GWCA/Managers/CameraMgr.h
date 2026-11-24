@@ -41,15 +41,7 @@ namespace GW::CameraMgr {
     extern "C" GWCA_API Camera* __cdecl GW_CameraMgr_GetCamera() noexcept;
     extern "C" GWCA_API bool __cdecl GW_CameraMgr_SetMaxDist(float dist) noexcept;
     extern "C" GWCA_API bool __cdecl GW_CameraMgr_SetFieldOfView(float fov) noexcept;
-#ifdef _MSC_VER
-    // C linkage fixes the symbol name; the C++ record return is covered by cross-compiler ABI tests.
-#pragma warning(push)
-#pragma warning(disable: 4190)
-#endif
-    extern "C" GWCA_API Vec3f __cdecl GW_CameraMgr_ComputeCamPos(float dist) noexcept;
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
+    extern "C" GWCA_API void __cdecl GW_CameraMgr_ComputeCamPos(float dist, Vec3f* out) noexcept;
     extern "C" GWCA_API bool __cdecl GW_CameraMgr_UpdateCameraPos() noexcept;
     extern "C" GWCA_API float __cdecl GW_CameraMgr_GetFieldOfView() noexcept;
     extern "C" GWCA_API float __cdecl GW_CameraMgr_GetYaw() noexcept;
@@ -77,7 +69,9 @@ namespace GW::CameraMgr {
 
     inline Vec3f ComputeCamPos(float dist)
     {
-        return GWCA_CALL_C(GW_CameraMgr_ComputeCamPos, dist);
+        Vec3f out;
+        GWCA_CALL_C(GW_CameraMgr_ComputeCamPos, dist, &out);
+        return out;
     }
 
     inline bool UpdateCameraPos()

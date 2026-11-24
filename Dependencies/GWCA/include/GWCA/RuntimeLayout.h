@@ -3,8 +3,8 @@
 #include <cstdint>
 namespace GW::Runtime {
 inline constexpr size_t ExportCount = 574;
-inline constexpr uint64_t Schema = 0xf84bbdbff525d558ULL;
-inline constexpr uint32_t AbiVersion = 0x040C0000u;
+inline constexpr uint64_t Schema = 0x641353bac54269e0ULL;
+inline constexpr uint32_t AbiVersion = 0x040D0100u;
 enum class Export : size_t {
 GW_GetAccountContext,
 GW_GetAgentContext,
