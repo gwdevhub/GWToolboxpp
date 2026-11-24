@@ -86,9 +86,6 @@ void RecordInstalledDll(const fs::path& dll)
 
 bool LauncherSettingEnabled(const std::string& name)
 {
-    if (name == "noUpdate" && settings.noupdate) {
-        return true;
-    }
     const Json saved = readSettings();
     return saved.contains(name) && saved[name].is_boolean() && saved[name].get<bool>();
 }
@@ -98,7 +95,4 @@ void SetLauncherSetting(const std::string& name, const bool value)
     Json saved = readSettings();
     saved[name] = value;
     writeSettings(saved);
-    if (name == "noUpdate") {
-        settings.noupdate = value;
-    }
 }

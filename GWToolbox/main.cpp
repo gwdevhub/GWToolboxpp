@@ -47,15 +47,6 @@ void showError(const std::string& message)
     ShowMessageBoxA(nullptr, message.c_str(), "GWToolbox - Error", MB_OK | MB_ICONERROR);
 }
 
-static void ShowError(const wchar_t* message)
-{
-    ShowMessageBoxWithLinksW(nullptr, message, L"GWToolbox - Error");
-}
-
-static void ShowError(const char* message)
-{
-    ShowMessageBoxA(nullptr, message, "GWToolbox - Error", 0);
-}
 
 // Opts in to per-monitor DPI awareness so scaled displays get real layout instead of blurry bitmap-stretching; must run before any window (incl. a MessageBox) is created.
 static void EnableDpiAwareness()
@@ -156,38 +147,6 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     if (settings.install) {
         Install(settings.quiet, error);
         return 0;
-    }
-    if (settings.uninstall) {
-        Uninstall(settings.quiet, error);
-        return 0;
-    }
-    if (settings.reinstall) {
-        Uninstall(settings.quiet, error);
-        Install(settings.quiet, error);
-        return 0;
-    }
-
-    if (!IsInstalled() && !settings.noinstall) {
-        if (settings.quiet) {
-            ShowError(L"Can't ask to install if started with '/quiet'");
-            fprintf(stderr, "Can't ask to install if started with '/quiet'\n");
-            return 1;
-        }
-
-        const int iRet = ShowMessageBoxW(nullptr, L"GWToolbox doesn't seem to be installed, do you want to install it?", L"GWToolbox", MB_YESNO);
-
-        if (iRet == IDNO) {
-            fprintf(stderr, "User doesn't want to install GWToolbox\n");
-            return 1;
-        }
-
-        if (iRet == IDYES) {
-            if (!Install(settings.quiet, error)) {
-                ShowError(std::format(L"Failed to install GWToolbox:\n\n{}", error).c_str());
-                fprintf(stderr, "Failed to install\n");
-                return 1;
-            }
-        }
     }
 
     if (settings.pid) {

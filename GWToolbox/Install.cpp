@@ -61,52 +61,6 @@ fs::path EnsureInstallationDirectoryExist()
     return {};
 }
 
-bool CopyInstaller()
-{
-    std::filesystem::path dest_path = GetInstallationDir();
-    if (dest_path.empty())
-        return false;
-    dest_path = dest_path.parent_path() / L"GWToolbox.exe";
-
-    std::filesystem::path source_path;
-    if (!PathGetExeFullPath(source_path)) {
-        return false;
-    }
-
-    if (source_path == dest_path) {
-        return true;
-    }
-
-    if (!PathSafeCopy(source_path, dest_path, true)) {
-        return false;
-    }
-
-    return true;
-}
-
-bool DeleteInstallationDirectory(std::wstring& error)
-{
-    const auto install_dir = GetInstallationDir();
-    if (install_dir.empty())
-        return error = L"Failed to GetInstallationDir() in DeleteInstallationDirectory()", false;
-    const auto fspath = install_dir / "*";
-
-    const auto str = fspath.wstring();
-    SHFILEOPSTRUCTW FileOp = {nullptr};
-    FileOp.wFunc = FO_DELETE;
-    FileOp.pFrom = fspath.c_str();
-    FileOp.fFlags = FOF_NO_UI | FOF_ALLOWUNDO;
-    FileOp.fAnyOperationsAborted = FALSE;
-    FileOp.lpszProgressTitle = L"GWToolbox uninstallation";
-
-    const int iRet = SHFileOperationW(&FileOp);
-    if (iRet != 0)
-        return error = std::format(L"SHFileOperationW failed: {:#X}, GetLastError {:#X}", iRet, GetLastError()), false;
-    if (FileOp.fAnyOperationsAborted)
-        return error = std::format(L"SHFileOperationW failed: fAnyOperationsAborted"), false;
-    return true;
-}
-
 // Optional: copies gwtoolbox.gwmod alongside the installed dll if one sits next to the launcher (no release asset exists yet); its absence is the ordinary case and must never fail Install().
 static void InstallLocalWasmGwmodIfPresent(const fs::path& install_path)
 {
@@ -153,16 +107,12 @@ bool Install(const bool quiet, std::wstring& error)
         fs::path running_exe;
         if (PathGetExeFullPath(running_exe))
             cfa_apps.push_back(running_exe); // the launcher doing the writing right now (e.g. from Downloads)
-        cfa_apps.push_back(docs_dir / L"GWToolbox.exe"); // the installed copy, once it exists
         AddDefenderExceptions(docs_dir, cfa_apps, quiet, error); // Silent fail, it shows its own messages
     }
 
     fs::path install_path = EnsureInstallationDirectoryExist();
     if (install_path.empty())
         return error = L"EnsureInstallationDirectoryExist failed", false;
-
-    if (!CopyInstaller())
-        return error = L"CopyInstaller failed", false;
 
     if (!DownloadDllForInstall(install_path.parent_path(), error))
         return false;
@@ -173,43 +123,10 @@ bool Install(const bool quiet, std::wstring& error)
                    dll_path.parent_path().wstring()
                ), false;
     }
-    if (!IsInstalled()) {
-        return error = std::format(
-                   L"IsInstalled() returned false after installation; it may have been quarantined by anti virus software!\n\nExclude the {} directory in your anti virus settings and re-launch.", dll_path.wstring(),
-                   dll_path.parent_path().wstring()
-               ), false;
-    }
-
     InstallLocalWasmGwmodIfPresent(install_path);
 
     if (!quiet) {
         ShowMessageBoxW(nullptr, L"Installation successful", L"Installation", 0);
-    }
-
-    return true;
-}
-
-bool Uninstall(const bool quiet, std::wstring& error)
-{
-    bool DeleteAllFiles = true;
-    if (quiet == false) {
-        const int iRet = ShowMessageBoxW(
-            nullptr,
-            L"Do you want to delete *all* possible files from installation folder? (Default: no)\n",
-            L"Uninstallation",
-            MB_YESNO);
-
-        if (iRet != IDYES) {
-            DeleteAllFiles = false;
-        }
-    }
-
-    if (DeleteAllFiles) {
-        DeleteInstallationDirectory(error);
-    }
-
-    if (quiet == false) {
-        ShowMessageBoxW(nullptr, L"Uninstallation successful", L"Uninstallation", 0);
     }
 
     return true;
@@ -221,7 +138,5 @@ bool IsInstalled()
     if (install_path.empty())
         return false;
 
-    const auto dllpath = install_path.parent_path();
-    return exists(dllpath / L"GWToolboxdll.dll")
-           && exists(dllpath / L"GWToolbox.exe");
+    return exists(install_path.parent_path() / L"GWToolboxdll.dll");
 }

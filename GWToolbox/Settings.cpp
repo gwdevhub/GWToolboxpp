@@ -13,14 +13,9 @@ void PrintUsage(const bool terminate)
             "    /version                   Print version and exist\n"
             "    /quiet                     Doesn't create any interaction with the user\n\n"
 
-            "    /install                   Create necessary folders and download GWToolboxdll\n"
-            "    /uninstall                 Remove all data used by GWToolbox\n"
-            "    /reinstall                 Do a fresh installation\n\n"
+            "    /install                   Create necessary folders and download GWToolboxdll\n\n"
 
             "    /asadmin                   GWToolbox will try to run as admin\n"
-            "    /noupdate                  Won't try to update\n"
-            "    /noexecheck                Won't check Github for a newer GWToolbox.exe\n"
-            "    /noinstall                 Won't try to install if missing\n"
             "    /localdll                  Check launcher directory for toolbox dll (or gwtoolbox.gwmod for a wasm client), won't try to install or update\n\n"
 
             "    /status                    Print whether GWToolbox is installed, then exit\n"
@@ -32,21 +27,6 @@ void PrintUsage(const bool terminate)
     if (terminate) {
         exit(0);
     }
-}
-
-static bool IsOneOrZeroOf3(const bool b1, const bool b2, const bool b3)
-{
-    int count = 0;
-    if (b1) {
-        ++count;
-    }
-    if (b2) {
-        ++count;
-    }
-    if (b3) {
-        ++count;
-    }
-    return count <= 1;
 }
 
 void ParseCommandLine()
@@ -67,13 +47,6 @@ void ParseCommandLine()
         }
         else if (wcscmp(arg, L"/install") == 0) {
             settings.install = true;
-            settings.noupdate = false;
-        }
-        else if (wcscmp(arg, L"/uninstall") == 0) {
-            settings.uninstall = true;
-        }
-        else if (wcscmp(arg, L"/reinstall") == 0) {
-            settings.reinstall = true;
         }
         else if (wcscmp(arg, L"/pid") == 0) {
             if (++i == argc) {
@@ -90,25 +63,14 @@ void ParseCommandLine()
         else if (wcscmp(arg, L"/asadmin") == 0) {
             settings.asadmin = true;
         }
-        else if (wcscmp(arg, L"/noupdate") == 0) {
-            settings.noupdate = true;
-        }
-        else if (wcscmp(arg, L"/noexecheck") == 0) {
-            settings.noexecheck = true;
-        }
         else if (wcscmp(arg, L"/help") == 0) {
             settings.help = true;
-        }
-        else if (wcscmp(arg, L"/noinstall") == 0) {
-            settings.noinstall = true;
         }
         else if (wcscmp(arg, L"/quiet") == 0) {
             settings.quiet = true;
         }
         else if (wcscmp(arg, L"/localdll") == 0) {
             settings.localdll = true;
-            settings.noupdate = true;
-            settings.noinstall = true;
         }
         else if (wcscmp(arg, L"/status") == 0) {
             settings.status = true;
@@ -131,10 +93,6 @@ void ParseCommandLine()
         PrintUsage(true);
     }
 
-    if (!IsOneOrZeroOf3(settings.install, settings.uninstall, settings.reinstall)) {
-        printf("You can only use one of '/install', '/uninstall' and '/reinstall'\n");
-        PrintUsage(true);
-    }
 }
 
 bool IsRunningAsAdmin()

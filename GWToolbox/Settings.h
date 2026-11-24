@@ -9,12 +9,7 @@ struct Settings {
     bool version = false;
     bool quiet = false;
     bool install = false;
-    bool uninstall = false;
-    bool reinstall = false;
     bool asadmin = false;
-    bool noupdate = false;
-    bool noexecheck = false;
-    bool noinstall = false;
     bool localdll = false;
     bool status = false;
     bool scan = false;

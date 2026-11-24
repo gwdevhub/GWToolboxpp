@@ -21,6 +21,8 @@ namespace fs = std::filesystem;
 
 namespace {
 
+bool localDllOnly = false;
+
 constexpr auto kCheckTimeout = std::chrono::seconds(60);
 constexpr auto kDownloadTimeout = std::chrono::seconds(600);
 constexpr auto kPollInterval = std::chrono::milliseconds(200);
@@ -73,16 +75,24 @@ std::optional<Json> dllAsset(const Json& release)
 
 fs::path FindInstalledDll()
 {
+    const fs::path local = launcherDirectory() / "GWToolboxdll.dll";
+    std::error_code ec;
+    if (localDllOnly) {
+        return fs::is_regular_file(local, ec) ? local : fs::path{};
+    }
     if (const auto dll = dllFromSettings()) {
         return *dll;
     }
-    const fs::path local = launcherDirectory() / "GWToolboxdll.dll";
-    std::error_code ec;
     if (fs::is_regular_file(local, ec)) {
         RecordInstalledDll(local);
         return local;
     }
     return {};
+}
+
+void SetLocalDllOnly(const bool enabled)
+{
+    localDllOnly = enabled;
 }
 
 void RecordInstalledDll(const fs::path& dll)

@@ -8,6 +8,7 @@
 
 #include "Inject.h"
 #include "Install.h"
+#include "Installation.h"
 #include "ScanResult.h"
 #include "Settings.h"
 #include "WasmInject.h"
@@ -229,26 +230,8 @@ bool InjectInstalledDllInProcess(const Process* process, std::wstring& error)
         return true;
     }
 
-    fs::path dllpath;
-    dllpath = GetInstallationDir();
-    if (dllpath.empty()) return error = L"GetInstallationDir failed", false;
-    dllpath = dllpath.parent_path() / L"GWToolboxdll.dll";
-    if (settings.localdll) {
-        if (!PathGetProgramDirectory(dllpath)) return error = L"PathGetProgramDirectory failed", false;
-        dllpath = dllpath / L"GWToolboxdll.dll";
-        if (!exists(dllpath)) {
-            return error = std::format(L"Application @ {} not found.\n\nEnsure your copy of {} is local to {} or run {} without the /localdll argument.", dllpath.wstring(), dllpath.filename().wstring(), exe_filename, exe_filename), false;
-        }
-    }
-
-    if (!exists(dllpath)) {
-        if (settings.noinstall) {
-            return error = std::format(L"Application @ {} not found.\n\nYou may need to install GWToolbox by running {} without the /noinstall argument.", dllpath.wstring(), exe_filename), false;
-        }
-        return error =
-                   std::format(L"Application @ {} not found; it may have been quarantined by anti virus software!\n\nExclude the {} directory in your anti virus settings and re-launch {}.", dllpath.wstring(), dllpath.parent_path().wstring(), exe_filename),
-               false;
-    }
+    const fs::path dllpath = FindInstalledDll();
+    if (dllpath.empty()) return error = L"GWToolbox isn't installed yet. Install it from the launcher first.", false;
 
     DWORD ExitCode;
     if (!InjectRemoteThread(process, dllpath.wstring().c_str(), &ExitCode)) return error = std::format(L"InjectRemoteThread failed (ExitCode: {})", ExitCode), false;
@@ -356,7 +339,6 @@ InjectOutcome injectTarget(const ScanTarget& target)
         fs::path exe_path;
         if (!install_dir.empty() && PathGetExeFullPath(exe_path)) {
             std::vector<fs::path> cfa_apps = GetGuildWarsExecutablePaths();
-            cfa_apps.push_back(install_dir.parent_path() / L"GWToolbox.exe");
             cfa_apps.push_back(exe_path);
             EnsureDefenderReadiness(install_dir.parent_path(), cfa_apps);
         }

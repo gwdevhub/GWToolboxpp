@@ -70,7 +70,7 @@ function Inject {
   $stage = Join-Path (Split-Path $Launcher -Parent) 'GWToolboxdll.dll'
   if ((Resolve-Path $stage -ErrorAction SilentlyContinue).Path -ne (Resolve-Path $Dll).Path) { Copy-Item $Dll $stage -Force }
   Write-Host "[harness] injecting into Gw.exe pid=$gw" -ForegroundColor Cyan
-  & $Launcher /pid $gw /localdll /noupdate /noinstall /noexecheck /quiet | Out-Null
+  & $Launcher /pid $gw /localdll /quiet | Out-Null
 }
 
 function Loaded-Dll { Join-Path (Split-Path $Launcher -Parent) 'GWToolboxdll.dll' }
