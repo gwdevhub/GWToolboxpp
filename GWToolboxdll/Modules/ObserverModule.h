@@ -357,6 +357,8 @@ public:
 
     // Represents an agent whose stats are tracked
     // Includes players AND npc's
+    class ObservableParty;
+
     class ObservableAgent {
     public:
         ObservableAgent(ObserverModule& parent, const GW::AgentLiving& agent_living);
@@ -407,6 +409,8 @@ public:
         std::string DebugName();
         std::string SanitizedName();
         std::wstring SanitizedNameW();
+        ObservableParty* GetParty() const;
+        GW::Constants::SkillID GetCurrentSkill() const;
 
     private:
         bool trim_hench_name = false;

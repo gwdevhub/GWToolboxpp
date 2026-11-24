@@ -448,18 +448,8 @@ namespace {
                     // e.g. flash enchantments, stances, whirlwind
                     break;
                 }
-                case TargetType::anyone: {
-                    // Ensure we interpret the target correctly
-                    // e.g. Mirror of Ice, Stone Sheath
-                    if (action->target_id == NO_AGENT) {
-                        target = caster;
-                        target_party = caster_party;
-                    }
-                    break;
-                }
+                case TargetType::anyone:
                 case TargetType::ally: {
-                    // Ensure we interpret the target correctly
-                    // e.g. Healing Burst
                     if (action->target_id == NO_AGENT) {
                         target = caster;
                         target_party = caster_party;
@@ -796,6 +786,11 @@ namespace {
         return default_hp;
     }
 
+    std::pair<uint32_t, uint32_t> CasterAndTarget(const uint32_t caster_id, const uint32_t target_id, const bool no_target)
+    {
+        return no_target ? std::pair{caster_id, target_id} : std::pair{target_id, caster_id};
+    }
+
     void HandleDamageDone(const uint32_t caster_id, const uint32_t target_id, const float amount_pc, const bool is_crit)
     {
         ObservableAgent* caster = ObserverModule::Instance().GetObservableAgentById(caster_id);
@@ -814,13 +809,9 @@ namespace {
         }
 
         if (damage_amount > 0 && caster && target) {
-            ObservableParty* caster_party = ObserverModule::Instance().GetObservablePartyById(caster->party_id);
-            ObservableParty* target_party = ObserverModule::Instance().GetObservablePartyById(target->party_id);
-
-            GW::Constants::SkillID skill_id = NO_SKILL;
-            if (caster->current_target_action && caster->current_target_action->is_skill) {
-                skill_id = caster->current_target_action->skill_id;
-            }
+            ObservableParty* caster_party = caster->GetParty();
+            ObservableParty* target_party = target->GetParty();
+            const auto skill_id = caster->GetCurrentSkill();
             
             // Track last damage skill for death tracking
             if (skill_id != NO_SKILL) {
@@ -918,13 +909,9 @@ namespace {
         }
 
         if (healing_amount > 0 && caster && target) {
-            ObservableParty* caster_party = ObserverModule::Instance().GetObservablePartyById(caster->party_id);
-            ObservableParty* target_party = ObserverModule::Instance().GetObservablePartyById(target->party_id);
-
-            GW::Constants::SkillID skill_id = NO_SKILL;
-            if (caster->current_target_action && caster->current_target_action->is_skill) {
-                skill_id = caster->current_target_action->skill_id;
-            }
+            ObservableParty* caster_party = caster->GetParty();
+            ObservableParty* target_party = target->GetParty();
+            const auto skill_id = caster->GetCurrentSkill();
 
             caster->stats.total_healing_dealt += healing_amount;
             if (target_party) {
@@ -1063,20 +1050,8 @@ namespace {
                 break;
 
             case GW::Packet::StoC::GenericValueID::attack_started: {
-                // swap target and caster for skill_activated
-                uint32_t _caster_id;
-                uint32_t _target_id;
-                if (no_target) {
-                    // do nothing... caster is correct in &ObserverModule::Instance() case
-                    _caster_id = caster_id;
-                    _target_id = target_id; // 0
-                }
-                else {
-                    // caster and target are swapped
-                    _caster_id = target_id;
-                    _target_id = caster_id;
-                }
-                HandleAttackStarted(_caster_id, _target_id);
+                const auto [caster, target] = CasterAndTarget(caster_id, target_id, no_target);
+                HandleAttackStarted(caster, target);
                 break;
             }
 
@@ -1093,20 +1068,8 @@ namespace {
                 break;
 
             case GW::Packet::StoC::GenericValueID::attack_skill_activated: {
-                // swap target and caster for skill_activated
-                uint32_t _caster_id;
-                uint32_t _target_id;
-                if (no_target) {
-                    // do nothing... caster is correct in &ObserverModule::Instance() case
-                    _caster_id = caster_id;
-                    _target_id = target_id; // 0
-                }
-                else {
-                    // caster and target are swapped
-                    _caster_id = target_id;
-                    _target_id = caster_id;
-                }
-                HandleAttackSkillStarted(_caster_id, _target_id, static_cast<GW::Constants::SkillID>(value));
+                const auto [caster, target] = CasterAndTarget(caster_id, target_id, no_target);
+                HandleAttackSkillStarted(caster, target, static_cast<GW::Constants::SkillID>(value));
                 break;
             }
 
@@ -1123,20 +1086,8 @@ namespace {
                 break;
 
             case GW::Packet::StoC::GenericValueID::skill_activated: {
-                // swap target and caster for skill_activated
-                uint32_t _caster_id;
-                uint32_t _target_id;
-                if (no_target) {
-                    // do nothing... caster is correct in &ObserverModule::Instance() case
-                    _caster_id = caster_id;
-                    _target_id = target_id; // 0
-                }
-                else {
-                    // caster and target are swapped
-                    _caster_id = target_id;
-                    _target_id = caster_id;
-                }
-                HandleSkillActivated(_caster_id, _target_id, static_cast<GW::Constants::SkillID>(value));
+                const auto [caster, target] = CasterAndTarget(caster_id, target_id, no_target);
+                HandleSkillActivated(caster, target, static_cast<GW::Constants::SkillID>(value));
                 break;
             }
         }
@@ -1603,6 +1554,16 @@ ObserverModule::ObservableGuild* ObserverModule::GetObservableGuildById(const ui
 
 
 // Lazy load an ObservableAgent using an agent_id
+ObserverModule::ObservableParty* ObserverModule::ObservableAgent::GetParty() const
+{
+    return ObserverModule::Instance().GetObservablePartyById(party_id);
+}
+
+GW::Constants::SkillID ObserverModule::ObservableAgent::GetCurrentSkill() const
+{
+    return current_target_action && current_target_action->is_skill ? current_target_action->skill_id : NO_SKILL;
+}
+
 ObserverModule::ObservableAgent* ObserverModule::GetObservableAgentById(const uint32_t agent_id)
 {
     if (agent_id == NO_AGENT) {
