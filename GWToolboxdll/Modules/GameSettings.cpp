@@ -188,6 +188,22 @@ namespace {
 
     constexpr float checkbox_w = 270.f;
 
+    struct CheckboxItem {
+        const char* label;
+        bool* value;
+    };
+
+    void DrawCheckboxGrid(std::initializer_list<CheckboxItem> items)
+    {
+        ImGui::Indent();
+        ImGui::StartSpacedElements(checkbox_w);
+        for (const auto& item : items) {
+            ImGui::NextSpacedElement();
+            ImGui::Checkbox(item.label, item.value);
+        }
+        ImGui::Unindent();
+    }
+
     enum PING_PARTS { NAME = 1, DESC = 2 };
 
     // prophecies = factions
@@ -774,17 +790,12 @@ namespace {
     {
         ImGui::Text("Flash Guild Wars taskbar icon when:");
         ImGui::ShowHelp("Only triggers when Guild Wars is not the active window");
-        ImGui::Indent();
-        ImGui::StartSpacedElements(checkbox_w);
-        ImGui::NextSpacedElement();
-        ImGui::Checkbox("Zoning in a new map", &settings.flash_window_on_zoning);
-        ImGui::NextSpacedElement();
-        ImGui::Checkbox("Cinematic start/end", &settings.flash_window_on_cinematic);
-        ImGui::NextSpacedElement();
-        ImGui::Checkbox("A player starts trade with you###flash_window_on_trade", &settings.flash_window_on_trade);
-        ImGui::NextSpacedElement();
-        ImGui::Checkbox("A party member pings your name", &settings.flash_window_on_name_ping);
-        ImGui::Unindent();
+        DrawCheckboxGrid({
+            {"Zoning in a new map", &settings.flash_window_on_zoning},
+            {"Cinematic start/end", &settings.flash_window_on_cinematic},
+            {"A player starts trade with you###flash_window_on_trade", &settings.flash_window_on_trade},
+            {"A party member pings your name", &settings.flash_window_on_name_ping},
+        });
 
         ImGui::Text("Show Guild Wars in foreground when:");
         ImGui::ShowHelp(
@@ -792,41 +803,27 @@ namespace {
             "the window from a minimized state when important events\n"
             "occur, such as entering instances."
         );
-        ImGui::Indent();
-        ImGui::StartSpacedElements(checkbox_w);
-        ImGui::NextSpacedElement();
-        ImGui::Checkbox("Launching GWToolbox++###focus_window_on_launch", &settings.focus_window_on_launch);
-        ImGui::NextSpacedElement();
-        ImGui::Checkbox("Zoning in a new map###focus_window_on_zoning", &settings.focus_window_on_zoning);
-        ImGui::NextSpacedElement();
-        ImGui::Checkbox("A player starts trade with you###focus_window_on_trade", &settings.focus_window_on_trade);
-        ImGui::Unindent();
+        DrawCheckboxGrid({
+            {"Launching GWToolbox++###focus_window_on_launch", &settings.focus_window_on_launch},
+            {"Zoning in a new map###focus_window_on_zoning", &settings.focus_window_on_zoning},
+            {"A player starts trade with you###focus_window_on_trade", &settings.focus_window_on_trade},
+        });
 
         ImGui::Text("Show a chat message when a friend:");
-        ImGui::Indent();
-        ImGui::StartSpacedElements(checkbox_w);
-        ImGui::NextSpacedElement();
-        ImGui::Checkbox("Logs in", &settings.notify_when_friends_online);
-        ImGui::NextSpacedElement();
-        ImGui::Checkbox("Joins your outpost###notify_when_friends_join_outpost", &settings.notify_when_friends_join_outpost);
-        ImGui::NextSpacedElement();
-        ImGui::Checkbox("Logs out", &settings.notify_when_friends_offline);
-        ImGui::NextSpacedElement();
-        ImGui::Checkbox("Leaves your outpost###notify_when_friends_leave_outpost", &settings.notify_when_friends_leave_outpost);
-        ImGui::Unindent();
+        DrawCheckboxGrid({
+            {"Logs in", &settings.notify_when_friends_online},
+            {"Joins your outpost###notify_when_friends_join_outpost", &settings.notify_when_friends_join_outpost},
+            {"Logs out", &settings.notify_when_friends_offline},
+            {"Leaves your outpost###notify_when_friends_leave_outpost", &settings.notify_when_friends_leave_outpost},
+        });
 
         ImGui::Text("Show a chat message when a player:");
-        ImGui::Indent();
-        ImGui::StartSpacedElements(checkbox_w);
-        ImGui::NextSpacedElement();
-        ImGui::Checkbox("Joins your party", &settings.notify_when_party_member_joins);
-        ImGui::NextSpacedElement();
-        ImGui::Checkbox("Joins your outpost###notify_when_players_join_outpost", &settings.notify_when_players_join_outpost);
-        ImGui::NextSpacedElement();
-        ImGui::Checkbox("Leaves your party", &settings.notify_when_party_member_leaves);
-        ImGui::NextSpacedElement();
-        ImGui::Checkbox("Leaves your outpost###notify_when_players_leave_outpost", &settings.notify_when_players_leave_outpost);
-        ImGui::Unindent();
+        DrawCheckboxGrid({
+            {"Joins your party", &settings.notify_when_party_member_joins},
+            {"Joins your outpost###notify_when_players_join_outpost", &settings.notify_when_players_join_outpost},
+            {"Leaves your party", &settings.notify_when_party_member_leaves},
+            {"Leaves your outpost###notify_when_players_leave_outpost", &settings.notify_when_players_leave_outpost},
+        });
     }
 
 
@@ -1887,19 +1884,13 @@ void GameSettings::DrawSettingsInternal()
     ImGui::CheckboxWithHelp("Automatic /age2 on /age", &settings.auto_age2_on_age, "GWToolbox++ will show /age2 time after /age is shown in chat");
 
     ImGui::TextUnformatted("Automatic screenshot on:");
-    ImGui::Indent();
-    ImGui::StartSpacedElements(checkbox_w);
-    ImGui::NextSpacedElement();
-    ImGui::Checkbox("Vanquish", &settings.auto_screenshot_on_vanquish);
-    ImGui::NextSpacedElement();
-    ImGui::Checkbox("Boss kill", &settings.auto_screenshot_on_boss_kill);
-    ImGui::NextSpacedElement();
-    ImGui::Checkbox("Mission complete", &settings.auto_screenshot_on_mission_complete);
-    ImGui::NextSpacedElement();
-    ImGui::Checkbox("Dungeon complete", &settings.auto_screenshot_on_dungeon_complete);
-    ImGui::NextSpacedElement();
-    ImGui::Checkbox("Title maxed", &settings.auto_screenshot_on_title_maxed);
-    ImGui::Unindent();
+    DrawCheckboxGrid({
+        {"Vanquish", &settings.auto_screenshot_on_vanquish},
+        {"Boss kill", &settings.auto_screenshot_on_boss_kill},
+        {"Mission complete", &settings.auto_screenshot_on_mission_complete},
+        {"Dungeon complete", &settings.auto_screenshot_on_dungeon_complete},
+        {"Title maxed", &settings.auto_screenshot_on_title_maxed},
+    });
 
     ImGui::Checkbox("Block full screen message when entering a new area", &settings.block_enter_area_message);
 
@@ -1968,25 +1959,16 @@ void GameSettings::DrawSettingsInternal()
 
     ImGui::NewLine();
     ImGui::Text("Block floating numbers above character on:");
-    ImGui::Indent();
-    ImGui::StartSpacedElements(checkbox_w);
-    ImGui::NextSpacedElement();
-    ImGui::Checkbox("Faction gain", &settings.block_faction_gain);
-    ImGui::NextSpacedElement();
-    ImGui::Checkbox("XP Gain", &settings.block_experience_gain);
-    ImGui::NextSpacedElement();
-    ImGui::Checkbox("0 XP Gain", &settings.block_zero_experience_gain);
-    ImGui::NextSpacedElement();
-    ImGui::Checkbox("Zero damage/heal/energy", &settings.block_zero_damage_or_energy);
-    ImGui::NextSpacedElement();
-    ImGui::Checkbox("Damage received", &settings.block_receiving_damage);
-    ImGui::NextSpacedElement();
-    ImGui::Checkbox("Damage dealt", &settings.block_dealing_damage);
-    ImGui::NextSpacedElement();
-    ImGui::Checkbox("Healing received", &settings.block_receiving_heals);
-    ImGui::NextSpacedElement();
-    ImGui::Checkbox("Healing given", &settings.block_giving_heals);
-    ImGui::Unindent();
+    DrawCheckboxGrid({
+        {"Faction gain", &settings.block_faction_gain},
+        {"XP Gain", &settings.block_experience_gain},
+        {"0 XP Gain", &settings.block_zero_experience_gain},
+        {"Zero damage/heal/energy", &settings.block_zero_damage_or_energy},
+        {"Damage received", &settings.block_receiving_damage},
+        {"Damage dealt", &settings.block_dealing_damage},
+        {"Healing received", &settings.block_receiving_heals},
+        {"Healing given", &settings.block_giving_heals},
+    });
     ImGui::CheckboxWithHelp("Combine floating numbers above character", &settings.combine_overhead_numbers, combine_overhead_numbers_help);
     if (ImGui::Checkbox("Show experience progress instead of current level on your experience bar", &settings.useful_level_progress_label)) {
         GW::GameThread::Enqueue(SetXpBarLabel);
