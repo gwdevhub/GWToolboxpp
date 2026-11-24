@@ -56,6 +56,15 @@ std::optional<fs::path> dllFromSettings()
 
 fs::path FindInstalledDll()
 {
+    if (settings.localdll) {
+        fs::path local_dll;
+        if (!PathGetProgramDirectory(local_dll)) {
+            return {};
+        }
+        local_dll /= L"GWToolboxdll.dll";
+        std::error_code ec;
+        return fs::is_regular_file(local_dll, ec) ? local_dll : fs::path{};
+    }
     if (const auto dll = dllFromSettings()) {
         return *dll;
     }

@@ -98,17 +98,16 @@ static int InjectQuietly()
     const ScanResult scan = ScanGuildWars();
     if (scan.targets.size() == 1) {
         const InjectOutcome outcome = injectTarget(scan.targets.front());
-        if (!outcome.ok) {
-            ShowError(FromUtf8(outcome.message).c_str());
-            fprintf(stderr, "injectTarget failed\n");
-            return 1;
+        if (outcome.ok) {
+            return 0;
         }
-        return 0;
+        fprintf(stderr, "injectTarget failed: %s\n", outcome.message.c_str());
+        return RunLauncher(outcome.message);
     }
     if (scan.targets.empty()) {
-        const std::string message = scan.errors.empty() ? "Guild Wars isn't running." : scan.errors.front().message;
-        fprintf(stderr, "%s\n", message.c_str());
-        return 0;
+        const std::string message = scan.errors.empty() ? std::string() : scan.errors.front().message;
+        fprintf(stderr, "%s\n", message.empty() ? "Guild Wars isn't running." : message.c_str());
+        return RunLauncher(message);
     }
     return RunLauncher();
 }

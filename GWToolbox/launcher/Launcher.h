@@ -2,4 +2,4 @@
 
 #include <string>
 
-int RunLauncher();
+int RunLauncher(std::string startup_error = {});

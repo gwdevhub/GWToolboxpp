@@ -62,8 +62,9 @@ void joinWorker(std::thread& worker)
 
 class LaunchWindow : public WebViewWindow {
 public:
-    LaunchWindow() : WebViewWindow(launchWindowOptions())
+    explicit LaunchWindow(std::string startup_error) : WebViewWindow(launchWindowOptions())
     {
+        launch_error_ = std::move(startup_error);
         handler().on("getState", [this](WebViewWindow&, const Json&, const Reply& reply) {
             reply.result(state());
         });
@@ -426,7 +427,7 @@ private:
 
 }
 
-int RunLauncher()
+int RunLauncher(std::string startup_error)
 {
     setApplicationName("GWToolbox");
     RemoveLauncherLeftovers(RunningLauncherPath());
@@ -442,7 +443,7 @@ int RunLauncher()
         return 1;
     }
 
-    LaunchWindow window;
+    LaunchWindow window(std::move(startup_error));
     window.show();
     runEventLoop();
     return 0;
