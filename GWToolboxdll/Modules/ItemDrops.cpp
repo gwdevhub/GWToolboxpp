@@ -647,6 +647,26 @@ void ItemDrops::SaveSettings(SettingsDoc& doc)
     doc.Set(Name(), "always_hide_for_party", always_hide_for_party);
 }
 
+namespace {
+    template <typename Map>
+    void DrawRemovableItemRows(const char* child_id, Map& items)
+    {
+        ImGui::BeginChild(child_id, ImVec2(0.0f, items.size() * 26.f));
+        for (const auto& [item_id, item_name] : items) {
+            ImGui::PushID(static_cast<int>(item_id));
+            ImGui::Text("%s (%d)", item_name.c_str(), item_id);
+            ImGui::SameLine();
+            const bool clicked = ImGui::Button(" X ");
+            ImGui::PopID();
+            if (clicked) {
+                items.erase(item_id);
+                break;
+            }
+        }
+        ImGui::EndChild();
+    }
+} // namespace
+
 void ItemDrops::DrawSettingsInternal()
 {
     ImGui::Text("Drop Tracking Settings");
@@ -694,19 +714,7 @@ void ItemDrops::DrawSettingsInternal()
         if (ImGui::Button("Restore defaults##player")) {
             dont_hide_for_player = default_dont_hide_for_player;
         }
-        ImGui::BeginChild("dont_block_for_player", ImVec2(0.0f, dont_hide_for_player.size() * 26.f));
-        for (const auto& [item_id, item_name] : dont_hide_for_player) {
-            ImGui::PushID(static_cast<int>(item_id));
-            ImGui::Text("%s (%d)", item_name.c_str(), item_id);
-            ImGui::SameLine();
-            const bool clicked = ImGui::Button(" X ");
-            ImGui::PopID();
-            if (clicked) {
-                dont_hide_for_player.erase(item_id);
-                break;
-            }
-        }
-        ImGui::EndChild();
+        DrawRemovableItemRows("dont_block_for_player", dont_hide_for_player);
         ImGui::Separator();
         bool submitted = false;
         ImGui::Text("Add new item:");
@@ -734,19 +742,7 @@ void ItemDrops::DrawSettingsInternal()
         if (ImGui::Button("Restore defaults##party")) {
             dont_hide_for_party = default_dont_hide_for_party;
         }
-        ImGui::BeginChild("dont_block_for_party", ImVec2(0.0f, dont_hide_for_party.size() * 26.f));
-        for (const auto& [item_id, item_name] : dont_hide_for_party) {
-            ImGui::PushID(static_cast<int>(item_id));
-            ImGui::Text("%s (%d)", item_name.c_str(), item_id);
-            ImGui::SameLine();
-            const bool clicked = ImGui::Button(" X ");
-            ImGui::PopID();
-            if (clicked) {
-                dont_hide_for_party.erase(item_id);
-                break;
-            }
-        }
-        ImGui::EndChild();
+        DrawRemovableItemRows("dont_block_for_party", dont_hide_for_party);
         ImGui::Separator();
         bool submitted = false;
         ImGui::Text("Add new item:");
@@ -778,19 +774,7 @@ void ItemDrops::DrawSettingsInternal()
         if (ImGui::Button("Clear all##always_player")) {
             always_hide_for_player.clear();
         }
-        ImGui::BeginChild("always_hide_for_player", ImVec2(0.0f, always_hide_for_player.size() * 26.f));
-        for (const auto& [item_id, item_name] : always_hide_for_player) {
-            ImGui::PushID(static_cast<int>(item_id));
-            ImGui::Text("%s (%d)", item_name.c_str(), item_id);
-            ImGui::SameLine();
-            const bool clicked = ImGui::Button(" X ");
-            ImGui::PopID();
-            if (clicked) {
-                always_hide_for_player.erase(item_id);
-                break;
-            }
-        }
-        ImGui::EndChild();
+        DrawRemovableItemRows("always_hide_for_player", always_hide_for_player);
         ImGui::Separator();
         bool submitted = false;
         ImGui::Text("Add new item:");
@@ -819,19 +803,7 @@ void ItemDrops::DrawSettingsInternal()
         if (ImGui::Button("Clear all##always_party")) {
             always_hide_for_party.clear();
         }
-        ImGui::BeginChild("always_hide_for_party", ImVec2(0.0f, always_hide_for_party.size() * 26.f));
-        for (const auto& [item_id, item_name] : always_hide_for_party) {
-            ImGui::PushID(static_cast<int>(item_id));
-            ImGui::Text("%s (%d)", item_name.c_str(), item_id);
-            ImGui::SameLine();
-            const bool clicked = ImGui::Button(" X ");
-            ImGui::PopID();
-            if (clicked) {
-                always_hide_for_party.erase(item_id);
-                break;
-            }
-        }
-        ImGui::EndChild();
+        DrawRemovableItemRows("always_hide_for_party", always_hide_for_party);
         ImGui::Separator();
         bool submitted = false;
         ImGui::Text("Add new item:");
