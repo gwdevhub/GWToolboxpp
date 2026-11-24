@@ -487,10 +487,9 @@ namespace {
         using GW::Constants::Allegiance;
         constexpr auto enemy = static_cast<int>(Allegiance::Enemy);
         for (const auto& spirit : spirit_defaults) {
-            auto* rule = AddDefaultRule(NPC, spirit.color, GW::Constants::Range::SpiritExtended / BaseMarkerSize(), BigCircle, -1, Alive);
+            auto* rule = AddDefaultRule(NPC, spirit.color, 0.f, BigCircle, -1, Alive);
             rule->active = Colors::IsVisible(spirit.color);
             rule->identifier = spirit.identifier;
-            rule->layer = 1;
             rule->stop_processing_rules = true;
         }
         struct NpcDefault {
