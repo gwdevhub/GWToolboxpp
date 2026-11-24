@@ -31,7 +31,7 @@ WindowOptions installWindowOptions(const InstallKind kind)
 bool DownloadAndInstallLauncher(const DllRelease& release, const std::function<void(int)>& progress, std::string& error)
 {
     const fs::path current = RunningLauncherPath();
-    const fs::path staged = current.parent_path() / (".new" + current.extension().string());
+    const fs::path staged = StagedLauncherPath(current);
     return DownloadLauncherRelease(release, staged, progress, error) && InstallLauncherRelease(current, staged, error);
 }
 

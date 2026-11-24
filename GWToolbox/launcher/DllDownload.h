@@ -14,6 +14,9 @@ struct DllRelease {
 };
 
 bool FetchDllRelease(DllRelease& release, std::string& error);
+bool DllReleaseFromListing(const std::string& listing, DllRelease& release, std::string& error);
+std::string Sha256FromDigest(const std::string& digest);
+bool ReleaseFromListing(const std::string& listing, const std::function<bool(const std::string&)>& isAsset, const std::string& missing, DllRelease& release, std::string& error);
 bool DownloadDllFile(const DllRelease& release, const std::filesystem::path& directory, const std::function<void(int)>& progress, std::string& error);
 std::filesystem::path SuggestedInstallDirectory();
 bool PrepareInstallDirectory(const std::filesystem::path& directory, std::string& error);

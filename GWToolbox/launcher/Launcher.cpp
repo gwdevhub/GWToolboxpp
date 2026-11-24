@@ -26,6 +26,21 @@ namespace fs = std::filesystem;
 
 namespace {
 
+constexpr auto kDllCheckCacheAge = std::chrono::seconds(5 * 60);
+
+bool FetchDllReleaseCached(DllRelease& release, std::string& error)
+{
+    if (auto cached = CachedDllRelease(kDllCheckCacheAge)) {
+        release = std::move(*cached);
+        return true;
+    }
+    if (!FetchDllRelease(release, error)) {
+        return false;
+    }
+    StoreDllRelease(release);
+    return true;
+}
+
 std::string characterLabel(const ScanTarget& target)
 {
     std::string label = target.character;
@@ -166,7 +181,7 @@ private:
         updater_ = std::thread([this, alive = alive_] {
             DllRelease release;
             std::string failure;
-            const bool ok = FetchDllRelease(release, failure);
+            const bool ok = FetchDllReleaseCached(release, failure);
             runOnUiThread([this, alive, ok, release] {
                 if (*alive) {
                     finishUpdateCheck(ok, release.version);
@@ -447,4 +462,23 @@ int RunLauncher(std::string startup_error)
     window.show();
     runEventLoop();
     return 0;
+}
+
+int InjectQuietly()
+{
+    const ScanResult scan = ScanGuildWars();
+    if (scan.targets.size() == 1) {
+        const InjectOutcome outcome = injectTarget(scan.targets.front());
+        if (outcome.ok) {
+            return 0;
+        }
+        std::fprintf(stderr, "injectTarget failed: %s\n", outcome.message.c_str());
+        return RunLauncher(outcome.message);
+    }
+    if (scan.targets.empty()) {
+        const std::string message = scan.errors.empty() ? std::string() : scan.errors.front().message;
+        std::fprintf(stderr, "%s\n", message.empty() ? "Guild Wars isn't running." : message.c_str());
+        return RunLauncher(message);
+    }
+    return RunLauncher();
 }
