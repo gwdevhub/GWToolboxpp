@@ -178,8 +178,11 @@ namespace {
         else
             Log::Log("[compositor] scan failed: FrCache_RenderAll not found");
         address = address ? GW::Scanner::FindInRange("\xa1????\x83", "x????x", 1, address, address + 0x10) : 0;
-        if (address && GW::Scanner::IsValidPtr(*(uintptr_t*)address))
-            frame_render_context = reinterpret_cast<FrameRenderContext*>((*(uintptr_t*)address) - offsetof(FrameRenderContext, render_buffer.m_size));
+        if (address && GW::Scanner::IsValidPtr(*(uintptr_t*)address)) {
+            const FrameRenderContext probe{};
+            const auto size_offset = reinterpret_cast<uintptr_t>(&probe.render_buffer.m_size) - reinterpret_cast<uintptr_t>(&probe);
+            frame_render_context = reinterpret_cast<FrameRenderContext*>((*(uintptr_t*)address) - size_offset);
+        }
         else if (FrCacheRenderAll_Func)
             Log::Log("[compositor] scan failed: FrCache render context not found");
 

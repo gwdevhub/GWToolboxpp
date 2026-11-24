@@ -33,7 +33,10 @@
 #pragma warning(disable : 4189) // local variable is initialized but not referenced
 #include <include/nfd.h>
 #include <nfd_common.c>
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wmacro-redefined"
 #include <nfd_win.cpp>
+#pragma clang diagnostic pop
 #pragma warning(pop)
 #include <dxgiformat.h>
 
