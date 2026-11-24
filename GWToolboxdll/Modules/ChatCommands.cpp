@@ -163,10 +163,20 @@ namespace {
         });
     };
 
+    struct SelfAndAgents {
+        const GW::Agent* me;
+        GW::AgentArray* agents;
+    };
+
+    SelfAndAgents ControlledWithAgents()
+    {
+        const auto agents = GW::Agents::GetAgentArray();
+        return {agents ? GW::Agents::GetControlledCharacter() : nullptr, agents};
+    }
+
     void TargetVipers()
     {
-        GW::AgentArray* agents = GW::Agents::GetAgentArray();
-        const GW::Agent* me = agents ? GW::Agents::GetControlledCharacter() : nullptr;
+        const auto [me, agents] = ControlledWithAgents();
         if (me == nullptr) {
             return;
         }
@@ -202,8 +212,7 @@ namespace {
     void TargetEE()
     {
         // target best ebon escape target
-        GW::AgentArray* agents = GW::Agents::GetAgentArray();
-        const GW::Agent* me = agents ? GW::Agents::GetControlledCharacter() : nullptr;
+        const auto [me, agents] = ControlledWithAgents();
         if (me == nullptr) {
             return;
         }
@@ -810,8 +819,7 @@ namespace {
             }
         }
 
-        const auto agents = GW::Agents::GetAgentArray();
-        const auto me = agents ? GW::Agents::GetControlledCharacter() : nullptr;
+        const auto [me, agents] = ControlledWithAgents();
         if (me == nullptr) {
             return;
         }
