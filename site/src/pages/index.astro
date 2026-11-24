@@ -95,13 +95,16 @@ const featureCards = [
       </div>
       <div class="mt-6 flex flex-wrap items-center gap-3">
         <a
-          href={release.url}
+          href={release.downloads.windows}
+          data-download-primary
+          data-windows={release.downloads.windows}
+          data-linux={release.downloads.linux}
           class="inline-flex items-center gap-2 rounded bg-(--color-accent) px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-(--color-accent-soft)"
         >
           <svg viewBox="0 0 16 16" class="h-4 w-4 fill-current" aria-hidden="true">
             <path d="M8 1.5a.75.75 0 0 1 .75.75v6.69l2.22-2.22a.75.75 0 1 1 1.06 1.06l-3.5 3.5a.75.75 0 0 1-1.06 0l-3.5-3.5a.75.75 0 1 1 1.06-1.06l2.22 2.22V2.25A.75.75 0 0 1 8 1.5zM3.25 13.5a.75.75 0 0 0 0 1.5h9.5a.75.75 0 0 0 0-1.5h-9.5z" />
           </svg>
-          Download {release.version}
+          <span data-download-label data-version={release.version}>Download {release.version}</span>
         </a>
         <a
           href="/docs/faq/"
@@ -119,7 +122,7 @@ const featureCards = [
         </a>
       </div>
       <p class="mt-4 text-xs text-(--color-fg-meta)">
-        Free, open source, MIT licensed. Windows only.
+        Free, open source, MIT licensed. <span data-platform-note>Windows only.</span>
         <a href="/docs/troubleshooting/#your-browser-blocked-the-download" class="text-(--color-accent) hover:underline">Trouble downloading?</a>
       </p>
 

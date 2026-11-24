@@ -3,7 +3,7 @@ import siteConfig from '../../site.config.json';
 
 interface Props {
   /** Latest release info; if omitted, we show a "Download" label without version. */
-  release?: { version: string; url: string };
+  release?: { version: string; downloads: { windows: string; linux: string } };
   /** Path to the current page so we can highlight the active nav link. */
   pathname?: string;
 }
@@ -147,7 +147,10 @@ const isActive = (href: string) =>
       {
         release ? (
           <a
-            href={release.url}
+            href={release.downloads.windows}
+            data-download-primary
+            data-windows={release.downloads.windows}
+            data-linux={release.downloads.linux}
             class="hidden h-8 lg:inline-flex items-center gap-1.5 rounded bg-(--color-accent) px-3 py-1.5 text-sm font-semibold text-black transition-colors hover:bg-(--color-accent-soft)"
           >
             <svg viewBox="0 0 16 16" class="h-3.5 w-3.5 fill-current" aria-hidden="true">

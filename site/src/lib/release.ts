@@ -1,25 +1,39 @@
 /**
  * Fetches the latest GWToolbox++ release from GitHub at build time so the
- * download button on the landing page always points at the freshest asset.
+ * download links always point at the freshest assets. The page picks the
+ * Windows or Linux link for each visitor in the browser (see download-links.ts).
  *
  * Falls back to the pinned URL in site.config.json if the API call fails
  * (rate limit, network) so the build never breaks.
  */
 import siteConfig from '../../site.config.json' with { type: 'json' };
 
+export type Downloads = {
+  windows: string;
+  linux: string;
+};
+
 export type LatestRelease = {
   version: string;
-  url: string;
+  downloads: Downloads;
   publishedAt: string | null;
   source: 'github' | 'fallback';
 };
 
+const RELEASES_PAGE = 'https://github.com/gwdevhub/GWToolboxpp/releases/latest';
+
 const FALLBACK: LatestRelease = {
   version: siteConfig.toolboxVersion,
-  url: siteConfig.fallbackDownloadUrl,
+  downloads: {
+    windows: siteConfig.fallbackDownloadUrl,
+    linux: RELEASES_PAGE,
+  },
   publishedAt: null,
   source: 'fallback',
 };
+
+const WINDOWS_ASSET = 'GWToolbox.exe';
+const LINUX_ASSET = 'GWToolbox.AppImage';
 
 export async function getLatestRelease(): Promise<LatestRelease> {
   try {
@@ -42,21 +56,25 @@ export async function getLatestRelease(): Promise<LatestRelease> {
     const latest = (await res.json()) as {
       tag_name?: string;
       name?: string;
+      html_url?: string;
       published_at?: string;
       assets?: { name: string; browser_download_url: string }[];
     };
+    const assetUrl = (name: string) =>
+      latest.assets?.find((a) => a.name === name)?.browser_download_url;
+    // A missing asset sends that platform to the release page instead. DLL-only
+    // `*_Release` tags don't carry the installer, so Windows keeps the stable URL.
+    const releasePage = latest.html_url ?? RELEASES_PAGE;
     // Strip the conventional "_Release" / "_Exe" suffix from the tag for display.
     const version = (latest.name ?? latest.tag_name ?? FALLBACK.version)
       .replace(/_Release$/i, '')
       .replace(/_Exe$/i, '');
-    // DLL-only `*_Release` tags don't carry the installer; keep the stable
-    // fallback download URL when the latest release ships no .exe.
-    const exe = latest.assets?.find((a) =>
-      a.name.toLowerCase().endsWith('.exe'),
-    );
     return {
       version,
-      url: exe?.browser_download_url ?? FALLBACK.url,
+      downloads: {
+        windows: assetUrl(WINDOWS_ASSET) ?? FALLBACK.downloads.windows,
+        linux: assetUrl(LINUX_ASSET) ?? releasePage,
+      },
       publishedAt: latest.published_at ?? null,
       source: 'github',
     };

@@ -48,5 +48,10 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site).href;
       <slot />
     </main>
     <Footer />
+    <script>
+      import { applyDownloadLinks } from '../lib/download-links';
+      applyDownloadLinks();
+      document.addEventListener('astro:page-load', applyDownloadLinks);
+    </script>
   </body>
 </html>
