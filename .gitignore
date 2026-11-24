@@ -90,3 +90,7 @@ GWToolbox.aps
 
 # clangd local config
 .clangd
+
+# Local AI agent tooling (not part of the repo)
+/.opencode/
+/.agents/
