@@ -8,6 +8,8 @@
 #include <string>
 #include <vector>
 
+#include "EmbeddedIcon.h"
+
 namespace {
 
 struct GtkFileDialogs {
@@ -23,6 +25,12 @@ struct GtkFileDialogs {
     void (*destroy)(GtkWidget*) = nullptr;
     gchar* (*fileName)(GtkFileChooser*) = nullptr;
     void (*freeString)(gpointer) = nullptr;
+    void (*setIcon)(GtkWindow*, GdkPixbuf*) = nullptr;
+    GdkPixbufLoader* (*loaderNew)() = nullptr;
+    gboolean (*loaderWrite)(GdkPixbufLoader*, const guchar*, gsize, GError**) = nullptr;
+    gboolean (*loaderClose)(GdkPixbufLoader*, GError**) = nullptr;
+    GdkPixbuf* (*loaderPixbuf)(GdkPixbufLoader*) = nullptr;
+    void (*unref)(gpointer) = nullptr;
 };
 
 template <typename F>
@@ -51,6 +59,12 @@ const GtkFileDialogs* gtkFileDialogs()
         loaded.destroy = symbolOf<decltype(loaded.destroy)>(library, "gtk_widget_destroy");
         loaded.fileName = symbolOf<decltype(loaded.fileName)>(library, "gtk_file_chooser_get_filename");
         loaded.freeString = symbolOf<decltype(loaded.freeString)>(library, "g_free");
+        loaded.setIcon = symbolOf<decltype(loaded.setIcon)>(library, "gtk_window_set_icon");
+        loaded.loaderNew = symbolOf<decltype(loaded.loaderNew)>(library, "gdk_pixbuf_loader_new");
+        loaded.loaderWrite = symbolOf<decltype(loaded.loaderWrite)>(library, "gdk_pixbuf_loader_write");
+        loaded.loaderClose = symbolOf<decltype(loaded.loaderClose)>(library, "gdk_pixbuf_loader_close");
+        loaded.loaderPixbuf = symbolOf<decltype(loaded.loaderPixbuf)>(library, "gdk_pixbuf_loader_get_pixbuf");
+        loaded.unref = symbolOf<decltype(loaded.unref)>(library, "g_object_unref");
         if (!loaded.initCheck || !loaded.newFileChooser || !loaded.run || !loaded.destroy || !loaded.fileName || !loaded.freeString ||
             !loaded.initCheck(nullptr, nullptr)) {
             loaded.library = nullptr;
@@ -58,6 +72,21 @@ const GtkFileDialogs* gtkFileDialogs()
         return loaded;
     }();
     return dialogs.library ? &dialogs : nullptr;
+}
+
+void applyAppIcon(const GtkFileDialogs& gtk, GtkWidget* dialog)
+{
+    if (!gtk.setIcon || !gtk.loaderNew || !gtk.loaderWrite || !gtk.loaderClose || !gtk.loaderPixbuf || !gtk.unref) {
+        return;
+    }
+    const std::string png = embeddedAppIcon();
+    GdkPixbufLoader* loader = gtk.loaderNew();
+    if (gtk.loaderWrite(loader, reinterpret_cast<const guchar*>(png.data()), png.size(), nullptr) && gtk.loaderClose(loader, nullptr)) {
+        if (GdkPixbuf* icon = gtk.loaderPixbuf(loader)) {
+            gtk.setIcon(reinterpret_cast<GtkWindow*>(dialog), icon);
+        }
+    }
+    gtk.unref(loader);
 }
 
 std::optional<std::string> runChooser(const std::string& title, GtkFileChooserAction action, const char* accept, const std::string& start,
@@ -68,6 +97,7 @@ std::optional<std::string> runChooser(const std::string& title, GtkFileChooserAc
         return std::nullopt;
     }
     GtkWidget* dialog = gtk->newFileChooser(title.c_str(), nullptr, action, "_Cancel", GTK_RESPONSE_CANCEL, accept, GTK_RESPONSE_ACCEPT, nullptr);
+    applyAppIcon(*gtk, dialog);
     if (!start.empty() && gtk->setCurrentFolder) {
         gtk->setCurrentFolder(reinterpret_cast<GtkFileChooser*>(dialog), start.c_str());
     }
