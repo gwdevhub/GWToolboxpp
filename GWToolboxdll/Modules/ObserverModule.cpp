@@ -786,17 +786,6 @@ namespace {
         return default_hp;
     }
 
-    ObservableParty* PartyOf(const ObservableAgent* agent)
-    {
-        return ObserverModule::Instance().GetObservablePartyById(agent->party_id);
-    }
-
-    GW::Constants::SkillID CurrentSkillOf(const ObservableAgent* caster)
-    {
-        const auto* action = caster->current_target_action;
-        return action && action->is_skill ? action->skill_id : NO_SKILL;
-    }
-
     std::pair<uint32_t, uint32_t> CasterAndTarget(const uint32_t caster_id, const uint32_t target_id, const bool no_target)
     {
         return no_target ? std::pair{caster_id, target_id} : std::pair{target_id, caster_id};
@@ -820,9 +809,9 @@ namespace {
         }
 
         if (damage_amount > 0 && caster && target) {
-            ObservableParty* caster_party = PartyOf(caster);
-            ObservableParty* target_party = PartyOf(target);
-            const auto skill_id = CurrentSkillOf(caster);
+            ObservableParty* caster_party = caster->GetParty();
+            ObservableParty* target_party = target->GetParty();
+            const auto skill_id = caster->GetCurrentSkill();
             
             // Track last damage skill for death tracking
             if (skill_id != NO_SKILL) {
@@ -920,9 +909,9 @@ namespace {
         }
 
         if (healing_amount > 0 && caster && target) {
-            ObservableParty* caster_party = PartyOf(caster);
-            ObservableParty* target_party = PartyOf(target);
-            const auto skill_id = CurrentSkillOf(caster);
+            ObservableParty* caster_party = caster->GetParty();
+            ObservableParty* target_party = target->GetParty();
+            const auto skill_id = caster->GetCurrentSkill();
 
             caster->stats.total_healing_dealt += healing_amount;
             if (target_party) {
@@ -1565,6 +1554,16 @@ ObserverModule::ObservableGuild* ObserverModule::GetObservableGuildById(const ui
 
 
 // Lazy load an ObservableAgent using an agent_id
+ObserverModule::ObservableParty* ObserverModule::ObservableAgent::GetParty() const
+{
+    return ObserverModule::Instance().GetObservablePartyById(party_id);
+}
+
+GW::Constants::SkillID ObserverModule::ObservableAgent::GetCurrentSkill() const
+{
+    return current_target_action && current_target_action->is_skill ? current_target_action->skill_id : NO_SKILL;
+}
+
 ObserverModule::ObservableAgent* ObserverModule::GetObservableAgentById(const uint32_t agent_id)
 {
     if (agent_id == NO_AGENT) {
