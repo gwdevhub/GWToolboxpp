@@ -1,0 +1,11 @@
+#!/bin/sh
+# Checks the staged changes against the mechanical rules in AGENTS.md (scripts/check_agent_rules.py).
+# Enable once per clone with: git config core.hooksPath .githooks
+root="$(git rev-parse --show-toplevel)" || exit 1
+for py in python python3; do
+    if command -v "$py" >/dev/null 2>&1; then
+        exec "$py" -I "$root/scripts/check_agent_rules.py"
+    fi
+done
+echo "pre-commit: Python not found, so the AGENTS.md check was skipped." >&2
+exit 0
