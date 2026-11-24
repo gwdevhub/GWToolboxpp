@@ -17,6 +17,9 @@ namespace GameWorldCompositor {
     [[nodiscard]] bool IsActive();
     [[nodiscard]] bool HasFailed();
 
+    // Settings-panel line describing the state above.
+    void DrawStatus();
+
     // Reset the once-per-frame draw guard. Must be called exactly once per rendered frame.
     void BeginFrame();
 

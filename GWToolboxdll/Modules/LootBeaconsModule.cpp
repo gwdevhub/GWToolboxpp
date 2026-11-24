@@ -648,12 +648,7 @@ void LootBeaconsModule::SaveSettings(SettingsDoc& doc)
 void LootBeaconsModule::DrawSettingsInternal()
 {
     const auto red = ImGui::ColorConvertU32ToFloat4(Colors::Red());
-    if (GameWorldCompositor::HasFailed())
-        ImGui::TextColored(red, "In-world compositor FAILED to install.");
-    else if (GameWorldCompositor::IsActive())
-        ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(Colors::Green()), "In-world compositor active.");
-    else
-        ImGui::TextDisabled("In-world compositor: not installed yet.");
+    GameWorldCompositor::DrawStatus();
 
     ImGui::TextUnformatted("Beacon by gold value");
     ImGui::ShowHelp(

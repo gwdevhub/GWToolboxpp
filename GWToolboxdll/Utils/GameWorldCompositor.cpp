@@ -314,6 +314,19 @@ bool GameWorldCompositor::HasFailed()
     return compositor_failed;
 }
 
+void GameWorldCompositor::DrawStatus()
+{
+    if (HasFailed()) {
+        ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(Colors::Red()), "In-world compositor FAILED to install.");
+    }
+    else if (IsActive()) {
+        ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(Colors::Green()), "In-world compositor active.");
+    }
+    else {
+        ImGui::TextDisabled("In-world compositor: not installed yet.");
+    }
+}
+
 void GameWorldCompositor::BeginFrame()
 {
     // Install the hook lazily once something wants to draw; retried each frame until it succeeds or fails.
