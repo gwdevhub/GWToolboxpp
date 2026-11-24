@@ -1,0 +1,11 @@
+#!/bin/sh
+# Blocks agent-written commit messages that don't say they were checked against AGENTS.md (scripts/check_commit_message.py).
+# Enable once per clone with: git config core.hooksPath .githooks
+root="$(git rev-parse --show-toplevel)" || exit 1
+for py in python python3; do
+    if command -v "$py" >/dev/null 2>&1; then
+        exec "$py" -I "$root/scripts/check_commit_message.py" "$1"
+    fi
+done
+echo "commit-msg: Python not found, so the AGENTS.md commit message check was skipped." >&2
+exit 0

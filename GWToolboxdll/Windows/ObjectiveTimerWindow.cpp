@@ -32,7 +32,6 @@
 #include <Utils/WebSocketServer.h>
 
 constexpr uint32_t TIME_UNKNOWN = std::numeric_limits<uint32_t>::max();
-unsigned int ObjectiveTimerWindow::ObjectiveSet::cur_ui_id = 0;
 
 namespace {
     ObjectiveTimerWindow::Settings settings;
@@ -53,9 +52,6 @@ namespace {
         Gloom,
         City
     };
-
-    // Hex values matching the first char of Kanaxai's dialogs in each room.
-    //const enum kanaxai_room_dialogs { Room5 = 0x5336, Room6, Room8, Room10, Room12, Room13, Room14, Room15 };
 
 
     // Room 1-4 no dialog
@@ -202,19 +198,720 @@ namespace {
     }
 } // namespace
 
-void ObjectiveTimerWindow::CheckIsMapLoaded()
-{
-    if (!map_load_pending || !InstanceLoadInfo || !InstanceLoadFile || !InstanceTimer) {
-        return;
+namespace ObjectiveTimerJson {
+    struct ObjectiveRecord {
+        std::string name;
+        uint32_t status = 0;
+        uint32_t start = 0;
+        uint32_t done = 0;
+        std::optional<uint32_t> indent;
+        std::optional<uint32_t> duration;
+    };
+
+    struct ObjectiveSetRecord {
+        std::string name;
+        uint32_t instance_start = 0;
+        uint32_t utc_start = 0;
+        std::vector<ObjectiveRecord> objectives;
+        std::optional<uint32_t> duration;
+    };
+}
+
+namespace {
+
+    enum class EventType {
+        ServerMessage,
+        // id1=msg length, id2=pointer to msg
+
+        // dialog from owner. Can be in chat or middle of screen.
+        DisplayDialogue,
+        // id1=msg length, id2=pointer to msg
+
+        InstanceLoadInfo,
+        // id1 is mapid
+        InstanceEnd,
+        // id1 is mapid we're leaving. Use as "end of instance".
+        DoorOpen,
+        // id=object_id
+        DoorClose,
+        // id=object_id
+        ObjectiveStarted,
+        // id=objective_id
+        ObjectiveDone,
+        // id=objective_id
+
+        AgentUpdateAllegiance,
+        // id1 = agent model id, id2 = allegiance_bits
+        DoACompleteZone,
+        // id1 = second wchar of message (doa "id")
+        CountdownStart,
+        // id1 = mapid
+        DungeonReward
+    };
+
+    class ObjectiveSet;
+
+    class Objective {
+    public:
+        char name[126] = "";
+        int indent = 0;
+        int starting_completes_n_previous_objectives = 0; // use -1 for all
+
+        ObjectiveSet* parent{};
+
+        struct Event {
+            EventType type;
+            uint32_t id1 = 0;
+            uint32_t id2 = 0;
+        };
+
+        std::vector<Event> start_events{};
+        std::vector<Event> end_events{};
+        std::vector<Objective*> children{};
+
+        DWORD start = 0;
+        DWORD done = 0;
+        DWORD start_time_point = 0;
+        DWORD done_time_point = 0;
+
+        enum class Status {
+            NotStarted,
+            Started,
+            Completed,
+            Failed
+        } status = Status::NotStarted;
+
+        const char* GetStartTimeStr();
+        const char* GetEndTimeStr();
+        const char* GetDurationStr();
+        DWORD GetDuration();
+
+        Objective(const char* name);
+
+        Objective* AddStartEvent(EventType et, uint32_t id1 = 0, uint32_t id2 = 0);
+        Objective* AddStartEvent(EventType et, uint32_t count, const wchar_t* msg);
+        Objective* AddEndEvent(EventType et, uint32_t id1 = 0, uint32_t id2 = 0);
+        Objective* AddEndEvent(EventType et, uint32_t count, const wchar_t* msg);
+        Objective* SetStarted();
+        Objective* SetDone();
+        Objective* AddChild(Objective* child);
+        using Serialized = ObjectiveTimerJson::ObjectiveRecord;
+        static Objective* FromJson(const Serialized& json);
+        Serialized ToJson();
+
+        [[nodiscard]] bool IsStarted() const;
+        [[nodiscard]] bool IsDone() const;
+        void Draw();
+        void InvalidateCachedStrings();
+        static void Update();
+
+    private:
+        char cached_done[16] = "";
+        char cached_start[16] = "";
+        char cached_duration[16] = "";
+        DWORD duration = 0;
+    };
+
+    class ObjectiveSet {
+    public:
+        ObjectiveSet();
+        ~ObjectiveSet();
+
+        DWORD system_time;
+        // Time point that this objective set was created in ms (i.e. run started)
+        DWORD run_start_time_point = 0;
+        DWORD duration = static_cast<DWORD>(-1);
+        DWORD GetDuration();
+        std::wstring character_name;
+        const char* GetDurationStr();
+        const char* GetStartTimeStr();
+
+        bool active = true;
+        bool failed = false;
+        bool from_disk = false;
+        bool need_to_collapse = false;
+        std::string name;
+
+        std::vector<Objective*> objectives{};
+
+        Objective* AddObjective(Objective* obj, const int starting_completes_num_previous = 0)
+        {
+            obj->starting_completes_n_previous_objectives = starting_completes_num_previous;
+            obj->parent = this;
+            objectives.push_back(obj);
+            return objectives.back();
+        }
+
+        Objective* AddObjectiveAfter(Objective* obj)
+        {
+            return AddObjective(obj, 1);
+        }
+
+        Objective* AddObjectiveAfterAll(Objective* obj)
+        {
+            return AddObjective(obj, -1);
+        }
+
+        void AddQuestObjective(const char* obj_name, const uint32_t id)
+        {
+            AddObjective(new Objective(obj_name))
+                ->AddStartEvent(EventType::ObjectiveStarted, id)
+                ->AddEndEvent(EventType::ObjectiveDone, id);
+        }
+
+        void Event(EventType type, uint32_t id1, uint32_t id2);
+        void CheckSetDone();
+        bool Draw(); // returns false when should be deleted
+        // Hidden by the "show past runs" filter, so it occupies no row at all.
+        bool IsFilteredOut();
+        // Renders as a single collapsed header row, so its height is known without drawing it.
+        [[nodiscard]] bool IsCollapsedRow() const { return !drawn_expanded; }
+        void StopObjectives();
+        using Serialized = ObjectiveTimerJson::ObjectiveSetRecord;
+        static ObjectiveSet* FromJson(const Serialized& json);
+        Serialized ToJson();
+        void Update() const;
+        void GetStartTime(tm* timeinfo) const;
+
+        const unsigned int ui_id = 0; // an internal id to ensure interface consistency
+
+        void InvalidateCachedStrings();
+
+    private:
+        static unsigned int cur_ui_id;
+        char cached_start[16] = {0};
+        char cached_time[16] = {0};
+        char cached_header[256] = {0};
+        // Day this run started, resolved once; compared against today to hide past runs.
+        int start_yday = -1;
+        int start_year = 0;
+        // Last known header state. Collapsed sets have a fixed row height, so once we've seen one
+        // collapsed we can reserve its row and skip the widget entirely while it's scrolled away.
+        bool drawn_expanded = true;
+    };
+
+    unsigned int ObjectiveSet::cur_ui_id = 0;
+    std::map<DWORD, ObjectiveSet*> objective_sets;
+    std::vector<ObjectiveSet*> display_order;
+    bool display_order_dirty = true;
+    bool clear_cached_times = false;
+    bool show_debug_events = false;
+    ObjectiveSet* current_objective_set = nullptr;
+
+    ObjectiveSet* GetCurrentObjectiveSet()
+    {
+        if (objective_sets.empty()) {
+            return nullptr;
+        }
+        if (!current_objective_set || !current_objective_set->active) {
+            return nullptr;
+        }
+        return current_objective_set;
     }
-    map_load_pending = false;
-    // use TimerWidgets start point, default first frame of 0% load, to comply with GWSCR timing
-    if (TimerWidget::Instance().GetStartPoint() != TIME_UNKNOWN && InstanceLoadInfo && InstanceLoadInfo->is_explorable) {
-        AddObjectiveSet(static_cast<GW::Constants::MapID>(InstanceLoadInfo->map_id));
-        Event(EventType::InstanceLoadInfo, InstanceLoadInfo->map_id);
+
+    void Event(const EventType type, const uint32_t id1 = 0, const uint32_t id2 = 0)
+    {
+        if (ObjectiveSet* os = GetCurrentObjectiveSet()) {
+            os->Event(type, id1, id2);
+
+            if (show_debug_events) {
+                switch (type) {
+                    case EventType::ServerMessage:
+                    case EventType::DisplayDialogue: {
+                        const wchar_t* msg = (wchar_t*)id2;
+                        Log::Info("Event: %d, %d, %x, %x, %x, %x, %x, %x", type, id1,
+                                  msg[0], msg[1], msg[2], msg[3], msg[4], msg[5]);
+                    }
+                    break;
+                    default:
+                        Log::Info("Event: %d, %d, %d", type, id1, id2);
+                }
+            }
+        }
     }
-    if (InstanceLoadFile && InstanceLoadFile->map_fileID == 219215) {
-        AddDoAObjectiveSet(InstanceLoadFile->spawn_point);
+
+    void Event(const EventType type, const uint32_t count, const wchar_t* msg)
+    {
+        Event(type, count, (uint32_t)msg);
+    }
+
+    void StopObjectives()
+    {
+        if (current_objective_set) {
+            current_objective_set->StopObjectives();
+            WebsocketSendMessage("reset");
+        }
+        current_objective_set = nullptr;
+    }
+
+    void RegisterObjectiveSet(ObjectiveSet* os)
+    {
+        for (const auto& cos : objective_sets) {
+            cos.second->StopObjectives();
+            cos.second->need_to_collapse = true;
+        }
+        objective_sets.emplace(os->system_time, os);
+        display_order_dirty = true;
+        if (os->active) {
+            current_objective_set = os;
+        }
+        runs_dirty = true;
+    }
+
+    void AddDungeonObjectiveSet(const std::vector<GW::Constants::MapID>& levels, const uint32_t boss_model_id = 0)
+    {
+        const auto os = new ObjectiveSet;
+        ASSERT(!levels.empty());
+        os->name = Resources::GetMapName(levels[0])->string();
+        for (size_t i = 0; i < levels.size(); i++) {
+            char name[256];
+            snprintf(name, sizeof(name), "Level %zu", i + 1);
+            os->AddObjectiveAfterAll(new Objective(name))->AddStartEvent(EventType::InstanceLoadInfo, static_cast<uint32_t>(levels[i]));
+        }
+        os->objectives.front()->SetStarted();                         // start first level
+        os->objectives.back()->AddEndEvent(EventType::DungeonReward); // last level finished with dungeon reward
+        if (boss_model_id) {
+            os->objectives.back()->AddEndEvent(EventType::AgentUpdateAllegiance, boss_model_id, 0x6E6F6E63);
+        }
+        RegisterObjectiveSet(os);
+    }
+
+    void AddUrgozObjectiveSet()
+    {
+        const auto os = new ObjectiveSet;
+        os->name = Resources::GetMapName(GW::Constants::MapID::Urgozs_Warren)->string();
+        os->AddObjective(new Objective("Zone 1 | Weakness"))->SetStarted();
+        os->AddObjectiveAfterAll(new Objective("Zone 2 | Life Drain"))->AddStartEvent(EventType::DoorOpen, 45420);
+        os->AddObjectiveAfterAll(new Objective("Zone 3 | Levers"))->AddStartEvent(EventType::DoorOpen, 11692);
+        os->AddObjectiveAfterAll(new Objective("Zone 4 | Bridge Wolves"))->AddStartEvent(EventType::DoorOpen, 54552);
+        os->AddObjectiveAfterAll(new Objective("Zone 5 | More Wolves"))->AddStartEvent(EventType::DoorOpen, 1760);
+        os->AddObjectiveAfterAll(new Objective("Zone 6 | Energy Drain"))->AddStartEvent(EventType::DoorOpen, 40330);
+        os->AddObjectiveAfterAll(new Objective("Zone 7 | Exhaustion"))->AddStartEvent(EventType::DoorOpen, 60114);
+        os->AddObjectiveAfterAll(new Objective("Zone 8 | Pillars"))->AddStartEvent(EventType::DoorOpen, 37191);
+        os->AddObjectiveAfterAll(new Objective("Zone 9 | Blood Drinkers"))->AddStartEvent(EventType::DoorOpen, 35500);
+        os->AddObjectiveAfterAll(new Objective("Zone 10 | Bridge"))->AddStartEvent(EventType::DoorOpen, 34278);
+        os->AddObjectiveAfterAll(new Objective("Zone 11 | Urgoz"))
+          ->AddStartEvent(EventType::DoorOpen, 15529)
+          ->AddStartEvent(EventType::DoorOpen, 45631)
+          ->AddStartEvent(EventType::DoorOpen, 53071)
+          ->AddEndEvent(EventType::ServerMessage, 6, L"\x6C9C\x0\x0\x0\x0\x2810")
+          ->AddEndEvent(EventType::ServerMessage, 6, L"\x6C9C\x0\x0\x0\x0\x1488");
+
+        RegisterObjectiveSet(os);
+    }
+
+    void AddDeepObjectiveSet()
+    {
+        const auto os = new ObjectiveSet;
+        os->name = Resources::GetMapName(GW::Constants::MapID::The_Deep)->string();
+        os->AddObjective(new Objective("Room 1 | Soothing"))
+          ->SetStarted()
+          ->AddEndEvent(EventType::DoorOpen, Deep_room_1_first)
+          ->AddEndEvent(EventType::DoorOpen, Deep_room_1_second);
+        os->AddObjective(new Objective("Room 2 | Death"))
+          ->SetStarted()
+          ->AddEndEvent(EventType::DoorOpen, Deep_room_2_first)
+          ->AddEndEvent(EventType::DoorOpen, Deep_room_2_second);
+        os->AddObjective(new Objective("Room 3 | Surrender"))
+          ->SetStarted()
+          ->AddEndEvent(EventType::DoorOpen, Deep_room_3_first)
+          ->AddEndEvent(EventType::DoorOpen, Deep_room_3_second);
+        os->AddObjective(new Objective("Room 4 | Exposure"))
+          ->SetStarted()
+          ->AddEndEvent(EventType::DoorOpen, Deep_room_4_first)
+          ->AddEndEvent(EventType::DoorOpen, Deep_room_4_second);
+        os->AddObjective(new Objective("Room 5 | Pain"))
+          ->AddStartEvent(EventType::DoorOpen, Deep_room_1_first)
+          ->AddStartEvent(EventType::DoorOpen, Deep_room_1_second)
+          ->AddStartEvent(EventType::DoorOpen, Deep_room_2_first)
+          ->AddStartEvent(EventType::DoorOpen, Deep_room_2_second)
+          ->AddStartEvent(EventType::DoorOpen, Deep_room_3_first)
+          ->AddStartEvent(EventType::DoorOpen, Deep_room_3_second)
+          ->AddStartEvent(EventType::DoorOpen, Deep_room_4_first)
+          ->AddStartEvent(EventType::DoorOpen, Deep_room_4_second);
+
+        os->AddObjectiveAfterAll(new Objective("Room 6 | Lethargy"))->AddStartEvent(EventType::DoorOpen, Deep_room_5);
+        os->AddObjectiveAfterAll(new Objective("Room 7 | Depletion"))->AddStartEvent(EventType::DoorOpen, Deep_room_6);
+
+        // 8 and 9 together because theres no boundary between
+        os->AddObjectiveAfterAll(new Objective("Room 8-9 | Failure/Shadows"))
+          ->AddStartEvent(EventType::DoorOpen, Deep_room_7);
+
+        os->AddObjectiveAfterAll(new Objective("Room 10 | Scorpion"))
+          ->AddStartEvent(EventType::DisplayDialogue, 4, kanaxai_dialog_r10);
+        os->AddObjectiveAfterAll(new Objective("Room 11 | Fear"))->AddStartEvent(EventType::DoorOpen, Deep_room_11);
+        os->AddObjectiveAfterAll(new Objective("Room 12 | Depletion"))
+          ->AddStartEvent(EventType::DisplayDialogue, 4, kanaxai_dialog_r12);
+        // 13 and 14 together because theres no boundary between
+        os->AddObjectiveAfterAll(new Objective("Room 13-14 | Decay/Torment"))
+          ->AddStartEvent(EventType::DisplayDialogue, 4, kanaxai_dialog_r13);
+        os->AddObjectiveAfterAll(new Objective("Room 15 | Kanaxai"))
+          ->AddStartEvent(EventType::DisplayDialogue, 4, kanaxai_dialog_r15)
+          ->AddEndEvent(EventType::ServerMessage, 6, L"\x6D4D\x0\x0\x0\x0\x2810")
+          ->AddEndEvent(EventType::ServerMessage, 6, L"\x6D4D\x0\x0\x0\x0\x1488");
+        RegisterObjectiveSet(os);
+    }
+
+    void AddFoWObjectiveSet()
+    {
+        const auto os = new ObjectiveSet;
+        os->name = Resources::GetMapName(GW::Constants::MapID::The_Fissure_of_Woe)->string();
+
+        os->AddQuestObjective("ToC", 309);
+        os->AddQuestObjective("Wailing Lord", 310);
+        os->AddQuestObjective("Griffons", 311);
+        os->AddQuestObjective("Defend", 312);
+        os->AddQuestObjective("Forge", 313);
+        os->AddQuestObjective("Menzies", 314);
+        os->AddQuestObjective("Restore", 315);
+        os->AddQuestObjective("Khobay", 316);
+        os->AddQuestObjective("ToS", 317);
+        os->AddQuestObjective("Burning Forest", 318);
+        os->AddQuestObjective("The Hunt", 319);
+        RegisterObjectiveSet(os);
+    }
+
+    void AddUWObjectiveSet()
+    {
+        const auto os = new ObjectiveSet;
+        os->name = Resources::GetMapName(GW::Constants::MapID::The_Underworld)->string();
+        os->AddQuestObjective("Chamber", 146);
+        os->AddQuestObjective("Restore", 147);
+        os->AddQuestObjective("Escort", 148);
+        os->AddQuestObjective("UWG", 149);
+        os->AddQuestObjective("Vale", 150);
+        os->AddQuestObjective("Waste", 151);
+        os->AddQuestObjective("Pits", 152);
+        os->AddQuestObjective("Planes", 153);
+        os->AddQuestObjective("Mnts", 154);
+        os->AddQuestObjective("Pools", 155);
+        os->AddObjective(new Objective("Dhuum"))
+          ->AddStartEvent(EventType::AgentUpdateAllegiance, GW::Constants::ModelID::UW::Dhuum, 0x6D6F6E31)
+          ->AddEndEvent(EventType::ObjectiveDone, 157);
+        RegisterObjectiveSet(os);
+    }
+
+    void AddToPKObjectiveSet()
+    {
+        // Pre-fetch map names for topk
+        Resources::GetMapName(GW::Constants::MapID::Scarred_Earth);
+        Resources::GetMapName(GW::Constants::MapID::The_Underworld_PvP);
+        Resources::GetMapName(GW::Constants::MapID::The_Courtyard);
+        Resources::GetMapName(GW::Constants::MapID::Tomb_of_the_Primeval_Kings);
+        Resources::GetMapName(GW::Constants::MapID::The_Hall_of_Heroes);
+
+        // Enqueue for next thread to allow map names to be loaded
+        GW::GameThread::Enqueue(
+            []() {
+                const auto os = new ObjectiveSet;
+                os->name = Resources::GetMapName(GW::Constants::MapID::Tomb_of_the_Primeval_Kings)->string();
+                os->AddObjective(new Objective(Resources::GetMapName(GW::Constants::MapID::The_Underworld_PvP)->string().c_str()))
+                    ->SetStarted()
+                    ->AddStartEvent(EventType::InstanceLoadInfo, std::to_underlying(GW::Constants::MapID::The_Underworld_PvP))
+                    ->AddEndEvent(EventType::CountdownStart, std::to_underlying(GW::Constants::MapID::The_Underworld_PvP));
+                os->AddObjective(new Objective(Resources::GetMapName(GW::Constants::MapID::Scarred_Earth)->string().c_str()))
+                    ->AddStartEvent(EventType::InstanceLoadInfo, std::to_underlying(GW::Constants::MapID::Scarred_Earth))
+                    ->AddEndEvent(EventType::CountdownStart, std::to_underlying(GW::Constants::MapID::Scarred_Earth));
+                os->AddObjective(new Objective(Resources::GetMapName(GW::Constants::MapID::The_Courtyard)->string().c_str()))
+                    ->AddStartEvent(EventType::InstanceLoadInfo, std::to_underlying(GW::Constants::MapID::The_Courtyard))
+                    ->AddEndEvent(EventType::CountdownStart, std::to_underlying(GW::Constants::MapID::The_Courtyard));
+                os->AddObjective(new Objective(Resources::GetMapName(GW::Constants::MapID::The_Hall_of_Heroes)->string().c_str()))
+                    ->AddStartEvent(EventType::InstanceLoadInfo, std::to_underlying(GW::Constants::MapID::The_Hall_of_Heroes))
+                    ->AddEndEvent(EventType::CountdownStart, std::to_underlying(GW::Constants::MapID::The_Hall_of_Heroes));
+                RegisterObjectiveSet(os);
+            },
+            true
+        );
+
+
+
+    }
+
+    void AddObjectiveSet(const GW::Constants::MapID map_id)
+    {
+        // clang-format off
+        using namespace GW::Constants;
+        switch (map_id) {
+            // elite areas:
+            case MapID::Urgozs_Warren:
+                AddUrgozObjectiveSet();
+                break;
+            case MapID::The_Deep:
+                AddDeepObjectiveSet();
+                break;
+            case MapID::The_Fissure_of_Woe:
+                AddFoWObjectiveSet();
+                break;
+            case MapID::The_Underworld:
+                AddUWObjectiveSet();
+                break;
+
+            // dungeons - 1 level:
+            case MapID::Ooze_Pit:
+                AddDungeonObjectiveSet({MapID::Ooze_Pit});
+                break;
+            case MapID::Fronis_Irontoes_Lair_mission:
+                AddDungeonObjectiveSet({MapID::Fronis_Irontoes_Lair_mission});
+                break;
+            case MapID::Secret_Lair_of_the_Snowmen:
+                AddDungeonObjectiveSet({MapID::Secret_Lair_of_the_Snowmen});
+                break;
+
+            // dungeons - 2 levels:
+            case MapID::Sepulchre_of_Dragrimmar_Level_1:
+                AddDungeonObjectiveSet({MapID::Sepulchre_of_Dragrimmar_Level_1, MapID::Sepulchre_of_Dragrimmar_Level_2});
+                break;
+            case MapID::Bogroot_Growths_Level_1:
+                AddDungeonObjectiveSet({MapID::Bogroot_Growths_Level_1, MapID::Bogroot_Growths_Level_2});
+                break;
+            case MapID::Arachnis_Haunt_Level_1:
+                AddDungeonObjectiveSet({MapID::Arachnis_Haunt_Level_1, MapID::Arachnis_Haunt_Level_2});
+                break;
+
+            // dungeons - 3 levels:
+            case MapID::Catacombs_of_Kathandrax_Level_1:
+                AddDungeonObjectiveSet({MapID::Catacombs_of_Kathandrax_Level_1,
+                                        MapID::Catacombs_of_Kathandrax_Level_2,
+                                        MapID::Catacombs_of_Kathandrax_Level_3});
+                break;
+            case MapID::Rragars_Menagerie_Level_1:
+                AddDungeonObjectiveSet({MapID::Rragars_Menagerie_Level_1,
+                                        MapID::Rragars_Menagerie_Level_2,
+                                        MapID::Rragars_Menagerie_Level_3});
+                break;
+            case MapID::Cathedral_of_Flames_Level_1:
+                AddDungeonObjectiveSet({MapID::Cathedral_of_Flames_Level_1,
+                                        MapID::Cathedral_of_Flames_Level_2,
+                                        MapID::Cathedral_of_Flames_Level_3});
+                break;
+            case MapID::Darkrime_Delves_Level_1:
+                AddDungeonObjectiveSet({MapID::Darkrime_Delves_Level_1,
+                                        MapID::Darkrime_Delves_Level_2,
+                                        MapID::Darkrime_Delves_Level_3});
+                break;
+            case MapID::Ravens_Point_Level_1:
+                AddDungeonObjectiveSet({MapID::Ravens_Point_Level_1,
+                                        MapID::Ravens_Point_Level_2,
+                                        MapID::Ravens_Point_Level_3});
+                break;
+            case MapID::Vloxen_Excavations_Level_1:
+                AddDungeonObjectiveSet({MapID::Vloxen_Excavations_Level_1,
+                                        MapID::Vloxen_Excavations_Level_2,
+                                        MapID::Vloxen_Excavations_Level_3});
+                break;
+            case MapID::Bloodstone_Caves_Level_1:
+                AddDungeonObjectiveSet({MapID::Bloodstone_Caves_Level_1,
+                                        MapID::Bloodstone_Caves_Level_2,
+                                        MapID::Bloodstone_Caves_Level_3});
+                break;
+            case MapID::Shards_of_Orr_Level_1:
+                AddDungeonObjectiveSet({MapID::Shards_of_Orr_Level_1,
+                                        MapID::Shards_of_Orr_Level_2,
+                                        MapID::Shards_of_Orr_Level_3});
+                break;
+            case MapID::Oolas_Lab_Level_1:
+                AddDungeonObjectiveSet({MapID::Oolas_Lab_Level_1, MapID::Oolas_Lab_Level_2, MapID::Oolas_Lab_Level_3});
+                break;
+            case MapID::Heart_of_the_Shiverpeaks_Level_1:
+                AddDungeonObjectiveSet({MapID::Heart_of_the_Shiverpeaks_Level_1,
+                                        MapID::Heart_of_the_Shiverpeaks_Level_2,
+                                        MapID::Heart_of_the_Shiverpeaks_Level_3});
+                break;
+            case MapID::Forsaken_Tunnels_Level1:
+                AddDungeonObjectiveSet({MapID::Forsaken_Tunnels_Level1,
+                                        MapID::Forsaken_Tunnels_Level2,
+                                        MapID::Forsaken_Tunnels_Level3});
+                break;
+            case MapID::Forsaken_Tunnels_Presearing_Level1:
+                AddDungeonObjectiveSet({MapID::Forsaken_Tunnels_Presearing_Level1,
+                                        MapID::Forsaken_Tunnels_Presearing_Level2,
+                                        MapID::Forsaken_Tunnels_Presearing_Level3});
+                break;
+
+            // dungeons - 5 levels:
+            case MapID::Frostmaws_Burrows_Level_1:
+                AddDungeonObjectiveSet({MapID::Frostmaws_Burrows_Level_1,
+                                        MapID::Frostmaws_Burrows_Level_2,
+                                        MapID::Frostmaws_Burrows_Level_3,
+                                        MapID::Frostmaws_Burrows_Level_4,
+                                        MapID::Frostmaws_Burrows_Level_5});
+                break;
+
+            // dungeons - irregular:
+            case MapID::Slavers_Exile_Level_5:
+                AddDungeonObjectiveSet({MapID::Slavers_Exile_Level_5});
+                break;
+
+            // Others:
+            case MapID::The_Underworld_PvP:
+                if (const GW::AreaInfo* info = GW::Map::GetCurrentMapInfo()) {
+                    if (info->type == GW::RegionType::ExplorableZone) {
+                        AddToPKObjectiveSet();
+                    }
+                }
+                break;
+            default:
+                break;
+        }
+        // clang-format on
+        WebsocketSendMessage("reset");
+        WebsocketSendMessage("start");
+
+    }
+
+    void AddDoAObjectiveSet(const GW::Vec2f spawn)
+    {
+        constexpr int n_areas = 4;
+
+        const auto starting_area = [&] {
+            constexpr GW::Vec2f mallyx_spawn(-3931, -6214);
+            constexpr GW::Vec2f area_spawns[] = {
+                {-10514, 15231}, // foundry
+                {-18575, -8833}, // city
+                {364, -10445},   // veil
+                {16034, 1244},   // gloom
+            };
+            double best_dist = GetDistance(spawn, mallyx_spawn);
+            int starting_area = -1;
+            for (auto i = 0; i < n_areas; i++) {
+                const float dist = GetDistance(spawn, area_spawns[i]);
+                if (best_dist > dist) {
+                    best_dist = dist;
+                    starting_area = i;
+                }
+            }
+            return starting_area;
+        }();
+
+        if (starting_area == -1) {
+            return; // we're doing mallyx, not doa!
+        }
+
+        const auto os = new ObjectiveSet;
+
+        os->name = Resources::GetMapName(GW::Constants::MapID::Domain_of_Anguish)->string();
+
+        const std::vector<std::function<void()>> add_doa_obj = {
+            [&] {
+                Objective* parent = os->AddObjectiveAfterAll(new Objective("Foundry"))
+                                      ->AddStartEvent(EventType::DoACompleteZone, Gloom)
+                                      ->AddStartEvent(EventType::DoorOpen, DoA_foundry_entrance_r1)
+                                      ->AddEndEvent(EventType::DoACompleteZone, Foundry);
+                if (settings.show_detailed_objectives) {
+                    parent->AddChild(os->AddObjective(new Objective("Room 1"), 0)
+                                       ->AddStartEvent(EventType::DoorClose, DoA_foundry_entrance_r1)
+                                       ->AddEndEvent(EventType::DoorOpen, DoA_foundry_r1_r2));
+                    parent->AddChild(os->AddObjective(new Objective("Room 2"), 1)
+                                       ->AddStartEvent(EventType::DoorClose, DoA_foundry_r1_r2)
+                                       ->AddEndEvent(EventType::DoorOpen, DoA_foundry_r2_r3));
+                    parent->AddChild(os->AddObjective(new Objective("Room 3"), 2)
+                                       ->AddStartEvent(EventType::DoorClose, DoA_foundry_r2_r3)
+                                       ->AddEndEvent(EventType::DoorOpen, DoA_foundry_r3_r4));
+                    parent->AddChild(os->AddObjective(new Objective("Room 4"), 3)
+                                       ->AddStartEvent(EventType::DoorClose, DoA_foundry_r3_r4)
+                                       ->AddEndEvent(EventType::DoorOpen, DoA_foundry_r4_r5));
+
+                    // maybe time snakes take? (check them being added to party)
+
+                    // maybe change BB event to use the dialog instead? "None shall escape. Prepare to die."
+                    // change BB to start at door and finish at fury spawn?
+                    parent->AddChild(os->AddObjective(new Objective("Black Beast"), 4)
+                                       ->AddStartEvent(EventType::DoorOpen, DoA_foundry_r5_bb)
+                                       ->AddEndEvent(EventType::AgentUpdateAllegiance, 5221, 0x6E6F6E63)); // all 3 are the same
+
+                    // 0x8101 0x273D 0x98D8 0xB91A 0x47B8 The Fury: Ah, you have finally arrived. My dark master informed me
+                    // I might have visitors....
+                    parent->AddChild(os->AddObjective(new Objective("Fury"), 5)
+                                       ->AddStartEvent(EventType::DisplayDialogue, 4, L"\x8101\x273D\x98DB\xB91A")
+                                       ->AddEndEvent(EventType::DoACompleteZone, Foundry));
+                }
+            },
+            [&] {
+                Objective* parent = os->AddObjectiveAfterAll(new Objective("City"))
+                                      ->AddStartEvent(EventType::DoACompleteZone, Foundry)
+                                      ->AddEndEvent(EventType::DoACompleteZone, City);
+                if (settings.show_detailed_objectives) {
+                    parent->AddChild(os->AddObjective(new Objective("Outside"), 0)
+                                       ->AddStartEvent(EventType::DoorOpen, DoA_city_entrance)
+                                       ->AddEndEvent(EventType::DoorOpen, DoA_city_wall));
+                    parent->AddChild(os->AddObjective(new Objective("Inside"), 1)
+                                       ->AddStartEvent(EventType::DoorOpen, DoA_city_wall)
+                                       ->AddEndEvent(EventType::DoACompleteZone, City));
+                }
+
+            },
+            [&] {
+                Objective* parent = os->AddObjectiveAfterAll(new Objective("Veil"))
+                                      ->AddStartEvent(EventType::DoACompleteZone, City)
+                                      ->AddEndEvent(EventType::DoACompleteZone, Veil);
+                if (settings.show_detailed_objectives) {
+                    parent->AddChild(os->AddObjective(new Objective("360"), 0)
+                                       ->AddStartEvent(EventType::DoorOpen, DoA_veil_360_left)
+                                       ->AddStartEvent(EventType::DoorOpen, DoA_veil_360_middle)
+                                       ->AddStartEvent(EventType::DoorOpen, DoA_veil_360_right));
+                    parent->AddChild(os->AddObjective(new Objective("Underlords"), 1)
+                                       ->AddStartEvent(EventType::DoorOpen, DoA_veil_ranger)
+                                       ->AddStartEvent(EventType::DoorOpen, DoA_veil_derv));
+                    parent->AddChild(os->AddObjective(new Objective("Lords"), 2)
+                                       ->AddStartEvent(EventType::DoorOpen, DoA_veil_trench_gloom)
+                                       ->AddStartEvent(EventType::DoorOpen, DoA_veil_trench_monk)
+                                       ->AddStartEvent(EventType::DoorOpen, DoA_veil_trench_ele)
+                                       ->AddStartEvent(EventType::DoorOpen, DoA_veil_trench_mes)
+                                       ->AddStartEvent(EventType::DoorOpen, DoA_veil_trench_necro));
+                    parent->AddChild(os->AddObjective(new Objective("Tendrils"), 3)
+                                       ->AddStartEvent(EventType::DisplayDialogue, 4, L"\x8101\x34C1\x9FA1\xED8F\x1BE4")
+                                       ->AddEndEvent(EventType::DoACompleteZone, Veil));
+                }
+            },
+            [&] {
+                Objective* parent = os->AddObjectiveAfterAll(new Objective("Gloom"))
+                                      ->AddStartEvent(EventType::DoACompleteZone, Veil)
+                                      ->AddEndEvent(EventType::DoACompleteZone, Gloom);
+                if (settings.show_detailed_objectives) {
+                    parent->AddChild(os->AddObjective(new Objective("Cave"), 0)
+                                       ->AddStartEvent(EventType::DisplayDialogue, 4, L"\x8101\x5765\x9846\xA72B")
+                                       ->AddEndEvent(EventType::DisplayDialogue, 4, L"\x8101\x5767\xA547\xB2C2"));
+
+                    parent->AddChild(os->AddObjective(new Objective("Darknesses"), 1)
+                                       ->AddStartEvent(EventType::DisplayDialogue, 4, L"\x8101\x273B\xB5DB\x8B13")
+                                       ->AddEndEvent(EventType::DoACompleteZone, Gloom));
+                }
+            }
+        };
+
+        for (auto i = 0; i < n_areas; i++) {
+            const auto idx = (starting_area + i) % n_areas;
+            add_doa_obj[idx]();
+        }
+
+        os->objectives.front()->SetStarted();
+        RegisterObjectiveSet(os);
+    }
+
+    void CheckIsMapLoaded()
+    {
+        if (!map_load_pending || !InstanceLoadInfo || !InstanceLoadFile || !InstanceTimer) {
+            return;
+        }
+        map_load_pending = false;
+        // use TimerWidgets start point, default first frame of 0% load, to comply with GWSCR timing
+        if (TimerWidget::Instance().GetStartPoint() != TIME_UNKNOWN && InstanceLoadInfo && InstanceLoadInfo->is_explorable) {
+            AddObjectiveSet(static_cast<GW::Constants::MapID>(InstanceLoadInfo->map_id));
+            Event(EventType::InstanceLoadInfo, InstanceLoadInfo->map_id);
+        }
+        if (InstanceLoadFile && InstanceLoadFile->map_fileID == 219215) {
+            AddDoAObjectiveSet(InstanceLoadFile->spawn_point);
+        }
+    }
+
+    void ClearObjectiveSets()
+    {
+        for (const auto& os : objective_sets) {
+            delete os.second;
+        }
+        objective_sets.clear();
+        display_order.clear();
+        display_order_dirty = true;
     }
 }
 
@@ -343,7 +1040,6 @@ void ObjectiveTimerWindow::Initialize()
                 else if (packet->animation_type == 3 && packet->animation_stage == 2) {
                     Event(EventType::DoorClose, packet->object_id);
                 }
-                // TODO: maybe add a more generic ManipulateMapObject packet?
             }
         });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveUpdateName>(
@@ -385,165 +1081,7 @@ void ObjectiveTimerWindow::Initialize()
 
 }
 
-void ObjectiveTimerWindow::Event(const EventType type, const uint32_t count, const wchar_t* msg) const
-{
-    Event(type, count, (uint32_t)msg);
-}
-
-void ObjectiveTimerWindow::Event(const EventType type, const uint32_t id1, const uint32_t id2) const
-{
-    if (ObjectiveSet* os = GetCurrentObjectiveSet()) {
-        os->Event(type, id1, id2);
-
-        if (show_debug_events) {
-            switch (type) {
-                case EventType::ServerMessage:
-                case EventType::DisplayDialogue: {
-                    const wchar_t* msg = (wchar_t*)id2;
-                    Log::Info("Event: %d, %d, %x, %x, %x, %x, %x, %x", type, id1,
-                              msg[0], msg[1], msg[2], msg[3], msg[4], msg[5]);
-                }
-                break;
-                default:
-                    Log::Info("Event: %d, %d, %d", type, id1, id2);
-            }
-        }
-    }
-}
-
-void ObjectiveTimerWindow::AddObjectiveSet(const GW::Constants::MapID map_id)
-{
-    // clang-format off
-    using namespace GW::Constants;
-    switch (map_id) {
-        // elite areas:
-        case MapID::Urgozs_Warren:
-            AddUrgozObjectiveSet();
-            break;
-        case MapID::The_Deep:
-            AddDeepObjectiveSet();
-            break;
-        case MapID::The_Fissure_of_Woe:
-            AddFoWObjectiveSet();
-            break;
-        case MapID::The_Underworld:
-            AddUWObjectiveSet();
-            break;
-
-        // dungeons - 1 level:
-        case MapID::Ooze_Pit:
-            AddDungeonObjectiveSet({MapID::Ooze_Pit});
-            break;
-        case MapID::Fronis_Irontoes_Lair_mission:
-            AddDungeonObjectiveSet({MapID::Fronis_Irontoes_Lair_mission});
-            break;
-        case MapID::Secret_Lair_of_the_Snowmen:
-            AddDungeonObjectiveSet({MapID::Secret_Lair_of_the_Snowmen});
-            break;
-
-        // dungeons - 2 levels:
-        case MapID::Sepulchre_of_Dragrimmar_Level_1:
-            AddDungeonObjectiveSet({MapID::Sepulchre_of_Dragrimmar_Level_1, MapID::Sepulchre_of_Dragrimmar_Level_2});
-            break;
-        case MapID::Bogroot_Growths_Level_1:
-            AddDungeonObjectiveSet({MapID::Bogroot_Growths_Level_1, MapID::Bogroot_Growths_Level_2});
-            break;
-        case MapID::Arachnis_Haunt_Level_1:
-            AddDungeonObjectiveSet({MapID::Arachnis_Haunt_Level_1, MapID::Arachnis_Haunt_Level_2});
-            break;
-
-        // dungeons - 3 levels:
-        case MapID::Catacombs_of_Kathandrax_Level_1:
-            AddDungeonObjectiveSet({MapID::Catacombs_of_Kathandrax_Level_1,
-                                    MapID::Catacombs_of_Kathandrax_Level_2,
-                                    MapID::Catacombs_of_Kathandrax_Level_3});
-            break;
-        case MapID::Rragars_Menagerie_Level_1:
-            AddDungeonObjectiveSet({MapID::Rragars_Menagerie_Level_1,
-                                    MapID::Rragars_Menagerie_Level_2,
-                                    MapID::Rragars_Menagerie_Level_3});
-            break;
-        case MapID::Cathedral_of_Flames_Level_1:
-            AddDungeonObjectiveSet({MapID::Cathedral_of_Flames_Level_1,
-                                    MapID::Cathedral_of_Flames_Level_2,
-                                    MapID::Cathedral_of_Flames_Level_3});
-            break;
-        case MapID::Darkrime_Delves_Level_1:
-            AddDungeonObjectiveSet({MapID::Darkrime_Delves_Level_1,
-                                    MapID::Darkrime_Delves_Level_2,
-                                    MapID::Darkrime_Delves_Level_3});
-            break;
-        case MapID::Ravens_Point_Level_1:
-            AddDungeonObjectiveSet({MapID::Ravens_Point_Level_1,
-                                    MapID::Ravens_Point_Level_2,
-                                    MapID::Ravens_Point_Level_3});
-            break;
-        case MapID::Vloxen_Excavations_Level_1:
-            AddDungeonObjectiveSet({MapID::Vloxen_Excavations_Level_1,
-                                    MapID::Vloxen_Excavations_Level_2,
-                                    MapID::Vloxen_Excavations_Level_3});
-            break;
-        case MapID::Bloodstone_Caves_Level_1:
-            AddDungeonObjectiveSet({MapID::Bloodstone_Caves_Level_1,
-                                    MapID::Bloodstone_Caves_Level_2,
-                                    MapID::Bloodstone_Caves_Level_3});
-            break;
-        case MapID::Shards_of_Orr_Level_1:
-            AddDungeonObjectiveSet({MapID::Shards_of_Orr_Level_1,
-                                    MapID::Shards_of_Orr_Level_2,
-                                    MapID::Shards_of_Orr_Level_3});
-            break;
-        case MapID::Oolas_Lab_Level_1:
-            AddDungeonObjectiveSet({MapID::Oolas_Lab_Level_1, MapID::Oolas_Lab_Level_2, MapID::Oolas_Lab_Level_3});
-            break;
-        case MapID::Heart_of_the_Shiverpeaks_Level_1:
-            AddDungeonObjectiveSet({MapID::Heart_of_the_Shiverpeaks_Level_1,
-                                    MapID::Heart_of_the_Shiverpeaks_Level_2,
-                                    MapID::Heart_of_the_Shiverpeaks_Level_3});
-            break;
-        case MapID::Forsaken_Tunnels_Level1:
-            AddDungeonObjectiveSet({MapID::Forsaken_Tunnels_Level1,
-                                    MapID::Forsaken_Tunnels_Level2,
-                                    MapID::Forsaken_Tunnels_Level3});
-            break;
-        case MapID::Forsaken_Tunnels_Presearing_Level1:
-            AddDungeonObjectiveSet({MapID::Forsaken_Tunnels_Presearing_Level1,
-                                    MapID::Forsaken_Tunnels_Presearing_Level2,
-                                    MapID::Forsaken_Tunnels_Presearing_Level3});
-            break;
-
-        // dungeons - 5 levels:
-        case MapID::Frostmaws_Burrows_Level_1:
-            AddDungeonObjectiveSet({MapID::Frostmaws_Burrows_Level_1,
-                                    MapID::Frostmaws_Burrows_Level_2,
-                                    MapID::Frostmaws_Burrows_Level_3,
-                                    MapID::Frostmaws_Burrows_Level_4,
-                                    MapID::Frostmaws_Burrows_Level_5});
-            break;
-
-        // dungeons - irregular:
-        case MapID::Slavers_Exile_Level_5:
-            AddDungeonObjectiveSet({MapID::Slavers_Exile_Level_5});
-            break;
-
-        // Others:
-        case MapID::The_Underworld_PvP:
-            if (const GW::AreaInfo* info = GW::Map::GetCurrentMapInfo()) {
-                if (info->type == GW::RegionType::ExplorableZone) {
-                    AddToPKObjectiveSet();
-                }
-            }
-            break;
-        default:
-            break;
-    }
-    // clang-format on
-    WebsocketSendMessage("reset");
-    WebsocketSendMessage("start");
-
-}
-
-void ObjectiveTimerWindow::ObjectiveSet::StopObjectives()
+void ObjectiveSet::StopObjectives()
 {
     duration = GetDuration();
     active = false;
@@ -558,323 +1096,6 @@ void ObjectiveTimerWindow::ObjectiveSet::StopObjectives()
                 break;
         }
     }
-}
-
-void ObjectiveTimerWindow::AddObjectiveSet(ObjectiveSet* os)
-{
-    for (const auto& cos : objective_sets) {
-        cos.second->StopObjectives();
-        cos.second->need_to_collapse = true;
-    }
-    objective_sets.emplace(os->system_time, os);
-    display_order_dirty = true;
-    if (os->active) {
-        current_objective_set = os;
-    }
-    runs_dirty = true;
-}
-
-void ObjectiveTimerWindow::AddDungeonObjectiveSet(const std::vector<GW::Constants::MapID>& levels, const uint32_t boss_model_id)
-{
-    const auto os = new ObjectiveSet;
-    ASSERT(!levels.empty());
-    os->name = Resources::GetMapName(levels[0])->string();
-    for (size_t i = 0; i < levels.size(); i++) {
-        char name[256];
-        snprintf(name, sizeof(name), "Level %zu", i + 1);
-        os->AddObjectiveAfterAll(new Objective(name))->AddStartEvent(EventType::InstanceLoadInfo, static_cast<uint32_t>(levels[i]));
-    }
-    os->objectives.front()->SetStarted();                         // start first level
-    os->objectives.back()->AddEndEvent(EventType::DungeonReward); // last level finished with dungeon reward
-    if (boss_model_id) {
-        os->objectives.back()->AddEndEvent(EventType::AgentUpdateAllegiance, boss_model_id, 0x6E6F6E63);
-    }
-    AddObjectiveSet(os);
-}
-
-void ObjectiveTimerWindow::AddDoAObjectiveSet(const GW::Vec2f spawn)
-{
-    constexpr int n_areas = 4;
-
-    const auto starting_area = [&] {
-        constexpr GW::Vec2f mallyx_spawn(-3931, -6214);
-        constexpr GW::Vec2f area_spawns[] = {
-            {-10514, 15231}, // foundry
-            {-18575, -8833}, // city
-            {364, -10445},   // veil
-            {16034, 1244},   // gloom
-        };
-        double best_dist = GetDistance(spawn, mallyx_spawn);
-        int starting_area = -1;
-        for (auto i = 0; i < n_areas; i++) {
-            const float dist = GetDistance(spawn, area_spawns[i]);
-            if (best_dist > dist) {
-                best_dist = dist;
-                starting_area = i;
-            }
-        }
-        return starting_area;
-    }();
-
-    if (starting_area == -1) {
-        return; // we're doing mallyx, not doa!
-    }
-
-    const auto os = new ObjectiveSet;
-
-    os->name = Resources::GetMapName(GW::Constants::MapID::Domain_of_Anguish)->string();
-
-    const std::vector<std::function<void()>> add_doa_obj = {
-        [&] {
-            Objective* parent = os->AddObjectiveAfterAll(new Objective("Foundry"))
-                                  ->AddStartEvent(EventType::DoACompleteZone, Gloom)
-                                  ->AddStartEvent(EventType::DoorOpen, DoA_foundry_entrance_r1)
-                                  ->AddEndEvent(EventType::DoACompleteZone, Foundry);
-            if (settings.show_detailed_objectives) {
-                parent->AddChild(os->AddObjective(new Objective("Room 1"), 0)
-                                   ->AddStartEvent(EventType::DoorClose, DoA_foundry_entrance_r1)
-                                   ->AddEndEvent(EventType::DoorOpen, DoA_foundry_r1_r2));
-                parent->AddChild(os->AddObjective(new Objective("Room 2"), 1)
-                                   ->AddStartEvent(EventType::DoorClose, DoA_foundry_r1_r2)
-                                   ->AddEndEvent(EventType::DoorOpen, DoA_foundry_r2_r3));
-                parent->AddChild(os->AddObjective(new Objective("Room 3"), 2)
-                                   ->AddStartEvent(EventType::DoorClose, DoA_foundry_r2_r3)
-                                   ->AddEndEvent(EventType::DoorOpen, DoA_foundry_r3_r4));
-                parent->AddChild(os->AddObjective(new Objective("Room 4"), 3)
-                                   ->AddStartEvent(EventType::DoorClose, DoA_foundry_r3_r4)
-                                   ->AddEndEvent(EventType::DoorOpen, DoA_foundry_r4_r5));
-
-                // maybe time snakes take? (check them being added to party)
-
-                // maybe change BB event to use the dialog instead? "None shall escape. Prepare to die."
-                // change BB to start at door and finish at fury spawn?
-                parent->AddChild(os->AddObjective(new Objective("Black Beast"), 4)
-                                   ->AddStartEvent(EventType::DoorOpen, DoA_foundry_r5_bb)
-                                   ->AddEndEvent(EventType::AgentUpdateAllegiance, 5221, 0x6E6F6E63)); // all 3 are the same
-
-                // 0x8101 0x273D 0x98D8 0xB91A 0x47B8 The Fury: Ah, you have finally arrived. My dark master informed me
-                // I might have visitors....
-                parent->AddChild(os->AddObjective(new Objective("Fury"), 5)
-                                   ->AddStartEvent(EventType::DisplayDialogue, 4, L"\x8101\x273D\x98DB\xB91A")
-                                   ->AddEndEvent(EventType::DoACompleteZone, Foundry));
-            }
-        },
-        [&] {
-            Objective* parent = os->AddObjectiveAfterAll(new Objective("City"))
-                                  ->AddStartEvent(EventType::DoACompleteZone, Foundry)
-                                  ->AddEndEvent(EventType::DoACompleteZone, City);
-            if (settings.show_detailed_objectives) {
-                parent->AddChild(os->AddObjective(new Objective("Outside"), 0)
-                                   ->AddStartEvent(EventType::DoorOpen, DoA_city_entrance)
-                                   ->AddEndEvent(EventType::DoorOpen, DoA_city_wall));
-                parent->AddChild(os->AddObjective(new Objective("Inside"), 1)
-                                   ->AddStartEvent(EventType::DoorOpen, DoA_city_wall)
-                                   ->AddEndEvent(EventType::DoACompleteZone, City));
-            }
-
-            // TODO: jadoth (starts at end of city, ends when chest spawns)
-        },
-        [&] {
-            Objective* parent = os->AddObjectiveAfterAll(new Objective("Veil"))
-                                  ->AddStartEvent(EventType::DoACompleteZone, City)
-                                  ->AddEndEvent(EventType::DoACompleteZone, Veil);
-            if (settings.show_detailed_objectives) {
-                parent->AddChild(os->AddObjective(new Objective("360"), 0)
-                                   ->AddStartEvent(EventType::DoorOpen, DoA_veil_360_left)
-                                   ->AddStartEvent(EventType::DoorOpen, DoA_veil_360_middle)
-                                   ->AddStartEvent(EventType::DoorOpen, DoA_veil_360_right));
-                parent->AddChild(os->AddObjective(new Objective("Underlords"), 1)
-                                   ->AddStartEvent(EventType::DoorOpen, DoA_veil_ranger)
-                                   ->AddStartEvent(EventType::DoorOpen, DoA_veil_derv));
-                parent->AddChild(os->AddObjective(new Objective("Lords"), 2)
-                                   ->AddStartEvent(EventType::DoorOpen, DoA_veil_trench_gloom)
-                                   ->AddStartEvent(EventType::DoorOpen, DoA_veil_trench_monk)
-                                   ->AddStartEvent(EventType::DoorOpen, DoA_veil_trench_ele)
-                                   ->AddStartEvent(EventType::DoorOpen, DoA_veil_trench_mes)
-                                   ->AddStartEvent(EventType::DoorOpen, DoA_veil_trench_necro));
-                parent->AddChild(os->AddObjective(new Objective("Tendrils"), 3)
-                                   ->AddStartEvent(EventType::DisplayDialogue, 4, L"\x8101\x34C1\x9FA1\xED8F\x1BE4")
-                                   ->AddEndEvent(EventType::DoACompleteZone, Veil));
-            }
-        },
-        [&] {
-            Objective* parent = os->AddObjectiveAfterAll(new Objective("Gloom"))
-                                  ->AddStartEvent(EventType::DoACompleteZone, Veil)
-                                  ->AddEndEvent(EventType::DoACompleteZone, Gloom);
-            if (settings.show_detailed_objectives) {
-                parent->AddChild(os->AddObjective(new Objective("Cave"), 0)
-                                   ->AddStartEvent(EventType::DisplayDialogue, 4, L"\x8101\x5765\x9846\xA72B")
-                                   ->AddEndEvent(EventType::DisplayDialogue, 4, L"\x8101\x5767\xA547\xB2C2"));
-
-                // TODO: rift may not be possible from outside of range
-
-                // TODO: deathbringer ?
-
-                parent->AddChild(os->AddObjective(new Objective("Darknesses"), 1)
-                                   ->AddStartEvent(EventType::DisplayDialogue, 4, L"\x8101\x273B\xB5DB\x8B13")
-                                   ->AddEndEvent(EventType::DoACompleteZone, Gloom));
-            }
-        }
-    };
-
-    for (auto i = 0; i < n_areas; i++) {
-        const auto idx = (starting_area + i) % n_areas;
-        add_doa_obj[idx]();
-    }
-
-    os->objectives.front()->SetStarted();
-    AddObjectiveSet(os);
-}
-
-void ObjectiveTimerWindow::AddUrgozObjectiveSet()
-{
-    const auto os = new ObjectiveSet;
-    os->name = Resources::GetMapName(GW::Constants::MapID::Urgozs_Warren)->string();
-    os->AddObjective(new Objective("Zone 1 | Weakness"))->SetStarted();
-    os->AddObjectiveAfterAll(new Objective("Zone 2 | Life Drain"))->AddStartEvent(EventType::DoorOpen, 45420);
-    os->AddObjectiveAfterAll(new Objective("Zone 3 | Levers"))->AddStartEvent(EventType::DoorOpen, 11692);
-    os->AddObjectiveAfterAll(new Objective("Zone 4 | Bridge Wolves"))->AddStartEvent(EventType::DoorOpen, 54552);
-    os->AddObjectiveAfterAll(new Objective("Zone 5 | More Wolves"))->AddStartEvent(EventType::DoorOpen, 1760);
-    os->AddObjectiveAfterAll(new Objective("Zone 6 | Energy Drain"))->AddStartEvent(EventType::DoorOpen, 40330);
-    os->AddObjectiveAfterAll(new Objective("Zone 7 | Exhaustion"))->AddStartEvent(EventType::DoorOpen, 60114);
-    os->AddObjectiveAfterAll(new Objective("Zone 8 | Pillars"))->AddStartEvent(EventType::DoorOpen, 37191);
-    os->AddObjectiveAfterAll(new Objective("Zone 9 | Blood Drinkers"))->AddStartEvent(EventType::DoorOpen, 35500);
-    os->AddObjectiveAfterAll(new Objective("Zone 10 | Bridge"))->AddStartEvent(EventType::DoorOpen, 34278);
-    os->AddObjectiveAfterAll(new Objective("Zone 11 | Urgoz"))
-      ->AddStartEvent(EventType::DoorOpen, 15529)
-      ->AddStartEvent(EventType::DoorOpen, 45631)
-      ->AddStartEvent(EventType::DoorOpen, 53071)
-      ->AddEndEvent(EventType::ServerMessage, 6, L"\x6C9C\x0\x0\x0\x0\x2810")
-      ->AddEndEvent(EventType::ServerMessage, 6, L"\x6C9C\x0\x0\x0\x0\x1488");
-
-    AddObjectiveSet(os);
-}
-
-void ObjectiveTimerWindow::AddDeepObjectiveSet()
-{
-    const auto os = new ObjectiveSet;
-    os->name = Resources::GetMapName(GW::Constants::MapID::The_Deep)->string();
-    os->AddObjective(new Objective("Room 1 | Soothing"))
-      ->SetStarted()
-      ->AddEndEvent(EventType::DoorOpen, Deep_room_1_first)
-      ->AddEndEvent(EventType::DoorOpen, Deep_room_1_second);
-    os->AddObjective(new Objective("Room 2 | Death"))
-      ->SetStarted()
-      ->AddEndEvent(EventType::DoorOpen, Deep_room_2_first)
-      ->AddEndEvent(EventType::DoorOpen, Deep_room_2_second);
-    os->AddObjective(new Objective("Room 3 | Surrender"))
-      ->SetStarted()
-      ->AddEndEvent(EventType::DoorOpen, Deep_room_3_first)
-      ->AddEndEvent(EventType::DoorOpen, Deep_room_3_second);
-    os->AddObjective(new Objective("Room 4 | Exposure"))
-      ->SetStarted()
-      ->AddEndEvent(EventType::DoorOpen, Deep_room_4_first)
-      ->AddEndEvent(EventType::DoorOpen, Deep_room_4_second);
-    os->AddObjective(new Objective("Room 5 | Pain"))
-      ->AddStartEvent(EventType::DoorOpen, Deep_room_1_first)
-      ->AddStartEvent(EventType::DoorOpen, Deep_room_1_second)
-      ->AddStartEvent(EventType::DoorOpen, Deep_room_2_first)
-      ->AddStartEvent(EventType::DoorOpen, Deep_room_2_second)
-      ->AddStartEvent(EventType::DoorOpen, Deep_room_3_first)
-      ->AddStartEvent(EventType::DoorOpen, Deep_room_3_second)
-      ->AddStartEvent(EventType::DoorOpen, Deep_room_4_first)
-      ->AddStartEvent(EventType::DoorOpen, Deep_room_4_second);
-
-    os->AddObjectiveAfterAll(new Objective("Room 6 | Lethargy"))->AddStartEvent(EventType::DoorOpen, Deep_room_5);
-    os->AddObjectiveAfterAll(new Objective("Room 7 | Depletion"))->AddStartEvent(EventType::DoorOpen, Deep_room_6);
-
-    // 8 and 9 together because theres no boundary between
-    os->AddObjectiveAfterAll(new Objective("Room 8-9 | Failure/Shadows"))
-      ->AddStartEvent(EventType::DoorOpen, Deep_room_7);
-
-    os->AddObjectiveAfterAll(new Objective("Room 10 | Scorpion"))
-      ->AddStartEvent(EventType::DisplayDialogue, 4, kanaxai_dialog_r10);
-    os->AddObjectiveAfterAll(new Objective("Room 11 | Fear"))->AddStartEvent(EventType::DoorOpen, Deep_room_11);
-    os->AddObjectiveAfterAll(new Objective("Room 12 | Depletion"))
-      ->AddStartEvent(EventType::DisplayDialogue, 4, kanaxai_dialog_r12);
-    // 13 and 14 together because theres no boundary between
-    os->AddObjectiveAfterAll(new Objective("Room 13-14 | Decay/Torment"))
-      ->AddStartEvent(EventType::DisplayDialogue, 4, kanaxai_dialog_r13);
-    os->AddObjectiveAfterAll(new Objective("Room 15 | Kanaxai"))
-      ->AddStartEvent(EventType::DisplayDialogue, 4, kanaxai_dialog_r15)
-      ->AddEndEvent(EventType::ServerMessage, 6, L"\x6D4D\x0\x0\x0\x0\x2810")
-      ->AddEndEvent(EventType::ServerMessage, 6, L"\x6D4D\x0\x0\x0\x0\x1488");
-    AddObjectiveSet(os);
-}
-
-void ObjectiveTimerWindow::AddFoWObjectiveSet()
-{
-    const auto os = new ObjectiveSet;
-    os->name = Resources::GetMapName(GW::Constants::MapID::The_Fissure_of_Woe)->string();
-
-    os->AddQuestObjective("ToC", 309);
-    os->AddQuestObjective("Wailing Lord", 310);
-    os->AddQuestObjective("Griffons", 311);
-    os->AddQuestObjective("Defend", 312);
-    os->AddQuestObjective("Forge", 313);
-    os->AddQuestObjective("Menzies", 314);
-    os->AddQuestObjective("Restore", 315);
-    os->AddQuestObjective("Khobay", 316);
-    os->AddQuestObjective("ToS", 317);
-    os->AddQuestObjective("Burning Forest", 318);
-    os->AddQuestObjective("The Hunt", 319);
-    AddObjectiveSet(os);
-}
-
-void ObjectiveTimerWindow::AddUWObjectiveSet()
-{
-    const auto os = new ObjectiveSet;
-    os->name = Resources::GetMapName(GW::Constants::MapID::The_Underworld)->string();
-    os->AddQuestObjective("Chamber", 146);
-    os->AddQuestObjective("Restore", 147);
-    os->AddQuestObjective("Escort", 148);
-    os->AddQuestObjective("UWG", 149);
-    os->AddQuestObjective("Vale", 150);
-    os->AddQuestObjective("Waste", 151);
-    os->AddQuestObjective("Pits", 152);
-    os->AddQuestObjective("Planes", 153);
-    os->AddQuestObjective("Mnts", 154);
-    os->AddQuestObjective("Pools", 155);
-    os->AddObjective(new Objective("Dhuum"))
-      ->AddStartEvent(EventType::AgentUpdateAllegiance, GW::Constants::ModelID::UW::Dhuum, 0x6D6F6E31)
-      ->AddEndEvent(EventType::ObjectiveDone, 157);
-    AddObjectiveSet(os);
-}
-
-void ObjectiveTimerWindow::AddToPKObjectiveSet()
-{
-    // Pre-fetch map names for topk
-    Resources::GetMapName(GW::Constants::MapID::Scarred_Earth);
-    Resources::GetMapName(GW::Constants::MapID::The_Underworld_PvP);
-    Resources::GetMapName(GW::Constants::MapID::The_Courtyard);
-    Resources::GetMapName(GW::Constants::MapID::Tomb_of_the_Primeval_Kings);
-    Resources::GetMapName(GW::Constants::MapID::The_Hall_of_Heroes);
-
-    // Enqueue for next thread to allow map names to be loaded
-    GW::GameThread::Enqueue(
-        []() {
-            const auto os = new ObjectiveSet;
-            os->name = Resources::GetMapName(GW::Constants::MapID::Tomb_of_the_Primeval_Kings)->string();
-            os->AddObjective(new Objective(Resources::GetMapName(GW::Constants::MapID::The_Underworld_PvP)->string().c_str()))
-                ->SetStarted()
-                ->AddStartEvent(EventType::InstanceLoadInfo, std::to_underlying(GW::Constants::MapID::The_Underworld_PvP))
-                ->AddEndEvent(EventType::CountdownStart, std::to_underlying(GW::Constants::MapID::The_Underworld_PvP));
-            os->AddObjective(new Objective(Resources::GetMapName(GW::Constants::MapID::Scarred_Earth)->string().c_str()))
-                ->AddStartEvent(EventType::InstanceLoadInfo, std::to_underlying(GW::Constants::MapID::Scarred_Earth))
-                ->AddEndEvent(EventType::CountdownStart, std::to_underlying(GW::Constants::MapID::Scarred_Earth));
-            os->AddObjective(new Objective(Resources::GetMapName(GW::Constants::MapID::The_Courtyard)->string().c_str()))
-                ->AddStartEvent(EventType::InstanceLoadInfo, std::to_underlying(GW::Constants::MapID::The_Courtyard))
-                ->AddEndEvent(EventType::CountdownStart, std::to_underlying(GW::Constants::MapID::The_Courtyard));
-            os->AddObjective(new Objective(Resources::GetMapName(GW::Constants::MapID::The_Hall_of_Heroes)->string().c_str()))
-                ->AddStartEvent(EventType::InstanceLoadInfo, std::to_underlying(GW::Constants::MapID::The_Hall_of_Heroes))
-                ->AddEndEvent(EventType::CountdownStart, std::to_underlying(GW::Constants::MapID::The_Hall_of_Heroes));
-            Instance().AddObjectiveSet(os);
-        },
-        true
-    );
-
-
-
 }
 
 void ObjectiveTimerWindow::Update(float)
@@ -977,17 +1198,6 @@ void ObjectiveTimerWindow::Draw(IDirect3DDevice9*)
     }
 }
 
-ObjectiveTimerWindow::ObjectiveSet* ObjectiveTimerWindow::GetCurrentObjectiveSet() const
-{
-    if (objective_sets.empty()) {
-        return nullptr;
-    }
-    if (!current_objective_set || !current_objective_set->active) {
-        return nullptr;
-    }
-    return current_objective_set;
-}
-
 void ObjectiveTimerWindow::DrawSettingsInternal()
 {
     ImGui::Separator();
@@ -1086,7 +1296,6 @@ void ObjectiveTimerWindow::LoadRuns()
     loading = true;
     Resources::EnqueueWorkerTask([] {
         ObjectiveTimerWindow& instance = Instance();
-        // ClearObjectiveSets();
         Resources::EnsureFolderExists(Resources::GetPath(L"runs"));
         WIN32_FIND_DATAW FindFileData;
         size_t max_objectives_in_memory = 200;
@@ -1102,7 +1311,7 @@ void ObjectiveTimerWindow::LoadRuns()
         }
         FindClose(hFind);
 
-        for (auto it = obj_timer_files.rbegin(); it != obj_timer_files.rend() && instance.objective_sets.size() < max_objectives_in_memory; ++it) {
+        for (auto it = obj_timer_files.rbegin(); it != obj_timer_files.rend() && objective_sets.size() < max_objectives_in_memory; ++it) {
             std::ifstream file;
             std::wstring fn = Resources::GetPath(L"runs", *it);
             file.open(std::filesystem::path(fn));
@@ -1114,15 +1323,15 @@ void ObjectiveTimerWindow::LoadRuns()
                 if (auto ec = glz::read<opts>(os_arr, ss.str()); !ec) {
                     for (const auto& elem : os_arr) {
                         ObjectiveSet* os = ObjectiveSet::FromJson(elem);
-                        if (instance.objective_sets.contains(os->system_time)) {
+                        if (objective_sets.contains(os->system_time)) {
                             delete os;
                             continue; // Don't load in a run that already exists
                         }
                         os->StopObjectives();
                         os->need_to_collapse = true;
                         os->from_disk = true;
-                        instance.objective_sets.emplace(os->system_time, os);
-                        instance.display_order_dirty = true;
+                        objective_sets.emplace(os->system_time, os);
+                        display_order_dirty = true;
                     }
                 }
                 file.close();
@@ -1146,7 +1355,7 @@ void ObjectiveTimerWindow::SaveRuns()
         Resources::EnsureFolderExists(Resources::GetPath(L"runs"));
         std::map<std::wstring, std::vector<ObjectiveSet*>> objective_sets_by_file;
         wchar_t filename[36];
-        for (auto& os : instance.objective_sets) {
+        for (auto& os : objective_sets) {
             if (os.second->from_disk) {
                 continue; // No need to re-save a run.
             }
@@ -1176,29 +1385,10 @@ void ObjectiveTimerWindow::SaveRuns()
     });
 }
 
-void ObjectiveTimerWindow::ClearObjectiveSets()
-{
-    for (const auto& os : objective_sets) {
-        delete os.second;
-    }
-    objective_sets.clear();
-    display_order.clear();
-    display_order_dirty = true;
-}
-
-void ObjectiveTimerWindow::StopObjectives()
-{
-    if (current_objective_set) {
-        current_objective_set->StopObjectives();
-        WebsocketSendMessage("reset");
-    }
-    current_objective_set = nullptr;
-}
-
 
 // =============================================================================
 
-ObjectiveTimerWindow::Objective::Objective(const char* _name)
+Objective::Objective(const char* _name)
     : start(TIME_UNKNOWN),
       done(TIME_UNKNOWN),
       duration(TIME_UNKNOWN)
@@ -1206,35 +1396,35 @@ ObjectiveTimerWindow::Objective::Objective(const char* _name)
     std::snprintf(name, _countof(name), "%s", _name);
 }
 
-ObjectiveTimerWindow::Objective* ObjectiveTimerWindow::Objective::AddStartEvent(
+Objective* Objective::AddStartEvent(
     const EventType et, const uint32_t id1, const uint32_t id2)
 {
     start_events.emplace_back<Event>({et, id1, id2});
     return this;
 }
 
-ObjectiveTimerWindow::Objective* ObjectiveTimerWindow::Objective::AddStartEvent(
+Objective* Objective::AddStartEvent(
     const EventType et, const uint32_t count, const wchar_t* msg)
 {
     start_events.emplace_back<Event>({et, count, (uint32_t)msg});
     return this;
 }
 
-ObjectiveTimerWindow::Objective* ObjectiveTimerWindow::Objective::AddEndEvent(
+Objective* Objective::AddEndEvent(
     const EventType et, const uint32_t id1, const uint32_t id2)
 {
     end_events.emplace_back<Event>({et, id1, id2});
     return this;
 }
 
-ObjectiveTimerWindow::Objective* ObjectiveTimerWindow::Objective::AddEndEvent(
+Objective* Objective::AddEndEvent(
     const EventType et, const uint32_t count, const wchar_t* msg)
 {
     end_events.emplace_back<Event>({et, count, (uint32_t)msg});
     return this;
 }
 
-ObjectiveTimerWindow::Objective* ObjectiveTimerWindow::Objective::SetStarted()
+Objective* Objective::SetStarted()
 {
     if (IsStarted()) {
         return this;
@@ -1246,7 +1436,7 @@ ObjectiveTimerWindow::Objective* ObjectiveTimerWindow::Objective::SetStarted()
     return this;
 }
 
-ObjectiveTimerWindow::Objective* ObjectiveTimerWindow::Objective::SetDone()
+Objective* Objective::SetDone()
 {
     if (status == Status::Completed) {
         return this;
@@ -1273,17 +1463,17 @@ ObjectiveTimerWindow::Objective* ObjectiveTimerWindow::Objective::SetDone()
     return this;
 }
 
-ObjectiveTimerWindow::Objective* ObjectiveTimerWindow::Objective::AddChild(Objective* child)
+Objective* Objective::AddChild(Objective* child)
 {
     children.push_back(child);
     child->indent = indent + 1;
     return children.back();
 }
 
-bool ObjectiveTimerWindow::Objective::IsStarted() const { return IsDone() || start != TIME_UNKNOWN; }
-bool ObjectiveTimerWindow::Objective::IsDone() const { return done != TIME_UNKNOWN; }
+bool Objective::IsStarted() const { return IsDone() || start != TIME_UNKNOWN; }
+bool Objective::IsDone() const { return done != TIME_UNKNOWN; }
 
-const char* ObjectiveTimerWindow::Objective::GetEndTimeStr()
+const char* Objective::GetEndTimeStr()
 {
     if (status < Status::Completed) {
         return "--:--";
@@ -1294,7 +1484,7 @@ const char* ObjectiveTimerWindow::Objective::GetEndTimeStr()
     return cached_done;
 }
 
-const char* ObjectiveTimerWindow::Objective::GetStartTimeStr()
+const char* Objective::GetStartTimeStr()
 {
     if (status < Status::Started) {
         return "--:--";
@@ -1305,7 +1495,7 @@ const char* ObjectiveTimerWindow::Objective::GetStartTimeStr()
     return cached_start;
 }
 
-const char* ObjectiveTimerWindow::Objective::GetDurationStr()
+const char* Objective::GetDurationStr()
 {
     if (status < Status::Started) {
         return "--:--";
@@ -1316,7 +1506,7 @@ const char* ObjectiveTimerWindow::Objective::GetDurationStr()
     return cached_duration;
 }
 
-DWORD ObjectiveTimerWindow::Objective::GetDuration()
+DWORD Objective::GetDuration()
 {
     switch (status) {
         case Status::Started:
@@ -1332,12 +1522,12 @@ DWORD ObjectiveTimerWindow::Objective::GetDuration()
     return duration;
 }
 
-void ObjectiveTimerWindow::Objective::Update()
+void Objective::Update()
 {
     // Cached times etc moved into Draw and GetDuration functions
 }
 
-void ObjectiveTimerWindow::Objective::InvalidateCachedStrings()
+void Objective::InvalidateCachedStrings()
 {
     cached_start[0] = cached_done[0] = cached_duration[0] = '\0';
     for (Objective* child : children) {
@@ -1345,7 +1535,7 @@ void ObjectiveTimerWindow::Objective::InvalidateCachedStrings()
     }
 }
 
-void ObjectiveTimerWindow::Objective::Draw()
+void Objective::Draw()
 {
     switch (status) {
         case Status::NotStarted:
@@ -1410,7 +1600,7 @@ void ObjectiveTimerWindow::Objective::Draw()
     }
 }
 
-void ObjectiveTimerWindow::ObjectiveSet::Update() const
+void ObjectiveSet::Update() const
 {
     if (!active) {
         return;
@@ -1421,7 +1611,7 @@ void ObjectiveTimerWindow::ObjectiveSet::Update() const
     }
 }
 
-void ObjectiveTimerWindow::ObjectiveSet::Event(const EventType type, const uint32_t id1, const uint32_t id2)
+void ObjectiveSet::Event(const EventType type, const uint32_t id1, const uint32_t id2)
 {
     auto Match = [&](const Objective::Event& event) -> bool {
         if (type != event.type) {
@@ -1511,7 +1701,7 @@ void ObjectiveTimerWindow::ObjectiveSet::Event(const EventType type, const uint3
     }
 }
 
-void ObjectiveTimerWindow::ObjectiveSet::CheckSetDone()
+void ObjectiveSet::CheckSetDone()
 {
     if (!std::ranges::any_of(objectives, [](const Objective* obj) { return obj->done == TIME_UNKNOWN; })) {
         duration = GetDuration();
@@ -1527,7 +1717,7 @@ void ObjectiveTimerWindow::ObjectiveSet::CheckSetDone()
     }
 }
 
-ObjectiveTimerWindow::ObjectiveSet::ObjectiveSet()
+ObjectiveSet::ObjectiveSet()
     : system_time(static_cast<DWORD>(time(nullptr))),
       duration(TIME_UNKNOWN),
       ui_id(cur_ui_id++)
@@ -1536,7 +1726,7 @@ ObjectiveTimerWindow::ObjectiveSet::ObjectiveSet()
     character_name = GW::GetCharContext() ? GW::GetCharContext()->player_name : L"";
 }
 
-ObjectiveTimerWindow::ObjectiveSet::~ObjectiveSet()
+ObjectiveSet::~ObjectiveSet()
 {
     for (const auto* obj : objectives) {
         if (obj) {
@@ -1546,7 +1736,7 @@ ObjectiveTimerWindow::ObjectiveSet::~ObjectiveSet()
     objectives.clear();
 }
 
-ObjectiveTimerWindow::ObjectiveSet* ObjectiveTimerWindow::ObjectiveSet::FromJson(const Serialized& json)
+ObjectiveSet* ObjectiveSet::FromJson(const Serialized& json)
 {
     const auto os = new ObjectiveSet;
     os->active = false;
@@ -1561,7 +1751,7 @@ ObjectiveTimerWindow::ObjectiveSet* ObjectiveTimerWindow::ObjectiveSet::FromJson
     return os;
 }
 
-ObjectiveTimerWindow::ObjectiveSet::Serialized ObjectiveTimerWindow::ObjectiveSet::ToJson()
+ObjectiveSet::Serialized ObjectiveSet::ToJson()
 {
     Serialized out{
         .name = name,
@@ -1576,7 +1766,7 @@ ObjectiveTimerWindow::ObjectiveSet::Serialized ObjectiveTimerWindow::ObjectiveSe
     return out;
 }
 
-ObjectiveTimerWindow::Objective::Serialized ObjectiveTimerWindow::Objective::ToJson()
+Objective::Serialized Objective::ToJson()
 {
     return {
         .name = name,
@@ -1588,7 +1778,7 @@ ObjectiveTimerWindow::Objective::Serialized ObjectiveTimerWindow::Objective::ToJ
     };
 }
 
-ObjectiveTimerWindow::Objective* ObjectiveTimerWindow::Objective::FromJson(const Serialized& json)
+Objective* Objective::FromJson(const Serialized& json)
 {
     const auto obj = new Objective(json.name.c_str());
     obj->status = static_cast<Status>(static_cast<int>(json.status));
@@ -1599,7 +1789,7 @@ ObjectiveTimerWindow::Objective* ObjectiveTimerWindow::Objective::FromJson(const
     return obj;
 }
 
-const char* ObjectiveTimerWindow::ObjectiveSet::GetStartTimeStr()
+const char* ObjectiveSet::GetStartTimeStr()
 {
     if (!cached_start[0]) {
         tm timeinfo{};
@@ -1618,7 +1808,7 @@ const char* ObjectiveTimerWindow::ObjectiveSet::GetStartTimeStr()
     return cached_start;
 }
 
-DWORD ObjectiveTimerWindow::ObjectiveSet::GetDuration()
+DWORD ObjectiveSet::GetDuration()
 {
     if (active) {
         return duration = time_point_ms() - run_start_time_point;
@@ -1636,7 +1826,7 @@ DWORD ObjectiveTimerWindow::ObjectiveSet::GetDuration()
     return last_objective_done ? last_objective_done->done : TIME_UNKNOWN;
 }
 
-const char* ObjectiveTimerWindow::ObjectiveSet::GetDurationStr()
+const char* ObjectiveSet::GetDurationStr()
 {
     if (!cached_time[0] || active) {
         PrintTime(cached_time, sizeof(cached_time), GetDuration(), settings.show_decimal);
@@ -1644,7 +1834,7 @@ const char* ObjectiveTimerWindow::ObjectiveSet::GetDurationStr()
     return cached_time;
 }
 
-bool ObjectiveTimerWindow::ObjectiveSet::IsFilteredOut()
+bool ObjectiveSet::IsFilteredOut()
 {
     if (settings.show_past_runs || !from_disk) {
         return false;
@@ -1658,7 +1848,7 @@ bool ObjectiveTimerWindow::ObjectiveSet::IsFilteredOut()
     return start_yday != today_yday || start_year != today_year;
 }
 
-bool ObjectiveTimerWindow::ObjectiveSet::Draw()
+bool ObjectiveSet::Draw()
 {
     if (IsFilteredOut()) {
         return true;
@@ -1693,7 +1883,7 @@ bool ObjectiveTimerWindow::ObjectiveSet::Draw()
     return true;
 }
 
-void ObjectiveTimerWindow::ObjectiveSet::InvalidateCachedStrings()
+void ObjectiveSet::InvalidateCachedStrings()
 {
     cached_start[0] = cached_time[0] = cached_header[0] = '\0';
     for (Objective* objective : objectives) {
@@ -1701,7 +1891,7 @@ void ObjectiveTimerWindow::ObjectiveSet::InvalidateCachedStrings()
     }
 }
 
-void ObjectiveTimerWindow::ObjectiveSet::GetStartTime(tm* timeinfo) const
+void ObjectiveSet::GetStartTime(tm* timeinfo) const
 {
     const time_t ts = system_time;
     memcpy(timeinfo, localtime(&ts), sizeof(timeinfo[0]));

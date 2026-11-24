@@ -6,6 +6,7 @@
 # core.autocrlf=true (Git for Windows' default): CRLF turns the shebang into "/usr/bin/env bash\r",
 # which fails as `bad interpreter: No such file or directory`.
 *.sh text eol=lf
+.githooks/* text eol=lf
 
 # cmd.exe misreads labels and goto in batch files with LF endings, which a checkout made on Linux would give them.
 *.bat text eol=crlf

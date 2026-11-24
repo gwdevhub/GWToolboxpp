@@ -1779,6 +1779,735 @@ namespace {
     }
 } // namespace
 
+namespace {
+    using CmdAliasSetting = ChatCommands::CmdAliasSetting;
+
+    struct QuestPing {
+        GW::Constants::QuestID quest_id = static_cast<GW::Constants::QuestID>(0);
+        GuiUtils::EncString name;
+        GuiUtils::EncString description;
+        GuiUtils::EncString objectives;
+        void Update();
+        void Init();
+    };
+    QuestPing quest_ping;
+
+    void QuestPing::Init()
+    {
+        const auto* quest = GW::QuestMgr::GetActiveQuest();
+        if (quest) {
+            quest_id = quest->quest_id;
+            name.reset(quest->name);
+            objectives.reset(quest->objectives);
+        }
+    }
+
+    void QuestPing::Update()
+    {
+        if (!name.wstring().empty()) {
+            wchar_t print_buf[128];
+            swprintf(print_buf, _countof(print_buf), L"Current Quest: %ls", name.wstring().c_str());
+            GW::Chat::SendChat('#', print_buf);
+        }
+        if (!objectives.wstring().empty()) {
+            const auto& objective = objectives.wstring();
+            if (objective.starts_with(L"{s}") && objective.size() > 3 && objective.find(L'{', 3) == std::wstring::npos) {
+                wchar_t print_buf[128];
+                swprintf(print_buf, _countof(print_buf), L" - %ls", objective.c_str() + 3);
+                GW::Chat::SendChat('#', print_buf);
+            }
+            objectives.reset(nullptr);
+        }
+        if (!name.wstring().empty()) {
+            wchar_t url_buf[64];
+            swprintf(url_buf, _countof(url_buf), L"%hsGame_link:Quest_%d", GuiUtils::WikiUrl(L"").c_str(), quest_id);
+            GW::Chat::SendChat('#', url_buf);
+            name.reset(nullptr);
+        }
+    }
+
+    bool ReadTemplateFile(const std::wstring& path, char* buff, const size_t buffSize)
+    {
+        const auto fileHandle = CreateFileW(path.c_str(), GENERIC_READ, 0, nullptr, OPEN_EXISTING, 0, nullptr);
+        if (fileHandle == INVALID_HANDLE_VALUE) {
+            // We don't print that error, because we can /load [template]
+            return false;
+        }
+
+        const auto fileSize = GetFileSize(fileHandle, nullptr);
+        if (fileSize >= buffSize) {
+            Log::Error("Buffer size too small, file size is %d", fileSize);
+            CloseHandle(fileHandle);
+            return false;
+        }
+
+        DWORD bytesReaded; // @Remark, necessary !!!!! failed on some Windows 7.
+        if (ReadFile(fileHandle, buff, fileSize, &bytesReaded, nullptr) == FALSE) {
+            Log::Error("ReadFile failed ! (%u)", GetLastError());
+            CloseHandle(fileHandle);
+            return false;
+        }
+
+        buff[fileSize] = 0;
+        CloseHandle(fileHandle);
+        return true;
+    }
+
+    void CHAT_CMD_FUNC(CmdEnterMission)
+    {
+        const auto error_use_from_outpost = "Use '/enter' to start a mission or elite area from an outpost";
+        const auto error_fow_uw_syntax = "Use '/enter fow' or '/enter uw' to trigger entry";
+        const auto error_no_scrolls = "Unable to enter elite area; no scroll found";
+        const auto error_not_leading = "Unable to enter mission; you're not party leader";
+
+        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) {
+            return Log::Error(error_use_from_outpost);
+        }
+
+        switch (GW::Map::GetMapID()) {
+            case GW::Constants::MapID::Temple_of_the_Ages:
+            case GW::Constants::MapID::Zin_Ku_Corridor_outpost:
+            case GW::Constants::MapID::Chantry_of_Secrets_outpost:
+            case GW::Constants::MapID::Embark_Beach: {
+                if (argc < 2) {
+                    return Log::Error(error_fow_uw_syntax);
+                }
+                uint32_t item_id;
+                const std::wstring arg1 = TextUtils::ToLower(argv[1]);
+                if (arg1 == L"fow") {
+                    item_id = 22280;
+                }
+                else if (arg1 == L"uw") {
+                    item_id = 3746;
+                }
+                else {
+                    return Log::Error(error_fow_uw_syntax);
+                }
+                if (!GW::Items::UseItemByModelId(item_id, 1, 4) && !GW::Items::UseItemByModelId(item_id, 8, 16)) {
+                    return Log::Error(error_no_scrolls);
+                }
+            } break;
+            default:
+                const auto map_info = GW::Map::GetCurrentMapInfo();
+                if (!map_info || !map_info->GetHasEnterButton()) {
+                    return Log::Error(error_use_from_outpost);
+                }
+                if (!GW::PartyMgr::GetIsLeader()) {
+                    return Log::Error(error_not_leading);
+                }
+                const auto p = GW::GetGameContext()->party;
+                if (p && (p->flag & 0x8) != 0) {
+                    GW::Map::CancelEnterChallenge();
+                }
+                else {
+                    GW::Map::EnterChallenge();
+                }
+        }
+    }
+
+    void CHAT_CMD_FUNC(CmdAge2)
+    {
+        TimerWidget::Instance().PrintTimer();
+    }
+
+    void CHAT_CMD_FUNC(CmdDialog)
+    {
+        if (!IsMapReady()) {
+            return;
+        }
+        if (argc <= 1) {
+            Log::Warning(dialog_syntax);
+            return;
+        }
+        uint32_t id = 0;
+        auto dialog_str = std::wstring{argv[1]};
+        int base = 10;
+        if (dialog_str.starts_with(L"0x")) {
+            base = 16;
+            dialog_str = dialog_str.substr(2);
+        }
+        if (dialog_str == L"take" || dialog_str == L"0") {
+            id = 0;
+        }
+        else if (!(TextUtils::ParseUInt(argv[1], &id, base) && id)) {
+            Log::Warning(dialog_syntax);
+            return;
+        }
+        if (!DialogModule::GetDialogAgent()) {
+            const auto* target = GW::Agents::GetTargetAsAgentLiving();
+            const auto* me = GW::Agents::GetControlledCharacter();
+            if (target && me && target->allegiance == GW::Constants::Allegiance::Npc_Minipet && GetDistance(me->pos, target->pos) < GW::Constants::Range::Area) {
+                GW::Agents::InteractAgent(target);
+            }
+        }
+        DialogModule::SendDialog(id);
+    }
+
+    std::vector<ToolboxUIElement*> CHAT_CMD_FUNC(MatchingWindows)
+    {
+        std::vector<ToolboxUIElement*> ret;
+        if (argc <= 1) {
+            ret.push_back(&MainWindow::Instance());
+        }
+        else {
+            const std::wstring arg = TextUtils::ToLower(argv[1]);
+            if (arg == L"all") {
+                for (ToolboxUIElement* window : GWToolbox::GetUIElements()) {
+                    ret.push_back(window);
+                }
+            }
+            else if (!arg.empty()) {
+                const std::string name = TextUtils::WStringToString(arg);
+                for (ToolboxUIElement* window : GWToolbox::GetUIElements()) {
+                    if (TextUtils::ToLower(window->Name()).find(name) == 0) {
+                        ret.push_back(window);
+                    }
+                }
+            }
+        }
+        return ret;
+    }
+
+    void CHAT_CMD_FUNC(CmdTB)
+    {
+        if (!ImGui::GetCurrentContext()) {
+            return; // Don't process window manips until ImGui is ready
+        }
+        if (argc < 2) {
+            // e.g. /tbs
+            MainWindow::Instance().visible ^= 1;
+            return;
+        }
+
+        const std::wstring arg1 = TextUtils::ToLower(argv[1]);
+        if (argc < 3) {
+            if (arg1 == L"hide") {
+                // e.g. /tb hide
+                MainWindow::Instance().visible = false;
+            }
+            else if (arg1 == L"show") {
+                // e.g. /tb show
+                MainWindow::Instance().visible = true;
+            }
+            else if (arg1 == L"toggle") {
+                // e.g. /tb toggle
+                MainWindow::Instance().visible = !MainWindow::Instance().visible;
+            }
+            else if (arg1 == L"save") {
+                // e.g. /tb save
+                GWToolbox::SetSettingsFolder({});
+                const auto file_location = GWToolbox::SaveSettings();
+                const auto dir = file_location.parent_path();
+                const auto dirstr = dir.wstring();
+                const auto printable = TextUtils::str_replace_all(dirstr, LR"(\)", L"/");
+                Log::InfoW(L"Settings saved to [%ls;file://%ls]", printable.c_str(), printable.c_str());
+            }
+            else if (arg1 == L"load") {
+                // e.g. /tb load
+                GWToolbox::SetSettingsFolder({});
+                const auto file_location = GWToolbox::LoadSettings();
+                const auto dir = file_location.parent_path();
+                const auto dirstr = dir.wstring();
+                const auto printable = TextUtils::str_replace_all(dirstr, LR"(\)", L"/");
+                Log::InfoW(L"Settings loaded from [%ls;file://%ls]", printable.c_str() ,printable.c_str());
+            }
+            else if (arg1 == L"reset") {
+                // e.g. /tb reset
+                ImGui::SetWindowPos(MainWindow::Instance().Name(), ImVec2(50.0f, 50.0f));
+                ImGui::SetWindowPos(SettingsWindow::Instance().Name(), ImVec2(50.0f, 50.0f));
+                MainWindow::Instance().visible = false;
+                SettingsWindow::Instance().visible = true;
+            }
+            else if (arg1 == L"mini" || arg1 == L"minimize" || arg1 == L"collapse") {
+                // e.g. /tb mini
+                ImGui::SetWindowCollapsed(MainWindow::Instance().Name(), true);
+            }
+            else if (arg1 == L"maxi" || arg1 == L"maximize") {
+                // e.g. /tb maxi
+                ImGui::SetWindowCollapsed(MainWindow::Instance().Name(), false);
+            }
+            else if (arg1 == L"close" || arg1 == L"quit" || arg1 == L"exit") {
+                // e.g. /tb close
+                GWToolbox::SignalTerminate();
+            }
+            else {
+                // e.g. /tb travel
+                const std::vector<ToolboxUIElement*> windows = MatchingWindows(status, message, argc, argv);
+                for (ToolboxUIElement* window : windows) {
+                    window->visible ^= 1;
+                }
+            }
+            return;
+        }
+        const std::vector<ToolboxUIElement*> windows = MatchingWindows(status, message, argc, argv);
+        const std::wstring arg2 = TextUtils::ToLower(argv[2]);
+        if (arg2 == L"hide") {
+            // e.g. /tb travel hide
+            for (const auto& window : windows) {
+                window->visible = false;
+            }
+        }
+        else if (arg2 == L"show") {
+            // e.g. /tb travel show
+            for (const auto& window : windows) {
+                window->visible = true;
+            }
+        }
+        else if (arg2 == L"toggle") {
+            // e.g. /tb travel toggle
+            for (const auto& window : windows) {
+                window->visible = !window->visible;
+            }
+        }
+        else if (arg2 == L"mini" || arg2 == L"minimize" || arg2 == L"collapse") {
+            // e.g. /tb travel mini
+            for (const auto& window : windows) {
+                ImGui::SetWindowCollapsed(window->Name(), true);
+            }
+        }
+        else if (arg2 == L"maxi" || arg2 == L"maximize") {
+            // e.g. /tb travel maxi
+            for (const auto& window : windows) {
+                ImGui::SetWindowCollapsed(window->Name(), false);
+            }
+        }
+        else if (arg1 == L"save") {
+            // e.g. /tb save pure
+            const auto sanitised_foldername = TextUtils::SanitiseFilename(arg2);
+            GWToolbox::SetSettingsFolder(sanitised_foldername);
+            const auto file_location = GWToolbox::SaveSettings();
+            const auto dir = file_location.parent_path();
+            const auto dirstr = dir.wstring();
+            const auto printable = TextUtils::str_replace_all(dirstr, LR"(\)", L"/");
+            Log::InfoW(L"Settings saved to %ls", printable.c_str());
+        }
+        else if (arg1 == L"load") {
+            // e.g. /tb load tas
+            const auto sanitised_foldername = TextUtils::SanitiseFilename(arg2);
+            const auto old_settings_folder = Resources::GetSettingsFolderName();
+            GWToolbox::SetSettingsFolder(sanitised_foldername);
+            // A config exists if it has split per-module files, a legacy single-doc json, or a legacy ini
+            std::error_code ec;
+            const auto modules_folder = Resources::GetSettingFile(GWTOOLBOX_MODULES_FOLDERNAME);
+            const bool has_settings = (std::filesystem::exists(modules_folder, ec) && !std::filesystem::is_empty(modules_folder, ec)) || std::filesystem::exists(Resources::GetSettingFile(GWTOOLBOX_JSON_FILENAME), ec) ||
+                                      std::filesystem::exists(Resources::GetLegacySettingFile(GWTOOLBOX_JSON_FILENAME), ec) || std::filesystem::exists(Resources::GetLegacySettingFile(GWTOOLBOX_INI_FILENAME), ec);
+            if (!has_settings) {
+                Log::ErrorW(L"Settings folder '%ls' does not exist", arg2.c_str());
+                GWToolbox::SetSettingsFolder(old_settings_folder);
+                return;
+            }
+            const auto file_location = GWToolbox::LoadSettings();
+            const auto dir = file_location.parent_path();
+            const auto dirstr = dir.wstring();
+            const auto printable = TextUtils::str_replace_all(dirstr, LR"(\)", L"/");
+            Log::InfoW(L"Settings loaded from %ls", printable.c_str());
+        }
+        else {
+            // Invalid argument
+            Log::Error(tb_syntax);
+        }
+    }
+
+    void CHAT_CMD_FUNC(CmdChest)
+    {
+        if (!IsMapReady()) {
+            return;
+        }
+        GW::GameThread::Enqueue([]() {
+            const auto frame = GW::UI::GetFrameByLabel(L"InvAccount");
+            if (frame) {
+                GW::UI::DestroyUIComponent(frame);
+            }
+            else {
+                GW::Items::OpenXunlaiWindow();
+            }
+        });
+    }
+
+    void CHAT_CMD_FUNC(CmdAfk)
+    {
+        GW::FriendListMgr::SetFriendListStatus(GW::FriendStatus::Away);
+        if (argc > 1) {
+            const wchar_t* afk_msg = next_word(message);
+            ChatSettings::SetAfkMessage(afk_msg);
+        }
+        else {
+            ChatSettings::SetAfkMessage(L"");
+        }
+    }
+
+    void CHAT_CMD_FUNC(CmdShow)
+    {
+        std::wstring cmd = L"toggle ";
+        cmd.append(GetRemainingArgsWstr(message, 1));
+        cmd.append(L" on");
+        GW::Chat::SendChat('/', cmd.c_str());
+    }
+
+    void CHAT_CMD_FUNC(CmdHide)
+    {
+        std::wstring cmd = L"toggle ";
+        cmd.append(GetRemainingArgsWstr(message, 1));
+        cmd.append(L" off");
+        GW::Chat::SendChat('/', cmd.c_str());
+    }
+
+    GW::UI::WindowID CHAT_CMD_FUNC(MatchingGWWindow)
+    {
+        const std::map<GW::UI::WindowID, const wchar_t*> gw_windows = {
+            {GW::UI::WindowID_Compass, L"compass"}, {GW::UI::WindowID_HealthBar, L"healthbar"}, {GW::UI::WindowID_EnergyBar, L"energybar"}, {GW::UI::WindowID_ExperienceBar, L"experiencebar"}, {GW::UI::WindowID_Chat, L"chat"}
+        };
+        if (argc < 2) {
+            return GW::UI::WindowID_Count;
+        }
+        const std::wstring arg = TextUtils::ToLower(argv[1]);
+        if (!arg.empty() && arg != L"all") {
+            for (const auto& [window_id, window_name] : gw_windows) {
+                if (wcscmp(window_name, arg.c_str()) == 0) {
+                    return window_id;
+                }
+            }
+        }
+        return GW::UI::WindowID_Count;
+    }
+
+    void CHAT_CMD_FUNC(CmdToggle)
+    {
+        if (argc < 2) {
+            Log::ErrorW(L"Invalid syntax: %ls", message);
+            return;
+        }
+        const std::wstring last_arg = TextUtils::ToLower(argv[argc - 1]);
+        bool ignore_last_arg = false;
+        enum ActionType : uint8_t { Toggle, On, Off } action = Toggle;
+        if (last_arg == L"on" || last_arg == L"1" || last_arg == L"show") {
+            action = On;
+            ignore_last_arg = true;
+        }
+        else if (last_arg == L"off" || last_arg == L"0" || last_arg == L"hide") {
+            action = Off;
+            ignore_last_arg = true;
+        }
+        const std::wstring second_arg = TextUtils::ToLower(argv[1]);
+
+        auto equipment_slot = GW::EquipmentType::Unknown;
+
+        if (second_arg == L"cape") {
+            equipment_slot = GW::EquipmentType::Cape;
+        }
+        else if (second_arg == L"head" || second_arg == L"helm") {
+            equipment_slot = GW::EquipmentType::Helm;
+        }
+        else if (second_arg == L"costume_head") {
+            equipment_slot = GW::EquipmentType::CostumeHeadpiece;
+        }
+        else if (second_arg == L"costume") {
+            equipment_slot = GW::EquipmentType::CostumeBody;
+        }
+        if (equipment_slot != GW::EquipmentType::Unknown) {
+            GW::EquipmentStatus state = GW::Items::GetEquipmentVisibility(equipment_slot);
+            switch (action) {
+                case On:
+                    state = GW::EquipmentStatus::AlwaysShow;
+                    break;
+                case Off:
+                    state = GW::EquipmentStatus::AlwaysHide;
+                    break;
+                default:
+                    state = state == GW::EquipmentStatus::AlwaysShow ? GW::EquipmentStatus::AlwaysHide : GW::EquipmentStatus::AlwaysShow;
+                    break;
+            }
+            ASSERT(GW::Items::SetEquipmentVisibility(equipment_slot, state));
+            return;
+        }
+        const std::vector<ToolboxUIElement*> windows = MatchingWindows(status, message, ignore_last_arg ? argc - 1 : argc, argv);
+        for (ToolboxUIElement* window : windows) {
+            switch (action) {
+                case On:
+                    window->visible = true;
+                    break;
+                case Off:
+                    window->visible = false;
+                    break;
+                default:
+                    window->visible = !window->visible;
+                    break;
+            }
+        }
+        const GW::UI::WindowID gw_window = MatchingGWWindow(status, message, ignore_last_arg ? argc - 1 : argc, argv);
+        if (gw_window < GW::UI::WindowID_Count) {
+            bool set = true;
+            switch (action) {
+                case Off:
+                    set = false;
+                    break;
+                case Toggle:
+                    set = !GetWindowPosition(gw_window)->visible();
+                    break;
+            }
+            SetWindowVisible(gw_window, set);
+        }
+    }
+
+    void CHAT_CMD_FUNC(CmdSCWiki)
+    {
+        if (argc == 1) {
+            ShellExecuteW(nullptr, L"open", L"https://wiki.fbgmguild.com/wiki/Main_Page", nullptr, nullptr, SW_SHOWNORMAL);
+        }
+        else {
+            // the buffer is large enough, because you can type only 120 characters at once in the chat.
+            wchar_t link[256] = L"https://wiki.fbgmguild.com/index.php?search=";
+            int i;
+            for (i = 1; i < argc - 1; i++) {
+                wcscat_s(link, argv[i]);
+                wcscat_s(link, L"+");
+            }
+            wcscat_s(link, argv[i]);
+            ShellExecuteW(nullptr, L"open", link, nullptr, nullptr, SW_SHOWNORMAL);
+        }
+    }
+
+    void CHAT_CMD_FUNC(CmdLoad)
+    {
+        if (argc == 1) return;
+
+        std::wstring dir;
+        if (!GW::MemoryMgr::GetPersonalDir(dir)) return;
+
+        const std::filesystem::path build_file = std::format(L"{}/GUILD WARS/Templates/Skills/{}.txt", dir, argv[1]);
+        std::string content;
+        if (!Resources::ReadFile(build_file, content)) content = TextUtils::WStringToString(argv[1]);
+        if (argc == 2) {
+            GW::SkillbarMgr::LoadSkillTemplate(GW::Agents::GetControlledCharacterId(), content.c_str());
+        }
+        else if (argc == 3) {
+            uint32_t ihero_number;
+            if (TextUtils::ParseUInt(argv[2], &ihero_number)) {
+                // @Robustness:
+                // Check that the number is actually valid or make sure LoadSkillTemplate is safe
+                if (0 < ihero_number && ihero_number <= 8) {
+                    GW::SkillbarMgr::LoadSkillTemplate(GW::Agents::GetHeroAgentID(ihero_number), content.c_str());
+                }
+            }
+        }
+    }
+
+    void CHAT_CMD_FUNC(CmdPingBuild)
+    {
+        if (argc < 2) {
+            return;
+        }
+
+        std::wstring dir;
+        if (!GW::MemoryMgr::GetPersonalDir(dir)) return;
+
+        for (auto arg_idx = 1; arg_idx < argc; arg_idx++) {
+            const LPWSTR arg = argv[arg_idx];
+
+            const std::filesystem::path build_file = std::format(L"{}/GUILD WARS/Templates/Skills/{}.txt", dir, arg);
+            std::string content;
+            if (!Resources::ReadFile(build_file, content)) return;
+
+            GW::SkillbarMgr::SkillTemplate skill_template{};
+            if (!DecodeSkillTemplate(skill_template, content.c_str())) {
+                continue;
+            }
+
+            GW::Chat::SendChat('#', std::format(L"[{};{}]", arg, TextUtils::StringToWString(content)).c_str());
+        }
+    }
+
+    void CHAT_CMD_FUNC(CmdResize)
+    {
+        if (argc != 3) {
+            Log::Error("The syntax is /resize width height");
+            return;
+        }
+        int width, height;
+        if (!(TextUtils::ParseInt(argv[1], &width) && TextUtils::ParseInt(argv[2], &height))) {
+            Log::Error("The syntax is /resize width height");
+            return;
+        }
+        const HWND hwnd = GW::MemoryMgr::GetGWWindowHandle();
+        RECT rect;
+        GetWindowRect(hwnd, &rect);
+        MoveWindow(hwnd, rect.left, rect.top, width, height, TRUE);
+    }
+
+    void CHAT_CMD_FUNC(CmdPingEquipment)
+    {
+        if (!IsMapReady()) {
+            return;
+        }
+        if (argc < 2) {
+            Log::Error("Missing argument for /pingitem");
+            return;
+        }
+        const auto equipped_items_bag = GW::Items::GetBag(GW::Constants::Bag::Equipped_Items);
+        if (!equipped_items_bag) return;
+        const std::wstring arg1 = TextUtils::ToLower(argv[1]);
+        if (arg1 == L"weapon") {
+            GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 1), 3);
+        }
+        else if (arg1 == L"offhand" || arg1 == L"shield") {
+            GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 2), 3);
+        }
+        else if (arg1 == L"chest") {
+            GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 3), 2);
+        }
+        else if (arg1 == L"legs") {
+            GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 4), 2);
+        }
+        else if (arg1 == L"head") {
+            GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 5), 2);
+        }
+        else if (arg1 == L"boots" || arg1 == L"feet") {
+            GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 6), 2);
+        }
+        else if (arg1 == L"gloves" || arg1 == L"hands") {
+            GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 7), 2);
+        }
+        else if (arg1 == L"weapons") {
+            GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 1), 3);
+            GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 2), 3);
+        }
+        else if (arg1 == L"armor") {
+            GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 5), 2);
+            GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 3), 2);
+            GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 7), 2);
+            GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 4), 2);
+            GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 6), 2);
+        }
+        else if (arg1 == L"costume") {
+            GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 8), 1);
+            GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 9), 1);
+        }
+        else {
+            Log::Error("Unrecognised /pingitem %ls", argv[1]);
+        }
+    }
+
+    void CHAT_CMD_FUNC(CmdPingQuest)
+    {
+        quest_ping.Init();
+    }
+
+    void CHAT_CMD_FUNC(CmdMorale)
+    {
+        if (GW::GetGameContext()->world->morale == 100) {
+            GW::Chat::SendChat('#', L"I have no Morale Boost or Death Penalty!");
+        }
+        else {
+            auto packet = GW::UI::UIPacket::kSendCallTarget{.call_type = GW::CallTargetType::Morale, .agent_id = GW::Agents::GetControlledCharacterId()};
+            GW::UI::SendUIMessage(GW::UI::UIMessage::kSendCallTarget, &packet);
+        }
+    }
+
+    void CHAT_CMD_FUNC(CmdVolume)
+    {
+        const auto syntax = "Syntax: '/volume [master|music|background|effects|dialog|ui] [amount (0-100)]'";
+        wchar_t* value;
+        GW::UI::NumberPreference pref;
+        switch (argc) {
+            case 2:
+                pref = GW::UI::NumberPreference::VolMaster;
+                value = argv[1];
+                break;
+            case 3: {
+                const wchar_t* pref_str = argv[1];
+                if (wcscmp(pref_str, L"master") == 0) {
+                    pref = GW::UI::NumberPreference::VolMaster;
+                }
+                else if (wcscmp(pref_str, L"music") == 0) {
+                    pref = GW::UI::NumberPreference::VolMusic;
+                }
+                else if (wcscmp(pref_str, L"background") == 0) {
+                    pref = GW::UI::NumberPreference::VolBackground;
+                }
+                else if (wcscmp(pref_str, L"effects") == 0) {
+                    pref = GW::UI::NumberPreference::VolEffect;
+                }
+                else if (wcscmp(pref_str, L"dialog") == 0) {
+                    pref = GW::UI::NumberPreference::VolDialog;
+                }
+                else if (wcscmp(pref_str, L"ui") == 0) {
+                    pref = GW::UI::NumberPreference::VolUi;
+                }
+                else {
+                    return Log::Error(syntax);
+                }
+                value = argv[2];
+                break;
+            }
+            default:
+                return Log::Error(syntax);
+        }
+        uint32_t value_dec;
+        if (!TextUtils::ParseUInt(value, &value_dec, 10)) {
+            return Log::Error(syntax);
+        }
+        if (value_dec > 100) {
+            return Log::Error(syntax);
+        }
+        SetPreference(pref, value_dec);
+    }
+
+    void CHAT_CMD_FUNC(CmdSetHardMode)
+    {
+        if (!GW::GetWorldContext()->is_hard_mode_unlocked) {
+            return;
+        }
+        GW::PartyMgr::SetHardMode(true);
+    }
+
+    void CHAT_CMD_FUNC(CmdSetNormalMode)
+    {
+        GW::PartyMgr::SetHardMode(false);
+    }
+
+    void GetAchievements(const std::wstring& player_name)
+    {
+        if (!(!player_name.empty() && player_name.size() < 20)) {
+            return Log::Error("Invalid player name for hall of monuments command");
+        }
+        hom_achievements = HallOfMonumentsAchievements{};
+        HallOfMonumentsModule::AsyncGetAccountAchievements(player_name, &hom_achievements, OnAchievementsLoaded);
+    }
+
+    void CHAT_CMD_FUNC(CmdHom)
+    {
+        std::wstring player_name;
+        if (argc > 1) {
+            player_name = GetRemainingArgsWstr(message, 1);
+
+            if (player_name == L"me") {
+                player_name = GW::PlayerMgr::GetPlayerName(0);
+                return GetAchievements(player_name);
+            }
+            if (player_name.find(L" ") != std::wstring::npos && player_name.size() < 20) {
+                return GetAchievements(player_name);
+            }
+        }
+
+        const auto target = GW::Agents::GetTargetAsAgentLiving();
+        const auto player = target && target->IsPlayer() ? GW::PlayerMgr::GetPlayerByID(target->player_number) : nullptr;
+        if (player) {
+            player_name = player->name;
+            return GetAchievements(player_name);
+        }
+    }
+
+    void CHAT_CMD_FUNC(CmdWithdraw)
+    {
+        CmdGoldItemCommand(argc, argv, withdraw_syntax, GW::Items::WithdrawGold, InventoryManager::RefillUpToQuantity);
+    }
+
+    void CHAT_CMD_FUNC(CmdDeposit)
+    {
+        CmdGoldItemCommand(argc, argv, deposit_syntax, GW::Items::DepositGold, InventoryManager::StoreItems);
+    }
+}
+
 void ChatCommands::CreateAlias(const wchar_t* alias, const wchar_t* message)
 {
     if (alias && *alias == L'/') alias++;
@@ -1961,11 +2690,6 @@ void ChatCommands::SaveSettings(SettingsDoc& doc)
     doc.Set(Name(), "cmd_aliases", aliases);
 }
 
-void CHAT_CMD_FUNC(ChatCommands::CmdPingQuest)
-{
-    Instance().quest_ping.Init();
-}
-
 void CHAT_CMD_FUNC(ChatCommands::CmdCustomMarker)
 {
     if (argc == 2 && wcscmp(argv[1], L"clear") == 0) {
@@ -2106,40 +2830,6 @@ void ChatCommands::Update(const float delta)
     quest_ping.Update();
 }
 
-void ChatCommands::QuestPing::Init()
-{
-    const auto* quest = GW::QuestMgr::GetActiveQuest();
-    if (quest) {
-        quest_id = quest->quest_id;
-        name.reset(quest->name);
-        objectives.reset(quest->objectives);
-    }
-}
-
-void ChatCommands::QuestPing::Update()
-{
-    if (!name.wstring().empty()) {
-        wchar_t print_buf[128];
-        swprintf(print_buf, _countof(print_buf), L"Current Quest: %ls", name.wstring().c_str());
-        GW::Chat::SendChat('#', print_buf);
-    }
-    if (!objectives.wstring().empty()) {
-        const auto& objective = objectives.wstring();
-        if (objective.starts_with(L"{s}") && objective.size() > 3 && objective.find(L'{', 3) == std::wstring::npos) {
-            wchar_t print_buf[128];
-            swprintf(print_buf, _countof(print_buf), L" - %ls", objective.c_str() + 3);
-            GW::Chat::SendChat('#', print_buf);
-        }
-        objectives.reset(nullptr);
-    }
-    if (!name.wstring().empty()) {
-        wchar_t url_buf[64];
-        swprintf(url_buf, _countof(url_buf), L"%hsGame_link:Quest_%d", GuiUtils::WikiUrl(L"").c_str(), quest_id);
-        GW::Chat::SendChat('#', url_buf);
-        name.reset(nullptr);
-    }
-}
-
 void SearchAgent::Add(const wchar_t* _search, const GW::AgentTargetFlags type)
 {
     if (!_search || !_search[0]) return;
@@ -2255,625 +2945,6 @@ void SkillToUse::Update()
     }
 }
 
-bool ChatCommands::ReadTemplateFile(const std::wstring& path, char* buff, const size_t buffSize)
-{
-    const auto fileHandle = CreateFileW(path.c_str(), GENERIC_READ, 0, nullptr, OPEN_EXISTING, 0, nullptr);
-    if (fileHandle == INVALID_HANDLE_VALUE) {
-        // We don't print that error, because we can /load [template]
-        // Log::Error("Failed openning file '%S'", path.c_str());
-        return false;
-    }
-
-    const auto fileSize = GetFileSize(fileHandle, nullptr);
-    if (fileSize >= buffSize) {
-        Log::Error("Buffer size too small, file size is %d", fileSize);
-        CloseHandle(fileHandle);
-        return false;
-    }
-
-    DWORD bytesReaded; // @Remark, necessary !!!!! failed on some Windows 7.
-    if (ReadFile(fileHandle, buff, fileSize, &bytesReaded, nullptr) == FALSE) {
-        Log::Error("ReadFile failed ! (%u)", GetLastError());
-        CloseHandle(fileHandle);
-        return false;
-    }
-
-    buff[fileSize] = 0;
-    CloseHandle(fileHandle);
-    return true;
-}
-
-void CHAT_CMD_FUNC(ChatCommands::CmdEnterMission)
-{
-    const auto error_use_from_outpost = "Use '/enter' to start a mission or elite area from an outpost";
-    const auto error_fow_uw_syntax = "Use '/enter fow' or '/enter uw' to trigger entry";
-    const auto error_no_scrolls = "Unable to enter elite area; no scroll found";
-    const auto error_not_leading = "Unable to enter mission; you're not party leader";
-
-    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) {
-        return Log::Error(error_use_from_outpost);
-    }
-
-    switch (GW::Map::GetMapID()) {
-        case GW::Constants::MapID::Temple_of_the_Ages:
-        case GW::Constants::MapID::Zin_Ku_Corridor_outpost:
-        case GW::Constants::MapID::Chantry_of_Secrets_outpost:
-        case GW::Constants::MapID::Embark_Beach: {
-            if (argc < 2) {
-                return Log::Error(error_fow_uw_syntax);
-            }
-            uint32_t item_id;
-            const std::wstring arg1 = TextUtils::ToLower(argv[1]);
-            if (arg1 == L"fow") {
-                item_id = 22280;
-            }
-            else if (arg1 == L"uw") {
-                item_id = 3746;
-            }
-            else {
-                return Log::Error(error_fow_uw_syntax);
-            }
-            if (!GW::Items::UseItemByModelId(item_id, 1, 4) && !GW::Items::UseItemByModelId(item_id, 8, 16)) {
-                return Log::Error(error_no_scrolls);
-            }
-        } break;
-        default:
-            const auto map_info = GW::Map::GetCurrentMapInfo();
-            if (!map_info || !map_info->GetHasEnterButton()) {
-                return Log::Error(error_use_from_outpost);
-            }
-            if (!GW::PartyMgr::GetIsLeader()) {
-                return Log::Error(error_not_leading);
-            }
-            const auto p = GW::GetGameContext()->party;
-            if (p && (p->flag & 0x8) != 0) {
-                GW::Map::CancelEnterChallenge();
-            }
-            else {
-                GW::Map::EnterChallenge();
-            }
-    }
-}
-
-void CHAT_CMD_FUNC(ChatCommands::CmdMorale)
-{
-    if (GW::GetGameContext()->world->morale == 100) {
-        GW::Chat::SendChat('#', L"I have no Morale Boost or Death Penalty!");
-    }
-    else {
-        auto packet = GW::UI::UIPacket::kSendCallTarget{.call_type = GW::CallTargetType::Morale, .agent_id = GW::Agents::GetControlledCharacterId()};
-        GW::UI::SendUIMessage(GW::UI::UIMessage::kSendCallTarget, &packet);
-    }
-}
-
-void CHAT_CMD_FUNC(ChatCommands::CmdAge2)
-{
-    TimerWidget::Instance().PrintTimer();
-}
-
-
-
-void CHAT_CMD_FUNC(ChatCommands::CmdDialog)
-{
-    if (!IsMapReady()) {
-        return;
-    }
-    if (argc <= 1) {
-        Log::Warning(dialog_syntax);
-        return;
-    }
-    uint32_t id = 0;
-    auto dialog_str = std::wstring{argv[1]};
-    int base = 10;
-    if (dialog_str.starts_with(L"0x")) {
-        base = 16;
-        dialog_str = dialog_str.substr(2);
-    }
-    if (dialog_str == L"take" || dialog_str == L"0") {
-        id = 0;
-    }
-    else if (!(TextUtils::ParseUInt(argv[1], &id, base) && id)) {
-        Log::Warning(dialog_syntax);
-        return;
-    }
-    if (!DialogModule::GetDialogAgent()) {
-        const auto* target = GW::Agents::GetTargetAsAgentLiving();
-        const auto* me = GW::Agents::GetControlledCharacter();
-        if (target && me && target->allegiance == GW::Constants::Allegiance::Npc_Minipet && GetDistance(me->pos, target->pos) < GW::Constants::Range::Area) {
-            GW::Agents::InteractAgent(target);
-        }
-    }
-    DialogModule::SendDialog(id);
-}
-
-void CHAT_CMD_FUNC(ChatCommands::CmdChest)
-{
-    if (!IsMapReady()) {
-        return;
-    }
-    GW::GameThread::Enqueue([]() {
-        const auto frame = GW::UI::GetFrameByLabel(L"InvAccount");
-        if (frame) {
-            GW::UI::DestroyUIComponent(frame);
-        }
-        else {
-            GW::Items::OpenXunlaiWindow();
-        }
-    });
-}
-
-
-
-void CHAT_CMD_FUNC(ChatCommands::CmdTB)
-{
-    if (!ImGui::GetCurrentContext()) {
-        return; // Don't process window manips until ImGui is ready
-    }
-    if (argc < 2) {
-        // e.g. /tbs
-        MainWindow::Instance().visible ^= 1;
-        return;
-    }
-
-    const std::wstring arg1 = TextUtils::ToLower(argv[1]);
-    if (argc < 3) {
-        if (arg1 == L"hide") {
-            // e.g. /tb hide
-            MainWindow::Instance().visible = false;
-        }
-        else if (arg1 == L"show") {
-            // e.g. /tb show
-            MainWindow::Instance().visible = true;
-        }
-        else if (arg1 == L"toggle") {
-            // e.g. /tb toggle
-            MainWindow::Instance().visible = !MainWindow::Instance().visible;
-        }
-        else if (arg1 == L"save") {
-            // e.g. /tb save
-            GWToolbox::SetSettingsFolder({});
-            const auto file_location = GWToolbox::SaveSettings();
-            const auto dir = file_location.parent_path();
-            const auto dirstr = dir.wstring();
-            const auto printable = TextUtils::str_replace_all(dirstr, LR"(\)", L"/");
-            Log::InfoW(L"Settings saved to [%ls;file://%ls]", printable.c_str(), printable.c_str());
-        }
-        else if (arg1 == L"load") {
-            // e.g. /tb load
-            GWToolbox::SetSettingsFolder({});
-            const auto file_location = GWToolbox::LoadSettings();
-            const auto dir = file_location.parent_path();
-            const auto dirstr = dir.wstring();
-            const auto printable = TextUtils::str_replace_all(dirstr, LR"(\)", L"/");
-            Log::InfoW(L"Settings loaded from [%ls;file://%ls]", printable.c_str() ,printable.c_str());
-        }
-        else if (arg1 == L"reset") {
-            // e.g. /tb reset
-            ImGui::SetWindowPos(MainWindow::Instance().Name(), ImVec2(50.0f, 50.0f));
-            ImGui::SetWindowPos(SettingsWindow::Instance().Name(), ImVec2(50.0f, 50.0f));
-            MainWindow::Instance().visible = false;
-            SettingsWindow::Instance().visible = true;
-        }
-        else if (arg1 == L"mini" || arg1 == L"minimize" || arg1 == L"collapse") {
-            // e.g. /tb mini
-            ImGui::SetWindowCollapsed(MainWindow::Instance().Name(), true);
-        }
-        else if (arg1 == L"maxi" || arg1 == L"maximize") {
-            // e.g. /tb maxi
-            ImGui::SetWindowCollapsed(MainWindow::Instance().Name(), false);
-        }
-        else if (arg1 == L"close" || arg1 == L"quit" || arg1 == L"exit") {
-            // e.g. /tb close
-            GWToolbox::SignalTerminate();
-        }
-        else {
-            // e.g. /tb travel
-            const std::vector<ToolboxUIElement*> windows = MatchingWindows(status, message, argc, argv);
-            for (ToolboxUIElement* window : windows) {
-                window->visible ^= 1;
-            }
-        }
-        return;
-    }
-    const std::vector<ToolboxUIElement*> windows = MatchingWindows(status, message, argc, argv);
-    const std::wstring arg2 = TextUtils::ToLower(argv[2]);
-    if (arg2 == L"hide") {
-        // e.g. /tb travel hide
-        for (const auto& window : windows) {
-            window->visible = false;
-        }
-    }
-    else if (arg2 == L"show") {
-        // e.g. /tb travel show
-        for (const auto& window : windows) {
-            window->visible = true;
-        }
-    }
-    else if (arg2 == L"toggle") {
-        // e.g. /tb travel toggle
-        for (const auto& window : windows) {
-            window->visible = !window->visible;
-        }
-    }
-    else if (arg2 == L"mini" || arg2 == L"minimize" || arg2 == L"collapse") {
-        // e.g. /tb travel mini
-        for (const auto& window : windows) {
-            ImGui::SetWindowCollapsed(window->Name(), true);
-        }
-    }
-    else if (arg2 == L"maxi" || arg2 == L"maximize") {
-        // e.g. /tb travel maxi
-        for (const auto& window : windows) {
-            ImGui::SetWindowCollapsed(window->Name(), false);
-        }
-    }
-    else if (arg1 == L"save") {
-        // e.g. /tb save pure
-        const auto sanitised_foldername = TextUtils::SanitiseFilename(arg2);
-        GWToolbox::SetSettingsFolder(sanitised_foldername);
-        const auto file_location = GWToolbox::SaveSettings();
-        const auto dir = file_location.parent_path();
-        const auto dirstr = dir.wstring();
-        const auto printable = TextUtils::str_replace_all(dirstr, LR"(\)", L"/");
-        Log::InfoW(L"Settings saved to %ls", printable.c_str());
-    }
-    else if (arg1 == L"load") {
-        // e.g. /tb load tas
-        const auto sanitised_foldername = TextUtils::SanitiseFilename(arg2);
-        const auto old_settings_folder = Resources::GetSettingsFolderName();
-        GWToolbox::SetSettingsFolder(sanitised_foldername);
-        // A config exists if it has split per-module files, a legacy single-doc json, or a legacy ini
-        std::error_code ec;
-        const auto modules_folder = Resources::GetSettingFile(GWTOOLBOX_MODULES_FOLDERNAME);
-        const bool has_settings = (std::filesystem::exists(modules_folder, ec) && !std::filesystem::is_empty(modules_folder, ec)) || std::filesystem::exists(Resources::GetSettingFile(GWTOOLBOX_JSON_FILENAME), ec) ||
-                                  std::filesystem::exists(Resources::GetLegacySettingFile(GWTOOLBOX_JSON_FILENAME), ec) || std::filesystem::exists(Resources::GetLegacySettingFile(GWTOOLBOX_INI_FILENAME), ec);
-        if (!has_settings) {
-            Log::ErrorW(L"Settings folder '%ls' does not exist", arg2.c_str());
-            GWToolbox::SetSettingsFolder(old_settings_folder);
-            return;
-        }
-        const auto file_location = GWToolbox::LoadSettings();
-        const auto dir = file_location.parent_path();
-        const auto dirstr = dir.wstring();
-        const auto printable = TextUtils::str_replace_all(dirstr, LR"(\)", L"/");
-        Log::InfoW(L"Settings loaded from %ls", printable.c_str());
-    }
-    else {
-        // Invalid argument
-        Log::Error(tb_syntax);
-    }
-}
-
-GW::UI::WindowID CHAT_CMD_FUNC(ChatCommands::MatchingGWWindow)
-{
-    const std::map<GW::UI::WindowID, const wchar_t*> gw_windows = {
-        {GW::UI::WindowID_Compass, L"compass"}, {GW::UI::WindowID_HealthBar, L"healthbar"}, {GW::UI::WindowID_EnergyBar, L"energybar"}, {GW::UI::WindowID_ExperienceBar, L"experiencebar"}, {GW::UI::WindowID_Chat, L"chat"}
-    };
-    if (argc < 2) {
-        return GW::UI::WindowID_Count;
-    }
-    const std::wstring arg = TextUtils::ToLower(argv[1]);
-    if (!arg.empty() && arg != L"all") {
-        for (const auto& [window_id, window_name] : gw_windows) {
-            if (wcscmp(window_name, arg.c_str()) == 0) {
-                return window_id;
-            }
-        }
-    }
-    return GW::UI::WindowID_Count;
-}
-
-std::vector<ToolboxUIElement*> CHAT_CMD_FUNC(ChatCommands::MatchingWindows)
-{
-    std::vector<ToolboxUIElement*> ret;
-    if (argc <= 1) {
-        ret.push_back(&MainWindow::Instance());
-    }
-    else {
-        const std::wstring arg = TextUtils::ToLower(argv[1]);
-        if (arg == L"all") {
-            for (ToolboxUIElement* window : GWToolbox::GetUIElements()) {
-                ret.push_back(window);
-            }
-        }
-        else if (!arg.empty()) {
-            const std::string name = TextUtils::WStringToString(arg);
-            for (ToolboxUIElement* window : GWToolbox::GetUIElements()) {
-                if (TextUtils::ToLower(window->Name()).find(name) == 0) {
-                    ret.push_back(window);
-                }
-            }
-        }
-    }
-    return ret;
-}
-
-void CHAT_CMD_FUNC(ChatCommands::CmdShow)
-{
-    std::wstring cmd = L"toggle ";
-    cmd.append(GetRemainingArgsWstr(message, 1));
-    cmd.append(L" on");
-    GW::Chat::SendChat('/', cmd.c_str());
-}
-
-void CHAT_CMD_FUNC(ChatCommands::CmdHide)
-{
-    std::wstring cmd = L"toggle ";
-    cmd.append(GetRemainingArgsWstr(message, 1));
-    cmd.append(L" off");
-    GW::Chat::SendChat('/', cmd.c_str());
-}
-
-void CHAT_CMD_FUNC(ChatCommands::CmdToggle)
-{
-    if (argc < 2) {
-        Log::ErrorW(L"Invalid syntax: %ls", message);
-        return;
-    }
-    const std::wstring last_arg = TextUtils::ToLower(argv[argc - 1]);
-    bool ignore_last_arg = false;
-    enum ActionType : uint8_t { Toggle, On, Off } action = Toggle;
-    if (last_arg == L"on" || last_arg == L"1" || last_arg == L"show") {
-        action = On;
-        ignore_last_arg = true;
-    }
-    else if (last_arg == L"off" || last_arg == L"0" || last_arg == L"hide") {
-        action = Off;
-        ignore_last_arg = true;
-    }
-    const std::wstring second_arg = TextUtils::ToLower(argv[1]);
-
-    auto equipment_slot = GW::EquipmentType::Unknown;
-
-    if (second_arg == L"cape") {
-        equipment_slot = GW::EquipmentType::Cape;
-    }
-    else if (second_arg == L"head" || second_arg == L"helm") {
-        equipment_slot = GW::EquipmentType::Helm;
-    }
-    else if (second_arg == L"costume_head") {
-        equipment_slot = GW::EquipmentType::CostumeHeadpiece;
-    }
-    else if (second_arg == L"costume") {
-        equipment_slot = GW::EquipmentType::CostumeBody;
-    }
-    if (equipment_slot != GW::EquipmentType::Unknown) {
-        GW::EquipmentStatus state = GW::Items::GetEquipmentVisibility(equipment_slot);
-        switch (action) {
-            case On:
-                state = GW::EquipmentStatus::AlwaysShow;
-                break;
-            case Off:
-                state = GW::EquipmentStatus::AlwaysHide;
-                break;
-            default:
-                state = state == GW::EquipmentStatus::AlwaysShow ? GW::EquipmentStatus::AlwaysHide : GW::EquipmentStatus::AlwaysShow;
-                break;
-        }
-        ASSERT(GW::Items::SetEquipmentVisibility(equipment_slot, state));
-        return;
-    }
-    const std::vector<ToolboxUIElement*> windows = MatchingWindows(status, message, ignore_last_arg ? argc - 1 : argc, argv);
-    for (ToolboxUIElement* window : windows) {
-        switch (action) {
-            case On:
-                window->visible = true;
-                break;
-            case Off:
-                window->visible = false;
-                break;
-            default:
-                window->visible = !window->visible;
-                break;
-        }
-    }
-    const GW::UI::WindowID gw_window = MatchingGWWindow(status, message, ignore_last_arg ? argc - 1 : argc, argv);
-    if (gw_window < GW::UI::WindowID_Count) {
-        bool set = true;
-        switch (action) {
-            case Off:
-                set = false;
-                break;
-            case Toggle:
-                set = !GetWindowPosition(gw_window)->visible();
-                break;
-        }
-        SetWindowVisible(gw_window, set);
-    }
-}
-
-void CHAT_CMD_FUNC(ChatCommands::CmdAfk)
-{
-    GW::FriendListMgr::SetFriendListStatus(GW::FriendStatus::Away);
-    if (argc > 1) {
-        const wchar_t* afk_msg = next_word(message);
-        ChatSettings::SetAfkMessage(afk_msg);
-    }
-    else {
-        ChatSettings::SetAfkMessage(L"");
-    }
-}
-
-
-void CHAT_CMD_FUNC(ChatCommands::CmdSCWiki)
-{
-    if (argc == 1) {
-        ShellExecuteW(nullptr, L"open", L"https://wiki.fbgmguild.com/wiki/Main_Page", nullptr, nullptr, SW_SHOWNORMAL);
-    }
-    else {
-        // the buffer is large enough, because you can type only 120 characters at once in the chat.
-        wchar_t link[256] = L"https://wiki.fbgmguild.com/index.php?search=";
-        int i;
-        for (i = 1; i < argc - 1; i++) {
-            wcscat_s(link, argv[i]);
-            wcscat_s(link, L"+");
-        }
-        wcscat_s(link, argv[i]);
-        ShellExecuteW(nullptr, L"open", link, nullptr, nullptr, SW_SHOWNORMAL);
-    }
-}
-
-void CHAT_CMD_FUNC(ChatCommands::CmdLoad)
-{
-    if (argc == 1) return;
-
-    std::wstring dir;
-    if (!GW::MemoryMgr::GetPersonalDir(dir)) return;
-
-    const std::filesystem::path build_file = std::format(L"{}/GUILD WARS/Templates/Skills/{}.txt", dir, argv[1]);
-    std::string content;
-    if (!Resources::ReadFile(build_file, content)) content = TextUtils::WStringToString(argv[1]);
-    if (argc == 2) {
-        GW::SkillbarMgr::LoadSkillTemplate(GW::Agents::GetControlledCharacterId(), content.c_str());
-    }
-    else if (argc == 3) {
-        uint32_t ihero_number;
-        if (TextUtils::ParseUInt(argv[2], &ihero_number)) {
-            // @Robustness:
-            // Check that the number is actually valid or make sure LoadSkillTemplate is safe
-            if (0 < ihero_number && ihero_number <= 8) {
-                GW::SkillbarMgr::LoadSkillTemplate(GW::Agents::GetHeroAgentID(ihero_number), content.c_str());
-            }
-        }
-    }
-}
-
-void CHAT_CMD_FUNC(ChatCommands::CmdPingBuild)
-{
-    if (argc < 2) {
-        return;
-    }
-
-    std::wstring dir;
-    if (!GW::MemoryMgr::GetPersonalDir(dir)) return;
-
-    for (auto arg_idx = 1; arg_idx < argc; arg_idx++) {
-        const LPWSTR arg = argv[arg_idx];
-
-        const std::filesystem::path build_file = std::format(L"{}/GUILD WARS/Templates/Skills/{}.txt", dir, arg);
-        std::string content;
-        if (!Resources::ReadFile(build_file, content)) return;
-
-        GW::SkillbarMgr::SkillTemplate skill_template{};
-        if (!DecodeSkillTemplate(skill_template, content.c_str())) {
-            continue;
-        }
-
-        GW::Chat::SendChat('#', std::format(L"[{};{}]", arg, TextUtils::StringToWString(content)).c_str());
-    }
-}
-
-void CHAT_CMD_FUNC(ChatCommands::CmdPingEquipment)
-{
-    if (!IsMapReady()) {
-        return;
-    }
-    if (argc < 2) {
-        Log::Error("Missing argument for /pingitem");
-        return;
-    }
-    const auto equipped_items_bag = GW::Items::GetBag(GW::Constants::Bag::Equipped_Items);
-    if (!equipped_items_bag) return;
-    const std::wstring arg1 = TextUtils::ToLower(argv[1]);
-    if (arg1 == L"weapon") {
-        GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 1), 3);
-    }
-    else if (arg1 == L"offhand" || arg1 == L"shield") {
-        GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 2), 3);
-    }
-    else if (arg1 == L"chest") {
-        GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 3), 2);
-    }
-    else if (arg1 == L"legs") {
-        GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 4), 2);
-    }
-    else if (arg1 == L"head") {
-        GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 5), 2);
-    }
-    else if (arg1 == L"boots" || arg1 == L"feet") {
-        GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 6), 2);
-    }
-    else if (arg1 == L"gloves" || arg1 == L"hands") {
-        GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 7), 2);
-    }
-    else if (arg1 == L"weapons") {
-        GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 1), 3);
-        GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 2), 3);
-    }
-    else if (arg1 == L"armor") {
-        GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 5), 2);
-        GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 3), 2);
-        GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 7), 2);
-        GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 4), 2);
-        GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 6), 2);
-    }
-    else if (arg1 == L"costume") {
-        GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 8), 1);
-        GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 9), 1);
-    }
-    else {
-        Log::Error("Unrecognised /pingitem %ls", argv[1]);
-    }
-}
-
-void GetAchievements(const std::wstring& player_name)
-{
-    if (!(!player_name.empty() && player_name.size() < 20)) {
-        return Log::Error("Invalid player name for hall of monuments command");
-    }
-    hom_achievements = HallOfMonumentsAchievements{};
-    HallOfMonumentsModule::AsyncGetAccountAchievements(player_name, &hom_achievements, OnAchievementsLoaded);
-}
-
-void CHAT_CMD_FUNC(ChatCommands::CmdHom)
-{
-    std::wstring player_name;
-    if (argc > 1) {
-        player_name = GetRemainingArgsWstr(message, 1);
-
-        if (player_name == L"me") {
-            player_name = GW::PlayerMgr::GetPlayerName(0);
-            return GetAchievements(player_name);
-        }
-        if (player_name.find(L" ") != std::wstring::npos && player_name.size() < 20) {
-            return GetAchievements(player_name);
-        }
-    }
-
-    const auto target = GW::Agents::GetTargetAsAgentLiving();
-    const auto player = target && target->IsPlayer() ? GW::PlayerMgr::GetPlayerByID(target->player_number) : nullptr;
-    if (player) {
-        player_name = player->name;
-        return GetAchievements(player_name);
-    }
-}
-
-void CHAT_CMD_FUNC(ChatCommands::CmdWithdraw)
-{
-    CmdGoldItemCommand(argc, argv, withdraw_syntax, GW::Items::WithdrawGold, InventoryManager::RefillUpToQuantity);
-}
-
-void CHAT_CMD_FUNC(ChatCommands::CmdDeposit)
-{
-    CmdGoldItemCommand(argc, argv, deposit_syntax, GW::Items::DepositGold, InventoryManager::StoreItems);
-}
-
-void CHAT_CMD_FUNC(ChatCommands::CmdResize)
-{
-    if (argc != 3) {
-        Log::Error("The syntax is /resize width height");
-        return;
-    }
-    int width, height;
-    if (!(TextUtils::ParseInt(argv[1], &width) && TextUtils::ParseInt(argv[2], &height))) {
-        Log::Error("The syntax is /resize width height");
-        return;
-    }
-    const HWND hwnd = GW::MemoryMgr::GetGWWindowHandle();
-    RECT rect;
-    GetWindowRect(hwnd, &rect);
-    MoveWindow(hwnd, rect.left, rect.top, width, height, TRUE);
-}
 
 void CHAT_CMD_FUNC(ChatCommands::CmdReapplyTitle)
 {
@@ -2915,65 +2986,3 @@ apply:
 }
 
 
-
-void CHAT_CMD_FUNC(ChatCommands::CmdVolume)
-{
-    const auto syntax = "Syntax: '/volume [master|music|background|effects|dialog|ui] [amount (0-100)]'";
-    wchar_t* value;
-    GW::UI::NumberPreference pref;
-    switch (argc) {
-        case 2:
-            pref = GW::UI::NumberPreference::VolMaster;
-            value = argv[1];
-            break;
-        case 3: {
-            const wchar_t* pref_str = argv[1];
-            if (wcscmp(pref_str, L"master") == 0) {
-                pref = GW::UI::NumberPreference::VolMaster;
-            }
-            else if (wcscmp(pref_str, L"music") == 0) {
-                pref = GW::UI::NumberPreference::VolMusic;
-            }
-            else if (wcscmp(pref_str, L"background") == 0) {
-                pref = GW::UI::NumberPreference::VolBackground;
-            }
-            else if (wcscmp(pref_str, L"effects") == 0) {
-                pref = GW::UI::NumberPreference::VolEffect;
-            }
-            else if (wcscmp(pref_str, L"dialog") == 0) {
-                pref = GW::UI::NumberPreference::VolDialog;
-            }
-            else if (wcscmp(pref_str, L"ui") == 0) {
-                pref = GW::UI::NumberPreference::VolUi;
-            }
-            else {
-                return Log::Error(syntax);
-            }
-            value = argv[2];
-            break;
-        }
-        default:
-            return Log::Error(syntax);
-    }
-    uint32_t value_dec;
-    if (!TextUtils::ParseUInt(value, &value_dec, 10)) {
-        return Log::Error(syntax);
-    }
-    if (value_dec > 100) {
-        return Log::Error(syntax);
-    }
-    SetPreference(pref, value_dec);
-}
-
-void CHAT_CMD_FUNC(ChatCommands::CmdSetHardMode)
-{
-    if (!GW::GetWorldContext()->is_hard_mode_unlocked) {
-        return;
-    }
-    GW::PartyMgr::SetHardMode(true);
-}
-
-void CHAT_CMD_FUNC(ChatCommands::CmdSetNormalMode)
-{
-    GW::PartyMgr::SetHardMode(false);
-}

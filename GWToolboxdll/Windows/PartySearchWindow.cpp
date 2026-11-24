@@ -137,49 +137,49 @@ namespace {
 namespace {
 
     struct Message {
-    uint32_t timestamp = 0;
-    std::string name;
-    std::string message;
+        uint32_t timestamp = 0;
+        std::string name;
+        std::string message;
     };
 
     struct TBParty {
-    TBParty()
-    {
-        message[0] = 0;
-        player_name[0] = 0;
-    }
+        TBParty()
+        {
+            message[0] = 0;
+            player_name[0] = 0;
+        }
 
-    void FillCurrentLocation(const GW::Player* player)
-    {
-        map_id = static_cast<uint16_t>(GW::Map::GetMapID());
-        district = GW::Map::GetDistrict();
-        language = static_cast<uint8_t>(GW::Map::GetLanguage());
-        region_id = static_cast<uint8_t>(GW::Map::GetRegion());
-        primary = player->primary;
-        secondary = player->secondary;
-        player_name = TextUtils::WStringToString(player->name);
-        Log::Log("Party %d updated\n", concat_party_id);
-    }
+        void FillCurrentLocation(const GW::Player* player)
+        {
+            map_id = static_cast<uint16_t>(GW::Map::GetMapID());
+            district = GW::Map::GetDistrict();
+            language = static_cast<uint8_t>(GW::Map::GetLanguage());
+            region_id = static_cast<uint8_t>(GW::Map::GetRegion());
+            primary = player->primary;
+            secondary = player->secondary;
+            player_name = TextUtils::WStringToString(player->name);
+            Log::Log("Party %d updated\n", concat_party_id);
+        }
 
-    static uint32_t IdFromRegionParty(uint32_t party_id);
-    static uint32_t IdFromLocalParty(uint32_t party_id);
-    bool FromRegionParty(const GW::PartySearch*);
-    bool FromLocalParty(GW::PartyInfo*);
-    bool FromPlayerInMap(const GW::Player* player);
-    uint32_t concat_party_id = 0;
-    uint32_t player_id = 0;
-    uint8_t party_size = 0;
-    uint8_t hero_count = 0;
-    uint8_t search_type = 5;
-    uint8_t is_hard_mode = 0;
-    uint16_t map_id = 0;
-    int8_t region_id = 0;
-    int8_t district = 0;
-    int8_t language = 0;
-    uint8_t primary = 0;
-    uint8_t secondary = 0;
-    std::string message;
-    std::string player_name;
+        static uint32_t IdFromRegionParty(uint32_t party_id);
+        static uint32_t IdFromLocalParty(uint32_t party_id);
+        bool FromRegionParty(const GW::PartySearch*);
+        bool FromLocalParty(GW::PartyInfo*);
+        bool FromPlayerInMap(const GW::Player* player);
+        uint32_t concat_party_id = 0;
+        uint32_t player_id = 0;
+        uint8_t party_size = 0;
+        uint8_t hero_count = 0;
+        uint8_t search_type = 5;
+        uint8_t is_hard_mode = 0;
+        uint16_t map_id = 0;
+        int8_t region_id = 0;
+        int8_t district = 0;
+        int8_t language = 0;
+        uint8_t primary = 0;
+        uint8_t secondary = 0;
+        std::string message;
+        std::string player_name;
     };
 
     constexpr auto ALERT_BUF_SIZE = 1024 * 16;
