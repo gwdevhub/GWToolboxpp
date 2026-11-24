@@ -2541,6 +2541,27 @@ void CompletionWindow::DrawHallOfMonuments(IDirect3DDevice9* device)
         single_item_width *= 5.f;
     }
     const int missions_per_row = static_cast<int>(std::floor(ImGui::GetContentRegionAvail().x / (ImGui::FontScale() * single_item_width + ImGui::GetStyle().ItemSpacing.x)));
+    auto draw_completion_rows = [missions_per_row, device](auto& items, size_t count) {
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+        ImGui::Columns(missions_per_row, "###completion_section_cols", false);
+        const size_t items_per_col = static_cast<size_t>(ceil(count / static_cast<float>(missions_per_row)));
+        size_t col_count = 0;
+        for (const auto m : items) {
+            if (m->is_completed && settings.hide_unlocked_achievements) {
+                continue;
+            }
+            if (!m->Draw(device)) {
+                continue;
+            }
+            col_count++;
+            if (col_count == items_per_col) {
+                ImGui::NextColumn();
+                col_count = 0;
+            }
+        }
+        ImGui::Columns(1);
+        ImGui::PopStyleVar();
+    };
     const float checkbox_offset = ImGui::GetContentRegionAvail().x - 200.f * ImGui::FontScale();
     ImGui::Text("Hall of Monuments");
     ImGui::SameLine(checkbox_offset);
@@ -2576,11 +2597,6 @@ void CompletionWindow::DrawHallOfMonuments(IDirect3DDevice9* device)
     if (ImGui::CollapsingHeader(label)) {
         ImGui::TextDisabled(R"(To update this list, talk to the "Devotion" pedestal in Eye of the North,
 then press "Examine the Monument to Devotion.")");
-        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-        ImGui::Columns(missions_per_row, "###completion_section_cols", false);
-        const size_t items_per_col = static_cast<size_t>(ceil(drawn / static_cast<float>(missions_per_row)));
-        size_t col_count = 0;
-
         if (!minipets_sorted) {
             bool ready = true;
             for (const auto m : minipets) {
@@ -2595,21 +2611,7 @@ then press "Examine the Monument to Devotion.")");
             }
         }
 
-        for (const auto m : minipets) {
-            if (m->is_completed && settings.hide_unlocked_achievements) {
-                continue;
-            }
-            if (!m->Draw(device)) {
-                continue;
-            }
-            col_count++;
-            if (col_count == items_per_col) {
-                ImGui::NextColumn();
-                col_count = 0;
-            }
-        }
-        ImGui::Columns(1);
-        ImGui::PopStyleVar();
+        draw_completion_rows(minipets, drawn);
     }
     // Valor
     completed = 0;
@@ -2635,26 +2637,7 @@ then press "Examine the Monument to Devotion.")");
              static_cast<float>(dedicated) / static_cast<float>(hom_weapons.size()) * 100.f);
 
     if (ImGui::CollapsingHeader(label)) {
-        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-        ImGui::Columns(missions_per_row, "###completion_section_cols", false);
-        const size_t items_per_col = static_cast<size_t>(ceil(drawn / static_cast<float>(missions_per_row)));
-        size_t col_count = 0;
-
-        for (const auto m : hom_weapons) {
-            if (m->is_completed && settings.hide_unlocked_achievements) {
-                continue;
-            }
-            if (!m->Draw(device)) {
-                continue;
-            }
-            col_count++;
-            if (col_count == items_per_col) {
-                ImGui::NextColumn();
-                col_count = 0;
-            }
-        }
-        ImGui::Columns(1);
-        ImGui::PopStyleVar();
+        draw_completion_rows(hom_weapons, drawn);
     }
 
     // Resilience
@@ -2681,26 +2664,7 @@ then press "Examine the Monument to Devotion.")");
              static_cast<float>(dedicated) / static_cast<float>(hom_armor.size()) * 100.f);
 
     if (ImGui::CollapsingHeader(label)) {
-        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-        ImGui::Columns(missions_per_row, "###completion_section_cols", false);
-        const auto items_per_col = static_cast<size_t>(ceil(drawn / static_cast<float>(missions_per_row)));
-        size_t col_count = 0;
-
-        for (const auto m : hom_armor) {
-            if (m->is_completed && settings.hide_unlocked_achievements) {
-                continue;
-            }
-            if (!m->Draw(device)) {
-                continue;
-            }
-            col_count++;
-            if (col_count == items_per_col) {
-                ImGui::NextColumn();
-                col_count = 0;
-            }
-        }
-        ImGui::Columns(1);
-        ImGui::PopStyleVar();
+        draw_completion_rows(hom_armor, drawn);
     }
 
     // Fellowship
@@ -2727,26 +2691,7 @@ then press "Examine the Monument to Devotion.")");
              static_cast<float>(dedicated) / static_cast<float>(hom_companions.size()) * 100.f);
 
     if (ImGui::CollapsingHeader(label)) {
-        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-        ImGui::Columns(missions_per_row, "###completion_section_cols", false);
-        const size_t items_per_col = static_cast<size_t>(ceil(drawn / static_cast<float>(missions_per_row)));
-        size_t col_count = 0;
-
-        for (const auto m : hom_companions) {
-            if (m->is_completed && settings.hide_unlocked_achievements) {
-                continue;
-            }
-            if (!m->Draw(device)) {
-                continue;
-            }
-            col_count++;
-            if (col_count == items_per_col) {
-                ImGui::NextColumn();
-                col_count = 0;
-            }
-        }
-        ImGui::Columns(1);
-        ImGui::PopStyleVar();
+        draw_completion_rows(hom_companions, drawn);
     }
 
     // Honor
@@ -2773,26 +2718,7 @@ then press "Examine the Monument to Devotion.")");
              static_cast<float>(dedicated) / static_cast<float>(hom_titles.size()) * 100.f);
 
     if (ImGui::CollapsingHeader(label)) {
-        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-        ImGui::Columns(missions_per_row, "###completion_section_cols", false);
-        const size_t items_per_col = static_cast<size_t>(ceil(drawn / static_cast<float>(missions_per_row)));
-        size_t col_count = 0;
-
-        for (const auto m : hom_titles) {
-            if (m->is_completed && settings.hide_unlocked_achievements) {
-                continue;
-            }
-            if (!m->Draw(device)) {
-                continue;
-            }
-            col_count++;
-            if (col_count == items_per_col) {
-                ImGui::NextColumn();
-                col_count = 0;
-            }
-        }
-        ImGui::Columns(1);
-        ImGui::PopStyleVar();
+        draw_completion_rows(hom_titles, drawn);
     }
 }
 
