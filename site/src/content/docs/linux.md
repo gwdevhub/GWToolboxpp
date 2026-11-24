@@ -1,18 +1,21 @@
 ---
 title: "Linux Install Guide"
 section: meta
-description: "How to run Guild Wars + GWToolbox++ on Linux."
+description: "How to run GWToolbox++ natively on Linux, with Guild Wars running through Wine."
 ---
 
-> **GWToolbox++ does not officially support Linux or any non-Windows host.** Guild Wars itself runs well on Linux through Wine, and Toolbox can run alongside it, so this guide is provided purely as a convenience for anyone who wants to give it a go. Running outside Windows is unsupported and offered as-is — please don't expect help through the usual support channels if something here doesn't work.
+As of November 2026, the GWToolbox++ launcher works natively on Linux. Guild Wars itself still runs through Wine, and there are two supported ways to run Toolbox with it:
 
-GWToolbox++ is a Windows DLL. The walkthrough below is a short summary — for the full, authoritative reference (including troubleshooting, performance tuning, optional DXVK setup, sound, DirectSong, and more) please use the excellent guide maintained by [**ChthonVII**](https://github.com/ChthonVII): [guildwarslinuxinstallguide](https://github.com/ChthonVII/guildwarslinuxinstallguide).
+1. **Inject with `GWToolbox.AppImage`.** Run the native Linux launcher and inject GWToolbox++ into a Guild Wars client that is already running in Wine. This is the simplest route if you start the game yourself.
+2. **Launch through GW Launcher.** Start Guild Wars with [GW Launcher](https://github.com/gwdevhub/gwlauncher/releases/latest), which also runs natively on Linux, and add `GWToolboxdll.dll` to its mods so Toolbox loads with each launch.
 
-If you hit anything that isn't covered here, that guide is the place to look first.
+This page walks through both routes. For the full reference, including troubleshooting, performance tuning, optional DXVK setup, sound, DirectSong, and more, please use the excellent guide maintained by [**ChthonVII**](https://github.com/ChthonVII): [guildwarslinuxinstallguide](https://github.com/ChthonVII/guildwarslinuxinstallguide).
+
+If you hit a problem with the Linux launcher, please report it on the [GitHub issues page](https://github.com/gwdevhub/GWToolboxpp/issues). If something here doesn't work, that guide is the place to look first.
 
 ## Pick the right Wine
 
-Toolbox needs Wine's process-injection features to load the DLL. Which build you want depends on your kernel:
+Guild Wars needs Wine's process-injection features to run with Toolbox. Which build you want depends on your kernel:
 
 - **Kernel ≥ 6.14** with a stock distro kernel — official **WineHQ** packages (`wine`, `wine-devel`, or `wine-staging`) work out of the box.
 - **Kernel ≥ 6.14** with custom/backport kernels — a **TkG** build (e.g. [Kron4ek/Wine-Builds](https://github.com/Kron4ek/Wine-Builds)) with **NTSYNC** enabled.
@@ -46,20 +49,59 @@ wine start /d "C:\\Program Files (x86)\\Guild Wars" \
               "C:\\Program Files (x86)\\Guild Wars\\Gw.exe"
 ```
 
-## Install GWToolbox++
+## Route 1: Inject with GWToolbox.AppImage
 
-1. [Download the launcher](https://github.com/gwdevhub/GWToolboxpp/releases/latest) and run it inside the same prefix — it auto-downloads `GWToolboxdll.dll` into `~/Documents/GWToolboxpp/`.
-2. **Launching Toolbox** — pick one of:
-   - **Launcher UI** — run `GWToolbox.exe` before or after starting Guild Wars; it finds the running `Gw.exe` and injects the DLL.
-   - **Silent injection** (recommended for scripts/launchers):
-     ```bash
-     wine start /d "C:\\Program Files (x86)\\GWToolbox" \
-                   "C:\\Program Files (x86)\\GWToolbox\\GWToolbox.exe" /quiet
-     ```
-   - **Generic injector** — e.g. `Injectory`, useful if you don't want the launcher running at all:
-     ```bash
-     injectory.x86.exe -l Gw.exe -i GWToolboxdll.dll
-     ```
+Use this route when you start Guild Wars yourself and want to add Toolbox to a client that is already running.
+
+### Download and run the launcher
+
+1. Download `GWToolbox.AppImage` from the [latest release](https://github.com/gwdevhub/GWToolboxpp/releases/latest).
+2. Start it. If it won't start, make it executable and try again:
+
+   ```bash
+   chmod +x GWToolbox.AppImage
+   ./GWToolbox.AppImage
+   ```
+
+   The launcher only sets the executable bit on its own updates, so a file you downloaded yourself may need this step.
+
+3. The launcher saves `GWToolbox.exe` and its settings file, `GWToolbox.json`, into the folder that holds the AppImage. The DLL install window suggests that same folder, but you can choose another one there. The launcher remembers where the DLL is installed. If it has no record, it looks in the AppImage's folder.
+
+### Inject into a running Guild Wars client
+
+Start the game under Wine however you like, with a `wine start` command or a shortcut, then inject into it:
+
+1. Make sure the Guild Wars client is running in its Wine prefix.
+2. In the GWToolbox launcher, choose that client. It injects `GWToolboxdll.dll` into the running client.
+
+You can inject into a client that was already running before you opened the launcher, so you don't need to restart the game to add Toolbox.
+
+## Route 2: Launch through GW Launcher
+
+Use this route if you want GW Launcher to start Guild Wars and load Toolbox automatically on each launch.
+
+1. Download the Linux build of [GW Launcher](https://github.com/gwdevhub/gwlauncher/releases/latest) and put it in its own empty folder. It writes its settings and account files next to itself.
+2. Download `GWToolboxdll.dll` from the [latest release](https://github.com/gwdevhub/GWToolboxpp/releases/latest), or use the copy the GWToolbox launcher installed, which is in the folder you chose in its install window.
+3. Start GW Launcher and click **Add Account**. Fill in the account's Guild Wars folder in the editor.
+4. In the editor's **Mods** pane, click **Add...**, then choose `GWToolboxdll.dll`. It is added with its box ticked, so it loads with that account.
+5. Click **Save**.
+6. Launch the account by double-clicking it in the account list, or by right-clicking it and choosing **Launch Account**.
+
+To change an existing account, right-click it and choose **Edit Account**, then follow step 4.
+
+## Advanced: the Windows build under Wine
+
+The Linux launcher also saves the Windows `GWToolbox.exe` next to the AppImage, so you can run that under Wine if you prefer. The Windows exe can inject the DLL, and you can use a generic injector instead:
+
+- **Silent injection** (for scripts and launchers):
+  ```bash
+  wine start /d "C:\\Program Files (x86)\\GWToolbox" \
+                "C:\\Program Files (x86)\\GWToolbox\\GWToolbox.exe" /quiet
+  ```
+- **Generic injector** — e.g. `Injectory`, useful if you don't want the launcher running at all:
+  ```bash
+  injectory.x86.exe -l Gw.exe -i GWToolboxdll.dll
+  ```
 
 ## Common pitfalls
 
