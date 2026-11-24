@@ -1,6 +1,8 @@
 #pragma once
 
 // ReSharper disable once CppUnusedIncludeDirective
+#include <optional>
+
 #include <ImGuiAddons.h>
 #include <Utils/Json.h>
 #include <ToolboxIni.h>
@@ -119,41 +121,79 @@ namespace GuiUtils {
     bool IconButton(const char* label, GwButtonIcon icon, const ImVec2& size = ImVec2(0, 0), const ImGuiButtonFlags flags = ImGuiButtonFlags_None);
     bool IconButtonConfirm(const char* label, GwButtonIcon icon, const ImVec2& size = ImVec2(0, 0), const ImGuiButtonFlags flags = ImGuiButtonFlags_None);
 
-    // Up and down buttons placed after a row's controls. Swaps items[index] with its neighbour when one is pressed,
-    // and returns true if it did.
     template <typename Items>
-    bool ReorderButtons(Items& items, const size_t index, const size_t count, const float button_width, const float spacing)
+    bool SwapWithNeighbour(Items& items, const size_t index, const bool up)
+    {
+        if (up ? index == 0 : index + 1 >= items.size()) return false;
+        std::swap(items[index], items[up ? index - 1 : index + 1]);
+        return true;
+    }
+
+    template <typename Items>
+    bool ReorderDragDrop(Items& items, const size_t index, const char* payload_type)
     {
         bool moved = false;
-        if (index > 0) {
+        if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
+            ImGui::SetDragDropPayload(payload_type, &index, sizeof(index));
+            ImGui::TextUnformatted("Move");
+            ImGui::EndDragDropSource();
+        }
+        if (ImGui::BeginDragDropTarget()) {
+            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(payload_type)) {
+                const size_t from = *static_cast<const size_t*>(payload->Data);
+                if (from != index && from < items.size()) {
+                    std::swap(items[from], items[index]);
+                    moved = true;
+                }
+            }
+            ImGui::EndDragDropTarget();
+        }
+        return moved;
+    }
+
+    template <typename Items>
+    bool ReorderButtons(Items& items, const size_t index, const std::optional<size_t> up, const std::optional<size_t> down, const float button_width, const float spacing, const char* payload_type)
+    {
+        bool moved = false;
+        if (up) {
             const bool move_up = ImGui::Button(ICON_FA_ARROW_UP, ImVec2(button_width, 0));
             if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip("Move up");
+                ImGui::SetTooltip("Move up (or drag)");
             }
             if (move_up) {
-                std::swap(items[index], items[index - 1]);
+                std::swap(items[index], items[*up]);
                 moved = true;
             }
+            moved |= ReorderDragDrop(items, index, payload_type);
             ImGui::SameLine(0.f, spacing);
         }
         else {
             ImGui::SameLine(0.f, button_width + spacing * 2);
         }
 
-        if (index + 1 < count) {
+        if (down) {
             const bool move_down = ImGui::Button(ICON_FA_ARROW_DOWN, ImVec2(button_width, 0));
             if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip("Move down");
+                ImGui::SetTooltip("Move down (or drag)");
             }
             if (move_down) {
-                std::swap(items[index], items[index + 1]);
+                std::swap(items[index], items[*down]);
                 moved = true;
             }
+            moved |= ReorderDragDrop(items, index, payload_type);
             ImGui::SameLine(0.f, spacing);
         }
         else {
             ImGui::SameLine(0.f, button_width + spacing * 2);
         }
         return moved;
+    }
+
+    template <typename Items>
+    bool ReorderButtons(Items& items, const size_t index, const size_t count, const float button_width, const float spacing, const char* payload_type)
+    {
+        const std::optional<size_t> up = index > 0 ? std::optional<size_t>(index - 1) : std::nullopt;
+        const std::optional<size_t> down = index + 1 < count ? std::optional<size_t>(index + 1) : std::nullopt;
+        return ReorderButtons(items, index, up, down, button_width, spacing, payload_type);
     }
 };

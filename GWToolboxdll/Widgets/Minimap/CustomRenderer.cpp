@@ -298,16 +298,26 @@ void CustomRenderer::DrawLineSettings()
         Invalidate();
     }
     
-    size_t n_lines = std::count_if(lines.begin(), lines.end(), [](const auto& line) {
-        return !line->created_by_toolbox;
-    });
-    
     const float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
     ImGui::PushID("lines");
     for (size_t i = 0; i < lines.size(); i++) {
         CustomLine& line = *lines[i];
         if (line.created_by_toolbox)
             continue;
+        std::optional<size_t> up_neighbour;
+        for (size_t j = i; j-- > 0;) {
+            if (!lines[j]->created_by_toolbox) {
+                up_neighbour = j;
+                break;
+            }
+        }
+        std::optional<size_t> down_neighbour;
+        for (size_t j = i + 1; j < lines.size(); j++) {
+            if (!lines[j]->created_by_toolbox) {
+                down_neighbour = j;
+                break;
+            }
+        }
         ImGui::PushID(static_cast<int>(i));
         markers_changed |= ImGui::Checkbox("##visible", &line.visible);
         if (ImGui::IsItemHovered()) {
@@ -367,7 +377,7 @@ void CustomRenderer::DrawLineSettings()
         }
         ImGui::SameLine(0.0f, spacing);
 
-        markers_changed |= GuiUtils::ReorderButtons(lines, i, n_lines, BTN_WIDTH, spacing);
+        markers_changed |= GuiUtils::ReorderButtons(lines, i, up_neighbour, down_neighbour, BTN_WIDTH, spacing, "CUSTOM_LINE_ROW");
 
         const bool remove = ImGui::Button("x##delete", ImVec2(BTN_WIDTH, 0));
         if (ImGui::IsItemHovered()) {
@@ -471,7 +481,7 @@ void CustomRenderer::DrawMarkerSettings()
         }
         ImGui::SameLine(0.0f, spacing);
 
-        markers_changed |= GuiUtils::ReorderButtons(markers, i, markers.size(), BTN_WIDTH, spacing);
+        markers_changed |= GuiUtils::ReorderButtons(markers, i, markers.size(), BTN_WIDTH, spacing, "CUSTOM_MARKER_ROW");
 
         const bool remove = ImGui::Button("x##delete", ImVec2(BTN_WIDTH, 0));
         if (ImGui::IsItemHovered()) {
@@ -603,7 +613,7 @@ void CustomRenderer::DrawPolygonSettings()
         }
         ImGui::SameLine(0.0f, spacing);
 
-        polygon_changed |= GuiUtils::ReorderButtons(polygons, i, polygons.size(), BTN_WIDTH, spacing);
+        polygon_changed |= GuiUtils::ReorderButtons(polygons, i, polygons.size(), BTN_WIDTH, spacing, "CUSTOM_POLYGON_ROW");
 
         const bool remove = ImGui::Button("x##delete", ImVec2(BTN_WIDTH, 0));
         if (ImGui::IsItemHovered()) {

@@ -170,7 +170,7 @@ void RangeRenderer::DrawSettings()
         }
         ImGui::SameLine(0.f, spacing);
 
-        row_changed |= GuiUtils::ReorderButtons(circles_, i, circles_.size(), BTN_WIDTH, spacing);
+        row_changed |= GuiUtils::ReorderButtons(circles_, i, circles_.size(), BTN_WIDTH, spacing, "RANGE_CIRCLE_ROW");
 
         const bool remove = ImGui::Button("x##del", ImVec2(BTN_WIDTH, 0));
         if (ImGui::IsItemHovered()) {
