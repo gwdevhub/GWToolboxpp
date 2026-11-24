@@ -21,6 +21,7 @@
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/PlayerMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/PartyMgr.h>
 
 #include <Logger.h>
 #include <Utils/GuiUtils.h>
@@ -60,28 +61,14 @@ namespace {
         return buff ? buff->begin() : nullptr;
     }
 
-    GW::PartyContext* CurrentPartyContext()
-    {
-        const auto* g = GW::GetGameContext();
-        return g ? g->party : nullptr;
-    }
-
-    template <typename T>
-    T* PartyAt(GW::Array<T*>& parties, const uint32_t party_id)
-    {
-        return parties.valid() && party_id < parties.size() ? parties[party_id] : nullptr;
-    }
-
     GW::PartySearch* GetRegionParty(const uint32_t party_id)
     {
-        auto* ctx = CurrentPartyContext();
-        return ctx ? PartyAt(ctx->party_search, party_id) : nullptr;
+        return GW::PartyMgr::GetPartySearch(party_id);
     }
 
     GW::PartyInfo* GetLocalParty(const uint32_t party_id)
     {
-        auto* ctx = CurrentPartyContext();
-        return ctx ? PartyAt(ctx->parties, party_id) : nullptr;
+        return GW::PartyMgr::GetPartyInfo(party_id);
     }
 
     GW::Player* GetPartyLeader(GW::PartyInfo* party)
@@ -94,7 +81,7 @@ namespace {
 
     GW::PartyInfo* GetPartyFromPlayer(const uint32_t player_number)
     {
-        auto* ctx = CurrentPartyContext();
+        const auto* ctx = GW::GetPartyContext();
         if (!ctx) {
             return nullptr;
         }
