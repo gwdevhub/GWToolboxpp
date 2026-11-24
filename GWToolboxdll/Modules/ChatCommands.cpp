@@ -1783,12 +1783,12 @@ namespace {
     using CmdAliasSetting = ChatCommands::CmdAliasSetting;
 
     struct QuestPing {
-    GW::Constants::QuestID quest_id = static_cast<GW::Constants::QuestID>(0);
-    GuiUtils::EncString name;
-    GuiUtils::EncString description;
-    GuiUtils::EncString objectives;
-    void Update();
-    void Init();
+        GW::Constants::QuestID quest_id = static_cast<GW::Constants::QuestID>(0);
+        GuiUtils::EncString name;
+        GuiUtils::EncString description;
+        GuiUtils::EncString objectives;
+        void Update();
+        void Init();
     };
     QuestPing quest_ping;
 
