@@ -170,35 +170,7 @@ void RangeRenderer::DrawSettings()
         }
         ImGui::SameLine(0.f, spacing);
 
-        if (i > 0) {
-            const bool move_up = ImGui::Button(ICON_FA_ARROW_UP, ImVec2(BTN_WIDTH, 0));
-            if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip("Move up");
-            }
-            if (move_up) {
-                std::swap(circles_[i], circles_[i - 1]);
-                row_changed = true;
-            }
-            ImGui::SameLine(0.f, spacing);
-        }
-        else {
-            ImGui::SameLine(0.f, BTN_WIDTH + spacing * 2);
-        }
-
-        if (i < circles_.size() - 1) {
-            const bool move_down = ImGui::Button(ICON_FA_ARROW_DOWN, ImVec2(BTN_WIDTH, 0));
-            if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip("Move down");
-            }
-            if (move_down) {
-                std::swap(circles_[i], circles_[i + 1]);
-                row_changed = true;
-            }
-            ImGui::SameLine(0.f, spacing);
-        }
-        else {
-            ImGui::SameLine(0.f, BTN_WIDTH + spacing * 2);
-        }
+        row_changed |= GuiUtils::ReorderButtons(circles_, i, circles_.size(), BTN_WIDTH, spacing);
 
         const bool remove = ImGui::Button("x##del", ImVec2(BTN_WIDTH, 0));
         if (ImGui::IsItemHovered()) {

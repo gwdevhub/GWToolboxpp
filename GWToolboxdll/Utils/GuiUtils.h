@@ -118,4 +118,42 @@ namespace GuiUtils {
     enum class GwButtonIcon { Save, LoadFromTemplate, SaveToTemplate, ManageTemplates, TemplateCode, ChatIcon };
     bool IconButton(const char* label, GwButtonIcon icon, const ImVec2& size = ImVec2(0, 0), const ImGuiButtonFlags flags = ImGuiButtonFlags_None);
     bool IconButtonConfirm(const char* label, GwButtonIcon icon, const ImVec2& size = ImVec2(0, 0), const ImGuiButtonFlags flags = ImGuiButtonFlags_None);
+
+    // Up and down buttons placed after a row's controls. Swaps items[index] with its neighbour when one is pressed,
+    // and returns true if it did.
+    template <typename Items>
+    bool ReorderButtons(Items& items, const size_t index, const size_t count, const float button_width, const float spacing)
+    {
+        bool moved = false;
+        if (index > 0) {
+            const bool move_up = ImGui::Button(ICON_FA_ARROW_UP, ImVec2(button_width, 0));
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("Move up");
+            }
+            if (move_up) {
+                std::swap(items[index], items[index - 1]);
+                moved = true;
+            }
+            ImGui::SameLine(0.f, spacing);
+        }
+        else {
+            ImGui::SameLine(0.f, button_width + spacing * 2);
+        }
+
+        if (index + 1 < count) {
+            const bool move_down = ImGui::Button(ICON_FA_ARROW_DOWN, ImVec2(button_width, 0));
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("Move down");
+            }
+            if (move_down) {
+                std::swap(items[index], items[index + 1]);
+                moved = true;
+            }
+            ImGui::SameLine(0.f, spacing);
+        }
+        else {
+            ImGui::SameLine(0.f, button_width + spacing * 2);
+        }
+        return moved;
+    }
 };
