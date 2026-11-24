@@ -1288,15 +1288,13 @@ bool TeamBuild::DrawEditWindow(size_t index, std::vector<TeamBuild>& all_builds,
 
     ImGui::Spacing();
 
-    if (ImGui::Button("Up") && index > 0) {
-        std::swap(all_builds[index - 1], all_builds[index]);
+    if (ImGui::Button("Up") && GuiUtils::SwapWithNeighbour(all_builds, index, true)) {
         builds_modified = true;
     }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Move the teambuild up in the list");
 
     ImGui::SameLine();
-    if (ImGui::Button("Down") && index + 1 < all_builds.size()) {
-        std::swap(all_builds[index], all_builds[index + 1]);
+    if (ImGui::Button("Down") && GuiUtils::SwapWithNeighbour(all_builds, index, false)) {
         builds_modified = true;
     }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Move the teambuild down in the list");

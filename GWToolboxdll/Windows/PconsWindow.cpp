@@ -915,10 +915,10 @@ void PconsWindow::DrawSettingsInternal()
             ImGui::TableNextColumn();
             ImGui::TextDisabled("Order");
 
-            for (auto it = pcons.begin(); it != pcons.end(); ++it) {
+            for (size_t i = 0; i < pcons.size(); i++) {
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn();
-                Pcon* pcon = *it;
+                Pcon* pcon = pcons[i];
                 ImGui::PushID(pcon->ini.c_str());
                 ImGui::Checkbox("###checked", &pcon->visible);
                 ImGui::SameLine();
@@ -943,20 +943,20 @@ void PconsWindow::DrawSettingsInternal()
                 }
 
                 ImGui::TableNextColumn();
-                if (it != pcons.begin()) {
+                if (i > 0) {
                     if (ImGui::Button(ICON_FA_ARROW_UP)) {
-                        std::iter_swap(it, it - 1);
+                        GuiUtils::SwapWithNeighbour(pcons, i, true);
                     }
-                    if (it != pcons.end() - 1) {
+                    if (i + 1 < pcons.size()) {
                         ImGui::SameLine();
                     }
                 }
                 else {
                     ImGui::SameLine(62);
                 }
-                if (it != pcons.end() - 1) {
+                if (i + 1 < pcons.size()) {
                     if (ImGui::Button(ICON_FA_ARROW_DOWN)) {
-                        std::iter_swap(it, it + 1);
+                        GuiUtils::SwapWithNeighbour(pcons, i, false);
                     }
                 }
 

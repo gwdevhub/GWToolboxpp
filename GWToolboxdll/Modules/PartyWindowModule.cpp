@@ -7,6 +7,8 @@
 #include <GWCA/Context/PartyContext.h>
 #include <GWCA/Context/GameContext.h>
 
+#include <Utils/GuiUtils.h>
+
 #include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/NPC.h>
 #include <GWCA/GameEntities/Party.h>
@@ -784,12 +786,14 @@ namespace {
             
 
             ImGui::SameLine();
-            if (ImGui::Button(ICON_FA_ARROW_UP) && i > 0) 
-                std::swap(edit_profession_order[i], edit_profession_order[i - 1]);
+            if (ImGui::Button(ICON_FA_ARROW_UP)) {
+                GuiUtils::SwapWithNeighbour(edit_profession_order, i, true);
+            }
 
             ImGui::SameLine();
-            if (ImGui::Button(ICON_FA_ARROW_DOWN) && i < edit_profession_order.size() - 1)
-                std::swap(edit_profession_order[i], edit_profession_order[i + 1]);
+            if (ImGui::Button(ICON_FA_ARROW_DOWN)) {
+                GuiUtils::SwapWithNeighbour(edit_profession_order, i, false);
+            }
 
             ImGui::SameLine();
             if (ImGui::Button("Remove")) {

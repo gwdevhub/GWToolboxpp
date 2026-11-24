@@ -28,6 +28,7 @@
 #include <Logger.h>
 #include <Modules/InventoryItem.h>
 #include <Modules/Resources.h>
+#include <Utils/GuiUtils.h>
 #include <Utils/SettingsDoc.h>
 #include <Utils/SettingsRegistry.h>
 #include <Utils/ToolboxUtils.h>
@@ -542,12 +543,12 @@ namespace {
             ImGui::Text("%d. %s", static_cast<int>(i) + 1, CampaignName(campaign));
             ImGui::SameLine(ImGui::GetContentRegionAvail().x - 60.f);
             ImGui::PushID(static_cast<int>(i));
-            if (ImGui::ArrowButton("up", ImGuiDir_Up) && i > 0) {
-                std::swap(profile.campaign_order[i], profile.campaign_order[i - 1]);
+            if (ImGui::ArrowButton("up", ImGuiDir_Up)) {
+                GuiUtils::SwapWithNeighbour(profile.campaign_order, i, true);
             }
             ImGui::SameLine();
-            if (ImGui::ArrowButton("down", ImGuiDir_Down) && i + 1 < profile.campaign_order.size()) {
-                std::swap(profile.campaign_order[i], profile.campaign_order[i + 1]);
+            if (ImGui::ArrowButton("down", ImGuiDir_Down)) {
+                GuiUtils::SwapWithNeighbour(profile.campaign_order, i, false);
             }
             ImGui::PopID();
         }
