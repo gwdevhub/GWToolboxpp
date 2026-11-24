@@ -63,6 +63,7 @@ to publish the release straight away.
 * GWToolbox compiles as a DLL (`GWToolboxdll.dll`) and EXE (`GWToolbox.exe`). The exe lets you select a Guild Wars Client and injects the dll, but you can also use other dll injectors of your choice.
 * By default, the launcher (`GWToolbox.exe`) will run the `GWToolboxdll.dll` in the same folder, if there is none, it will inject the one in your installation folder.
 * You can use the Visual Studio debugger directly to be able to break and step through toolbox code. First launch toolbox in debug mode as normal, then go to Debug -> Attach to process, then select the Gw.exe process and click Attach. You can also attach the debugger *before* running toolbox, to debug issues during launch, but then you will have to manually launch toolbox from outside visual studio, either with `GWToolbox.exe` or `AutoItLauncher/inject.au3`. 
+* Crash dumps are written to `%USERPROFILE%\Documents\GWToolboxpp\<COMPUTERNAME>\crashes\`, named `<version>-<yyyymmdd>-<hhmmss>-<pid>-<tid>.dmp`. They are full-memory dumps of about 80-100 MB. Toolbox does not write one while plugins are loaded. To triage the newest dump, run `python tools/crash_analyse.py` from the repository root (`--list` shows all dumps); it reads the same folder.
 
 ## How to contribute
 * Create a new branch and commit the changes relevant to your contribution. Please make sure you don't commit unrelated lines.
