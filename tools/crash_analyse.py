@@ -4,6 +4,7 @@ import ctypes
 import os
 import re
 import struct
+import subprocess
 import sys
 from pathlib import Path
 
@@ -29,6 +30,8 @@ EXC = {
     0xC0000096: "PRIV_INSTRUCTION", 0xC00000FD: "STACK_OVERFLOW",
     0x80000003: "BREAKPOINT", 0x80000004: "SINGLE_STEP",
     0xE06D7363: "C++ EXCEPTION (MSVC throw)",
+    0xE0435254: "TOOLBOX CRT FAILURE (abort/assert/purecall/terminate)",
+    0xE0415354: "TOOLBOX ASSERTION FAILURE",
 }
 AV_OP = {0: "reading", 1: "writing", 8: "executing (DEP)"}
 
@@ -140,14 +143,127 @@ class Dump:
         return {k: struct.unpack_from("<I", raw, o)[0] for k, o in X86.items()}
 
 
+_PE_CACHE = {}
+
+
+def win_basename(path):
+    """File name of a Windows path from a dump; Path() on Linux does not split on backslashes."""
+    return re.split(r"[\\/]", path)[-1]
+
+
+def pe_info(path):
+    """ImageBase, SizeOfImage, TimeDateStamp and the .text RVA range of a PE file."""
+    key = str(path)
+    if key not in _PE_CACHE:
+        d = Path(path).read_bytes()
+        pe = struct.unpack_from("<I", d, 0x3C)[0]
+        nsec = struct.unpack_from("<H", d, pe + 6)[0]
+        optsz = struct.unpack_from("<H", d, pe + 20)[0]
+        text = None
+        for i in range(nsec):
+            name, vsz, va = struct.unpack_from("<8sII", d, pe + 24 + optsz + i * 40)
+            if name.rstrip(b"\0") == b".text":
+                text = (va, vsz)
+        _PE_CACHE[key] = dict(
+            base=struct.unpack_from("<I", d, pe + 24 + 0x1C)[0],
+            size=struct.unpack_from("<I", d, pe + 24 + 0x38)[0],
+            ts=struct.unpack_from("<I", d, pe + 8)[0],
+            text=text)
+    return _PE_CACHE[key]
+
+
+def find_build(name, size, ts):
+    """A build under bin/ whose SizeOfImage and TimeDateStamp match the dump's module record."""
+    hits = sorted((p for p in (REPO / "bin").rglob(name) if p.is_file()),
+                  key=lambda p: ("Debug" not in p.parts, str(p)))
+    for p in hits:
+        info = pe_info(p)
+        if info["size"] == size and info["ts"] == ts:
+            return p
+    return None
+
+
+class LlvmSymbols:
+    """Linux stand-in for dbghelp: llvm-symbolizer against the matching bin/ build.
+    Only GWToolbox and GWCA modules are resolved; anything else stays an address."""
+
+    def __init__(self, modules, verbose=False):
+        self.targets = {}
+        self.cache = {}
+        self.loaded = set()
+        for m in modules:
+            name = win_basename(m["path"])
+            if not any(k in name.lower() for k in ("gwtoolbox", "gwca")):
+                continue
+            build = find_build(name, m["size"], m["ts"])
+            if build:
+                self.targets[m["base"]] = (m, build)
+                self.loaded.add(m["base"])
+            elif verbose:
+                print(f"  [sym] no bin/ build of {name} with size 0x{m['size']:x} "
+                      f"ts 0x{m['ts']:x}", file=sys.stderr)
+
+    def _lookup(self, addr):
+        """(module name, function, file, line) for addr, or 'data' if it is not in .text."""
+        if addr in self.cache:
+            return self.cache[addr]
+        hit = None
+        for base, (m, build) in self.targets.items():
+            if not base <= addr < base + m["size"]:
+                continue
+            info = pe_info(build)
+            rva = addr - base
+            if not info["text"] or not info["text"][0] <= rva < info["text"][0] + info["text"][1]:
+                hit = ("data",)
+                break
+            out = subprocess.run(
+                ["llvm-symbolizer", f"--obj={build}", "--functions=linkage", "--inlines",
+                 f"0x{info['base'] + rva:x}"],
+                capture_output=True, text=True).stdout.splitlines()
+            func = out[0] if out else "??"
+            file, line = "??", 0
+            if len(out) > 1 and out[1].count(":") >= 2:
+                f, ln, _col = out[1].rsplit(":", 2)
+                file, line = f, int(ln) if ln.isdigit() else 0
+            hit = (win_basename(m["path"]), None if func == "??" else func, file, line)
+            break
+        self.cache[addr] = hit
+        return hit
+
+    def resolve(self, addr):
+        hit = self._lookup(addr)
+        if not hit:
+            return None
+        if hit[0] == "data":
+            return "(data, not code)"
+        mod, func, file, line = hit
+        s = f"{mod}!{func or '??'}"
+        return s + (f"  [{Path(file).name}:{line}]" if line else "")
+
+    def source(self, addr, ctx=0):
+        hit = self._lookup(addr)
+        if not hit or hit[0] == "data" or not hit[3]:
+            return []
+        try:
+            lines = Path(hit[2]).read_text(encoding="utf8", errors="replace").splitlines()
+        except OSError:
+            return []
+        ln = hit[3]
+        lo, hi = max(0, ln - 1 - ctx), min(len(lines), ln + ctx)
+        return [(i + 1, lines[i].rstrip()) for i in range(lo, hi)]
+
+
 class Symbols:
 
     def __init__(self, modules, verbose=False):
         self.ok = False
         self.mods = modules
+        self.fallback = None
         try:
             self.dh = ctypes.WinDLL("dbghelp.dll")
-        except OSError:
+        except (OSError, AttributeError):  # AttributeError: not Windows, no WinDLL
+            self.fallback = LlvmSymbols(modules, verbose)
+            self.loaded = self.fallback.loaded
             return
         self.h = ctypes.c_void_p(0x1234)
         sp = ";".join(str(p) for p in SYMDIRS if p.exists())
@@ -178,8 +294,10 @@ class Symbols:
 
     def resolve(self, addr):
         m = self.module_of(addr)
-        name = Path(m["path"]).name if m else "?"
+        name = win_basename(m["path"]) if m else "?"
         base = f"{name}+0x{addr - m['base']:x}" if m else f"0x{addr:08x}"
+        if self.fallback:
+            return self.fallback.resolve(addr) or base
         if not self.ok:
             return base
         buf = ctypes.create_string_buffer(88 + 2048)
@@ -220,6 +338,8 @@ class Symbols:
         return f"{Path(s).name}:{ln}" + (f"+{d.value}" if d.value else "")
 
     def source(self, addr, ctx=0):
+        if self.fallback:
+            return self.fallback.source(addr, ctx)
         self.last_file = None
         self.line(addr)
         if not self.last_file:
@@ -391,6 +511,38 @@ def triage(dumps, want_sym):
             print(f"{p.name:<40} [unreadable: {e}]")
 
 
+def scan_stack(dump, ctx, sym, mods, nbytes):
+    """Words on the faulting thread's stack that point into GWToolbox/GWCA code or data.
+    Stale words are common, so treat these as candidates; '(data, not code)' rules one out."""
+    ours = [m for m in mods
+            if any(k in Path(m["path"]).name.lower() for k in ("gwca", "gwtoolbox"))]
+    esp = ctx["Esp"]
+    buf = dump.read(esp, nbytes)
+    if not buf:
+        print("\nSTACK SCAN: no stack memory captured at Esp")
+        return
+    print(f"\nSTACK SCAN ({len(buf)} bytes from Esp 0x{esp:08x}, code words in GWToolbox/GWCA)")
+    code = []
+    for i in range(0, len(buf) - 3, 4):
+        v = struct.unpack_from("<I", buf, i)[0]
+        if any(m["base"] <= v < m["base"] + m["size"] for m in ours):
+            label = sym.resolve(v) or f"0x{v:08x}"
+            if "(data, not code)" in label:  # stale pointers into data; not return addresses
+                continue
+            code.append((esp + i, v, label))
+            print(f"  0x{esp + i:08x}  0x{v:08x}  {label}")
+
+    # CRT assert: _assert's return address is the next code word on the stack, and the
+    # asserting function's own return address follows it. Heuristic, but in an IM_ASSERT
+    # the asserting function is the caller, so the first code word above _assert is it.
+    idx = next((k for k, h in enumerate(code) if h[2].split("!")[-1].startswith("_assert")), None)
+    if idx is not None and idx + 1 < len(code):
+        _, v, label = code[idx + 1]
+        print(f"\nASSERT CALLER (first code word above _assert)  {label}")
+        for n, text in sym.source(v, 2):
+            print(f"  {n:>6} | {text}")
+
+
 def main():
     ap = argparse.ArgumentParser(
         description="Triage a GWToolbox minidump without opening a debugger.")
@@ -411,6 +563,9 @@ def main():
                     help="lines of source context per frame (0 = just the line)")
     ap.add_argument("--comment", nargs="?", const="",
                     help="raw Toolbox report section(s): Crash, Thread, Code, Trace, Stack")
+    ap.add_argument("--scan", type=lambda s: int(s, 0), default=0, metavar="BYTES",
+                    help="scan this many bytes of the faulting thread's stack from Esp for "
+                         "return addresses in GWToolbox/GWCA (auto 0x4000 on CRT failures)")
     ap.add_argument("-v", "--verbose", action="store_true", help="report symbol load failures")
     a = ap.parse_args()
 
@@ -437,7 +592,11 @@ def main():
     print(f"{path.name}   ({path.stat().st_size / 1e6:.0f} MB, "
           f"{'x86' if d.arch == 0 else 'arch ' + str(d.arch)}, "
           f"{len(mods)} modules, {len(d.threads())} threads)")
-    if not sym.ok:
+    if sym.fallback:
+        print(f"  [i] Linux: llvm-symbolizer on {len(sym.loaded)} bin/ build(s) matching the dump")
+        if not sym.loaded:
+            print("  [!] no bin/ build matches this dump's module sizes/timestamps -- addresses only")
+    elif not sym.ok:
         print("  [!] dbghelp unavailable -- addresses only")
     elif not sym.loaded:
         print("  [!] no module images resolved -- addresses only")
@@ -518,6 +677,15 @@ def main():
     else:
         print("\nSTACK (EBP chain, faulting thread tid %d)" % exc["tid"])
         print_stack(d, ctx, sym, a.frames)
+
+    # 0xE0435254 is the Toolbox CRT handler (CrashHandler.cpp): abort()/assert/purecall/terminate
+    # routed here. The EBP chain stops in msvcrt, so the real call site is found by stack scan.
+    crt = exc["code"] == 0xE0435254
+    if crt and 10 in d.streams:
+        sz, rva = d.streams[10]
+        print("\nCRT FAILURE  " + d.d[rva:rva + sz].decode("utf8", "replace").strip())
+    if a.scan or crt:
+        scan_stack(d, ctx, sym, mods, a.scan or 0x4000)
 
     ours = [m for m in mods
             if any(k in Path(m["path"]).name.lower() for k in ("gwca", "gwtoolbox"))]
