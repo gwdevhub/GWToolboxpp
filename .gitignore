@@ -94,3 +94,5 @@ GWToolbox.aps
 # Local AI agent tooling (not part of the repo)
 /.opencode/
 /.agents/
+!/tools/debug/
+!/tools/debug/WineGdbStub.dll

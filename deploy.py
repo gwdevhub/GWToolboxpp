@@ -17,10 +17,11 @@ Branch flow: the version bump, build (code checks) and release commit all happen
 on the dev branch. dev is then merged into master and the release tag is created
 on master. HEAD is returned to dev when the release finishes.
 
-Release assets: the DLL and its PDB, the launcher exe and its PDB, and the Linux
-AppImage with its debug file. The PDBs and the debug file are gzipped first. A
-binary and its gzipped file are uploaded only when the newest GitHub release that
-has the binary has a different hash, so an unchanged binary isn't uploaded again.
+Release assets: the DLL with its PDB and DWARF debug file, the launcher exe and its
+PDB, and the Linux AppImage with its debug file. The PDBs and the debug files are
+gzipped first. A binary and its gzipped files are uploaded only when the newest GitHub
+release that has the binary has a different hash, so an unchanged binary isn't uploaded
+again.
 """
 
 from __future__ import annotations
@@ -291,22 +292,23 @@ def latest_digest(releases: list[dict], name: str) -> str | None:
     return None
 
 
-def select_uploads(releases: list[dict], binaries: list[tuple[Path, Path]]) -> list[Path]:
-    """The binaries and gzipped files to upload: a pair only when its binary differs from the newest release that has it."""
+def select_uploads(releases: list[dict], binaries: list[tuple[Path, list[Path]]]) -> list[Path]:
+    """The binaries and gzipped files to upload: a group only when its binary differs from the newest release that has it."""
     uploads: list[Path] = []
-    for binary, gz in binaries:
+    for binary, gzs in binaries:
         local = sha256_of(binary)
         released = latest_digest(releases, binary.name)
+        names = ", ".join(gz.name for gz in gzs)
         if released is None:
-            log(f"{binary.name}: no release has it yet - uploading it and {gz.name}")
+            log(f"{binary.name}: no release has it yet - uploading it and {names}")
         elif released == local:
-            log(f"{binary.name}: same as the newest release that has it - not uploading it or {gz.name}")
+            log(f"{binary.name}: same as the newest release that has it - not uploading it or {names}")
             continue
         elif released == "":
-            log(f"{binary.name}: the newest release that has it gives no hash - uploading it and {gz.name}")
+            log(f"{binary.name}: the newest release that has it gives no hash - uploading it and {names}")
         else:
-            log(f"{binary.name}: differs from the newest release that has it - uploading it and {gz.name}")
-        uploads += [binary, gz]
+            log(f"{binary.name}: differs from the newest release that has it - uploading it and {names}")
+        uploads += [binary, *gzs]
     return uploads
 
 
@@ -439,14 +441,16 @@ def main() -> None:
 
     dll = BIN / "GWToolboxdll.dll"
     dll_pdb = BIN / "GWToolboxdll.pdb"
+    dll_debug = BIN / "GWToolboxdll.debug"
     exe = BIN / "GWToolbox.exe"
     exe_pdb = BIN / "GWToolbox.pdb"
     appimage = BIN / "GWToolbox.AppImage"
     debug = BIN / "GWToolbox.debug"
-    require_files([dll, dll_pdb, exe, exe_pdb, appimage, debug])
+    require_files([dll, dll_pdb, dll_debug, exe, exe_pdb, appimage, debug])
 
     # --- compress the debug files for distribution ---
     dll_pdb_gz = compress_for_release(dll_pdb)
+    dll_debug_gz = compress_for_release(dll_debug)
     exe_pdb_gz = compress_for_release(exe_pdb)
     debug_gz = compress_for_release(debug)
 
@@ -456,7 +460,7 @@ def main() -> None:
         fail("Can't tell which GitHub repository origin points at, so the release assets can't be compared.")
     log(f"Comparing the built binaries with the releases of {slug}...")
     releases = fetch_releases(slug)
-    upload_paths = select_uploads(releases, [(dll, dll_pdb_gz), (exe, exe_pdb_gz), (appimage, debug_gz)])
+    upload_paths = select_uploads(releases, [(dll, [dll_pdb_gz, dll_debug_gz]), (exe, [exe_pdb_gz]), (appimage, [debug_gz])])
 
     # --- commit version bump + history on dev (only the release files, if changed) ---
     # Diff against HEAD (not the index) so an already-`git add`ed-but-uncommitted

@@ -18,7 +18,7 @@ SELECTED_PROFILE = os.environ.get("SELECTED_PROFILE", "relwithdebinfo")
 RETIRED_PROFILES = ["mingw", "mingw-debug", "mingw-release", "minsizerel", "windows", "clang", "vcpkg"] + (
     [LINUX_PROFILE] if IS_WINDOWS else [])
 HOST_TOOLS_DIR = os.path.join(TOOLCHAIN_DIR, "host-tools", "bin")
-SANDBOX_TOOLS = ["cmake", "ctest", "cpack", "ninja"]
+SANDBOX_TOOLS = ["cmake", "ctest", "cpack", "ninja", "gdb"]
 VSCODE_EXTENSIONS = ["llvm-vs-code-extensions.vscode-clangd", "ms-vscode.cmake-tools"]
 # Both Flatpak JetBrains IDEs use the same CMake integration, but CLion opens the folder and keeps the project in
 # .idea/workspace.xml, while Rider opens CMakeLists.txt and keeps its own project under .idea/.idea.<folder>.cmake/.
@@ -187,8 +187,43 @@ def set_profiles(log, workspace, label):
     prune_run_configurations(log, workspace)
 
 
+REMOTE_DEBUG_NAME = "GWToolbox remote"
+REMOTE_DEBUG_ARGS = "localhost:2345"
+REMOTE_DEBUG_SYMBOLS = "$PROJECT_DIR$/bin/Debug/GWToolboxdll.debug"
+
+
+def set_remote_debug(log, workspace):
+    """Adds the GWToolbox remote-debug configuration to a CLion workspace.xml: the stub's port and the Debug build's symbols.
+    An entry already there is left as it is."""
+    if not os.path.isfile(workspace):
+        return
+    text = read(workspace)
+    if 'name="%s" type="CLion_Remote"' % REMOTE_DEBUG_NAME in text:
+        fixed = re.sub(r'(<configuration name="%s" type="CLion_Remote"(?:(?!</configuration>).)*?)<debugger [^>]*/>' % re.escape(REMOTE_DEBUG_NAME),
+                       r'\1<debugger toolchainName="Default" />', text, count=1, flags=re.S)
+        if fixed != text:
+            write(workspace, fixed)
+            log.step("set the %s remote-debug configuration to use the Default toolchain's GDB" % REMOTE_DEBUG_NAME)
+        return
+    match = re.search(r'<component name="RunManager"[^>]*>.*?</component>', text, re.S)
+    if not match:
+        return
+    block = match.group(0)
+    configuration = ('    <configuration name="%s" type="CLion_Remote" version="1" remoteCommand="%s" symbolFile="%s" sysroot="">\n'
+                     '      <debugger toolchainName="Default" />\n'
+                     '      <method v="2" />\n'
+                     '    </configuration>') % (REMOTE_DEBUG_NAME, REMOTE_DEBUG_ARGS, REMOTE_DEBUG_SYMBOLS)
+    block = re.sub(r'(<component name="RunManager"[^>]*>)', lambda m: m.group(1) + "\n" + configuration, block, count=1)
+    item = '      <item itemvalue="Remote Debug.%s" />' % REMOTE_DEBUG_NAME
+    block = re.sub(r'(\n\s*</list>)', lambda m: "\n" + item + m.group(1), block, count=1)
+    write(workspace, text.replace(match.group(0), block, 1))
+    log.step("added the %s remote-debug configuration to %s" % (REMOTE_DEBUG_NAME, os.path.relpath(workspace, REPO_ROOT)))
+
+
 def set_clion_profiles(log):
-    set_profiles(log, os.path.join(REPO_ROOT, ".idea", "workspace.xml"), "CLion")
+    workspace = os.path.join(REPO_ROOT, ".idea", "workspace.xml")
+    set_profiles(log, workspace, "CLion")
+    set_remote_debug(log, workspace)
 
 
 def flatpak_ides():
@@ -284,6 +319,12 @@ if [ "$name" = cmake ]; then
     run_tool "$@" 2>&1 | tee -a "$log"
     exit "${PIPESTATUS[0]}"
 fi
+if [ "$name" = gdb ] && [ -e /.flatpak-info ]; then
+    # GDB runs in the foreground with its stdin intact. A helper on the host watches GDB's connection to the stub, and ends
+    # GDB once that connection has closed, so the IDE sees the session end and can start the next one.
+    flatpak-spawn --host sh -c 'sp=$$; ( seen=""; while kill -0 "$sp" 2>/dev/null; do for g in $(pgrep -P "$sp" -x gdb); do if ss -tnp | grep -q "pid=$g,"; then seen="$g"; fi; if [ "$seen" = "$g" ] && ! ss -tnp | grep -q "pid=$g,"; then kill "$g"; fi; done; sleep 1; done ) & "$@"' sh "$tool" "$@"
+    exit $?
+fi
 run_tool "$@"
 '''
 
@@ -335,26 +376,34 @@ def set_ide_environment(log, ide, vcpkg_root):
         log.note("flatpak override --user --env=PATH=%s --env=VCPKG_ROOT=%s %s" % (path, vcpkg_root, app))
 
 
+def ide_tool_path(tool):
+    path = os.path.join(HOST_TOOLS_DIR, tool)
+    home = os.path.expanduser("~")
+    return "$USER_HOME$" + path[len(home):] if path.startswith(home + os.sep) else path
+
+
 def set_ide_cmake_path(log, ide):
-    """Points the IDE's Default toolchain at the wrapper's cmake. Its bundled CMake lives under /app, which only
-    exists inside the sandbox; the IDE keeps the path as customCMakePath in options/linux/toolchains.xml."""
+    """Points the IDE's Default toolchain at the wrapper's cmake and gdb. Their bundled copies live under /app, which only
+    exists inside the sandbox; the IDE keeps the paths as customCMakePath and customGDBPath in options/linux/toolchains.xml."""
     options = ide_options_dir(ide)
     file = os.path.join(options, "linux", "toolchains.xml") if options else None
     text = read(file) if file and os.path.isfile(file) else ""
     if not re.search(r'<toolchain [^>]*name="Default"', text):
         log.note("%s has no toolchains.xml with a Default toolchain yet (start %s once, then re-run the bootstrap)" % (ide, ide))
         return False
-    cmake = os.path.join(HOST_TOOLS_DIR, "cmake")
-    home = os.path.expanduser("~")
-    value = "$USER_HOME$" + cmake[len(home):] if cmake.startswith(home + os.sep) else cmake
+    cmake = ide_tool_path("cmake")
+    gdb = ide_tool_path("gdb")
 
     def fix(match):
-        tag = re.sub(r'\s+customCMakePath="[^"]*"', "", match.group(0))
-        return tag.replace("<toolchain ", '<toolchain customCMakePath="%s" ' % value, 1)
+        tag = match.group(0)
+        for attribute in ("customCMakePath", "debuggerKind", "customGDBPath"):
+            tag = re.sub(r'\s+%s="[^"]*"' % attribute, "", tag)
+        return tag.replace("<toolchain ", '<toolchain customCMakePath="%s" debuggerKind="CUSTOM_GDB" customGDBPath="%s" '
+                           % (cmake, gdb), 1)
 
     shutil.copy2(file, file + ".bootstrap-backup")
     write(file, re.sub(r'<toolchain [^>]*name="Default"[^>]*/>', fix, text, count=1))
-    log.step("set %s's CMake path to %s (backup: %s.bootstrap-backup)" % (ide, cmake, file))
+    log.step("set %s's CMake path to %s and its GDB to %s (backup: %s.bootstrap-backup)" % (ide, cmake, gdb, file))
     return True
 
 

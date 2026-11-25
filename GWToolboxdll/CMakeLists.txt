@@ -140,6 +140,12 @@ endif()
 
 add_library(GWToolbox_DLL SHARED)
 set_target_properties(GWToolbox_DLL PROPERTIES PREFIX "" OUTPUT_NAME "GWToolboxdll")
+target_compile_options(GWToolbox_DLL PRIVATE -gdwarf-4)
+find_program(GWTOOLBOX_LLVM_OBJCOPY NAMES llvm-objcopy llvm-objcopy.exe HINTS "${LLVM_MINGW_ROOT}/bin" REQUIRED)
+add_custom_command(TARGET GWToolbox_DLL POST_BUILD
+    COMMAND "${GWTOOLBOX_LLVM_OBJCOPY}" --only-keep-debug "$<TARGET_FILE:GWToolbox_DLL>" "$<TARGET_FILE_DIR:GWToolbox_DLL>/GWToolboxdll.debug"
+    COMMAND "${GWTOOLBOX_LLVM_OBJCOPY}" --strip-all "$<TARGET_FILE:GWToolbox_DLL>"
+    VERBATIM)
 
 file(GLOB SOURCES CONFIGURE_DEPENDS
     "*.h"

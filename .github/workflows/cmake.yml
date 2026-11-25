@@ -192,6 +192,7 @@ jobs:
     - name: Compress the debug info
       run: |
         gzip -kf bin/RelWithDebInfo/GWToolboxdll.pdb
+        gzip -kf bin/RelWithDebInfo/GWToolboxdll.debug
         gzip -kf bin/RelWithDebInfo/GWToolbox.pdb
         gzip -kf bin/RelWithDebInfo/GWToolbox.debug
 
@@ -235,6 +236,7 @@ jobs:
           "$BIN_DIR/GWToolbox.exe" \
           "$BIN_DIR/GWToolboxdll.dll" \
           "$BIN_DIR/GWToolboxdll.pdb.gz" \
+          "$BIN_DIR/GWToolboxdll.debug.gz" \
           "$BIN_DIR/GWToolbox.pdb.gz" \
           "$BIN_DIR/GWToolbox.AppImage" \
           "$BIN_DIR/GWToolbox.debug.gz"

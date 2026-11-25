@@ -65,6 +65,39 @@ to publish the release straight away.
 * You can use the Visual Studio debugger directly to be able to break and step through toolbox code. First launch toolbox in debug mode as normal, then go to Debug -> Attach to process, then select the Gw.exe process and click Attach. You can also attach the debugger *before* running toolbox, to debug issues during launch, but then you will have to manually launch toolbox from outside visual studio, either with `GWToolbox.exe` or `AutoItLauncher/inject.au3`. 
 * Crash dumps are written to `%USERPROFILE%\Documents\GWToolboxpp\<COMPUTERNAME>\crashes\`, named `<version>-<yyyymmdd>-<hhmmss>-<pid>-<tid>.dmp`. They are full-memory dumps of about 80-100 MB. Toolbox does not write one while plugins are loaded. To triage the newest dump, run `python tools/crash_analyse.py` from the repository root (`--list` shows all dumps); it reads the same folder.
 
+## Debugging a running Guild Wars instance on Linux
+
+GWToolbox can be debugged from CLion or Rider while it runs inside Guild Wars under Wine. The `tools/debug/WineGdbStub.dll`
+file is a GDB remote stub that is loaded into the game next to the toolbox DLL. It listens on `127.0.0.1:2345` and speaks the
+GDB remote protocol, so no `winedbg` or ptrace permissions are needed. Its source is the WineGdbStub repository.
+
+1. Build the debug toolbox DLL. The DLL is stripped, and its DWARF is split into `GWToolboxdll.debug` beside it:
+   ```sh
+   python3 scripts/build.py --preset debug --target GWToolbox_DLL
+   ```
+2. Add both DLLs to a launcher account's mods, switched on. Use the full path to each:
+   * `<repository>/tools/debug/WineGdbStub.dll`
+   * `<repository>/bin/Debug/GWToolboxdll.dll`
+
+   Each one is a mod entry in the account's `Accounts.json`, with `"type": 1` and `"active": true`. The launcher injects every
+   active mod when it starts the account.
+3. Start the account from the launcher. Check that the stub is listening with `ss -ltn | grep 2345`.
+4. Attach from the command line, or from CLion as described below. Connecting stops the game, and detaching resumes it:
+   ```sh
+   gdb -ex "set architecture i386" -ex "file bin/Debug/GWToolboxdll.debug" -ex "target remote localhost:2345" -ex "break ChatFilter.cpp:999" -ex continue
+   ```
+   GDB loads the symbols at the DLL's real address using the offset the stub reports. Detaching leaves the game running.
+
+**CLion.** `scripts/bootstrap.py` writes a Remote Debug configuration named `GWToolbox remote` into the project. It targets
+`localhost:2345`, uses `bin/Debug/GWToolboxdll.debug` as the symbol file, and takes its GDB from the Default toolchain, which the
+bootstrap points at the host's GDB through `.toolchain/host-tools/bin/gdb`. Start that configuration, then set breakpoints in the
+toolbox source. The stub reports the DLL's real address to GDB (`qOffsets`), so breakpoints resolve without extra commands.
+
+**Limits.** The stub serves one debugger at a time, so stop a session before starting another, or a new connection will time out.
+Each breakpoint hit stops the whole game, so a breakpoint on code that runs every frame will pause it briefly every frame. Only
+software breakpoints are supported, and registers and memory can be read but not written. Interrupting a running game is not
+supported. To change the port or the reported module, set `GWSTUB_PORT` or `GWSTUB_MODULE` in the game's environment.
+
 ## How to contribute
 * Create a new branch and commit the changes relevant to your contribution. Please make sure you don't commit unrelated lines.
 * Run clang-format and clang-tidy on the code you wrote. .clang-tidy and .clang-format files are in the root of the repository.

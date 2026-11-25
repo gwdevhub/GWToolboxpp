@@ -201,6 +201,8 @@ def graph_binaries(arguments):
         names.add(name)
         if name.lower().endswith((".exe", ".dll")):
             names.add(os.path.splitext(name)[0] + ".pdb")
+        if name == "GWToolboxdll.dll":
+            names.add("GWToolboxdll.debug")
     return names
 
 

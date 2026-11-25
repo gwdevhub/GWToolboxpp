@@ -41,8 +41,8 @@ set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY BOTH)
 set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE BOTH)
 
-# The dll is injected into Gw.exe, so the C++ runtime is linked in statically. --pdb= names the .pdb after the output;
-# -s drops the runtime libraries' DWARF (the .pdb already covers debugging) without losing it.
-foreach(TARGET_KIND EXE SHARED MODULE)
-    set(CMAKE_${TARGET_KIND}_LINKER_FLAGS_INIT "-static -Wl,--pdb= -Wl,-s")
-endforeach()
+# The dll is injected into Gw.exe, so the C++ runtime is linked in statically. --pdb= names the .pdb after the output.
+# Shared libraries keep their DWARF through the link so GWToolboxdll/CMakeLists.txt can split it out for GDB.
+set(CMAKE_EXE_LINKER_FLAGS_INIT "-static -Wl,--pdb= -Wl,-s")
+set(CMAKE_MODULE_LINKER_FLAGS_INIT "-static -Wl,--pdb= -Wl,-s")
+set(CMAKE_SHARED_LINKER_FLAGS_INIT "-static -Wl,--pdb=")

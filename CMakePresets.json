@@ -16,6 +16,7 @@
         "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchain.cmake",
         "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/vcpkg-overlays/triplets",
         "VCPKG_TARGET_TRIPLET": "x86-mingw-mixed",
+        "CMAKE_SHARED_LINKER_FLAGS": "-static -Wl,--pdb=",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
         "VCPKG_APPLOCAL_DEPS": "OFF",
         "VCPKG_INSTALLED_DIR": "${sourceDir}/build/${hostSystemName}/vcpkg_installed"

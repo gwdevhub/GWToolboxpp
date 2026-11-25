@@ -103,6 +103,8 @@ def main():
     else:
         if "CLion" not in flatpak_ides:
             ide_setup.set_clion_profiles(log)
+        else:
+            ide_setup.set_remote_debug(log, ide_setup.FLATPAK_IDES["CLion"]["workspace"])
         ide_setup.install_vscode_extensions(log)
         ide_setup.clear_ide_locks(log, flatpak_ides)
 
