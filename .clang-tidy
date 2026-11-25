@@ -1,4 +1,28 @@
-Checks:          '*,-performance-no-int-to-ptr,-misc-unused-parameters,-android*,-readability-non-const-parameter,-modernize-use-trailing-return-type,-bugprone-bool-pointer-implicit-conversion'
+Checks: >
+  bugprone-*,
+  -bugprone-easily-swappable-parameters,
+  performance-*,
+  modernize-*,
+  -modernize-avoid-c-arrays,
+  -modernize-use-nodiscard,
+  -modernize-use-trailing-return-type,
+  readability-*,
+  -readability-braces-around-statements,
+  -readability-identifier-length,
+  -readability-implicit-bool-conversion,
+  -readability-magic-numbers,
+  -readability-non-const-parameter,
+  -readability-uppercase-literal-suffix,
+  misc-*,
+  -misc-include-cleaner,
+  -misc-const-correctness,
+  -misc-non-private-member-variables-in-classes,
+  google-*,
+  -google-readability-namespace-comments,
+  -google-readability-todo,
+  -google-readability-braces-around-statements
+HeaderFilterRegex: '^.*[\\/]GWToolboxdll[\\/].*'
+ExcludeHeaderFilterRegex: '(imgui_impl_|imconfig\.h|ToolboxIni|sha1)'
 WarningsAsErrors: true
 CheckOptions:
   - key:             bugprone-unhandled-self-assignment.WarnOnlyIfThisHasSuspiciousField
