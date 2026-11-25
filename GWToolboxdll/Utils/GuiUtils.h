@@ -3,6 +3,7 @@
 // ReSharper disable once CppUnusedIncludeDirective
 #include <optional>
 
+#include <IconsFontAwesome5.h>
 #include <ImGuiAddons.h>
 #include <Utils/Json.h>
 #include <ToolboxIni.h>
