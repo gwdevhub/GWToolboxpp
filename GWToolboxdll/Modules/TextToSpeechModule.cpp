@@ -2032,6 +2032,9 @@ void TextToSpeechModule::DrawSettingsInternal()
             if (!combined_log.empty()) combined_log += "\n";
             combined_log += msg;
         }
-        ImGui::InputTextMultiline("##VoiceLog", const_cast<char*>(combined_log.c_str()), combined_log.size(), ImVec2(-1, 100), ImGuiInputTextFlags_ReadOnly);
+        // ImGui requires buf_size to include the NUL terminator (IM_ASSERT(strlen + 1 <= buf_size)).
+        std::vector<char> log_buffer(combined_log.begin(), combined_log.end());
+        log_buffer.push_back('\0');
+        ImGui::InputTextMultiline("##VoiceLog", log_buffer.data(), log_buffer.size(), ImVec2(-1, 100), ImGuiInputTextFlags_ReadOnly);
     }
 }
