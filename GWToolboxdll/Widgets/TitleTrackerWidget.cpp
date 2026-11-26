@@ -344,6 +344,7 @@ void TitleTrackerWidget::SignalTerminate()
         delete t;
     }
     title_progress_by_id.clear();
+    title_progress_by_title.clear();
 
     GW::UI::RemoveUIMessageCallback(&OnPostUIMessage_HookEntry);
     pending_title_sort_order = true;
