@@ -69,6 +69,7 @@ set_property(GLOBAL APPEND PROPERTY JOB_POOLS compile=${GWTB_COMPILE_JOBS})
 set(CMAKE_JOB_POOL_COMPILE compile)
 
 add_compile_definitions(
+    "$<$<CONFIG:Debug>:_DEBUG>"
     "NOMINMAX"
     "WIN32_LEAN_AND_MEAN"
     # MinGW's dshow.h includes strsafe.h, whose deprecation macros would rewrite strcpy/swprintf calls.
