@@ -1,9 +1,14 @@
 #include "stdafx.h"
 
 #include "HttpClient.h"
+#include "SchannelTls.h"
 
 #include <windows.h>
 #include <winhttp.h>
+
+#include <cstdlib>
+#include <cstring>
+#include <cwchar>
 
 namespace {
 
@@ -57,6 +62,230 @@ namespace {
         }
         return true;
     }
+
+    struct ParsedUrl {
+        bool tls = false;
+        std::string host;
+        uint16_t port = 0;
+        std::string host_header;
+        std::string target;
+    };
+
+    bool ParseUrl(const std::string& url, ParsedUrl& out)
+    {
+        const std::wstring wide = Utf8ToWide(url.c_str(), url.size());
+        URL_COMPONENTSW comp = {};
+        comp.dwStructSize = sizeof(comp);
+        wchar_t scheme_buf[16] = {};
+        wchar_t host_buf[256] = {};
+        wchar_t path_buf[2048] = {};
+        wchar_t extra_buf[2048] = {};
+        comp.lpszScheme = scheme_buf;
+        comp.dwSchemeLength = _countof(scheme_buf);
+        comp.lpszHostName = host_buf;
+        comp.dwHostNameLength = _countof(host_buf);
+        comp.lpszUrlPath = path_buf;
+        comp.dwUrlPathLength = _countof(path_buf);
+        comp.lpszExtraInfo = extra_buf;
+        comp.dwExtraInfoLength = _countof(extra_buf);
+        if (!WinHttpCrackUrl(wide.c_str(), 0, 0, &comp)) {
+            return false;
+        }
+        if (comp.nScheme != INTERNET_SCHEME_HTTP && comp.nScheme != INTERNET_SCHEME_HTTPS) {
+            return false;
+        }
+        out.tls = comp.nScheme == INTERNET_SCHEME_HTTPS;
+        out.host = WideToUtf8(host_buf, comp.dwHostNameLength);
+        out.port = comp.nPort;
+        const bool default_port = (out.tls && out.port == 443) || (!out.tls && out.port == 80);
+        out.host_header = default_port ? out.host : out.host + ":" + std::to_string(out.port);
+        out.target = WideToUtf8(path_buf, comp.dwUrlPathLength) + WideToUtf8(extra_buf, comp.dwExtraInfoLength);
+        if (out.target.empty()) {
+            out.target = "/";
+        }
+        return true;
+    }
+
+    std::string ResolveRedirect(const ParsedUrl& base, const std::string& location)
+    {
+        if (StartsWith(location.c_str(), "http://") || StartsWith(location.c_str(), "https://")) {
+            return location;
+        }
+        const std::string origin = std::string(base.tls ? "https://" : "http://") + base.host_header;
+        if (!location.empty() && location[0] == '/') {
+            return origin + location;
+        }
+        const size_t last_slash = base.target.find_last_of('/');
+        return origin + base.target.substr(0, last_slash + 1) + location;
+    }
+
+    std::string FindHeader(const std::string& head, const char* name)
+    {
+        const size_t name_len = strlen(name);
+        size_t line_start = head.find("\r\n");
+        while (line_start != std::string::npos) {
+            line_start += 2;
+            const size_t line_end = head.find("\r\n", line_start);
+            const std::string line = head.substr(line_start, line_end == std::string::npos ? std::string::npos : line_end - line_start);
+            if (line.size() > name_len && _strnicmp(line.c_str(), name, name_len) == 0 && line[name_len] == ':') {
+                size_t value_start = name_len + 1;
+                while (value_start < line.size() && line[value_start] == ' ') {
+                    ++value_start;
+                }
+                return line.substr(value_start);
+            }
+            line_start = line_end;
+        }
+        return {};
+    }
+
+    int ParseStatusCode(const std::string& head)
+    {
+        if (!StartsWith(head.c_str(), "HTTP/")) {
+            return 0;
+        }
+        const size_t space = head.find(' ');
+        if (space == std::string::npos) {
+            return 0;
+        }
+        return atoi(head.c_str() + space + 1);
+    }
+
+    bool ReadHead(SchannelTlsStream& stream, std::string& head, std::string& leftover)
+    {
+        constexpr size_t max_head_size = 64 * 1024;
+        std::string buf;
+        for (;;) {
+            const size_t end = buf.find("\r\n\r\n");
+            if (end != std::string::npos) {
+                std::string candidate = buf.substr(0, end + 4);
+                if (ParseStatusCode(candidate) / 100 == 1) {
+                    buf.erase(0, end + 4);
+                    continue;
+                }
+                head = std::move(candidate);
+                leftover = buf.substr(end + 4);
+                return true;
+            }
+            if (buf.size() > max_head_size) {
+                return false;
+            }
+            char chunk[4096];
+            const int n = stream.Receive(chunk, sizeof(chunk));
+            if (n <= 0) {
+                return false;
+            }
+            buf.append(chunk, static_cast<size_t>(n));
+        }
+    }
+
+    class HttpBodyReader {
+    public:
+        enum class Framing { UntilClose, Length, Chunked };
+
+        HttpBodyReader(SchannelTlsStream& stream, std::string buffered, const Framing framing, const uint64_t length)
+            : m_stream(stream)
+            , m_buffered(std::move(buffered))
+            , m_framing(framing)
+            , m_remaining(length)
+        {
+        }
+
+        int Read(char* out, const size_t cap)
+        {
+            switch (m_framing) {
+                case Framing::UntilClose: return ReadRaw(out, cap);
+                case Framing::Length:     return ReadLength(out, cap);
+                case Framing::Chunked:    return ReadChunk(out, cap);
+            }
+            return -1;
+        }
+
+    private:
+        int ReadRaw(char* out, const size_t cap)
+        {
+            if (!m_buffered.empty()) {
+                const size_t n = std::min(cap, m_buffered.size());
+                memcpy(out, m_buffered.data(), n);
+                m_buffered.erase(0, n);
+                return static_cast<int>(n);
+            }
+            return m_stream.Receive(out, cap);
+        }
+
+        int ReadLength(char* out, const size_t cap)
+        {
+            if (m_remaining == 0) {
+                return 0;
+            }
+            const int n = ReadRaw(out, static_cast<size_t>(std::min<uint64_t>(cap, m_remaining)));
+            if (n == 0) {
+                return -1;
+            }
+            if (n > 0) {
+                m_remaining -= static_cast<uint64_t>(n);
+            }
+            return n;
+        }
+
+        int ReadChunk(char* out, const size_t cap)
+        {
+            if (m_chunk_remaining == 0) {
+                if (m_chunk_started) {
+                    std::string crlf;
+                    if (!ReadLine(crlf)) {
+                        return -1;
+                    }
+                }
+                std::string size_line;
+                if (!ReadLine(size_line)) {
+                    return -1;
+                }
+                m_chunk_started = true;
+                m_chunk_remaining = strtoull(size_line.c_str(), nullptr, 16);
+                if (m_chunk_remaining == 0) {
+                    std::string trailer;
+                    do {
+                        if (!ReadLine(trailer)) {
+                            return -1;
+                        }
+                    } while (!trailer.empty());
+                    return 0;
+                }
+            }
+            const int n = ReadRaw(out, static_cast<size_t>(std::min<uint64_t>(cap, m_chunk_remaining)));
+            if (n <= 0) {
+                return -1;
+            }
+            m_chunk_remaining -= static_cast<uint64_t>(n);
+            return n;
+        }
+
+        bool ReadLine(std::string& line)
+        {
+            for (;;) {
+                const size_t end = m_buffered.find("\r\n");
+                if (end != std::string::npos) {
+                    line = m_buffered.substr(0, end);
+                    m_buffered.erase(0, end + 2);
+                    return true;
+                }
+                char chunk[4096];
+                const int n = m_stream.Receive(chunk, sizeof(chunk));
+                if (n <= 0) {
+                    return false;
+                }
+                m_buffered.append(chunk, static_cast<size_t>(n));
+            }
+        }
+
+        SchannelTlsStream& m_stream;
+        std::string m_buffered;
+        Framing m_framing;
+        uint64_t m_remaining = 0;
+        uint64_t m_chunk_remaining = 0;
+        bool m_chunk_started = false;
+    };
 
 } // namespace
 
@@ -248,6 +477,7 @@ void HttpRequest::Clear()
     m_Content.clear();
     m_Status = ResponseStatus::None;
     m_StatusCode = 0;
+    m_TransportError = 0;
     m_Aborted.store(false);
 }
 
@@ -302,6 +532,9 @@ void HttpRequest::RequestAbort()
         m_Aborted.store(true);
         to_close = static_cast<HINTERNET>(m_hRequest);
         m_hRequest = nullptr;
+        if (m_Tls) {
+            m_Tls->Shutdown();
+        }
         LeaveCriticalSection(cs);
     }
     // Closing the request handle from another thread cancels any pending
@@ -314,6 +547,10 @@ void HttpRequest::RequestAbort()
 bool HttpRequest::Perform()
 {
     Clear();
+
+    if (!m_VerifyPeer && m_Url.size() >= 8 && _wcsnicmp(m_Url.c_str(), L"https://", 8) == 0) {
+        return PerformSchannel();
+    }
 
     URL_COMPONENTSW comp = {};
     comp.dwStructSize = sizeof(comp);
@@ -331,6 +568,7 @@ bool HttpRequest::Perform()
     comp.dwExtraInfoLength = _countof(extra_buf);
 
     if (!WinHttpCrackUrl(m_Url.c_str(), 0, 0, &comp)) {
+        m_TransportError = GetLastError();
         m_Status = ResponseStatus::Error;
         return false;
     }
@@ -344,6 +582,7 @@ bool HttpRequest::Perform()
         WINHTTP_NO_PROXY_BYPASS,
         0);
     if (!hSession) {
+        m_TransportError = GetLastError();
         m_Status = ResponseStatus::Error;
         return false;
     }
@@ -354,6 +593,7 @@ bool HttpRequest::Perform()
 
     HINTERNET hConnect = WinHttpConnect(hSession, host_buf, comp.nPort, 0);
     if (!hConnect) {
+        m_TransportError = GetLastError();
         WinHttpCloseHandle(hSession);
         m_Status = ResponseStatus::Error;
         return false;
@@ -379,6 +619,7 @@ bool HttpRequest::Perform()
         WINHTTP_DEFAULT_ACCEPT_TYPES,
         flags);
     if (!hRequest) {
+        m_TransportError = GetLastError();
         WinHttpCloseHandle(hConnect);
         WinHttpCloseHandle(hSession);
         m_Status = ResponseStatus::Error;
@@ -458,6 +699,7 @@ bool HttpRequest::Perform()
 
     if (!ok) {
         const DWORD err = GetLastError();
+        m_TransportError = err;
         CloseHandles();
         if (m_Aborted.load()) {
             m_Status = ResponseStatus::Aborted;
@@ -514,6 +756,7 @@ bool HttpRequest::Perform()
             DWORD read = 0;
             if (!WinHttpReadData(hRequest, buf, sizeof(buf), &read)) {
                 const bool aborted = m_Aborted.load();
+                m_TransportError = GetLastError();
                 CloseHandles();
                 m_Status = aborted ? ResponseStatus::Aborted : ResponseStatus::Error;
                 return false;
@@ -538,6 +781,135 @@ bool HttpRequest::Perform()
     return true;
 }
 
+bool HttpRequest::PublishTls(SchannelTlsStream* stream)
+{
+    auto* cs = static_cast<CRITICAL_SECTION*>(m_CancelMutex);
+    EnterCriticalSection(cs);
+    const bool allowed = stream == nullptr || !m_Aborted.load();
+    if (allowed) {
+        m_Tls = stream;
+    }
+    LeaveCriticalSection(cs);
+    return allowed;
+}
+
+bool HttpRequest::PerformSchannel()
+{
+    std::string url = WideToUtf8(m_Url.c_str(), m_Url.size());
+    std::string method = (m_HasCustomMethod && !m_Method.empty())
+                             ? WideToUtf8(m_Method.c_str(), m_Method.size())
+                             : std::string(m_PostBody ? "POST" : "GET");
+    std::string body = m_PostBody ? std::string(static_cast<const char*>(m_PostBody), m_PostBodySize) : std::string{};
+    const std::string headers = WideToUtf8(m_HeadersBlock.c_str(), m_HeadersBlock.size());
+    const std::string user_agent = m_UserAgent.empty() ? std::string("GWToolbox") : WideToUtf8(m_UserAgent.c_str(), m_UserAgent.size());
+    const int conn_timeout = m_ConnectTimeoutMs > 0 ? m_ConnectTimeoutMs : 60000;
+    const int rw_timeout = m_TimeoutMs > 0 ? m_TimeoutMs : 30000;
+    const int max_redirects = m_FollowLocation ? (m_MaxRedirects >= 0 ? m_MaxRedirects : 10) : 0;
+
+    auto fail = [this](const uint32_t error) {
+        m_TransportError = error ? error : ERROR_WINHTTP_CONNECTION_ERROR;
+        m_Status = m_Aborted.load() ? ResponseStatus::Aborted : ResponseStatus::Error;
+        return false;
+    };
+
+    for (int redirects = 0;; ++redirects) {
+        ParsedUrl target;
+        if (!ParseUrl(url, target)) {
+            return fail(ERROR_WINHTTP_INVALID_URL);
+        }
+
+        SchannelTlsStream stream;
+        if (!stream.Connect(target.host, target.port, target.tls, conn_timeout, rw_timeout)) {
+            return fail(stream.LastError());
+        }
+        if (!PublishTls(&stream)) {
+            return fail(0);
+        }
+
+        std::string request = method + " " + target.target + " HTTP/1.1\r\nHost: " + target.host_header +
+                              "\r\nUser-Agent: " + user_agent + "\r\nConnection: close\r\n";
+        if (!headers.empty()) {
+            request += headers + "\r\n";
+        }
+        if (!body.empty() || method == "POST" || method == "PUT") {
+            request += "Content-Length: " + std::to_string(body.size()) + "\r\n";
+        }
+        request += "\r\n";
+
+        std::string head;
+        std::string leftover;
+        const bool responded = stream.Send(request.data(), request.size()) &&
+                               (body.empty() || stream.Send(body.data(), body.size())) &&
+                               ReadHead(stream, head, leftover);
+        if (!responded) {
+            PublishTls(nullptr);
+            return fail(stream.LastError());
+        }
+
+        const int status = ParseStatusCode(head);
+        if (status == 0) {
+            PublishTls(nullptr);
+            return fail(ERROR_WINHTTP_INVALID_SERVER_RESPONSE);
+        }
+
+        const std::string location = FindHeader(head, "Location");
+        const bool redirect = (status == 301 || status == 302 || status == 303 || status == 307 || status == 308) &&
+                              !location.empty() && redirects < max_redirects;
+        if (redirect) {
+            PublishTls(nullptr);
+            if ((status == 301 || status == 302 || status == 303) && method == "POST") {
+                method = "GET";
+                body.clear();
+            }
+            url = ResolveRedirect(target, location);
+            continue;
+        }
+
+        m_StatusCode = status;
+        OnHeader(head.c_str(), head.size());
+
+        const bool has_body = !m_NoBody && method != "HEAD" && status != 204 && status != 304;
+        HttpBodyReader::Framing framing = HttpBodyReader::Framing::Length;
+        uint64_t length = 0;
+        if (has_body) {
+            const std::string transfer_encoding = FindHeader(head, "Transfer-Encoding");
+            const std::string content_length = FindHeader(head, "Content-Length");
+            if (transfer_encoding.find("chunked") != std::string::npos) {
+                framing = HttpBodyReader::Framing::Chunked;
+            }
+            else if (!content_length.empty()) {
+                length = strtoull(content_length.c_str(), nullptr, 10);
+            }
+            else {
+                framing = HttpBodyReader::Framing::UntilClose;
+            }
+        }
+
+        HttpBodyReader reader(stream, std::move(leftover), framing, length);
+        char buf[8192];
+        for (;;) {
+            const int n = reader.Read(buf, sizeof(buf));
+            if (n < 0) {
+                PublishTls(nullptr);
+                return fail(stream.LastError());
+            }
+            if (n == 0) {
+                break;
+            }
+            OnContent(buf, static_cast<size_t>(n));
+        }
+        PublishTls(nullptr);
+
+        if (m_Aborted.load()) {
+            m_Status = ResponseStatus::Aborted;
+            return false;
+        }
+        m_Status = ResponseStatus::Completed;
+        OnPerformed();
+        return true;
+    }
+}
+
 const char* HttpRequest::GetStatusStr() const
 {
     switch (m_Status) {
@@ -548,6 +920,37 @@ const char* HttpRequest::GetStatusStr() const
         case ResponseStatus::Aborted:   return "Aborted";
         default:                        return "Unknown";
     }
+}
+
+std::string HttpRequest::GetErrorDescription() const
+{
+    if (m_Status == ResponseStatus::Completed) return {};
+
+    std::string out = GetStatusStr();
+    if (m_StatusCode) {
+        char code[32];
+        snprintf(code, sizeof(code), " HTTP %d", m_StatusCode);
+        out += code;
+    }
+    if (m_TransportError) {
+        wchar_t* message = nullptr;
+        const DWORD len = FormatMessageW(
+            FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
+                FORMAT_MESSAGE_FROM_HMODULE | FORMAT_MESSAGE_IGNORE_INSERTS,
+            GetModuleHandleW(L"winhttp.dll"), m_TransportError,
+            MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), reinterpret_cast<LPWSTR>(&message), 0, nullptr);
+        std::string text = len && message ? WideToUtf8(message, len) : std::string{};
+        if (message) LocalFree(message);
+        while (!text.empty() && (text.back() == '\r' || text.back() == '\n' || text.back() == ' ')) {
+            text.pop_back();
+        }
+        char code[32];
+        snprintf(code, sizeof(code), " (error %u", m_TransportError);
+        out += code;
+        if (!text.empty()) out += ": " + text;
+        out += ")";
+    }
+    return out;
 }
 
 const char* HttpRequest::GetProtocolPrefix(const Protocol proto)

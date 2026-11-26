@@ -42,6 +42,8 @@ enum class ResponseStatus {
 
 using ParamField = std::pair<const char*, const char*>;
 
+class SchannelTlsStream;
+
 class HttpRequest {
 public:
     HttpRequest();
@@ -91,6 +93,8 @@ public:
 
     const char* GetStatusStr() const;
 
+    std::string GetErrorDescription() const;
+
     static const char* GetProtocolPrefix(Protocol proto);
     static const char* GetHttpMethodName(HttpMethod method);
 
@@ -106,9 +110,12 @@ protected:
     std::string m_Content;
     ResponseStatus m_Status;
     int m_StatusCode;
+    uint32_t m_TransportError = 0;
 
 private:
     void CloseHandles();
+    bool PerformSchannel();
+    bool PublishTls(SchannelTlsStream* stream);
 
     // Configuration (set via SetXxx)
     std::wstring m_Url;
@@ -133,6 +140,7 @@ private:
     void* m_hSession;
     void* m_hConnect;
     void* m_hRequest;
+    SchannelTlsStream* m_Tls = nullptr;
 
     // Cancellation
     void* m_CancelMutex; // CRITICAL_SECTION*

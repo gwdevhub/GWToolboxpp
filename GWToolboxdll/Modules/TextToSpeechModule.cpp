@@ -1071,9 +1071,14 @@ Gender GetGenderByFileId(const uint32_t file_id)
         client.SetTimeoutSec(timeout_sec);
         client.Execute();
         if (!client.IsSuccessful()) {
-            VoiceLog("%s returned error code: %ld", service_name.c_str(), client.GetStatusCode());
-            std::string error_response = std::move(client.GetContent());
-            if (!error_response.empty()) VoiceLog("Error response: %s", error_response.c_str());
+            if (client.GetStatus() == ResponseStatus::Completed) {
+                VoiceLog("%s returned HTTP %d for %s", service_name.c_str(), client.GetStatusCode(), url.c_str());
+                std::string error_response = std::move(client.GetContent());
+                if (!error_response.empty()) VoiceLog("Error response: %s", error_response.c_str());
+            }
+            else {
+                VoiceLog("%s request to %s failed (timeout %d s): %s", service_name.c_str(), url.c_str(), timeout_sec, client.GetErrorDescription().c_str());
+            }
             return "";
         }
         return std::move(client.GetContent());

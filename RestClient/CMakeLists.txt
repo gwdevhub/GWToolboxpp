@@ -8,4 +8,6 @@ target_precompile_headers(RestClient PRIVATE "stdafx.h")
 target_include_directories(RestClient PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(RestClient PUBLIC
     winhttp
+    secur32
+    ws2_32
     Core)
