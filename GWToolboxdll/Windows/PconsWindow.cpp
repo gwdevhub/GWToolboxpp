@@ -344,7 +344,7 @@ PconsWindow::PconsWindow()
                                      0x521AE, {SkillID::Pie_Induced_Ecstasy}, 10));
 
     pcons.push_back(new PconWarSupplies("War Supplies", "War Supply", "warsupply", L"War Supplies",
-                                      0x577B3, {SkillID::Well_Supplied}, 20));
+                                      0x5788F, {SkillID::Well_Supplied}, 20));
 
     pcons.push_back(pcon_alcohol = new PconAlcohol("Alcohol", "Alcohol", "alcohol", L"Dwarven Ale",
                                                    0x252BD, 10));
