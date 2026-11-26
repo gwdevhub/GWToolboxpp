@@ -26,6 +26,7 @@
 #include <vector>
 
 #include "easywsclient.hpp"
+#include "easywsclient_schannel.hpp"
 
 namespace { // private module-only namespace
 
@@ -311,6 +312,8 @@ namespace { // private module-only namespace
         std::condition_variable m_QueueCv;
     };
 
+    std::atomic<easywsclient::WebSocket::TlsBackend> g_tls_backend{easywsclient::WebSocket::TlsBackend::Platform};
+
     easywsclient::WebSocket::pointer from_url(
         const std::string& url,
         bool /*useMask*/,
@@ -327,6 +330,9 @@ namespace { // private module-only namespace
         }
         log_error("easywsclient: connecting: ssl=%s host=%s port=%d path=%s\n",
                   is_ssl ? "true" : "false", host.c_str(), port, path.c_str());
+        if (g_tls_backend.load() == easywsclient::WebSocket::TlsBackend::SchannelIgnoreErrors) {
+            return easywsclient::schannel::connect(host, port, is_ssl, path, additional_headers, origin);
+        }
 
         const std::wstring whost = Utf8ToWide(host);
         const std::wstring wpath = Utf8ToWide(path);
@@ -463,6 +469,11 @@ namespace { // private module-only namespace
 
 
 namespace easywsclient {
+
+    void WebSocket::setTlsBackend(TlsBackend backend)
+    {
+        g_tls_backend.store(backend);
+    }
 
     WebSocket::pointer WebSocket::create_dummy()
     {

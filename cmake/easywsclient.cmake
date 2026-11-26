@@ -9,7 +9,9 @@ if(EMSCRIPTEN)
 else()
     set(SOURCES
         "${EASYWSCLIENT_FOLDER}/easywsclient.hpp"
-        "${EASYWSCLIENT_FOLDER}/easywsclient.cpp")
+        "${EASYWSCLIENT_FOLDER}/easywsclient.cpp"
+        "${EASYWSCLIENT_FOLDER}/easywsclient_schannel.hpp"
+        "${EASYWSCLIENT_FOLDER}/easywsclient_schannel.cpp")
 endif()
 
 add_library(easywsclient)
@@ -19,7 +21,7 @@ target_include_directories(easywsclient PUBLIC "${EASYWSCLIENT_FOLDER}")
 set_target_properties(easywsclient PROPERTIES FOLDER "Dependencies/")
 
 if(NOT EMSCRIPTEN)
-    target_link_libraries(easywsclient PUBLIC winhttp)
+    target_link_libraries(easywsclient PUBLIC winhttp secur32 ws2_32)
 endif()
 # The Emscripten backend needs no extra link flags: emscripten/websocket.h's
 # JS glue is pulled in automatically by the SDK when the header is used.
