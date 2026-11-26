@@ -314,6 +314,17 @@ set(GWTOOLBOXDLL_LIBRARIES
     )
 target_link_libraries(GWToolbox_DLL PRIVATE ${GWTOOLBOXDLL_LIBRARIES})
 
+foreach(lib IN LISTS GWTOOLBOXDLL_LIBRARIES)
+    if(TARGET ${lib})
+        get_target_property(lib_type ${lib} TYPE)
+        get_target_property(lib_alias ${lib} ALIASED_TARGET)
+        get_target_property(lib_imported ${lib} IMPORTED)
+        if(NOT lib_imported AND NOT lib_alias AND NOT lib_type STREQUAL "INTERFACE_LIBRARY")
+            target_compile_options(${lib} PRIVATE "$<$<CONFIG:Debug>:-gdwarf-4>")
+        endif()
+    endif()
+endforeach()
+
 # The per-frame code is built at -O2 while the rest is optimised for size, and clang rejects a precompiled header
 # built with other -O or exception settings. Each such group is its own target with its own copy of the header;
 # without one these were the slowest files to build. It compiles with GWToolbox_DLL's settings and is linked into it.
