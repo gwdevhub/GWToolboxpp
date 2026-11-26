@@ -776,6 +776,7 @@ void GWToolbox::Initialize(LPVOID module)
         dllmodule = static_cast<HMODULE>(module);
     }
     if (initialization_failed || gwtoolbox_state != GWToolboxState::Terminated) return;
+    easywsclient::WebSocket::setTlsBackend(easywsclient::WebSocket::TlsBackend::SchannelIgnoreErrors);
     gwtoolbox_state = GWToolboxState::Initialising;
 
     Log::InitializeLog();
