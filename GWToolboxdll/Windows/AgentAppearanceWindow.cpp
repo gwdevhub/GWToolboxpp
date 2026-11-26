@@ -172,28 +172,6 @@ namespace {
     GW::HookEntry ChatCmd_HookEntry;
     bool hooks_registered = false;
 
-#ifdef _DEBUG
-    struct AppearanceStats {
-        std::map<uint32_t, uint32_t> invalidations;
-        uint32_t cache_hits = 0;
-        uint32_t key_rebuilds = 0;
-        uint32_t relation_recomputes = 0;
-        clock_t relation_ticks = 0;
-        clock_t window_start = TIMER_INIT();
-    } appearance_stats;
-
-    void LogAppearanceStats()
-    {
-        constexpr clock_t report_interval = 10 * CLOCKS_PER_SEC;
-        if (TIMER_DIFF(appearance_stats.window_start) < report_interval) return;
-        Log::Info("Appearance: cache hits %u, key rebuilds %u, relation recomputes %u, relation time %lld ms",
-                  appearance_stats.cache_hits, appearance_stats.key_rebuilds, appearance_stats.relation_recomputes,
-                  static_cast<long long>(appearance_stats.relation_ticks) * 1000 / CLOCKS_PER_SEC);
-        for (const auto& [msgid, count] : appearance_stats.invalidations) Log::Info("Appearance invalidation 0x%08x: %u", msgid, count);
-        appearance_stats = {};
-    }
-#endif
-
     uint32_t StateMask(const int state)
     {
         return state >= 0 && state < 2 ? 1u << state : 0;
@@ -378,10 +356,6 @@ namespace {
         if (agent_type == Player) {
             if ((checks & CheckSelf) && agent->agent_id == GW::Agents::GetControlledCharacterId()) key.relations |= RelationSelf;
             if (cached.relations_generation != relations_generation) {
-#ifdef _DEBUG
-                ++appearance_stats.relation_recomputes;
-                const auto relation_start = TIMER_INIT();
-#endif
                 cached.relations_generation = relations_generation;
                 cached.relations = 0;
                 if (checks & (CheckFriend | CheckGuild)) {
@@ -401,21 +375,10 @@ namespace {
                 }
                 if ((checks & CheckMyParty) && ToolboxUtils::IsAgentInMyParty(agent->agent_id)) cached.relations |= RelationMyParty;
                 if ((checks & CheckAnyParty) && ToolboxUtils::IsAgentInParty(agent->agent_id)) cached.relations |= RelationInParty;
-#ifdef _DEBUG
-                appearance_stats.relation_ticks += TIMER_DIFF(relation_start);
-#endif
             }
             key.relations |= cached.relations;
         }
-        if (cached.valid && cached.key == key) {
-#ifdef _DEBUG
-            ++appearance_stats.cache_hits;
-#endif
-            return;
-        }
-#ifdef _DEBUG
-        ++appearance_stats.key_rebuilds;
-#endif
+        if (cached.valid && cached.key == key) return;
         cached.key = key;
         cached.valid = true;
         cached.matches.clear();
@@ -515,9 +478,6 @@ namespace {
 
     void OnUIMessage(GW::HookStatus*, const GW::UI::UIMessage msgid, void* wParam, void*)
     {
-#ifdef _DEBUG
-        ++appearance_stats.invalidations[static_cast<uint32_t>(msgid)];
-#endif
         switch (msgid) {
             case GW::UI::UIMessage::kMapLoaded:
                 AgentAppearanceWindow::ResetAppearanceCache();
@@ -617,9 +577,6 @@ void AgentAppearanceWindow::Show()
 
 void AgentAppearanceWindow::Draw(IDirect3DDevice9*)
 {
-#ifdef _DEBUG
-    LogAppearanceStats();
-#endif
     if (visible) {
         ImGui::SetNextWindowSize(ImVec2(650.f, 650.f), ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowSizeConstraints(ImVec2(650.f, 450.f), ImVec2(FLT_MAX, FLT_MAX));
