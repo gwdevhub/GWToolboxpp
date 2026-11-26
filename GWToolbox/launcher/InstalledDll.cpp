@@ -25,8 +25,8 @@ fs::path FindInstalledDll()
     if (localDllOnly) {
         return fs::is_regular_file(local, ec) ? local : fs::path{};
     }
-    if (const auto dll = dllFromSettings()) {
-        return *dll;
+    if (const auto saved = savedDllPath()) {
+        return fs::is_regular_file(*saved, ec) ? *saved : fs::path{};
     }
     const fs::path installed = DefaultDllPath();
     if (fs::is_regular_file(installed, ec)) {

@@ -14,7 +14,7 @@ std::filesystem::path DefaultDllPath();
 
 void RecordInstalledDll(const std::filesystem::path& dll);
 
-std::optional<std::filesystem::path> dllFromSettings();
+std::optional<std::filesystem::path> savedDllPath();
 
 void SetLocalDllOnly(bool enabled);
 

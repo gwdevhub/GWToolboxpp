@@ -45,19 +45,14 @@ void SetLauncherSetting(const std::string& name, const bool value)
     writeSettings(saved);
 }
 
-std::optional<fs::path> dllFromSettings()
+std::optional<fs::path> savedDllPath()
 {
     const Json saved = readSettings();
     if (!saved.contains("dll") || !saved["dll"].is_string()) {
         return std::nullopt;
     }
     const std::string utf8 = saved["dll"].get<std::string>();
-    const fs::path dll(std::u8string(utf8.begin(), utf8.end()));
-    std::error_code ec;
-    if (fs::is_regular_file(dll, ec)) {
-        return dll;
-    }
-    return std::nullopt;
+    return fs::path(std::u8string(utf8.begin(), utf8.end()));
 }
 
 void RecordInstalledDll(const fs::path& dll)
