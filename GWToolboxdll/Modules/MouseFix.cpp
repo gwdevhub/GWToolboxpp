@@ -55,11 +55,9 @@ namespace {
 
     MouseFix::Settings settings;
 
-#if MOUSEFIX_ENABLE_CAMERA_FIX
-    bool initialized = false;
-    using OnProcessInput_pt = bool(__cdecl*)(uint32_t* wParam, uint32_t* lParam);
-    OnProcessInput_pt ProcessInput_Func = nullptr;
-    OnProcessInput_pt ProcessInput_Ret = nullptr;
+    using ProcessInput_pt = bool(__cdecl*)(uint32_t* wParam, uint32_t* lParam);
+    ProcessInput_pt ProcessInput_Func = nullptr;
+    ProcessInput_pt ProcessInput_Ret = nullptr;
 
     struct GwMouseMove {
         int center_x;                // 0x00 viewport centre the camera deltas are measured against
@@ -75,16 +73,53 @@ namespace {
     };
 
     GwMouseMove* gw_mouse_move = nullptr;
-    // OsInput event id for "mouse moved while the camera is captured". ArenaNet shuffles this
-    // enum between builds, so it's read out of the WM_MOUSEMOVE handler rather than hard coded.
-    uint32_t mouse_look_event_id = 0;
+    bool* HasRegisteredTrackMouseEvent = nullptr;
+    // ArenaNet has reordered OsInput event ids between builds; re-verify this after game updates.
+    constexpr uint32_t mouse_look_event_id = 0x11;
+    float look_remainder_x = 0.f;
+    float look_remainder_y = 0.f;
+    constexpr float min_camera_look_sensitivity = 0.5f;
+    constexpr float max_camera_look_sensitivity = 5.f;
+    constexpr auto camera_look_sensitivity_help = "Multiplies how fast the camera turns while holding right click and moving the mouse.\n"
+        "Applied on top of the in-game camera rotation speed.";
+
+    void ScanProcessInput()
+    {
+        const auto address = GW::Scanner::Find("\xc7\x45\xf0\x10\x00\x00\x00\xc7\x45\xf4\x02\x00\x00\x00", "xx?xxxxxx?xxxx", 0x15);
+        DEBUG_ASSERT(address);
+        if (address && GW::Scanner::IsValidPtr(*(uintptr_t*)address)) {
+            ProcessInput_Func = (ProcessInput_pt)GW::Scanner::ToFunctionStart(address, 0xfff);
+            const auto track_mouse_ref = GW::Scanner::FindInRange("\x83\x3d????\x00", "xx????x", 2, address, address - 0x30);
+            if (track_mouse_ref && GW::Scanner::IsValidPtr(*(uintptr_t*)track_mouse_ref)) {
+                HasRegisteredTrackMouseEvent = *(bool**)track_mouse_ref;
+                gw_mouse_move = (GwMouseMove*)(HasRegisteredTrackMouseEvent - 0x28);
+            }
+        }
+        DEBUG_ASSERT(ProcessInput_Func);
+        DEBUG_ASSERT(HasRegisteredTrackMouseEvent);
+        DEBUG_ASSERT(gw_mouse_move);
+
+        GWCA_INFO("[SCAN] ProcessInput_Func = %p", ProcessInput_Func);
+        GWCA_INFO("[SCAN] HasRegisteredTrackMouseEvent = %p", HasRegisteredTrackMouseEvent);
+        GWCA_INFO("[SCAN] gw_mouse_move = %p", gw_mouse_move);
+    }
+
+    void ScaleLookAxis(uint32_t& delta, float& remainder)
+    {
+        const auto sensitivity = std::clamp(settings.camera_look_sensitivity, min_camera_look_sensitivity, max_camera_look_sensitivity);
+        const auto scaled = static_cast<float>(static_cast<int32_t>(delta)) * sensitivity + remainder;
+        const auto whole = std::trunc(scaled);
+        remainder = scaled - whole;
+        delta = static_cast<uint32_t>(static_cast<int32_t>(whole));
+    }
+
+#if MOUSEFIX_ENABLE_CAMERA_FIX
+    bool initialized = false;
     LONG rawInputRelativePosX = 0;
     LONG rawInputRelativePosY = 0;
-    bool* HasRegisteredTrackMouseEvent = nullptr;
     using SetCursorPosCenter_pt = void(__cdecl*)(GwMouseMove* wParam);
     SetCursorPosCenter_pt SetCursorPosCenter_Func = nullptr;
-    SetCursorPosCenter_pt SetCursorPosCenter_Ret = nullptr;    // Override (and rewrite) GW's handling of setting the mouse cursor to the center of the screen (bypass GameMutex, may be the cause of camera glitch)
-    // This could be a patch really, but rewriting the function out is a bit more readable.
+    SetCursorPosCenter_pt SetCursorPosCenter_Ret = nullptr;
 
     bool ShouldFixCursor() {
         return settings.enable_cursor_fix && !GW::UI::IsInControllerMode();
@@ -95,9 +130,7 @@ namespace {
         GW::Hook::EnterHook();
         if (!ShouldFixCursor())
             return GW::Hook::LeaveHook();
-        // @Enhancement: Maybe assert that gwmm == gw_mouse_move?
         const HWND gw_window_handle = GetFocus();
-        // @Enhancement: Maybe check that the focussed window handle is the GW window handle?
         RECT rect;
         if (!(gw_window_handle && GetClientRect(gw_window_handle, &rect))) {
             return GW::Hook::LeaveHook();
@@ -109,42 +142,28 @@ namespace {
         GW::Hook::LeaveHook();
     }
 
-    // Override (and rewrite) GW's handling of mouse event 0x200 to stop camera glitching.
-    bool OnProcessInput(uint32_t* wParam, uint32_t* lParam)
+    bool RewriteMouseLookFromRawInput(const uint32_t* wParam, uint32_t* lParam)
     {
-        GW::Hook::EnterHook();
-        if (!(ShouldFixCursor() && HasRegisteredTrackMouseEvent && gw_mouse_move && mouse_look_event_id)) {
-            goto forward_call; // Failed to find addresses for variables
-        }
-        if (!(wParam && wParam[1] == 0x200)) {
-            goto forward_call; // Not mouse movement
+        if (!(ShouldFixCursor() && SetCursorPosCenter_Func && wParam && wParam[1] == WM_MOUSEMOVE)) {
+            return false;
         }
         if (!(*HasRegisteredTrackMouseEvent && gw_mouse_move->move_camera)) {
-            goto forward_call; // Not moving the camera, or GW hasn't yet called TrackMouseEvent
+            return false;
         }
-
         lParam[0] = mouse_look_event_id;
-        // Set the output parameters to be the relative position of the mouse to the center of the screen
-        // NB: Original function uses ClientToScreen here; we've already grabbed the correct value via CursorFixWndProc
         lParam[1] = rawInputRelativePosX;
         lParam[2] = rawInputRelativePosY;
-
-        // Reset the cursor position to the middle of the viewport
         OnSetCursorPosCenter(gw_mouse_move);
-        GW::Hook::LeaveHook();
         return true;
-    forward_call:
-        GW::Hook::LeaveHook();
-        return ProcessInput_Ret(wParam, lParam);
     }
 
     void CursorFixWndProc(const UINT Message, const WPARAM wParam, const LPARAM lParam)
     {
         if (!(Message == WM_INPUT && GET_RAWINPUT_CODE_WPARAM(wParam) == RIM_INPUT && lParam)) {
-            return; // Not raw input
+            return;
         }
-        if (!ShouldFixCursor()) {
-            return; // No gw mouse move ptr; this shouldn't happen
+        if (!(ShouldFixCursor() && gw_mouse_move)) {
+            return;
         }
 
         BYTE lpb[128];
@@ -163,64 +182,49 @@ namespace {
         }
     }
 
-    bool CursorFixInitialise()
+    void CursorFixInitialise()
     {
-        if (gw_mouse_move) {
-            return true;
+        if (SetCursorPosCenter_Func) {
+            return;
         }
-        const auto hwnd = GW::MemoryMgr::GetGWWindowHandle();
-        if (!hwnd) {
-            return false;
-        }
-        uintptr_t address = GW::Scanner::Find("\xc7\x45\xf0\x10\x00\x00\x00\xc7\x45\xf4\x02\x00\x00\x00", "xx?xxxxxx?xxxx", 0x15);
-        DEBUG_ASSERT(address);
-        if(address && GW::Scanner::IsValidPtr(*(uintptr_t*)address)) {
-            ProcessInput_Func = (OnProcessInput_pt)GW::Scanner::ToFunctionStart(address, 0xfff);
-
-            address = GW::Scanner::FindInRange("\x83\x3d????\x00", "xx????x", 2, address, address - 0x30);
-            if (address && GW::Scanner::IsValidPtr(*(uintptr_t*)address)) {
-                HasRegisteredTrackMouseEvent = *(bool**)address;
-                gw_mouse_move = (GwMouseMove*)(HasRegisteredTrackMouseEvent - 0x28);
-            }
-        }
-        mouse_look_event_id = 0x11; // AI thought it would be a good idea to scan for this...
         SetCursorPosCenter_Func = (SetCursorPosCenter_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("OsInput.cpp", "basis", 0, 0));
-        DEBUG_ASSERT(ProcessInput_Func);
         DEBUG_ASSERT(SetCursorPosCenter_Func);
-        DEBUG_ASSERT(HasRegisteredTrackMouseEvent);
-        DEBUG_ASSERT(gw_mouse_move);
-
-        GWCA_INFO("[SCAN] ProcessInput_Func = %p", ProcessInput_Func);
-        GWCA_INFO("[SCAN] HasRegisteredTrackMouseEvent = %p", HasRegisteredTrackMouseEvent);
-        GWCA_INFO("[SCAN] gw_mouse_move = %p", gw_mouse_move);
         GWCA_INFO("[SCAN] SetCursorPosCenter_Func = %p", SetCursorPosCenter_Func);
-        GWCA_INFO("[SCAN] mouse_look_event_id = 0x%02x", mouse_look_event_id);
-
-#ifdef _DEBUG
-#endif
-        if (ProcessInput_Func && HasRegisteredTrackMouseEvent && gw_mouse_move && SetCursorPosCenter_Func && mouse_look_event_id) {
-            GW::Hook::CreateHook((void**)&ProcessInput_Func, OnProcessInput, reinterpret_cast<void**>(&ProcessInput_Ret));
+        if (SetCursorPosCenter_Func) {
             GW::Hook::CreateHook((void**)&SetCursorPosCenter_Func, OnSetCursorPosCenter, reinterpret_cast<void**>(&SetCursorPosCenter_Ret));
-        }            
-
-        return gw_mouse_move != nullptr;
+        }
     }
 
     void CursorFixEnable(const bool enable)
     {
         CursorFixInitialise();
-        if (!(ProcessInput_Func && HasRegisteredTrackMouseEvent && gw_mouse_move && SetCursorPosCenter_Func && mouse_look_event_id))
+        if (!SetCursorPosCenter_Func)
             return;
-        if (!enable) {
-            GW::Hook::DisableHooks(ProcessInput_Func);
-            GW::Hook::DisableHooks(SetCursorPosCenter_Func);
+        if (enable) {
+            GW::Hook::EnableHooks(SetCursorPosCenter_Func);
         }
         else {
-            GW::Hook::EnableHooks(ProcessInput_Func);
-            GW::Hook::EnableHooks(SetCursorPosCenter_Func);
+            GW::Hook::DisableHooks(SetCursorPosCenter_Func);
         }
     }
 #endif // MOUSEFIX_ENABLE_CAMERA_FIX
+
+    bool OnProcessInput(uint32_t* wParam, uint32_t* lParam)
+    {
+        GW::Hook::EnterHook();
+#if MOUSEFIX_ENABLE_CAMERA_FIX
+        const bool produced_event = RewriteMouseLookFromRawInput(wParam, lParam) || ProcessInput_Ret(wParam, lParam);
+#else
+        const bool produced_event = ProcessInput_Ret(wParam, lParam);
+#endif // MOUSEFIX_ENABLE_CAMERA_FIX
+        const bool is_mouse_look = produced_event && wParam && wParam[1] == WM_MOUSEMOVE && lParam && lParam[0] == mouse_look_event_id && gw_mouse_move->move_camera;
+        if (is_mouse_look && settings.camera_look_sensitivity != 1.f && !GW::UI::IsInControllerMode()) {
+            ScaleLookAxis(lParam[1], look_remainder_x);
+            ScaleLookAxis(lParam[2], look_remainder_y);
+        }
+        GW::Hook::LeaveHook();
+        return produced_event;
+    }
 
     HCURSOR current_cursor = nullptr;
     bool cursor_size_hooked = false;
@@ -459,6 +463,7 @@ void MouseFix::Initialize()
 {
     ToolboxModule::Initialize();
     SettingsRegistry::Register(this, settings);
+    SettingsRegistry::Describe(this, "camera_look_sensitivity", "Right-click camera sensitivity", camera_look_sensitivity_help);
 
     ChangeCursorIcon_Func = (ChangeCursorIcon_pt)GW::Scanner::ToFunctionStart(GW::Scanner::Find("\x80\x7e\x01\x80", "xxxx"));
     if (ChangeCursorIcon_Func) {
@@ -469,6 +474,12 @@ void MouseFix::Initialize()
 #if _DEBUG
     ASSERT(ChangeCursorIcon_Func);
 #endif
+
+    ScanProcessInput();
+    if (ProcessInput_Func && gw_mouse_move) {
+        GW::Hook::CreateHook((void**)&ProcessInput_Func, OnProcessInput, reinterpret_cast<void**>(&ProcessInput_Ret));
+        GW::Hook::EnableHooks(ProcessInput_Func);
+    }
 
 #if MOUSEFIX_ENABLE_CAMERA_FIX
     const GW::UI::UIMessage ui_messages[] = {
@@ -486,6 +497,7 @@ void MouseFix::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
     ToolboxModule::LoadSettings(doc, legacy);
     doc.GetStruct(Name(), settings);
+    settings.camera_look_sensitivity = std::clamp(settings.camera_look_sensitivity, min_camera_look_sensitivity, max_camera_look_sensitivity);
     SetCursorSize(settings.cursor_size);
 }
 
@@ -499,6 +511,9 @@ void MouseFix::Terminate()
 {
     ToolboxModule::Terminate();
     GW::Hook::RemoveHook(ChangeCursorIcon_Func);
+    if (ProcessInput_Ret) {
+        GW::Hook::RemoveHook(ProcessInput_Func);
+    }
 
 #if MOUSEFIX_ENABLE_CAMERA_FIX
     CursorFixEnable(false);
@@ -524,6 +539,15 @@ void MouseFix::DrawSettingsInternal()
     if (ImGui::Button("Reset")) {
         SetCursorSize(32);
         RedrawCursorIcon();
+    }
+
+    const bool look_hook_available = ProcessInput_Ret != nullptr;
+    ImGui::BeginDisabled(!look_hook_available);
+    ImGui::SliderFloat("Right-click camera sensitivity", &settings.camera_look_sensitivity, min_camera_look_sensitivity, max_camera_look_sensitivity, "%.2fx", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::EndDisabled();
+    ImGui::ShowHelp(look_hook_available ? camera_look_sensitivity_help : "Unavailable: failed to find the Guild Wars mouse input handler.");
+    if (ImGui::Button("Reset##camera_look_sensitivity")) {
+        settings.camera_look_sensitivity = 1.f;
     }
 }
 

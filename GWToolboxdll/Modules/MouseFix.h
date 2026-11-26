@@ -17,15 +17,16 @@ public:
 
     [[nodiscard]] const char* Name() const override { return "Mouse Settings"; }
 #if MOUSEFIX_ENABLE_CAMERA_FIX
-    [[nodiscard]] const char* Description() const override { return " - Fixes occasional camera glitch when looking around in-game\n - Adds option to scale cursor size"; }
+    [[nodiscard]] const char* Description() const override { return " - Fixes occasional camera glitch when looking around in-game\n - Adds option to scale cursor size\n - Adds option to speed up right-click camera rotation"; }
 #else
-    [[nodiscard]] const char* Description() const override { return " - Adds option to scale cursor size"; }
+    [[nodiscard]] const char* Description() const override { return " - Adds option to scale cursor size\n - Adds option to speed up right-click camera rotation"; }
 #endif // MOUSEFIX_ENABLE_CAMERA_FIX
     [[nodiscard]] const char* Icon() const override { return ICON_FA_MOUSE_POINTER; }
 
     struct Settings {
         bool enable_cursor_fix = false;
         int cursor_size = 32;
+        float camera_look_sensitivity = 1.f;
     };
 
     void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
