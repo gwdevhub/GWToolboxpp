@@ -30,6 +30,7 @@ public:
         bool camera_smoothing = false;
         float cam_speed = 1000.f;
         float cam_max_distance = 900.f;
+        float rotation_speed_multiplier = 1.f;
     };
 
     void Initialize() override;

@@ -3,6 +3,7 @@
 #include <GWCA/GameEntities/Camera.h>
 
 #include <GWCA/Managers/CameraMgr.h>
+#include <GWCA/Managers/UIMgr.h>
 
 #include <GWToolbox.h>
 
@@ -29,6 +30,21 @@ namespace {
 
     typedef void(__cdecl* OnSetCameraMode_pt)(uint32_t camera_mode, bool enabled);
     OnSetCameraMode_pt OnSetCameraMode_Func = nullptr, OnSetCameraMode_Ret = nullptr;
+
+    typedef void(__cdecl* SetRotationSpeed_pt)(float speed);
+    SetRotationSpeed_pt SetRotationSpeed_Func = nullptr, SetRotationSpeed_Ret = nullptr;
+
+    void OnSetRotationSpeed(float speed) {
+        GW::Hook::EnterHook();
+        SetRotationSpeed_Ret(speed * settings.rotation_speed_multiplier);
+        GW::Hook::LeaveHook();
+    }
+
+    void ApplyRotationSpeed(float multiplier) {
+        if (!SetRotationSpeed_Ret) return;
+        const auto preference_speed = static_cast<int32_t>(GW::UI::GetPreference(GW::UI::NumberPreference::CameraRotationSpeed));
+        SetRotationSpeed_Ret(static_cast<float>(preference_speed) / 100.f * multiplier);
+    }
 
     void OnSetCameraMode(uint32_t camera_mode, bool enabled) {
         GW::Hook::EnterHook();
@@ -208,11 +224,15 @@ void CameraUnlockModule::Terminate()
     ToolboxModule::Terminate();
     GW::Chat::DeleteCommand(&ChatCmdHookEntry);
     GW::CameraMgr::UnlockCam(false);
+    ApplyRotationSpeed(1.f);
     if (OnSetCameraMode_Func) {
         GW::Hook::RemoveHook(OnSetCameraMode_Func);
     }
     if (GetCameraEye_Func) {
         GW::Hook::RemoveHook(GetCameraEye_Func);
+    }
+    if (SetRotationSpeed_Func) {
+        GW::Hook::RemoveHook(SetRotationSpeed_Func);
     }
 }
 
@@ -236,6 +256,14 @@ void CameraUnlockModule::Initialize()
         GW::Hook::EnableHooks(GetCameraEye_Func);
     }
     DEBUG_ASSERT(GetCameraEye_Func);
+
+    const auto set_rotation_speed_call = GW::Scanner::Find("\xff\xb3\xcc\x04\x00\x00", "xxxxxx", -5);
+    SetRotationSpeed_Func = (SetRotationSpeed_pt)GW::Scanner::FunctionFromNearCall(set_rotation_speed_call);
+    if (SetRotationSpeed_Func) {
+        GW::Hook::CreateHook((void**)&SetRotationSpeed_Func, OnSetRotationSpeed, (void**)&SetRotationSpeed_Ret);
+        GW::Hook::EnableHooks(SetRotationSpeed_Func);
+    }
+    DEBUG_ASSERT(SetRotationSpeed_Func);
 }
 void CameraUnlockModule::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) {
     ToolboxModule::LoadSettings(doc, legacy);
@@ -247,6 +275,8 @@ void CameraUnlockModule::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) {
     }
     settings.cam_max_distance = std::clamp(settings.cam_max_distance, 25.f, 5000.f);
     GW::CameraMgr::SetMaxDist(settings.cam_max_distance);
+    settings.rotation_speed_multiplier = std::clamp(settings.rotation_speed_multiplier, 0.5f, 5.f);
+    ApplyRotationSpeed(settings.rotation_speed_multiplier);
 }
 
 void CameraUnlockModule::SaveSettings(SettingsDoc& doc)
@@ -268,6 +298,10 @@ void CameraUnlockModule::DrawSettingsInternal()
         settings.cam_max_distance = std::clamp(settings.cam_max_distance, 25.f, 5000.f);
         GW::CameraMgr::SetMaxDist(settings.cam_max_distance);
     }
+    if (ImGui::SliderFloat("Camera speed multiplier", &settings.rotation_speed_multiplier, 0.5f, 5.f, "%.2fx")) {
+        ApplyRotationSpeed(settings.rotation_speed_multiplier);
+    }
+    ImGui::ShowHelp("Scales how fast the camera turns when you drag with the right mouse button.\nMultiplies the Camera Rotate Speed setting in Guild Wars.");
 }
 
 bool CameraUnlockModule::WndProc(const UINT Message, const WPARAM wParam, const LPARAM) {
