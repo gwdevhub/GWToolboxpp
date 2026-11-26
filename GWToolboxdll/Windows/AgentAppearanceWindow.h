@@ -47,6 +47,9 @@ public:
     [[nodiscard]] const char* Name() const override { return "Agent Appearance"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_PALETTE; }
     void Show();
+    void Initialize() override;
+    void SignalTerminate() override;
+    void Terminate() override;
     void Draw(IDirect3DDevice9* device) override;
 
     static bool AppearanceRulesLoaded();

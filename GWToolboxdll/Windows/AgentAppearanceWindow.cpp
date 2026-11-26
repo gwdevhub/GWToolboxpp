@@ -137,10 +137,13 @@ namespace {
     struct MatchCache {
         const GW::Agent* agent = nullptr;
         uint32_t generation = 0;
+        uint32_t relations = 0;
+        uint32_t relations_generation = 0;
         MatchKey key;
         bool valid = false;
         bool name_requested = false;
         std::wstring name;
+        std::wstring encoded_name;
         std::vector<const CustomAgent*> matches;
     };
 
@@ -161,12 +164,35 @@ namespace {
     std::unordered_map<uint32_t, MatchCache> match_cache;
     std::unordered_map<uint32_t, std::pair<uint32_t, uint32_t>> pending_names;
     uint32_t next_name_token = 0;
+    uint32_t relations_generation = 1;
     std::array<RuleBucket, 6> rule_buckets;
     unsigned int cur_ui_id = 0;
     bool pending_focus = false;
-    bool hooks_added = false;
     GW::HookEntry UIMsg_Entry;
     GW::HookEntry ChatCmd_HookEntry;
+    bool hooks_registered = false;
+
+#ifdef _DEBUG
+    struct AppearanceStats {
+        std::map<uint32_t, uint32_t> invalidations;
+        uint32_t cache_hits = 0;
+        uint32_t key_rebuilds = 0;
+        uint32_t relation_recomputes = 0;
+        clock_t relation_ticks = 0;
+        clock_t window_start = TIMER_INIT();
+    } appearance_stats;
+
+    void LogAppearanceStats()
+    {
+        constexpr clock_t report_interval = 10 * CLOCKS_PER_SEC;
+        if (TIMER_DIFF(appearance_stats.window_start) < report_interval) return;
+        Log::Info("Appearance: cache hits %u, key rebuilds %u, relation recomputes %u, relation time %lld ms",
+                  appearance_stats.cache_hits, appearance_stats.key_rebuilds, appearance_stats.relation_recomputes,
+                  static_cast<long long>(appearance_stats.relation_ticks) * 1000 / CLOCKS_PER_SEC);
+        for (const auto& [msgid, count] : appearance_stats.invalidations) Log::Info("Appearance invalidation 0x%08x: %u", msgid, count);
+        appearance_stats = {};
+    }
+#endif
 
     uint32_t StateMask(const int state)
     {
@@ -234,7 +260,9 @@ namespace {
 
         [[nodiscard]] bool Matches(const GW::Agent* agent) const
         {
-            return agent && agent->type == type && MarkIdentifier(agent) == identifier && EncodedName(agent) == name;
+            if (!agent || agent->type != type || MarkIdentifier(agent) != identifier) return false;
+            const auto* encoded = GW::Agents::GetAgentEncName(agent);
+            return wcscmp(name.c_str(), encoded ? encoded : L"") == 0;
         }
     };
 
@@ -349,28 +377,64 @@ namespace {
             | (living && living->GetHasBossGlow() ? FlagBoss : 0u);
         if (agent_type == Player) {
             if ((checks & CheckSelf) && agent->agent_id == GW::Agents::GetControlledCharacterId()) key.relations |= RelationSelf;
-            if (checks & (CheckFriend | CheckGuild)) {
-                const auto decoded = living ? GW::PlayerMgr::GetPlayerName(living->login_number) : nullptr;
-                const auto encoded = decoded ? nullptr : GW::Agents::GetAgentEncName(agent->agent_id);
-                const auto player_name = decoded ? std::wstring(decoded) : encoded ? TextUtils::GetPlayerNameFromEncodedString(encoded) : std::wstring{};
-                if ((checks & CheckFriend) && !player_name.empty() && GW::FriendListMgr::GetFriend(nullptr, player_name.c_str(), GW::FriendType::Friend)) key.relations |= RelationFriend;
-                const auto guild = (checks & CheckGuild) && !player_name.empty() ? GW::GetGuildContext() : nullptr;
-                if (guild) {
-                    for (const auto member : guild->player_roster) {
-                        if (member && member->current_name[0] && player_name == member->current_name) {
-                            key.relations |= RelationGuild;
-                            break;
+            if (cached.relations_generation != relations_generation) {
+#ifdef _DEBUG
+                ++appearance_stats.relation_recomputes;
+                const auto relation_start = TIMER_INIT();
+#endif
+                cached.relations_generation = relations_generation;
+                cached.relations = 0;
+                if (checks & (CheckFriend | CheckGuild)) {
+                    const auto decoded = living ? GW::PlayerMgr::GetPlayerName(living->login_number) : nullptr;
+                    const auto encoded = decoded ? nullptr : GW::Agents::GetAgentEncName(agent->agent_id);
+                    const auto player_name = decoded ? std::wstring(decoded) : encoded ? TextUtils::GetPlayerNameFromEncodedString(encoded) : std::wstring{};
+                    if ((checks & CheckFriend) && !player_name.empty() && GW::FriendListMgr::GetFriend(nullptr, player_name.c_str(), GW::FriendType::Friend)) cached.relations |= RelationFriend;
+                    const auto guild = (checks & CheckGuild) && !player_name.empty() ? GW::GetGuildContext() : nullptr;
+                    if (guild) {
+                        for (const auto member : guild->player_roster) {
+                            if (member && member->current_name[0] && player_name == member->current_name) {
+                                cached.relations |= RelationGuild;
+                                break;
+                            }
                         }
                     }
                 }
+                if ((checks & CheckMyParty) && ToolboxUtils::IsAgentInMyParty(agent->agent_id)) cached.relations |= RelationMyParty;
+                if ((checks & CheckAnyParty) && ToolboxUtils::IsAgentInParty(agent->agent_id)) cached.relations |= RelationInParty;
+#ifdef _DEBUG
+                appearance_stats.relation_ticks += TIMER_DIFF(relation_start);
+#endif
             }
-            if ((checks & CheckMyParty) && ToolboxUtils::IsAgentInMyParty(agent->agent_id)) key.relations |= RelationMyParty;
-            if ((checks & CheckAnyParty) && ToolboxUtils::IsAgentInParty(agent->agent_id)) key.relations |= RelationInParty;
+            key.relations |= cached.relations;
         }
-        if (cached.valid && cached.key == key) return;
+        if (cached.valid && cached.key == key) {
+#ifdef _DEBUG
+            ++appearance_stats.cache_hits;
+#endif
+            return;
+        }
+#ifdef _DEBUG
+        ++appearance_stats.key_rebuilds;
+#endif
         cached.key = key;
         cached.valid = true;
         cached.matches.clear();
+        if (checks & CheckName) {
+            const wchar_t* encoded = item_data ? item_data->single_item_name && *item_data->single_item_name ? item_data->single_item_name : item_data->name_enc : GW::Agents::GetAgentEncName(agent->agent_id);
+            if (!encoded) encoded = L"";
+            if (wcscmp(cached.encoded_name.c_str(), encoded) != 0) {
+                cached.encoded_name = encoded;
+                cached.generation = ++next_name_token;
+                cached.name.clear();
+                cached.name_requested = false;
+            }
+            if (cached.name.empty() && !cached.name_requested && *encoded) {
+                cached.name_requested = true;
+                const auto token = ++next_name_token;
+                pending_names.emplace(token, std::pair{agent->agent_id, cached.generation});
+                GW::UI::AsyncDecodeStr(encoded, OnNameDecoded, reinterpret_cast<void*>(static_cast<uintptr_t>(token)));
+            }
+        }
         for (const auto& entry : bucket.rules) {
             const auto* rule = entry.rule;
             if (entry.identifier && entry.identifier != key.identifier) continue;
@@ -379,18 +443,7 @@ namespace {
             if ((key.flags & entry.required_flags) != entry.required_flags || (key.flags & entry.rejected_flags)) continue;
             if ((key.relations & entry.required_relations) != entry.required_relations || (key.relations & entry.rejected_relations)) continue;
             if (entry.name_pattern) {
-                if (cached.name.empty()) {
-                    if (!cached.name_requested) {
-                        const wchar_t* encoded = item_data ? item_data->single_item_name && *item_data->single_item_name ? item_data->single_item_name : item_data->name_enc : GW::Agents::GetAgentEncName(agent->agent_id);
-                        if (encoded && *encoded) {
-                            cached.name_requested = true;
-                            const auto token = ++next_name_token;
-                            pending_names.emplace(token, std::pair{agent->agent_id, cached.generation});
-                            GW::UI::AsyncDecodeStr(encoded, OnNameDecoded, reinterpret_cast<void*>(static_cast<uintptr_t>(token)));
-                        }
-                    }
-                    continue;
-                }
+                if (cached.name.empty()) continue;
                 if (!entry.name_pattern->Matches(cached.name)) continue;
             }
             cached.matches.push_back(rule);
@@ -454,14 +507,34 @@ namespace {
         return applied_rules;
     }
 
+    constexpr auto kFriendMsg_0x10000087 = static_cast<GW::UI::UIMessage>(0x10000087);
+    constexpr auto kFriendMsg_0x10000089 = static_cast<GW::UI::UIMessage>(0x10000089);
+    constexpr auto kFriendMsg_0x1000008a = static_cast<GW::UI::UIMessage>(0x1000008a);
+    constexpr auto kGuildMsg_0x100000d8 = static_cast<GW::UI::UIMessage>(0x100000d8);
+    constexpr auto kGuildMsg_0x100000d9 = static_cast<GW::UI::UIMessage>(0x100000d9);
+
     void OnUIMessage(GW::HookStatus*, const GW::UI::UIMessage msgid, void* wParam, void*)
     {
+#ifdef _DEBUG
+        ++appearance_stats.invalidations[static_cast<uint32_t>(msgid)];
+#endif
         switch (msgid) {
             case GW::UI::UIMessage::kMapLoaded:
                 AgentAppearanceWindow::ResetAppearanceCache();
                 break;
             case GW::UI::UIMessage::kAgentUpdate:
                 OnAgentAdded(static_cast<uint32_t>(reinterpret_cast<uintptr_t>(wParam)));
+                break;
+            case kFriendMsg_0x10000087:
+            case kFriendMsg_0x10000089:
+            case kFriendMsg_0x1000008a:
+            case GW::UI::UIMessage::kFriendUpdated:
+            case GW::UI::UIMessage::kPartyAddPlayer:
+            case GW::UI::UIMessage::kPartyRemovePlayer:
+            case kGuildMsg_0x100000d8:
+            case kGuildMsg_0x100000d9:
+            case GW::UI::UIMessage::kGuildMemberUpdated:
+                ++relations_generation;
                 break;
         }
     }
@@ -544,6 +617,9 @@ void AgentAppearanceWindow::Show()
 
 void AgentAppearanceWindow::Draw(IDirect3DDevice9*)
 {
+#ifdef _DEBUG
+    LogAppearanceStats();
+#endif
     if (visible) {
         ImGui::SetNextWindowSize(ImVec2(650.f, 650.f), ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowSizeConstraints(ImVec2(650.f, 450.f), ImVec2(FLT_MAX, FLT_MAX));
@@ -593,13 +669,43 @@ void AgentAppearanceWindow::RegisterSettings(ToolboxModule* module)
     SettingsRegistry::RegisterField(module, "agent_border_thickness", &agent_border_thickness);
     SettingsRegistry::RegisterField(module, "target_border_thickness", &target_border_thickness);
     SettingsRegistry::RegisterField(module, "default_shape", reinterpret_cast<int*>(&default_shape));
-    if (!hooks_added) {
-        hooks_added = true;
-        GW::UI::RegisterUIMessageCallback(&UIMsg_Entry, GW::UI::UIMessage::kMapLoaded, OnUIMessage);
-        GW::UI::RegisterUIMessageCallback(&UIMsg_Entry, GW::UI::UIMessage::kAgentUpdate, OnUIMessage);
-        GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"marktarget", CmdMarkTarget);
-        GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"clearmarktarget", CmdClearMarkTarget);
-    }
+}
+
+void AgentAppearanceWindow::Initialize()
+{
+    ToolboxWindow::Initialize();
+    constexpr GW::UI::UIMessage messages[] = {
+        GW::UI::UIMessage::kMapLoaded,
+        GW::UI::UIMessage::kAgentUpdate,
+        kFriendMsg_0x10000087,
+        kFriendMsg_0x10000089,
+        kFriendMsg_0x1000008a,
+        GW::UI::UIMessage::kFriendUpdated,
+        GW::UI::UIMessage::kPartyAddPlayer,
+        GW::UI::UIMessage::kPartyRemovePlayer,
+        kGuildMsg_0x100000d8,
+        kGuildMsg_0x100000d9,
+        GW::UI::UIMessage::kGuildMemberUpdated,
+    };
+    for (const auto msgid : messages) GW::UI::RegisterUIMessageCallback(&UIMsg_Entry, msgid, OnUIMessage);
+    GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"marktarget", CmdMarkTarget);
+    GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"clearmarktarget", CmdClearMarkTarget);
+    hooks_registered = true;
+}
+
+void AgentAppearanceWindow::SignalTerminate()
+{
+    ToolboxModule::SignalTerminate();
+    if (!hooks_registered) return;
+    hooks_registered = false;
+    GW::UI::RemoveUIMessageCallback(&UIMsg_Entry);
+    GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
+}
+
+void AgentAppearanceWindow::Terminate()
+{
+    ToolboxUIElement::Terminate();
+    SignalTerminate();
 }
 
 void AgentAppearanceWindow::RegisterMinimapSettings(ToolboxModule* module)
@@ -810,9 +916,6 @@ void AgentAppearanceWindow::DrawRuleEditor()
 
 void AgentAppearanceWindow::ReleaseAppearanceHooks()
 {
-    GW::UI::RemoveUIMessageCallback(&UIMsg_Entry);
-    GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
-    hooks_added = false;
     ResetAppearanceCache();
     DeleteRules();
     RebuildRuleMatchers();
@@ -849,7 +952,13 @@ bool AgentAppearanceWindow::ApplyNameTagColor(const GW::Agent* agent, Color& col
 
 void AgentAppearanceWindow::InvalidateAppearance(const uint32_t agent_id)
 {
-    match_cache.erase(agent_id);
+    const auto found = match_cache.find(agent_id);
+    if (found == match_cache.end()) return;
+    if (!GW::Agents::GetAgentByID(agent_id)) {
+        match_cache.erase(found);
+        return;
+    }
+    found->second.valid = false;
 }
 
 float AgentAppearanceWindow::GetBaseSize()
@@ -874,6 +983,7 @@ Color AgentAppearanceWindow::GetAgentModifierColor()
 
 void AgentAppearanceWindow::RebuildRuleMatchers()
 {
+    ++relations_generation;
     const auto map_id = static_cast<uint32_t>(GW::Map::GetMapID());
     const auto instance_type = static_cast<uint32_t>(GW::Map::GetInstanceType());
     if (matcher_context_valid && (matcher_map_id != map_id || matcher_instance_type != instance_type)) {
