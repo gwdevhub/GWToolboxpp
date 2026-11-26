@@ -217,7 +217,7 @@ namespace {
 #else
         const bool produced_event = ProcessInput_Ret(wParam, lParam);
 #endif // MOUSEFIX_ENABLE_CAMERA_FIX
-        const bool is_mouse_look = produced_event && wParam && wParam[1] == WM_MOUSEMOVE && lParam && lParam[0] == mouse_look_event_id && gw_mouse_move->move_camera;
+        const bool is_mouse_look = produced_event && lParam && lParam[0] == mouse_look_event_id && gw_mouse_move->move_camera;
         if (is_mouse_look && settings.camera_look_sensitivity != 1.f && !GW::UI::IsInControllerMode()) {
             ScaleLookAxis(lParam[1], look_remainder_x);
             ScaleLookAxis(lParam[2], look_remainder_y);
