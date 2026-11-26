@@ -362,9 +362,12 @@ void TitleTrackerWidget::Draw(IDirect3DDevice9*)
     if (!visible) {
         return;
     }
-    static float calculated_widget_height = 0.0f;
+    static float content_height = 0.0f;
     ImGui::PushStyleColor(ImGuiCol_WindowBg, widget_background_color);
     ImGui::SetNextWindowSize(ImVec2(300.f, 0.0f), ImGuiCond_FirstUseEver);
+    if (content_height > 0.f) {
+        ImGui::SetNextWindowSizeConstraints({0.f, content_height}, {FLT_MAX, content_height});
+    }
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, true))) {
         settings.progress_bar_height = std::max(settings.progress_bar_height, ImGui::GetTextLineHeight());
         const float available_width = std::max(ImGui::GetContentRegionAvail().x,280.f);
@@ -462,6 +465,7 @@ void TitleTrackerWidget::Draw(IDirect3DDevice9*)
             ImGui::Dummy(bar_size);
             ImGui::Spacing();
         }
+        content_height = std::max(ImGui::GetCursorPosY() + ImGui::GetStyle().WindowPadding.y, ImGui::GetFrameHeight());
     }
     ImGui::End();
     ImGui::PopStyleColor();
