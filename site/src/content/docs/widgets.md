@@ -54,6 +54,8 @@ The [damage monitor](/docs/damage_monitor/) records how much damage has been dea
 ## Bonds
 The bonds monitor shows which maintained monk enchantments you currently have on the allies in the party window. There is an option in [Settings](/docs/settings/) to only show bonds for party members. The monitor also shows refrains ([Heroic Refrain](https://wiki.guildwars.com/wiki/Heroic_Refrain), [Bladeturn Refrain](https://wiki.guildwars.com/wiki/Bladeturn_Refrain), [Burning Refrain](https://wiki.guildwars.com/wiki/Burning_Refrain), [Hasty Refrain](https://wiki.guildwars.com/wiki/Hasty_Refrain), [Mending Refrain](https://wiki.guildwars.com/wiki/Mending_Refrain)) you have cast on yourself and your heroes. Refrains cast on **other players** cannot be shown: Guild Wars only tells your client about the effects on you and your own heroes, so a refrain you are maintaining on another player will leave its slot on the monitor empty.
 
+You can also turn on **Show weapon spells** in [Settings](/docs/settings/) to track weapon spells from your skill bar, such as [Great Dwarf Weapon](https://wiki.guildwars.com/wiki/Great_Dwarf_Weapon) or [Splinter Weapon](https://wiki.guildwars.com/wiki/Splinter_Weapon). Like refrains, they only show on yourself and your heroes. Refrains and weapon spells display the seconds they have left; untick **Show time remaining** to hide the countdown.
+
 The bonds are displayed in the order they appear in your skill bar when entering the zone. There is a button in [Settings](/docs/settings/) to refresh the order if you re-order your skill bar in an explorable area. You can also make them appear in reverse order.
 
 Self-targeted enchantments that cannot be maintained on another ally (e.g. Unyielding Aura) will not show up.

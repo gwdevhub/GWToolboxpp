@@ -144,7 +144,10 @@ namespace {
         bond_map.clear();
         for (const auto& skill : bar->skills) {
             auto skill_id = static_cast<GW::Constants::SkillID>(skill.skill_id);
-            if (const auto found = GetAvailableBond(skill_id); found && found->enabled) {
+            const auto found = GetAvailableBond(skill_id);
+            const auto skill_data = GW::SkillbarMgr::GetSkillConstantData(skill_id);
+            const bool tracked_weapon_spell = settings.show_weapon_spells && skill_data && skill_data->type == GW::Constants::SkillType::WeaponSpell;
+            if ((found && found->enabled) || tracked_weapon_spell) {
                 bond_map[skill_id] = bond_list.size();
                 bond_list.push_back(skill_id);
             }
@@ -405,14 +408,32 @@ void BondsWidget::Draw(IDirect3DDevice9*)
                     if (!DrawBondImage(agent_id, skill_id, &bond_top_left, &bond_bottom_right))
                         continue;
 
-                    const GW::Attribute* agentAttributes = GW::PartyMgr::GetAgentAttributes(agent_id);
-                    ASSERT(agentAttributes);
-                    agentAttributes = &agentAttributes[static_cast<size_t>(skill_data->attribute)];
-                    const bool overlay = effect.attribute_level < agentAttributes->level;
+                    if (skill_data->attribute != GW::Constants::AttributeByte::None) {
+                        const GW::Attribute* agentAttributes = GW::PartyMgr::GetAgentAttributes(agent_id);
+                        ASSERT(agentAttributes);
+                        agentAttributes = &agentAttributes[static_cast<size_t>(skill_data->attribute)];
+                        const bool overlay = effect.attribute_level < agentAttributes->level;
 
-                    if (overlay) {
-                        draw_list->AddRectFilled(bond_top_left, bond_bottom_right, settings.low_attribute_overlay);
+                        if (overlay) {
+                            draw_list->AddRectFilled(bond_top_left, bond_bottom_right, settings.low_attribute_overlay);
+                        }
                     }
+
+                    if (!settings.show_effect_timer || effect.duration <= 0.f) {
+                        continue;
+                    }
+                    const auto remaining_ms = effect.GetTimeRemaining();
+                    if (remaining_ms == 0) {
+                        continue;
+                    }
+                    char remaining_str[8];
+                    snprintf(remaining_str, sizeof(remaining_str), "%lu", (remaining_ms + 999) / 1000);
+                    const auto icon_size = bond_bottom_right.y - bond_top_left.y;
+                    ImGui::PushFont(nullptr, draw_list, icon_size * .6f);
+                    const auto text_size = ImGui::CalcTextSize(remaining_str);
+                    const ImVec2 text_pos = {bond_top_left.x + (icon_size - text_size.x) / 2, bond_top_left.y + (icon_size - text_size.y) / 2};
+                    ImGui::DrawTextWithOutline(draw_list, remaining_str, text_pos);
+                    ImGui::PopFont(draw_list);
                 }
             }
         }
@@ -495,6 +516,16 @@ void BondsWidget::DrawSettingsInternal()
         }
     }
     ImGui::Unindent();
+    if (ImGui::CheckboxWithHelp(
+            "Show weapon spells", &settings.show_weapon_spells,
+            "Shows weapon spells from your skill bar, like Great Dwarf Weapon or Splinter Weapon.\n"
+            "Only shown on yourself and your own heroes.\n"
+            "Guild Wars doesn't tell your client which weapon spell another player has, so that slot stays empty."
+        )) {
+        bond_skills_dirty = true;
+        FetchBondSkills();
+    }
+    ImGui::CheckboxWithHelp("Show time remaining", &settings.show_effect_timer, "Shows the seconds left on timed effects, such as refrains and weapon spells.\nOnly works for yourself and your heroes.");
 
     Colors::DrawSettingHueWheel("Background", &settings.background.value, 0);
     ImGui::Checkbox("Click to cast bond", &settings.click_to_cast);
