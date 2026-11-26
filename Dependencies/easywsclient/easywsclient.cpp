@@ -369,16 +369,15 @@ namespace { // private module-only namespace
             return nullptr;
         }
 
-        const auto ignore_tls_errors = [hRequest] {
+        // Preserve the previous behaviour of ignoring TLS errors on the WS
+        // upgrade path (the old code routed all verify callbacks to success).
+        if (is_ssl) {
             DWORD sec_flags = SECURITY_FLAG_IGNORE_UNKNOWN_CA
                             | SECURITY_FLAG_IGNORE_CERT_DATE_INVALID
                             | SECURITY_FLAG_IGNORE_CERT_CN_INVALID
                             | SECURITY_FLAG_IGNORE_CERT_WRONG_USAGE;
             WinHttpSetOption(hRequest, WINHTTP_OPTION_SECURITY_FLAGS,
                               &sec_flags, sizeof(sec_flags));
-        };
-        if (is_ssl) {
-            ignore_tls_errors();
         }
 
         // Request a WebSocket upgrade on this request.
@@ -413,14 +412,8 @@ namespace { // private module-only namespace
                                       ? 0
                                       : static_cast<DWORD>(extra_headers.size());
 
-        BOOL sent = WinHttpSendRequest(hRequest, headers, headers_len,
-                                       WINHTTP_NO_REQUEST_DATA, 0, 0, 0);
-        if (!sent && is_ssl && GetLastError() == ERROR_WINHTTP_SECURE_CHANNEL_ERROR) {
-            ignore_tls_errors();
-            sent = WinHttpSendRequest(hRequest, headers, headers_len,
-                                      WINHTTP_NO_REQUEST_DATA, 0, 0, 0);
-        }
-        if (!sent) {
+        if (!WinHttpSendRequest(hRequest, headers, headers_len,
+                                 WINHTTP_NO_REQUEST_DATA, 0, 0, 0)) {
             log_error("WinHttpSendRequest failed: %lu\n", GetLastError());
             WinHttpCloseHandle(hRequest);
             WinHttpCloseHandle(hConnect);
