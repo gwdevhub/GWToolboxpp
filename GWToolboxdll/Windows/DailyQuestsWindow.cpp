@@ -704,15 +704,13 @@ namespace {
 
     GW::HookEntry ChatCmd_HookEntry;
 
-    // rollover: the timestamp when this quest will be replaced by the next one.
-    // Pass 0 to indicate the current quest (no date shown).
-    void PrintDaily(const wchar_t* quest_type_enc, const wchar_t* quest_name_enc, const time_t rollover)
+    void PrintDaily(const wchar_t* quest_type_enc, const wchar_t* quest_name_enc, const time_t available_from)
     {
         std::wstring to_send;
         std::wstring quest_name_as_link = std::format(L"\x108\x107[\x1\x2{}\x2\x108\x107;wiki:\x1\x2{}\x2\x108\x107]\x1", quest_name_enc, quest_name_enc);
         std::wstring quest_type_as_link = std::format(L"\x108\x107[\x1\x2{}\x2\x108\x107;wiki:\x1\x2{}\x2\x108\x107]\x1", quest_type_enc, quest_type_enc);
-        if (rollover) {
-            to_send += std::format(L"\x108\x107<quote>\x1\x2{}\x2\x108\x107, {} @ {}: \x1\x2{}", quest_type_as_link, TextUtils::RelativeTimeW(rollover), TextUtils::StringToWString(TextUtils::TimeToString(rollover)), quest_name_as_link);
+        if (available_from) {
+            to_send += std::format(L"\x108\x107<quote>\x1\x2{}\x2\x108\x107, {} @ {}: \x1\x2{}", quest_type_as_link, TextUtils::RelativeTimeW(available_from), TextUtils::StringToWString(TextUtils::TimeToString(available_from)), quest_name_as_link);
         }
         else {
             to_send += std::format(L"\x108\x107<quote>\x1\x2{}\x2\x108\x107: \x1\x2{}", quest_type_as_link, quest_name_as_link);
@@ -724,7 +722,10 @@ namespace {
     {
         const time_t now = time(nullptr);
         const bool is_tomorrow = argc > 1 && !wcscmp(argv[1], L"tomorrow");
-        const auto [quest, rollover] = get_quest_func(is_tomorrow ? now + 86400 : now);
+        auto [quest, rollover] = get_quest_func(now);
+        if (is_tomorrow) {
+            quest = get_quest_func(rollover).quest;
+        }
         if (argc > 1 && (wcscmp(argv[1], L"take") == 0 || wcscmp(argv[1], L"travel") == 0) && quest->GetQuestGiverOutpost() != MapID::None) {
             pending_quest_take = quest;
             return;
@@ -772,16 +773,21 @@ namespace {
     {
         const time_t now = time(nullptr);
         const bool is_tomorrow = argc > 1 && !wcscmp(argv[1], L"tomorrow");
-        const time_t query_time = is_tomorrow ? now + 86400 : now;
         std::wstring buf;
 
         if (GW::Map::IsPreSearing()) {
-            const auto [quest, rollover] = DailyQuests::GetNicholasSandford(query_time);
+            auto [quest, rollover] = DailyQuests::GetNicholasSandford(now);
+            if (is_tomorrow) {
+                quest = DailyQuests::GetNicholasSandford(rollover).quest;
+            }
             buf = std::format(L"\x108\x107{} \x1\x2{}", 5, quest->GetQuestNameEnc());
             PrintDaily(L"\x108\x107Nicholas Sandford\x1", buf.c_str(), is_tomorrow ? rollover : 0);
         }
         else {
-            const auto [nick, rollover] = DailyQuests::GetNicholasTheTraveller(query_time);
+            auto [nick, rollover] = DailyQuests::GetNicholasTheTraveller(now);
+            if (is_tomorrow) {
+                nick = DailyQuests::GetNicholasTheTraveller(rollover).quest;
+            }
             buf = std::format(L"{}\x2\x108\x107 (\x1\x2{}\x2\x108\x107)\x1", nick->GetQuestNameEnc(), Resources::GetMapName(nick->map_id)->encoded());
             PrintDaily(GW::EncStrings::NicholasTheTraveller, buf.c_str(), is_tomorrow ? rollover : 0);
         }
