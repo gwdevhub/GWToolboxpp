@@ -109,18 +109,18 @@ GWToolbox++ adds a wide variety of chat commands that you trigger by typing them
 
 ## Daily quests
 
-All daily commands accept an optional `tomorrow` argument (e.g. `/zm tomorrow`) to look ahead one day.
+All daily commands accept an optional `tomorrow` argument (e.g. `/zm tomorrow`) to show the next rotation and when it starts. For `/nicholas` in post-searing and `/weekly`, this means the next weekly rotation.
 
 - `/zm`: Today's Zaishen Mission.
 - `/zb`: Today's Zaishen Bounty.
 - `/zc`: Today's Zaishen Combat.
 - `/zv`: Today's Zaishen Vanquish.
 - `/wanted`: Today's Wanted by the Shining Blade target.
-- `/nicholas`: Today's Nicholas the Traveler item.
+- `/nicholas`: This week's Nicholas the Traveler item, or today's Nicholas Sandford item in pre-searing.
 - `/vanguard`: Today's Pre-Searing Vanguard quest.
 - `/weekly`: This week's weekly bonus.
 - `/today` or `/daily` / `/dailies`: Print all of the above in one go (uses pre-searing equivalents when applicable).
-- `/tomorrow`: Same as `/today` but for tomorrow's rotation.
+- `/tomorrow`: Same as `/today` but for each activity's next rotation, including Nicholas's next weekly item in post-searing.
 
 ## Friends list
 
